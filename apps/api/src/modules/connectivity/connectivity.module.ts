@@ -6,5 +6,6 @@ import { ConnectivityService } from './connectivity.service';
 @Module({
   controllers: [ConnectivityController],
   providers: [ConnectivityService, ConnectivityRenderService],
+  exports: [ConnectivityRenderService],
 })
 export class ConnectivityModule {}

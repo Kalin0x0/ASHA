@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConnectivityModule } from '../connectivity/connectivity.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { SchedulerService } from './scheduler.service';
 import { SessionReaperService } from './session-reaper.service';
@@ -7,7 +8,7 @@ import { SessionsGateway } from './sessions.gateway';
 import { SessionsService } from './sessions.service';
 
 @Module({
-  imports: [WebhooksModule],
+  imports: [ConnectivityModule, WebhooksModule],
   controllers: [SessionsController],
   providers: [SessionsService, SchedulerService, SessionsGateway, SessionReaperService],
   exports: [SessionsGateway, SessionsService],

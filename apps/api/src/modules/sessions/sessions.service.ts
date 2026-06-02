@@ -5,6 +5,7 @@ import { type ProvisionCommand, RedisChannels, type RunConfig } from '@chista/ev
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
 import { RedisService } from '../../common/redis.service';
+import { ConnectivityRenderService } from '../connectivity/connectivity-render.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { SchedulerService } from './scheduler.service';
 
@@ -14,6 +15,7 @@ export class SessionsService {
     private readonly scheduler: SchedulerService,
     private readonly redis: RedisService,
     private readonly audit: AuditService,
+    @Optional() private readonly render?: ConnectivityRenderService,
     // Optional so unit tests can construct the service without the webhook deps;
     // when present, domain events fan out to subscribed webhooks.
     @Optional() private readonly webhooks?: WebhooksService,
@@ -85,7 +87,18 @@ export class SessionsService {
   private async dispatchProvision(
     sessionId: string,
     zoneName: string,
-    workspace: { id: string; image: { dockerImage: string; runConfigDefaults: unknown } | null; dockerConfig: unknown; coresLimit: number | null; memLimitMb: number | null; gpuCount: number; orgId: string },
+    workspace: {
+      id: string;
+      orgId: string;
+      image: { dockerImage: string; runConfigDefaults: unknown } | null;
+      dockerConfig: unknown;
+      coresLimit: number | null;
+      memLimitMb: number | null;
+      gpuCount: number;
+      webFilterId?: string | null;
+      egressGatewayId?: string | null;
+      browserIsolationId?: string | null;
+    },
     protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH',
   ) {
     const session = await prisma.session.findUnique({ where: { id: sessionId } });
@@ -103,6 +116,30 @@ export class SessionsService {
       gpuCount: workspace.gpuCount,
     };
 
+    // Resolve open-source sidecar descriptors from workspace connectivity policy.
+    const sidecars: ProvisionCommand['sidecars'] = {};
+    if (this.render) {
+      if (workspace.webFilterId) {
+        sidecars.squid = await this.render
+          .resolveSquidSidecar(workspace.orgId, workspace.webFilterId)
+          .catch(() => undefined);
+      }
+      if (workspace.egressGatewayId) {
+        sidecars.wireguard = await this.render
+          .resolveWireGuardSidecar(workspace.orgId, workspace.egressGatewayId)
+          .catch(() => undefined);
+      }
+      if (workspace.browserIsolationId) {
+        // If a Squid sidecar is present, auto-wire its hostname as the forward proxy.
+        const squidUrl = workspace.webFilterId
+          ? `http://chista-squid-${session.kasmId}:3128`
+          : undefined;
+        sidecars.neko = await this.render
+          .resolveNekoSidecar(workspace.orgId, workspace.browserIsolationId, squidUrl)
+          .catch(() => undefined);
+      }
+    }
+
     const command: ProvisionCommand = {
       sessionId,
       kasmId: session.kasmId,
@@ -111,6 +148,7 @@ export class SessionsService {
       zone: zoneName,
       protocol,
       runConfig,
+      ...(Object.keys(sidecars).length > 0 ? { sidecars } : {}),
     };
     await this.redis.publish(RedisChannels.provision(zoneName), command);
     await prisma.session.update({ where: { id: sessionId }, data: { status: 'PROVISIONING' } });

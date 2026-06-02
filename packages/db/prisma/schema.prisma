@@ -547,10 +547,17 @@ model Workspace {
   // { clipboardUp, clipboardDown, uploads, downloads, pwa }
   dlp           Json          @default("{}")
   launchSchema  Json? // dynamic launch-form JSON schema
+  // Optional sidecar policy attachments — resolved at session provision time.
+  webFilterId        String?
+  egressGatewayId    String?
+  browserIsolationId String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  image       Image?        @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  image            Image?                  @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  webFilter        WebFilterConfig?        @relation(fields: [webFilterId], references: [id], onDelete: SetNull)
+  egressGateway    EgressGateway?          @relation(fields: [egressGatewayId], references: [id], onDelete: SetNull)
+  browserIsolation BrowserIsolationConfig? @relation(fields: [browserIsolationId], references: [id], onDelete: SetNull)
   sessions    Session[]
   links       WorkspaceLink[]
   remoteApps  RemoteApp[]
@@ -1054,43 +1061,46 @@ model ConnectionProxyConfig {
 }
 
 model EgressGateway {
-  id        String   @id @default(cuid())
-  orgId     String
-  name      String
-  provider  String // purevpn | managed | custom
-  config    Json     @default("{}")
-  secretRef String?
-  enabled   Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String      @id @default(cuid())
+  orgId      String
+  name       String
+  provider   String // wireguard | tailscale | custom
+  config     Json        @default("{}")
+  secretRef  String?
+  enabled    Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  workspaces Workspace[]
 
   @@unique([orgId, name])
   @@index([orgId])
 }
 
 model WebFilterConfig {
-  id         String   @id @default(cuid())
+  id         String      @id @default(cuid())
   orgId      String
   name       String
-  categories Json     @default("{}") // categorization rules
-  cacheTtl   Int      @default(3600)
-  enabled    Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  categories Json        @default("{}") // categorization rules
+  cacheTtl   Int         @default(3600)
+  enabled    Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  workspaces Workspace[]
 
   @@unique([orgId, name])
   @@index([orgId])
 }
 
 model BrowserIsolationConfig {
-  id           String   @id @default(cuid())
+  id           String      @id @default(cuid())
   orgId        String
   name         String
-  forwardProxy String? // bluecoat | f5 | paloalto | none
-  config       Json     @default("{}")
-  enabled      Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  forwardProxy String? // http proxy URL forwarded to Neko's http_proxy env
+  config       Json        @default("{}")
+  enabled      Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  workspaces   Workspace[]
 
   @@unique([orgId, name])
   @@index([orgId])

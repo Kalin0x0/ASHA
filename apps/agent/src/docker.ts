@@ -1,9 +1,16 @@
 import { randomBytes } from 'node:crypto';
+import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 import net from 'node:net';
 import Docker from 'dockerode';
-import type { ProvisionCommand, SessionStatSample } from '@chista/events';
+import type { ProvisionCommand, SessionSidecar, SessionStatSample } from '@chista/events';
 import { routerName, sessionTraefikLabels } from '@chista/proxy-labels';
 import { agentEnv } from './env.js';
+
+// Host directory where sidecar config files are written.
+// When the agent runs inside Docker, this must be bind-mounted from the host
+// so the path is also reachable by Docker sibling containers.
+const SIDECAR_DIR = process.env.CHISTA_SIDECAR_DIR ?? '/var/lib/chista/sidecars';
 
 const socketPath =
   process.platform === 'win32' && !process.env.DOCKER_SOCKET
@@ -85,15 +92,84 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
   await container.start();
   const info = await container.inspect();
   const ip = info.NetworkSettings?.Networks?.[agentEnv.sessionNetwork]?.IPAddress ?? '';
+
+  // Launch optional open-source sidecars on the same session network.
+  if (cmd.sidecars && Object.keys(cmd.sidecars).length > 0) {
+    await launchSidecars(cmd.kasmId, cmd.sidecars);
+  }
+
   await waitForPort(ip, port, 30_000).catch(() => undefined);
 
   return { containerId: container.id, internalHost: ip, port, routerName: router };
+}
+
+async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCommand['sidecars']>): Promise<void> {
+  const dir = join(SIDECAR_DIR, kasmId);
+  mkdirSync(dir, { recursive: true });
+
+  const entries: Array<{ name: string; spec: SessionSidecar }> = [
+    ...(sidecars.squid ? [{ name: `chista-squid-${kasmId}`, spec: sidecars.squid }] : []),
+    ...(sidecars.wireguard ? [{ name: `chista-wg-${kasmId}`, spec: sidecars.wireguard }] : []),
+    ...(sidecars.neko ? [{ name: `chista-neko-${kasmId}`, spec: sidecars.neko }] : []),
+  ];
+
+  for (const { name, spec } of entries) {
+    await ensureImage(spec.image);
+
+    // Write config files and build bind-mounts.
+    const binds: string[] = [];
+    for (const [mountPath, content] of Object.entries(spec.configs ?? {})) {
+      // Use container name as a namespace prefix to avoid collisions.
+      const filename = `${name}-${mountPath.replace(/\//g, '_')}`;
+      const hostPath = join(dir, filename);
+      writeFileSync(hostPath, content, { mode: 0o600 });
+      binds.push(`${hostPath}:${mountPath}:ro`);
+    }
+
+    const sc = await docker.createContainer({
+      name,
+      Image: spec.image,
+      Env: Object.entries(spec.env ?? {}).map(([k, v]) => `${k}=${v}`),
+      HostConfig: {
+        NetworkMode: agentEnv.sessionNetwork,
+        RestartPolicy: { Name: 'no' },
+        Binds: binds.length ? binds : undefined,
+        CapAdd: spec.capAdd,
+      },
+      Labels: { 'chista.sidecar.kasmId': kasmId },
+    });
+    await sc.start();
+  }
 }
 
 export async function destroyContainer(idOrName: string): Promise<void> {
   const container = docker.getContainer(idOrName);
   await container.stop({ t: 5 }).catch(() => undefined);
   await container.remove({ force: true }).catch(() => undefined);
+
+  // Derive kasmId from session container name (chista-sess-<kasmId>) or
+  // from the raw kasmId passed directly, then clean up sidecars.
+  const kasmId = idOrName.startsWith('chista-sess-')
+    ? idOrName.slice('chista-sess-'.length)
+    : idOrName;
+  await destroySidecars(kasmId);
+}
+
+async function destroySidecars(kasmId: string): Promise<void> {
+  const names = [
+    `chista-squid-${kasmId}`,
+    `chista-wg-${kasmId}`,
+    `chista-neko-${kasmId}`,
+  ];
+  await Promise.allSettled(
+    names.map(async (name) => {
+      const c = docker.getContainer(name);
+      await c.stop({ t: 5 }).catch(() => undefined);
+      await c.remove({ force: true }).catch(() => undefined);
+    }),
+  );
+  // Remove config files written for this session.
+  rmSync(join(SIDECAR_DIR, kasmId), { recursive: true, force: true });
 }
 
 /** map: containerId → sessionId */

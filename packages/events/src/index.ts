@@ -30,6 +30,23 @@ export interface RunConfig {
   volumes?: Array<{ source: string; target: string; readOnly?: boolean }>;
 }
 
+/**
+ * A sidecar container that the agent launches alongside the session container.
+ * All sidecars share the session's Docker network (or Pod network in K8s).
+ */
+export interface SessionSidecar {
+  /** Docker/OCI image to run. */
+  image: string;
+  /** Environment variables. */
+  env?: Record<string, string>;
+  /** Config files to inject: mountPath → file content. */
+  configs?: Record<string, string>;
+  /** Linux capabilities to add (e.g. NET_ADMIN for WireGuard). */
+  capAdd?: string[];
+  /** Container ports (informational; used for K8s containerPort spec). */
+  ports?: number[];
+}
+
 export interface ProvisionCommand {
   sessionId: string;
   kasmId: string;
@@ -38,6 +55,15 @@ export interface ProvisionCommand {
   zone: string;
   protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH';
   runConfig: RunConfig;
+  /** Open-source sidecars to co-launch with the session container. */
+  sidecars?: {
+    /** Squid (squid-cache.org) web-filter proxy sidecar. */
+    squid?: SessionSidecar;
+    /** WireGuard (wireguard.com) egress tunnel sidecar. */
+    wireguard?: SessionSidecar;
+    /** Neko (github.com/m1k1o/neko) isolated-browser sidecar. */
+    neko?: SessionSidecar;
+  };
 }
 
 export interface DestroyCommand {

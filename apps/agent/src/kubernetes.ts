@@ -12,8 +12,8 @@
  * the provisioning loop in index.ts.
  */
 import { KubeConfig, CoreV1Api, NetworkingV1Api, AppsV1Api, Metrics } from '@kubernetes/client-node';
-import type { V1Pod, V1Service, V1Ingress } from '@kubernetes/client-node';
-import type { ProvisionCommand, SessionStatSample } from '@chista/events';
+import type { V1ConfigMap, V1Container, V1Pod, V1Service, V1Ingress, V1Volume } from '@kubernetes/client-node';
+import type { ProvisionCommand, SessionSidecar, SessionStatSample } from '@chista/events';
 import { routerName } from '@chista/proxy-labels';
 import { agentEnv } from './env.js';
 
@@ -65,6 +65,20 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     'chista.io/kasm-id': cmd.kasmId,
   };
 
+  // Build sidecar containers + shared volumes from connectivity policy.
+  const { sidecarContainers, sidecarVolumes, configMap } = buildSidecars(cmd, name);
+  const cmName = `${name}-cfg`;
+
+  if (configMap && Object.keys(configMap).length > 0) {
+    const cm: V1ConfigMap = {
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      metadata: { name: cmName, namespace: SESSION_NS, labels },
+      data: configMap,
+    };
+    await core.createNamespacedConfigMap({ namespace: SESSION_NS, body: cm });
+  }
+
   // 1. Pod
   const pod: V1Pod = {
     apiVersion: 'v1',
@@ -102,15 +116,15 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
               }
             : {}),
         },
+        ...sidecarContainers,
       ],
-      ...(cmd.runConfig.volumes?.length
-        ? {
-            volumes: cmd.runConfig.volumes.map((v, i) => ({
-              name: `vol-${i}`,
-              hostPath: { path: v.source },
-            })),
-          }
-        : {}),
+      volumes: [
+        ...(cmd.runConfig.volumes ?? []).map((v, i) => ({
+          name: `vol-${i}`,
+          hostPath: { path: v.source },
+        })),
+        ...sidecarVolumes,
+      ],
     },
   };
   await core.createNamespacedPod({ namespace: SESSION_NS, body: pod });
@@ -177,6 +191,8 @@ export async function destroyContainer(podName: string): Promise<void> {
     core.deleteNamespacedPod({ name: podName, ...opts }),
     core.deleteNamespacedService({ name: podName, ...opts }),
     networking.deleteNamespacedIngress({ name: podName, ...opts }),
+    // ConfigMap created for sidecar configs (may not exist — allSettled swallows the 404).
+    core.deleteNamespacedConfigMap({ name: `${podName}-cfg`, ...opts }),
   ]);
 }
 
@@ -204,6 +220,61 @@ export async function collectStats(map: Map<string, string>): Promise<SessionSta
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Converts ProvisionCommand sidecar descriptors into K8s container specs,
+ * a shared ConfigMap data blob, and the Volume references needed to mount them.
+ *
+ * All sidecars run in the same Pod as the session container, so they share
+ * localhost — Squid is reachable at localhost:3128, etc.
+ */
+function buildSidecars(
+  cmd: ProvisionCommand,
+  podName: string,
+): { sidecarContainers: V1Container[]; sidecarVolumes: V1Volume[]; configMap: Record<string, string> } {
+  const sidecarContainers: V1Container[] = [];
+  const sidecarVolumes: V1Volume[] = [];
+  const configMap: Record<string, string> = {};
+
+  const sidecars: Array<{ key: string; spec: SessionSidecar }> = [
+    ...(cmd.sidecars?.squid ? [{ key: 'squid', spec: cmd.sidecars.squid }] : []),
+    ...(cmd.sidecars?.wireguard ? [{ key: 'wireguard', spec: cmd.sidecars.wireguard }] : []),
+    ...(cmd.sidecars?.neko ? [{ key: 'neko', spec: cmd.sidecars.neko }] : []),
+  ];
+
+  for (const { key, spec } of sidecars) {
+    const volumeMounts: V1Container['volumeMounts'] = [];
+
+    for (const [mountPath, content] of Object.entries(spec.configs ?? {})) {
+      // ConfigMap key: replace / with _ to create a valid DNS label.
+      const cmKey = `${key}-${mountPath.replace(/\//g, '_')}`;
+      configMap[cmKey] = content;
+
+      const volName = `cfg-${key}-${volumeMounts.length}`;
+      sidecarVolumes.push({
+        name: volName,
+        configMap: {
+          name: `${podName}-cfg`,
+          items: [{ key: cmKey, path: mountPath.split('/').pop()! }],
+        },
+      });
+      volumeMounts.push({ name: volName, mountPath, readOnly: true });
+    }
+
+    sidecarContainers.push({
+      name: key,
+      image: spec.image,
+      env: Object.entries(spec.env ?? {}).map(([n, v]) => ({ name: n, value: v })),
+      ports: (spec.ports ?? []).map((p) => ({ containerPort: p })),
+      securityContext: spec.capAdd?.length
+        ? { capabilities: { add: spec.capAdd } }
+        : undefined,
+      volumeMounts: volumeMounts.length ? volumeMounts : undefined,
+    });
+  }
+
+  return { sidecarContainers, sidecarVolumes, configMap };
+}
 
 function randomSuffix(): string {
   return Math.random().toString(36).slice(2, 10);

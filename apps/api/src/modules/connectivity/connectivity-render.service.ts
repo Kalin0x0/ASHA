@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { prisma } from '@chista/db';
+import type { SessionSidecar } from '@chista/events';
 
 /** A rendered, ready-to-deploy artifact for an open-source sidecar. */
 export interface RenderedArtifact {
@@ -128,6 +129,57 @@ export class ConnectivityRenderService {
     ].join('\n');
 
     return { filename: `neko-${iso.name}.compose.yml`, content };
+  }
+
+  // ── Sidecar resolution ──────────────────────────────────────────────────────
+  // These methods return structured SessionSidecar descriptors consumed by the
+  // agent provisioning loop to co-launch open-source sidecars alongside sessions.
+
+  /** Build a Squid (ubuntu/squid) sidecar descriptor for the agent. */
+  async resolveSquidSidecar(orgId: string, id: string): Promise<SessionSidecar> {
+    const { content } = await this.renderSquidConfig(orgId, id);
+    return {
+      image: 'ubuntu/squid:latest',
+      configs: { '/etc/squid/squid.conf': content },
+    };
+  }
+
+  /** Build a WireGuard (masipcat/wireguard-go) sidecar descriptor for the agent. */
+  async resolveWireGuardSidecar(orgId: string, id: string): Promise<SessionSidecar> {
+    const { content } = await this.renderWireGuardConfig(orgId, id);
+    return {
+      image: 'masipcat/wireguard-go:latest',
+      configs: { '/etc/wireguard/wg0.conf': content },
+      capAdd: ['NET_ADMIN'],
+    };
+  }
+
+  /**
+   * Build a Neko (ghcr.io/m1k1o/neko) sidecar descriptor.
+   * @param squidProxyUrl – if a Squid sidecar is also active, pass its URL
+   *   so Neko's http_proxy is wired automatically; otherwise the stored
+   *   forwardProxy value (if any) is used.
+   */
+  async resolveNekoSidecar(orgId: string, id: string, squidProxyUrl?: string): Promise<SessionSidecar> {
+    const iso = await prisma.browserIsolationConfig.findFirst({ where: { id, orgId } });
+    if (!iso) throw new NotFoundException('Browser isolation config not found');
+    const c = (iso.config ?? {}) as { image?: string; screenWidth?: number; screenHeight?: number; fps?: number };
+    const image = c.image ?? 'ghcr.io/m1k1o/neko/chromium:latest';
+    const screen = `${c.screenWidth ?? 1280}x${c.screenHeight ?? 720}@${c.fps ?? 30}`;
+    const proxy = squidProxyUrl ?? iso.forwardProxy ?? undefined;
+
+    return {
+      image,
+      env: {
+        NEKO_DESKTOP_SCREEN: screen,
+        NEKO_MEMBER_MULTIUSER_USER_PASSWORD: 'neko',
+        NEKO_WEBRTC_EPR: '52000-52100',
+        NEKO_WEBRTC_ICELITE: '1',
+        ...(proxy ? { http_proxy: proxy, https_proxy: proxy } : {}),
+      },
+      capAdd: ['SYS_ADMIN'],
+      ports: [8080],
+    };
   }
 
   /** Squid dstdomain ACLs match a leading dot as "domain and subdomains". */
