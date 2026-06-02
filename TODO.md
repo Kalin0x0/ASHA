@@ -3,11 +3,11 @@
 A **Naiemi Group** product. Checklist tracking the build-out phase by phase.
 Status legend: `[x]` done · `[~]` partial / scaffolded · `[ ]` not started.
 
-> **All five phases are complete.** 188 unit tests; `typecheck · lint · test ·
+> **All six phases are complete.** 210 unit tests; `typecheck · lint · test ·
 > build` green across 25 workspace tasks. Every Kasm-parity feature was built
 > from scratch or on open-source tooling (KasmVNC, Neko, Squid, WireGuard, guacd,
-> ssh2, Fluent Bit, pg_dump, Proxmox VE API) — nothing derived from any
-> proprietary product.
+> ssh2, Fluent Bit, pg_dump, Proxmox VE API, @node-saml/node-saml, ldapts,
+> PulseAudio, CUPS) — nothing derived from any proprietary product.
 
 ---
 
@@ -232,6 +232,41 @@ open-source tooling — nothing derived from Kasm.
 The entire Kasm feature gap is now closed using only custom code + open-source
 tooling (Squid, WireGuard, Neko, guacd, ssh2, Fluent Bit, pg_dump, Proxmox VE) —
 nothing from Kasm.
+
+---
+
+## Phase 6 — Closing the last gaps to the incumbents
+
+Everything Kasm still had that Chista didn't — built from scratch / open-source.
+
+### Done
+- [x] **Session pause/resume** — `control` Redis channel + `SessionControlCommand`;
+      API `POST /sessions/:id/{pause,resume}`; Docker `pause`/`unpause`; K8s no-op
+      parity; `PAUSED` status end-to-end; viewer pause overlay + button.
+- [x] **Live resize / multi-monitor** — `POST /sessions/:id/resize`; agent
+      best-effort exec; viewer resolution selector (incl. dual-monitor geometry).
+- [x] **GPU hardware encoding** — `GpuConfig` (none|nvenc|vaapi); Docker
+      `DeviceRequests`/DRI device + env; K8s `nvidia.com/gpu` limit + render node.
+- [x] **Runtime DLP enforcement** — `DlpPolicy` on the workspace, injected as
+      container env (`KASM_*`) by the agent **and** enforced in the viewer
+      (clipboard/upload/audio/printing controls greyed out by policy).
+- [x] **Audio bridge** — PulseAudio (LGPL) sidecar resolver, DLP-gated.
+- [x] **Virtual printing** — CUPS (Apache-2.0) sidecar resolver, DLP-gated.
+- [x] **SAML 2.0 SP-initiated** — `@node-saml/node-saml`: login redirect, ACS
+      assertion validation, SP metadata endpoint.
+- [x] **LDAP** — `ldapts`: service-bind + user search + password re-bind login,
+      RFC-4515-safe live-test diagnostic endpoint.
+- [x] **JIT provisioning + group sync** — `FederationService` creates SSO users
+      on first login and reconciles mapped groups against the assertion.
+- [x] **License enforcement** — CONCURRENT + NAMED_USER caps gating session
+      launch; `GET /license/usage`; admin licensing page with live meters.
+- [x] **Image registry + marketplace** — registry CRUD + JSON-index sync +
+      one-click workspace install; admin `/registry` page.
+- [x] **Drag-and-drop upload** + **mobile/touch** viewer optimizations.
+
+**Phase 6 is complete.** 210 tests (+22), 25 typecheck+build tasks all green.
+New open-source deps: `@node-saml/node-saml`, `ldapts`; runtime sidecars use
+PulseAudio + CUPS images. Nothing from Kasm.
 
 ---
 
