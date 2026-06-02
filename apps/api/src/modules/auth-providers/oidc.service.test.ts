@@ -18,6 +18,8 @@ vi.stubGlobal('fetch', fetchMock);
 
 import { OidcService } from './oidc.service';
 
+const env = { SECRET_SEAL_KEY: '0123456789abcdef0123456789abcdef' } as never;
+
 // ── Real RSA keypair so we exercise the JWKS signature-verification path ──────
 const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const KID = 'test-key-1';
@@ -68,7 +70,7 @@ describe('OidcService', () => {
   let service: OidcService;
 
   beforeEach(() => {
-    service = new OidcService();
+    service = new OidcService(env);
     vi.clearAllMocks();
     fetchMock.mockResolvedValue({
       ok: true,

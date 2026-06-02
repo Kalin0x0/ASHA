@@ -1,7 +1,10 @@
-import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Inject, Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { createHash, createPublicKey, randomBytes, verify as cryptoVerify } from 'crypto';
 import type { JsonWebKey, KeyObject } from 'crypto';
 import { prisma } from '@chista/db';
+import type { Env } from '@chista/config';
+import { unsealConfig } from '../../common/config-seal';
+import { ENV } from '../../common/env.module';
 import type { FederatedProfile } from './federation.service';
 
 interface OidcConfig {
@@ -55,10 +58,15 @@ export class OidcService {
   /** In-flight PKCE states: state token → PendingState. */
   private readonly pendingStates = new Map<string, PendingState>();
 
+  constructor(@Inject(ENV) private readonly env: Env) {}
+
   private async loadConfig(id: string): Promise<{ cfg: OidcConfig; orgId: string }> {
     const row = await prisma.authConfig.findFirst({ where: { id, type: 'OIDC', enabled: true } });
     if (!row) throw new BadRequestException('OIDC provider not found or disabled');
-    return { cfg: row.config as unknown as OidcConfig, orgId: row.orgId };
+    const cfg = row.secretRef
+      ? (unsealConfig(row.secretRef, this.env.SECRET_SEAL_KEY) as unknown as OidcConfig)
+      : (row.config as unknown as OidcConfig);
+    return { cfg, orgId: row.orgId };
   }
 
   private async discover(issuer: string): Promise<DiscoveryDoc> {

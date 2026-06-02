@@ -10,17 +10,24 @@ const { prismaMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@chista/crypto', () => ({
+  seal: (t: string) => `sealed:${t}`,
+  unseal: (t: string) => t.replace(/^sealed:/, ''),
+  hashToken: (t: string) => `hashed:${t}`,
+  randomToken: () => 'rand',
+}));
 
 import { AuthProvidersService } from './auth-providers.service';
 
 const audit = { record: vi.fn().mockResolvedValue(undefined) };
+const env = { SECRET_SEAL_KEY: '0123456789abcdef0123456789abcdef' } as never;
 
 describe('AuthProvidersService', () => {
   let svc: AuthProvidersService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new AuthProvidersService(audit as never);
+    svc = new AuthProvidersService(audit as never, env);
   });
 
   it('rejects an OIDC provider missing issuer/clientId', async () => {
@@ -29,18 +36,20 @@ describe('AuthProvidersService', () => {
     ).rejects.toThrow('OIDC config missing: clientId');
   });
 
-  it('creates a valid OIDC provider', async () => {
+  it('creates a valid OIDC provider and seals secrets', async () => {
     prismaMock.authConfig.create.mockResolvedValue({ id: 'a1' });
     await svc.create('org1', 'u1', {
       type: 'OIDC',
       name: 'idp',
       enabled: true,
       priority: 100,
-      config: { issuer: 'https://idp', clientId: 'abc' },
+      config: { issuer: 'https://idp', clientId: 'abc', clientSecret: 'secret123' },
     });
-    expect(prismaMock.authConfig.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ orgId: 'org1', type: 'OIDC' }) }),
-    );
+    const data = prismaMock.authConfig.create.mock.calls[0][0].data;
+    expect(data).toMatchObject({ orgId: 'org1', type: 'OIDC' });
+    // clientSecret is a secret key → must be redacted in `config`, sealed in `secretRef`
+    expect(JSON.stringify(data.config)).not.toContain('secret123');
+    expect(typeof data.secretRef).toBe('string');
   });
 
   it('rejects a LDAP provider missing url/baseDN', async () => {

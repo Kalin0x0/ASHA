@@ -1,23 +1,29 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   CreateAuthConfigDto,
   CreateSsoMappingDto,
   UpdateAuthConfigDto,
 } from '@chista/contracts';
+import type { Env } from '@chista/config';
 import { prisma } from '@chista/db';
 import { AuditService } from '../../common/audit.service';
+import { mergeSealedConfig, redactConfig, sealConfig, unsealConfig } from '../../common/config-seal';
+import { ENV } from '../../common/env.module';
 
 /**
  * Identity federation: manage external auth providers (OIDC / SAML / LDAP) and
  * the group mappings that map IdP attributes onto Chista groups.
  *
- * Secrets in `config` (clientSecret, bindPassword) are stored inline for now;
- * a production deployment seals them via the secret store referenced by
- * `secretRef`. Every mutation is org-scoped.
+ * Secrets in `config` (clientSecret, bindPassword, idpCert) are sealed with
+ * AES-256-GCM into `secretRef`; `config` holds a redacted copy for display.
+ * Every mutation is org-scoped.
  */
 @Injectable()
 export class AuthProvidersService {
-  constructor(private readonly audit: AuditService) {}
+  constructor(
+    private readonly audit: AuditService,
+    @Inject(ENV) private readonly env: Env,
+  ) {}
 
   list(orgId: string) {
     return prisma.authConfig.findMany({
@@ -61,7 +67,8 @@ export class AuthProvidersService {
         name: dto.name,
         enabled: dto.enabled,
         priority: dto.priority,
-        config: dto.config as object,
+        config: redactConfig(dto.config) as object,
+        secretRef: sealConfig(dto.config, this.env.SECRET_SEAL_KEY),
       },
     });
     await this.audit.record({
@@ -80,13 +87,25 @@ export class AuthProvidersService {
     if (!existing) throw new NotFoundException('Auth provider not found');
     if (dto.config) this.validateConfig(existing.type, dto.config);
 
+    let sealed: string | undefined;
+    let redacted: object | undefined;
+    if (dto.config) {
+      const prev = existing.secretRef
+        ? unsealConfig(existing.secretRef, this.env.SECRET_SEAL_KEY)
+        : (existing.config as Record<string, unknown>);
+      const merged = mergeSealedConfig(prev, dto.config);
+      sealed = sealConfig(merged, this.env.SECRET_SEAL_KEY);
+      redacted = redactConfig(merged) as object;
+    }
+
     const res = await prisma.authConfig.updateMany({
       where: { id, orgId },
       data: {
         name: dto.name,
         enabled: dto.enabled,
         priority: dto.priority,
-        config: dto.config as object | undefined,
+        config: redacted,
+        secretRef: sealed,
       },
     });
     if (res.count === 0) throw new NotFoundException('Auth provider not found');
@@ -161,6 +180,15 @@ export class AuthProvidersService {
       targetId: id,
     });
     return { ok: true };
+  }
+
+  /** Internal: recover the unsealed config for a provider (OIDC/SAML/LDAP services). */
+  async resolveConfig(id: string): Promise<Record<string, unknown> | null> {
+    const row = await prisma.authConfig.findFirst({ where: { id } });
+    if (!row) return null;
+    return row.secretRef
+      ? unsealConfig(row.secretRef, this.env.SECRET_SEAL_KEY)
+      : (row.config as Record<string, unknown>);
   }
 
   /**

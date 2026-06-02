@@ -1,6 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Client } from 'ldapts';
 import { prisma } from '@chista/db';
+import type { Env } from '@chista/config';
+import { unsealConfig } from '../../common/config-seal';
+import { ENV } from '../../common/env.module';
 import type { FederatedProfile } from './federation.service';
 
 /**
@@ -17,10 +20,15 @@ import type { FederatedProfile } from './federation.service';
  */
 @Injectable()
 export class LdapService {
+  constructor(@Inject(ENV) private readonly env: Env) {}
+
   private async loadConfig(orgId: string, id: string) {
     const cfg = await prisma.authConfig.findFirst({ where: { id, orgId, type: 'LDAP' } });
     if (!cfg) throw new NotFoundException('LDAP provider not found');
-    return cfg.config as unknown as LdapConfig;
+    const resolved = cfg.secretRef
+      ? unsealConfig(cfg.secretRef, this.env.SECRET_SEAL_KEY)
+      : (cfg.config as Record<string, unknown>);
+    return resolved as unknown as LdapConfig;
   }
 
   private newClient(c: LdapConfig): Client {

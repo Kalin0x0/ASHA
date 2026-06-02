@@ -10,17 +10,24 @@ const { prismaMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@chista/crypto', () => ({
+  seal: (t: string) => `sealed:${t}`,
+  unseal: (t: string) => { if (!t.startsWith('sealed:')) throw new Error('not sealed'); return t.slice('sealed:'.length); },
+  hashToken: (t: string) => `hashed:${t}`,
+  randomToken: () => 'rand',
+}));
 
 import { WebhooksService } from './webhooks.service';
 
 const audit = { record: vi.fn().mockResolvedValue(undefined) };
+const env = { SECRET_SEAL_KEY: '0123456789abcdef0123456789abcdef' } as never;
 
 describe('WebhooksService', () => {
   let svc: WebhooksService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new WebhooksService(audit as never);
+    svc = new WebhooksService(audit as never, env);
   });
 
   afterEach(() => {

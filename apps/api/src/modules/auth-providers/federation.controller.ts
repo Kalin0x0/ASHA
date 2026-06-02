@@ -54,9 +54,11 @@ export class FederationController {
     @Req() req: ReqMeta,
   ) {
     if (!body?.SAMLResponse) return { error: 'Missing SAMLResponse' };
-    const { orgId, profile } = await this.saml.consumeAssertion(id, body.SAMLResponse);
+    const { orgId, profile, samlSession } = await this.saml.consumeAssertion(id, body.SAMLResponse);
     const user = await this.federation.provision(orgId, id, profile);
-    return this.auth.issueSession(user, 'saml', req.ip, req.headers['user-agent']);
+    const session = await this.auth.issueSession(user, 'saml', req.ip, req.headers['user-agent']);
+    // Return nameID + sessionIndex so the client can drive SP-initiated SLO later.
+    return { ...session, samlNameID: samlSession.nameID, samlSessionIndex: samlSession.sessionIndex };
   }
 
   /** SP metadata XML for the IdP administrator. */

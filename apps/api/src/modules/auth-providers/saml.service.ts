@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from '@nes
 import { SAML, type SamlConfig } from '@node-saml/node-saml';
 import { prisma } from '@chista/db';
 import type { Env } from '@chista/config';
+import { unsealConfig } from '../../common/config-seal';
 import { ENV } from '../../common/env.module';
 import type { FederatedProfile } from './federation.service';
 
@@ -29,6 +30,13 @@ export class SamlService {
     return cfg;
   }
 
+  /** Unseal the provider config (secretRef takes precedence over stored config). */
+  private resolveConfig(cfg: { config: unknown; secretRef: string | null }): Record<string, unknown> {
+    return cfg.secretRef
+      ? unsealConfig(cfg.secretRef, this.env.SECRET_SEAL_KEY)
+      : (cfg.config as Record<string, unknown>);
+  }
+
   private buildClient(id: string, config: Record<string, unknown>): SAML {
     const entryPoint = (config.entryPoint ?? config.ssoUrl) as string | undefined;
     const idpCert = (config.idpCert ?? config.cert) as string | undefined;
@@ -50,18 +58,22 @@ export class SamlService {
   /** Build the IdP redirect URL for an SP-initiated login. */
   async loginRedirectUrl(id: string, relayState = '/'): Promise<{ url: string; orgId: string }> {
     const cfg = await this.load(undefined, id);
-    const client = this.buildClient(id, cfg.config as Record<string, unknown>);
+    const client = this.buildClient(id, this.resolveConfig(cfg));
     const url = await client.getAuthorizeUrlAsync(relayState, undefined as never, {} as never);
     return { url, orgId: cfg.orgId };
   }
 
-  /** Validate the IdP's SAMLResponse and return a normalized profile. */
+  /** Validate the IdP's SAMLResponse and return a normalized profile + session refs. */
   async consumeAssertion(
     id: string,
     samlResponse: string,
-  ): Promise<{ orgId: string; profile: FederatedProfile }> {
+  ): Promise<{
+    orgId: string;
+    profile: FederatedProfile;
+    samlSession: { nameID: string; nameIDFormat?: string; sessionIndex?: string };
+  }> {
     const cfg = await this.load(undefined, id);
-    const client = this.buildClient(id, cfg.config as Record<string, unknown>);
+    const client = this.buildClient(id, this.resolveConfig(cfg));
     let profile: Record<string, unknown> | null;
     try {
       const result = await client.validatePostResponseAsync({ SAMLResponse: samlResponse });
@@ -78,13 +90,19 @@ export class SamlService {
       (attributes['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] as string);
     if (!email) throw new BadRequestException('SAML assertion had no email / NameID');
 
+    const nameID = (profile.nameID as string) ?? email;
     return {
       orgId: cfg.orgId,
       profile: {
         email,
-        username: (profile.nameID as string) ?? email,
+        username: nameID,
         displayName: (profile.displayName as string) ?? (attributes.displayName as string) ?? undefined,
         attributes,
+      },
+      samlSession: {
+        nameID,
+        nameIDFormat: (profile.nameIDFormat as string) ?? undefined,
+        sessionIndex: (profile.sessionIndex as string) ?? undefined,
       },
     };
   }
@@ -92,7 +110,7 @@ export class SamlService {
   /** SP metadata XML for handing to the IdP administrator. */
   async metadata(id: string): Promise<string> {
     const cfg = await this.load(undefined, id);
-    const client = this.buildClient(id, cfg.config as Record<string, unknown>);
+    const client = this.buildClient(id, this.resolveConfig(cfg));
     return client.generateServiceProviderMetadata(null, null);
   }
 
@@ -108,7 +126,7 @@ export class SamlService {
     relayState = '/',
   ): Promise<{ url: string }> {
     const cfg = await this.load(undefined, id);
-    const client = this.buildClient(id, cfg.config as Record<string, unknown>);
+    const client = this.buildClient(id, this.resolveConfig(cfg));
     const url = await client.getLogoutUrlAsync(subject as never, relayState, {} as never);
     return { url };
   }
