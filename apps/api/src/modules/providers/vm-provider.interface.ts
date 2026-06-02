@@ -933,6 +933,218 @@ export class OpenStackDriver implements VMProviderDriver {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Nutanix AHV (Prism Central v3) driver
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface NutanixConfig {
+  prismCentralUrl: string; // e.g. https://pc.example.com:9440
+  username: string;
+  password: string;
+  clusterUuid: string;
+  subnetUuid: string;
+  /** Source image UUID to clone the boot disk from. */
+  imageUuid: string;
+  insecureTls?: boolean;
+}
+
+export class NutanixDriver implements VMProviderDriver {
+  readonly kind = 'NUTANIX';
+
+  constructor(private readonly config: Record<string, unknown>) {}
+
+  private cfg(): NutanixConfig {
+    return this.config as unknown as NutanixConfig;
+  }
+
+  validateConfig(): { ok: true } | { ok: false; reason: string } {
+    const required = ['prismCentralUrl', 'username', 'password', 'clusterUuid', 'subnetUuid', 'imageUuid'];
+    const missing = required.filter((k) => !this.config[k]);
+    if (missing.length) return { ok: false, reason: `Nutanix config missing: ${missing.join(', ')}` };
+    return { ok: true };
+  }
+
+  private async v3<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+    const c = this.cfg();
+    const auth = Buffer.from(`${c.username}:${c.password}`).toString('base64');
+    const dispatcher = c.insecureTls ? insecureDispatcher() : undefined;
+    const res = await fetch(`${c.prismCentralUrl.replace(/\/$/, '')}/api/nutanix/v3${path}`, {
+      method,
+      headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+      ...(dispatcher ? { dispatcher } : {}),
+    } as RequestInit);
+    if (!res.ok) throw new Error(`Nutanix ${method} ${path}: ${res.status} ${await res.text()}`);
+    if (res.status === 204) return {} as T;
+    return res.json() as Promise<T>;
+  }
+
+  async createInstance(spec: VMInstanceSpec): Promise<VMInstance> {
+    const c = this.cfg();
+    const body = {
+      spec: {
+        name: spec.name,
+        resources: {
+          num_sockets: spec.resources?.cores ?? 2,
+          memory_size_mib: spec.resources?.memoryMb ?? 4096,
+          nic_list: [{ subnet_reference: { kind: 'subnet', uuid: c.subnetUuid } }],
+          disk_list: [
+            {
+              data_source_reference: { kind: 'image', uuid: spec.template || c.imageUuid },
+              device_properties: { device_type: 'DISK' },
+            },
+          ],
+        },
+        cluster_reference: { kind: 'cluster', uuid: c.clusterUuid },
+      },
+      metadata: { kind: 'vm' },
+    };
+    const res = await this.v3<{ metadata: { uuid: string } }>('POST', '/vms', body);
+    return { id: res.metadata.uuid, name: spec.name, status: 'provisioning' };
+  }
+
+  async destroyInstance(id: string): Promise<void> {
+    await this.v3('DELETE', `/vms/${id}`).catch(() => undefined);
+  }
+
+  async getInstance(id: string): Promise<VMInstance | null> {
+    try {
+      const vm = await this.v3<{
+        status: { name: string; resources?: { power_state?: string } };
+      }>('GET', `/vms/${id}`);
+      const power = vm.status.resources?.power_state;
+      const status: VMInstance['status'] =
+        power === 'ON' ? 'running' : power === 'OFF' ? 'stopped' : 'provisioning';
+      return { id, name: vm.status.name, status };
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KubeVirt / Harvester driver (Kubernetes VirtualMachine CRD)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface KubeVirtConfig {
+  /** Kubernetes API server URL, e.g. https://k8s.example.com:6443 */
+  apiServer: string;
+  /** Bearer token for a ServiceAccount with kubevirt.io permissions. */
+  token: string;
+  namespace: string;
+  /** containerDisk image (e.g. quay.io/containerdisks/ubuntu:22.04) or a
+   *  Harvester/KubeVirt DataVolume/source image name. */
+  image: string;
+  insecureTls?: boolean;
+}
+
+/**
+ * Drives KubeVirt VirtualMachine custom resources over the Kubernetes API.
+ * Harvester is KubeVirt-based, so the same driver backs both (kind reported
+ * per the registered provider). No kube client dep — plain REST + bearer token.
+ */
+class KubeVirtBase implements VMProviderDriver {
+  readonly kind: string;
+
+  constructor(private readonly config: Record<string, unknown>, kind: string) {
+    this.kind = kind;
+  }
+
+  private cfg(): KubeVirtConfig {
+    return this.config as unknown as KubeVirtConfig;
+  }
+
+  validateConfig(): { ok: true } | { ok: false; reason: string } {
+    const required = ['apiServer', 'token', 'namespace', 'image'];
+    const missing = required.filter((k) => !this.config[k]);
+    if (missing.length) return { ok: false, reason: `${this.kind} config missing: ${missing.join(', ')}` };
+    return { ok: true };
+  }
+
+  private async k8s<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+    const c = this.cfg();
+    const dispatcher = c.insecureTls ? insecureDispatcher() : undefined;
+    const res = await fetch(`${c.apiServer.replace(/\/$/, '')}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+      ...(dispatcher ? { dispatcher } : {}),
+    } as RequestInit);
+    if (!res.ok) throw new Error(`${this.kind} ${method} ${path}: ${res.status} ${await res.text()}`);
+    if (res.status === 204) return {} as T;
+    return res.json() as Promise<T>;
+  }
+
+  private vmsPath(name?: string): string {
+    const c = this.cfg();
+    const base = `/apis/kubevirt.io/v1/namespaces/${c.namespace}/virtualmachines`;
+    return name ? `${base}/${name}` : base;
+  }
+
+  async createInstance(spec: VMInstanceSpec): Promise<VMInstance> {
+    const c = this.cfg();
+    const cores = spec.resources?.cores ?? 2;
+    const memMb = spec.resources?.memoryMb ?? 4096;
+    const vm = {
+      apiVersion: 'kubevirt.io/v1',
+      kind: 'VirtualMachine',
+      metadata: { name: spec.name, namespace: c.namespace },
+      spec: {
+        running: true,
+        template: {
+          spec: {
+            domain: {
+              cpu: { cores },
+              resources: { requests: { memory: `${memMb}Mi` } },
+              devices: {
+                disks: [{ name: 'rootdisk', disk: { bus: 'virtio' } }],
+                interfaces: [{ name: 'default', masquerade: {} }],
+              },
+            },
+            networks: [{ name: 'default', pod: {} }],
+            volumes: [
+              { name: 'rootdisk', containerDisk: { image: spec.template || c.image } },
+            ],
+          },
+        },
+      },
+    };
+    const res = await this.k8s<{ metadata: { name: string; uid: string } }>('POST', this.vmsPath(), vm);
+    return { id: res.metadata.name, name: spec.name, status: 'provisioning' };
+  }
+
+  async destroyInstance(id: string): Promise<void> {
+    await this.k8s('DELETE', this.vmsPath(id)).catch(() => undefined);
+  }
+
+  async getInstance(id: string): Promise<VMInstance | null> {
+    try {
+      const vm = await this.k8s<{
+        metadata: { name: string };
+        status?: { printableStatus?: string; ready?: boolean };
+      }>('GET', this.vmsPath(id));
+      const s = vm.status?.printableStatus;
+      const status: VMInstance['status'] =
+        vm.status?.ready || s === 'Running' ? 'running' : s === 'Stopped' ? 'stopped' : 'provisioning';
+      return { id, name: vm.metadata.name, status };
+    } catch {
+      return null;
+    }
+  }
+}
+
+export class KubeVirtDriver extends KubeVirtBase {
+  constructor(config: Record<string, unknown>) {
+    super(config, 'KUBEVIRT');
+  }
+}
+
+export class HarvesterDriver extends KubeVirtBase {
+  constructor(config: Record<string, unknown>) {
+    super(config, 'HARVESTER');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // XML helpers (minimal — avoids xml parser dep for the EC2 Query API)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -974,6 +1186,12 @@ export function resolveVMDriver(
       return new OracleOciDriver(config);
     case 'OPENSTACK':
       return new OpenStackDriver(config);
+    case 'NUTANIX':
+      return new NutanixDriver(config);
+    case 'KUBEVIRT':
+      return new KubeVirtDriver(config);
+    case 'HARVESTER':
+      return new HarvesterDriver(config);
     default:
       return null;
   }

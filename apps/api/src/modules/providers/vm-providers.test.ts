@@ -4,6 +4,9 @@ import {
   AzureVmDriver,
   DigitalOceanDriver,
   GcpDriver,
+  HarvesterDriver,
+  KubeVirtDriver,
+  NutanixDriver,
   OpenStackDriver,
   OracleOciDriver,
   VSphereDriver,
@@ -48,6 +51,18 @@ describe('resolveVMDriver', () => {
     expect(resolveVMDriver('OPENSTACK', {})?.kind).toBe('OPENSTACK');
   });
 
+  it('returns NutanixDriver for NUTANIX', () => {
+    expect(resolveVMDriver('NUTANIX', {})?.kind).toBe('NUTANIX');
+  });
+
+  it('returns KubeVirtDriver for KUBEVIRT', () => {
+    expect(resolveVMDriver('KUBEVIRT', {})?.kind).toBe('KUBEVIRT');
+  });
+
+  it('returns HarvesterDriver for HARVESTER', () => {
+    expect(resolveVMDriver('HARVESTER', {})?.kind).toBe('HARVESTER');
+  });
+
   it('accepts contract enum aliases AWS/AZURE/GCP', () => {
     expect(resolveVMDriver('AWS', {})?.kind).toBe('AWS_EC2');
     expect(resolveVMDriver('AZURE', {})?.kind).toBe('AZURE_VM');
@@ -89,6 +104,59 @@ describe('OracleOciDriver', () => {
   it('fails validation without required fields', () => {
     const r = new OracleOciDriver({ endpoint: 'iaas.example.com' }).validateConfig();
     expect(r.ok).toBe(false);
+  });
+});
+
+describe('NutanixDriver', () => {
+  it('fails validation without required fields', () => {
+    expect(new NutanixDriver({ prismCentralUrl: 'https://pc:9440' }).validateConfig().ok).toBe(false);
+  });
+
+  it('creates a VM via Prism Central v3 with basic auth', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 202,
+      json: async () => ({ metadata: { uuid: 'vm-uuid-1' } }),
+      text: async () => '',
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const d = new NutanixDriver({
+      prismCentralUrl: 'https://pc:9440', username: 'admin', password: 'pw',
+      clusterUuid: 'cl-1', subnetUuid: 'sub-1', imageUuid: 'img-1',
+    });
+    const inst = await d.createInstance({ template: '', name: 'nut-vm' });
+    expect(inst.id).toBe('vm-uuid-1');
+    const [url, opts] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/api/nutanix/v3/vms');
+    expect((opts.headers as Record<string, string>)['Authorization']).toMatch(/^Basic /);
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('KubeVirt / Harvester', () => {
+  it('KubeVirt fails validation without token', () => {
+    const r = new KubeVirtDriver({ apiServer: 'https://k8s:6443', namespace: 'vms', image: 'img' }).validateConfig();
+    expect(r.ok).toBe(false);
+    expect((r as { ok: false; reason: string }).reason).toContain('token');
+  });
+
+  it('Harvester creates a VirtualMachine CR via the k8s API', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ metadata: { name: 'hv-vm', uid: 'u1' } }),
+      text: async () => '',
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const d = new HarvesterDriver({
+      apiServer: 'https://k8s:6443', token: 'tok', namespace: 'vms', image: 'quay.io/x/ubuntu:22.04',
+    });
+    const inst = await d.createInstance({ template: '', name: 'hv-vm' });
+    expect(inst.id).toBe('hv-vm');
+    const [url, opts] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/apis/kubevirt.io/v1/namespaces/vms/virtualmachines');
+    expect((opts.headers as Record<string, string>)['Authorization']).toBe('Bearer tok');
+    vi.unstubAllGlobals();
   });
 });
 

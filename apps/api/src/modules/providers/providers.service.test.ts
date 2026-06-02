@@ -43,9 +43,21 @@ describe('ProvidersService — VM', () => {
     );
   });
 
-  it('accepts a provider with no concrete driver yet (e.g. NUTANIX)', async () => {
+  it('persists a fully-configured provider that passes driver validation (NUTANIX)', async () => {
     prismaMock.vMProvider.create.mockResolvedValue({ id: 'vp2' });
-    await svc.createVM('org1', 'u1', { name: 'nut', provider: 'NUTANIX', config: {}, enabled: true });
+    await svc.createVM('org1', 'u1', {
+      name: 'nut',
+      provider: 'NUTANIX',
+      config: {
+        prismCentralUrl: 'https://pc:9440',
+        username: 'admin',
+        password: 'pw',
+        clusterUuid: 'cl-1',
+        subnetUuid: 'sub-1',
+        imageUuid: 'img-1',
+      },
+      enabled: true,
+    });
     expect(prismaMock.vMProvider.create).toHaveBeenCalled();
   });
 

@@ -88,10 +88,31 @@ const CONFIG_FIELDS: Partial<Record<VMProviderKind, ConfigField[]>> = {
     { key: 'imageRef', label: 'Image ID' },
     { key: 'networkId', label: 'Network ID (optional)' },
   ],
+  NUTANIX: [
+    { key: 'prismCentralUrl', label: 'Prism Central URL', placeholder: 'https://pc.example.com:9440' },
+    { key: 'username', label: 'Username' },
+    { key: 'password', label: 'Password', secret: true },
+    { key: 'clusterUuid', label: 'Cluster UUID' },
+    { key: 'subnetUuid', label: 'Subnet UUID' },
+    { key: 'imageUuid', label: 'Image UUID' },
+  ],
+  KUBEVIRT: [
+    { key: 'apiServer', label: 'Kubernetes API Server', placeholder: 'https://k8s.example.com:6443' },
+    { key: 'token', label: 'ServiceAccount Token', secret: true },
+    { key: 'namespace', label: 'Namespace', placeholder: 'vms' },
+    { key: 'image', label: 'containerDisk Image', placeholder: 'quay.io/containerdisks/ubuntu:22.04' },
+  ],
+  HARVESTER: [
+    { key: 'apiServer', label: 'Harvester API Server', placeholder: 'https://harvester.example.com:6443' },
+    { key: 'token', label: 'Token', secret: true },
+    { key: 'namespace', label: 'Namespace', placeholder: 'default' },
+    { key: 'image', label: 'Image', placeholder: 'default/ubuntu-22.04' },
+  ],
 };
 
 const IMPLEMENTED: VMProviderKind[] = [
   'PROXMOX', 'AWS', 'AZURE', 'GCP', 'VSPHERE', 'DIGITALOCEAN', 'ORACLE', 'OPENSTACK',
+  'NUTANIX', 'KUBEVIRT', 'HARVESTER',
 ];
 
 export default function VMProvidersPage() {

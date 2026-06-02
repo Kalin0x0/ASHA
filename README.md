@@ -73,7 +73,7 @@ Built from scratch or on open-source tooling — **nothing derived from any prop
 - **SCIM 2.0** — automated user + group provisioning/deprovisioning (RFC 7643/7644) for Okta, Azure AD, OneLogin: Users + Groups CRUD, PATCH ops, SCIM filters, bearer-token auth, and ServiceProviderConfig/ResourceTypes discovery.
 - **Licensing** — CONCURRENT and NAMED_USER enforcement gating session launch, with a live utilization page.
 - **Marketplace** — image-registry CRUD + catalog sync + one-click workspace install from an open-format registry index.
-- **Scale** — multi-zone, staging pools, casting, server pools + autoscale, DNS providers, and real VM-provider drivers for **Proxmox VE, AWS EC2** (inline SigV4), **Azure, GCP, VMware vSphere, DigitalOcean, Oracle OCI** (request signing), and **OpenStack** (Keystone v3).
+- **Scale** — multi-zone, staging pools, casting, server pools + autoscale, DNS providers, and real VM-provider drivers for **all eleven** backends: Proxmox VE, AWS EC2 (inline SigV4), Azure, GCP, VMware vSphere, DigitalOcean, Oracle OCI (request signing), OpenStack (Keystone v3), Nutanix AHV (Prism Central v3), and KubeVirt / Harvester (VirtualMachine CRDs over the Kubernetes API).
 - **Sessions** — sharing + live chat, recording to S3, idle/max-duration reaper, forensic watermarking + compliance banner.
 - **Ops & compliance** — SIEM log forwarding (Fluent Bit: syslog/Splunk/ES/Loki/HTTP), automated `pg_dump` backups with retention, webhooks (HMAC-signed) + reporting.
 - **Deploy** — single-node Docker Compose (Traefik, Postgres, Redis, guacd) and a Helm chart with the Kubernetes agent DaemonSet, session namespace, RBAC, and HPA.
