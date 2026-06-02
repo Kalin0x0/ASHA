@@ -105,6 +105,84 @@ export const createSession = (workspaceId: string) =>
 export const terminateSession = (id: string) =>
   apiFetch<{ ok: true }>(`/sessions/${id}`, { method: 'DELETE' });
 
+// ── Session control: pause / resume / resize (multi-monitor) ───────────────────
+export const pauseSession = (id: string) =>
+  apiFetch<{ ok: true }>(`/sessions/${id}/pause`, { method: 'POST' });
+export const resumeSession = (id: string) =>
+  apiFetch<{ ok: true }>(`/sessions/${id}/resume`, { method: 'POST' });
+export const resizeSession = (id: string, width: number, height: number) =>
+  apiFetch<{ ok: true }>(`/sessions/${id}/resize`, { method: 'POST', body: { width, height } });
+
+export interface ApiSessionConnection {
+  connectionUrl: string | null;
+  status: SessionStatus;
+  dlp?: {
+    clipboardUp?: boolean;
+    clipboardDown?: boolean;
+    uploads?: boolean;
+    downloads?: boolean;
+    printing?: boolean;
+    audioIn?: boolean;
+    audioOut?: boolean;
+    pwa?: boolean;
+  };
+}
+export const getSessionConnection = (id: string) =>
+  apiFetch<ApiSessionConnection>(`/sessions/${id}/connection`);
+
+// ── Image registries & marketplace ────────────────────────────────────────────
+export interface ApiRegistry {
+  id: string;
+  name: string;
+  url: string;
+  type: 'FIRST_PARTY' | 'THIRD_PARTY';
+  enabled: boolean;
+  lastSyncedAt: string | null;
+  _count?: { entries: number };
+}
+export interface ApiMarketplaceEntry {
+  id: string;
+  name: string;
+  friendlyName: string;
+  description: string | null;
+  dockerImage: string;
+  iconUrl: string | null;
+  categories: string[];
+  installed: boolean;
+  registry?: { name: string; type: string };
+}
+export const getRegistries = () => apiFetch<ApiRegistry[]>('/registries');
+export const createRegistry = (body: { name: string; url: string; type?: string }) =>
+  apiFetch<ApiRegistry>('/registries', { method: 'POST', body });
+export const syncRegistry = (id: string) =>
+  apiFetch<{ ok: true; upserted: number }>(`/registries/${id}/sync`, { method: 'POST' });
+export const deleteRegistry = (id: string) =>
+  apiFetch<{ ok: true }>(`/registries/${id}`, { method: 'DELETE' });
+export const getMarketplace = (q?: string) =>
+  apiFetch<ApiMarketplaceEntry[]>(`/marketplace${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+export const installMarketplaceEntry = (entryId: string, createWorkspace: boolean) =>
+  apiFetch<{ ok: true; imageId: string; workspaceId?: string }>(
+    `/marketplace/${entryId}/install`,
+    { method: 'POST', body: { createWorkspace } },
+  );
+
+// ── Licensing ──────────────────────────────────────────────────────────────────
+export interface ApiLicenseUsage {
+  type: 'CONCURRENT' | 'NAMED_USER' | null;
+  seats: number | null;
+  concurrentSessions: number | null;
+  usedConcurrent: number;
+  usedSeats: number;
+  licensed: boolean;
+}
+export const getLicense = () => apiFetch<unknown>('/license');
+export const getLicenseUsage = () => apiFetch<ApiLicenseUsage>('/license/usage');
+export const upsertLicense = (body: {
+  type: 'CONCURRENT' | 'NAMED_USER';
+  seats: number;
+  concurrentSessions: number;
+}) => apiFetch<unknown>('/license', { method: 'PUT', body });
+
 export const getWorkspaces = () => apiFetch<ApiWorkspace[]>('/workspaces');
 export const getLaunchableWorkspaces = () => apiFetch<ApiWorkspace[]>('/workspaces/launchable');
 export const getAgents = () => apiFetch<ApiAgent[]>('/agents');

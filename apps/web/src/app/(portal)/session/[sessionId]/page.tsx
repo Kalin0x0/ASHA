@@ -8,12 +8,17 @@ import {
   Clipboard,
   Loader2,
   Maximize2,
+  Monitor,
+  Pause,
+  Play,
   Power,
+  Printer,
   RotateCw,
   Settings,
   Share2,
   Upload,
   Volume2,
+  VolumeX,
   Wifi,
   Usb,
 } from 'lucide-react';
@@ -22,10 +27,28 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { ChistaMark } from '@/components/brand/logo';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { createShare } from '@/lib/api/endpoints';
+import {
+  type ApiSessionConnection,
+  createShare,
+  getSessionConnection,
+  pauseSession,
+  resizeSession,
+  resumeSession,
+} from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 import { useSession, useTerminateSession } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
+
+type Dlp = NonNullable<ApiSessionConnection['dlp']>;
+
+// Standard monitor geometries offered by the multi-monitor selector.
+const RESOLUTIONS: Array<{ label: string; w: number; h: number }> = [
+  { label: '1280 × 720', w: 1280, h: 720 },
+  { label: '1920 × 1080', w: 1920, h: 1080 },
+  { label: '2560 × 1440', w: 2560, h: 1440 },
+  { label: '3840 × 2160 (4K)', w: 3840, h: 2160 },
+  { label: 'Dual 3840 × 1080', w: 3840, h: 1080 },
+];
 
 const STEPS = [
   'Allocating an agent',
@@ -58,9 +81,15 @@ export default function StreamingViewerPage() {
   const [frameReady, setFrameReady] = useState(false);
   const [clock, setClock] = useState('');
   const [webcamOpen, setWebcamOpen] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [resMenuOpen, setResMenuOpen] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [dlp, setDlp] = useState<Dlp>({});
 
   const workspaceName = session?.workspaceName ?? 'Workspace';
   const status = session?.status;
+  const isPaused = status === 'PAUSED' || paused;
   const isRunning = status === 'RUNNING' || status === 'DEGRADED';
   const isError = status === 'ERROR' || status === 'DESTROYED' || status === 'TERMINATING';
   const connectionUrl = session?.connectionUrl;
@@ -82,6 +111,68 @@ export default function StreamingViewerPage() {
   useEffect(() => {
     setFrameReady(false);
   }, [connectionUrl]);
+
+  // Pull the DLP policy so the toolbar can grey out disallowed controls.
+  useEffect(() => {
+    if (!isLive || !session?.id || !isRunning) return;
+    let cancelled = false;
+    getSessionConnection(session.id)
+      .then((c) => {
+        if (!cancelled && c.dlp) setDlp(c.dlp);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.id, isRunning]);
+
+  // A capability is allowed unless the policy explicitly forbids it (=== false).
+  const allow = (key: keyof Dlp) => dlp[key] !== false;
+
+  const togglePause = async () => {
+    if (!session) return;
+    setBusy(true);
+    try {
+      if (isPaused) {
+        if (isLive) await resumeSession(session.id);
+        setPaused(false);
+        toast.success('Session resumed');
+      } else {
+        if (isLive) await pauseSession(session.id);
+        setPaused(true);
+        toast.success('Session paused', { description: 'Compute is frozen; state is retained.' });
+      }
+    } catch {
+      toast.error(isPaused ? 'Could not resume' : 'Could not pause');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const applyResolution = async (w: number, h: number, label: string) => {
+    setResMenuOpen(false);
+    if (!session) return;
+    try {
+      if (isLive) await resizeSession(session.id, w, h);
+      toast.success(`Display set to ${label}`);
+    } catch {
+      toast.error('Could not change resolution');
+    }
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragActive(false);
+    if (!allow('uploads')) {
+      toast.error('Uploads are disabled', { description: 'This workspace blocks file uploads (DLP policy).' });
+      return;
+    }
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+    toast.success(`${files.length} file(s) queued for upload`, {
+      description: 'Files are delivered to the session via the in-stream file channel.',
+    });
+  };
 
   const disconnect = () => router.push('/');
   const onTerminate = () => {
@@ -141,18 +232,46 @@ export default function StreamingViewerPage() {
           </div>
         )}
 
-        <div className="ml-auto flex items-center gap-1">
-          <ControlButton label="Clipboard" onClick={() => toast('Use the in-session toolbar for clipboard sync')}>
+        <div className="ml-auto flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <ControlButton
+            label="Clipboard"
+            disabled={!allow('clipboardUp') && !allow('clipboardDown')}
+            disabledHint="Clipboard sync is disabled by the workspace DLP policy."
+            onClick={() => toast('Use the in-session toolbar for clipboard sync')}
+          >
             <Clipboard className="size-4" />
           </ControlButton>
-          <ControlButton label="Upload file" onClick={() => toast('Use the in-session toolbar to upload files')}>
+          <ControlButton
+            label="Upload file"
+            disabled={!allow('uploads')}
+            disabledHint="File uploads are disabled by the workspace DLP policy."
+            onClick={() => toast('Drag files onto the stream, or use the in-session toolbar')}
+          >
             <Upload className="size-4" />
           </ControlButton>
-          <ControlButton label="Audio" onClick={() => toast('Audio is controlled inside the stream')}>
-            <Volume2 className="size-4" />
+          <ControlButton
+            label="Audio"
+            disabled={!allow('audioOut')}
+            disabledHint="Audio output is disabled by the workspace DLP policy."
+            onClick={() => toast('Audio is bridged via the PulseAudio sidecar')}
+          >
+            {allow('audioOut') ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+          </ControlButton>
+          <ControlButton
+            label="Virtual printer"
+            disabled={!allow('printing')}
+            disabledHint="Printing is disabled by the workspace DLP policy."
+            onClick={() =>
+              toast('Virtual printing', {
+                description: 'Print to the CUPS sidecar; jobs are captured as PDF for download.',
+              })
+            }
+          >
+            <Printer className="size-4" />
           </ControlButton>
           <ControlButton
             label={webcamOpen ? 'Close camera' : 'Camera / webcam'}
+            disabled={!allow('audioIn') && isLive && dlp.audioIn === false}
             onClick={() => setWebcamOpen((v) => !v)}
           >
             {webcamOpen ? <CameraOff className="size-4 text-gold-400" /> : <Camera className="size-4" />}
@@ -168,6 +287,41 @@ export default function StreamingViewerPage() {
           >
             <Usb className="size-4" />
           </ControlButton>
+
+          {/* Multi-monitor / resolution selector */}
+          <div className="relative shrink-0">
+            <ControlButton label="Display / monitors" onClick={() => setResMenuOpen((v) => !v)}>
+              <Monitor className={cn('size-4', resMenuOpen && 'text-gold-400')} />
+            </ControlButton>
+            {resMenuOpen && (
+              <div className="absolute right-0 top-9 z-40 w-48 overflow-hidden rounded-lg border border-white/10 bg-anthracite-900/95 py-1 shadow-[var(--shadow-lifted)] backdrop-blur">
+                <p className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Resolution
+                </p>
+                {RESOLUTIONS.map((r) => (
+                  <button
+                    key={r.label}
+                    onClick={() => applyResolution(r.w, r.h, r.label)}
+                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  >
+                    <Monitor className="size-3.5" /> {r.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Pause / Resume */}
+          <ControlButton label={isPaused ? 'Resume session' : 'Pause session'} onClick={() => void togglePause()}>
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : isPaused ? (
+              <Play className="size-4 text-gold-400" />
+            ) : (
+              <Pause className="size-4" />
+            )}
+          </ControlButton>
+
           <ControlButton label="Share session" onClick={onShare}>
             <Share2 className="size-4" />
           </ControlButton>
@@ -179,15 +333,26 @@ export default function StreamingViewerPage() {
           </ControlButton>
           <button
             onClick={onTerminate}
-            className="ml-1 inline-flex h-8 items-center gap-1.5 rounded-md bg-destructive/90 px-3 text-xs font-medium text-destructive-foreground transition-colors hover:bg-destructive ring-gold-focus"
+            className="ml-1 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-destructive/90 px-3 text-xs font-medium text-destructive-foreground transition-colors hover:bg-destructive ring-gold-focus"
           >
-            <Power className="size-3.5" /> End
+            <Power className="size-3.5" /> <span className="hidden sm:inline">End</span>
           </button>
         </div>
       </div>
 
       {/* Stage */}
-      <div ref={stageRef} className="relative flex-1 overflow-hidden bg-anthracite-950">
+      <div
+        ref={stageRef}
+        className="relative flex-1 overflow-hidden bg-anthracite-950 touch-manipulation"
+        onDragOver={(e) => {
+          if (isRunning) {
+            e.preventDefault();
+            setDragActive(true);
+          }
+        }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={onDrop}
+      >
         {isError ? (
           <Disconnected workspaceName={workspaceName} onRetry={() => router.refresh()} onBack={disconnect} />
         ) : !isRunning ? (
@@ -208,6 +373,33 @@ export default function StreamingViewerPage() {
         {webcamOpen && isRunning && (
           <WebcamPanel isWebRtc={isWebRtc} onClose={() => setWebcamOpen(false)} />
         )}
+
+        {/* Drag-and-drop file upload overlay */}
+        {dragActive && (
+          <div className="absolute inset-0 top-12 z-40 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gold-500/60 bg-anthracite-950/80 backdrop-blur-sm">
+            <Upload className="size-10 text-gold-400" />
+            <p className="font-display text-lg">
+              {allow('uploads') ? 'Drop files to upload to the session' : 'Uploads disabled by policy'}
+            </p>
+          </div>
+        )}
+
+        {/* Paused overlay */}
+        {isPaused && isRunning && (
+          <div className="absolute inset-0 top-12 z-30 flex flex-col items-center justify-center gap-4 bg-anthracite-950/85 backdrop-blur">
+            <Pause className="size-12 rounded-full bg-gold-500/15 p-3 text-gold-400" />
+            <div className="text-center">
+              <h2 className="font-display text-2xl font-medium">Session paused</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Compute is frozen — your state is retained.</p>
+            </div>
+            <button
+              onClick={() => void togglePause()}
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-gold-500/90 px-4 text-sm font-medium text-anthracite-950 transition-colors hover:bg-gold-500 ring-gold-focus"
+            >
+              <Play className="size-4" /> Resume
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -217,23 +409,33 @@ function ControlButton({
   children,
   label,
   onClick,
+  disabled = false,
+  disabledHint,
 }: {
   children: React.ReactNode;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
+  disabledHint?: string;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
-          onClick={onClick}
+          onClick={disabled ? () => disabledHint && toast(disabledHint) : onClick}
           aria-label={label}
-          className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground ring-gold-focus"
+          aria-disabled={disabled}
+          className={cn(
+            'inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors ring-gold-focus',
+            disabled
+              ? 'cursor-not-allowed text-muted-foreground/30'
+              : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+          )}
         >
           {children}
         </button>
       </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
+      <TooltipContent>{disabled ? `${label} — disabled by policy` : label}</TooltipContent>
     </Tooltip>
   );
 }

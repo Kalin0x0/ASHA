@@ -67,7 +67,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: 'Catalog', href: '/workspaces', icon: AppWindow, built: true },
       { label: 'Images', href: '/workspaces/images', icon: Container, built: true },
-      { label: 'Registry', href: '/registry', icon: Boxes, phase: 3 },
+      { label: 'Registry', href: '/registry', icon: Boxes, built: true },
     ],
   },
   {
@@ -126,7 +126,7 @@ export const navGroups: NavGroup[] = [
       { label: 'General', href: '/settings/general', icon: Settings2, phase: 2 },
       { label: 'Branding', href: '/settings/branding', icon: Palette, phase: 4 },
       { label: 'Banners', href: '/settings/banners', icon: Flag, phase: 3 },
-      { label: 'Licensing', href: '/settings/licensing', icon: BadgeCheck, phase: 3 },
+      { label: 'Licensing', href: '/settings/licensing', icon: BadgeCheck, built: true },
       { label: 'Database', href: '/settings/database', icon: DatabaseBackup, phase: 3 },
       { label: 'Config Import/Export', href: '/settings/config', icon: FileJson, phase: 3 },
     ],
