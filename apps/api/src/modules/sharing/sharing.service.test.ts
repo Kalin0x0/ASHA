@@ -29,7 +29,7 @@ describe('SharingService.create', () => {
   });
 
   it('creates a share for a running session owned by the caller', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', userId: 'user1', status: 'RUNNING' });
+    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', orgId: 'org1', userId: 'user1', status: 'RUNNING' });
     prismaMock.sessionShare.upsert.mockResolvedValue({ id: 'share1', sessionId: 'sess1' });
 
     const res = await svc.create(USER, 'sess1', {
@@ -44,14 +44,14 @@ describe('SharingService.create', () => {
   });
 
   it('rejects sharing a session the caller does not own', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', userId: 'other', status: 'RUNNING' });
+    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', orgId: 'org1', userId: 'other', status: 'RUNNING' });
     await expect(
       svc.create(USER, 'sess1', { allowControl: false, requireAuth: true, enableChat: true, enableAv: false }),
     ).rejects.toThrow('owner');
   });
 
   it('rejects sharing a session that is not running', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', userId: 'user1', status: 'PROVISIONING' });
+    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', orgId: 'org1', userId: 'user1', status: 'PROVISIONING' });
     await expect(
       svc.create(USER, 'sess1', { allowControl: false, requireAuth: true, enableChat: true, enableAv: false }),
     ).rejects.toThrow('running');
@@ -62,6 +62,13 @@ describe('SharingService.create', () => {
     await expect(
       svc.create(USER, 'ghost', { allowControl: false, requireAuth: true, enableChat: true, enableAv: false }),
     ).rejects.toThrow();
+  });
+
+  it('treats another org\'s session as not found (no cross-tenant leak)', async () => {
+    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', orgId: 'org2', userId: 'user1', status: 'RUNNING' });
+    await expect(
+      svc.create(USER, 'sess1', { allowControl: false, requireAuth: true, enableChat: true, enableAv: false }),
+    ).rejects.toThrow('not found');
   });
 });
 

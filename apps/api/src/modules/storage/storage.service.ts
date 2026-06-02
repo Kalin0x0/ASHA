@@ -23,7 +23,7 @@ export class StorageService {
     return prisma.volumeMapping.findMany({ where: { orgId }, orderBy: { name: 'asc' } });
   }
 
-  create_volume(orgId: string, dto: CreateVolumeMappingDto) {
+  createVolume(orgId: string, dto: CreateVolumeMappingDto) {
     return prisma.volumeMapping.create({
       data: {
         orgId,

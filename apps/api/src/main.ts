@@ -5,6 +5,13 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { corsOrigins, loadEnv } from '@chista/config';
 import { AppModule } from './app.module';
 
+// Prisma returns BigInt for some columns (e.g. Recording.bytes). JSON.stringify
+// throws on BigInt by default, which would 500 any endpoint that returns one.
+// Serialize BigInt as a JSON number string so responses stay valid.
+(BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function (this: bigint) {
+  return this.toString();
+};
+
 async function bootstrap() {
   const env = loadEnv();
   const app = await NestFactory.create(AppModule);

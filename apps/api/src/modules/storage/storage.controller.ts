@@ -36,7 +36,7 @@ export class StorageController {
     @CurrentUser() user: AuthUser,
     @Body(new ZodPipe(createVolumeMappingSchema)) dto: CreateVolumeMappingDto,
   ) {
-    return this.storage.create_volume(user.orgId, dto);
+    return this.storage.createVolume(user.orgId, dto);
   }
 
   @RequirePermissions('STORAGE_MANAGE')

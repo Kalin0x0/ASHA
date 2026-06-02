@@ -38,8 +38,8 @@ export class SharingController {
   @ApiBearerAuth()
   @RequirePermissions('SESSION_SHARE')
   @Get('sessions/:sessionId/share')
-  getForSession(@Param('sessionId') sessionId: string) {
-    return this.sharing.listForSession(sessionId);
+  getForSession(@CurrentUser() user: AuthUser, @Param('sessionId') sessionId: string) {
+    return this.sharing.listForSession(user.orgId, sessionId);
   }
 
   @ApiBearerAuth()

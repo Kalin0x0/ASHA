@@ -135,6 +135,18 @@ and reading the runtime paths.
       `SELF_SIGNED_CERT_IN_CHAIN`. Switched to `@fontsource-variable/fraunces` +
       `next/font/local` — identical visual output, zero network dependency at build time.
 
+### Fixed (Phase 2 backend review)
+- [x] **BigInt 500 on recordings endpoints.** `Recording.bytes` is a Prisma
+      BigInt; `JSON.stringify` throws on BigInt, so any `/recordings` response
+      would 500. Added a global `BigInt.prototype.toJSON` (→ string) in main.ts.
+- [x] **Cross-tenant share read.** `getForSession` / `listForSession` queried by
+      `sessionId` only — an admin with SESSION_SHARE in org A could read org B's
+      share config + chat. Now org-scoped (`findFirst({ sessionId, orgId })`).
+- [x] **Session-existence leak on share-create.** `create` checked the owner
+      before the org, so a foreign session returned a different error than a
+      missing one. Now a foreign session is reported as "not found" (org check
+      first), closing the enumeration vector.
+
 ### Known gaps (documented, deferred by design)
 - [ ] **Tenant isolation on update/delete-by-PK.** The Prisma tenant extension
       auto-scopes reads + `create`, but `update`/`delete` by unique id are not

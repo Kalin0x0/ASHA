@@ -21,7 +21,9 @@ export class SharingService {
   /** Owner creates (or replaces) a share for one of their sessions. */
   async create(user: AuthUser, sessionId: string, dto: CreateShareDto) {
     const session = await prisma.session.findUnique({ where: { id: sessionId } });
-    if (!session) throw new NotFoundException('Session not found');
+    // Org check first so a foreign session is indistinguishable from a missing
+    // one (no cross-tenant existence leak), then the owner check.
+    if (!session || session.orgId !== user.orgId) throw new NotFoundException('Session not found');
     if (session.userId !== user.sub) {
       throw new BadRequestException('Only the session owner can share it');
     }
@@ -65,9 +67,11 @@ export class SharingService {
     return share;
   }
 
-  async listForSession(sessionId: string) {
-    return prisma.sessionShare.findUnique({
-      where: { sessionId },
+  async listForSession(orgId: string, sessionId: string) {
+    // Scope by orgId so an admin in one tenant can't read another tenant's
+    // share config / chat by guessing a session id.
+    return prisma.sessionShare.findFirst({
+      where: { sessionId, orgId },
       include: { participants: true, messages: { orderBy: { createdAt: 'asc' }, take: 200 } },
     });
   }
