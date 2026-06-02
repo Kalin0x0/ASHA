@@ -20,8 +20,12 @@ Stream containerized desktops, browsers, and apps to any browser — self-hosted
 > WireGuard, guacd, Fluent Bit), Chista consumes them as **unmodified runtime container images or
 > generated config**, never linked into our source, so licenses stay clean.
 
-> **Status:** Phases 1–6 complete. **210 unit tests**, full `typecheck · lint · test · build`
-> green across 25 workspace tasks. See [`TODO.md`](TODO.md) for the phase-by-phase build log.
+> **Status:** Phases 1–7 complete. **276 unit tests**, full `typecheck · lint · test · build`
+> green across 26 workspace tasks. Identity (WebAuthn passkeys, SCIM 2.0, OIDC nonce-binding +
+> RP-logout, SAML SLO), an 11-provider VM driver matrix (Proxmox, AWS, Azure, GCP, vSphere,
+> DigitalOcean, Oracle OCI, OpenStack, Nutanix, KubeVirt, Harvester) and AES-256-GCM
+> secret-sealing at rest now exceed Kasm's open tier. See [`TODO.md`](TODO.md) for the
+> phase-by-phase build log.
 
 ## Architecture
 
@@ -126,7 +130,7 @@ pnpm dev                                        # turbo runs web + api + agent
 
 ## Roadmap
 
-All six phases are complete. The full per-item build log lives in [`TODO.md`](TODO.md).
+All seven phases are complete. The full per-item build log lives in [`TODO.md`](TODO.md).
 
 - ✅ **Phase 1** — monorepo, full data model, the Chista design system, admin shell + live dashboard + sessions, the end-user **launch → stream** flow against a real KasmVNC container, single-node Docker Compose, Helm skeleton.
 - ✅ **Phase 2** — RDP/VNC via guacd + SSH via ssh2, session sharing & chat, recording (S3), persistent profiles & file mappings, TOTP 2FA.
@@ -134,7 +138,7 @@ All six phases are complete. The full per-item build log lives in [`TODO.md`](TO
 - ✅ **Phase 4** — storage mappings, browser isolation / web filtering / egress, Kubernetes driver + HPA, Windows/RDS.
 - ✅ **Phase 5** — session reaper, forensic watermarking, SIEM log forwarding, automated backups, DLP, WebRTC/H.264 (Neko), device passthrough, connectivity sidecars wired into provisioning.
 - ✅ **Phase 6** — closing the gaps to the incumbents: session pause/resume/resize + multi-monitor, GPU encoding (NVENC/VAAPI), runtime DLP enforcement (agent + viewer), PulseAudio + CUPS sidecars, full SAML SP-initiated flow + LDAP bind/live-test with JIT provisioning, license enforcement, image-registry marketplace, drag-and-drop upload, and mobile/touch-optimized viewer.
-- ✅ **Phase 7** — OIDC Authorization Code + PKCE login with JWKS ID-token verification, SCIM 2.0 provisioning, eight real VM-provider drivers (Proxmox/AWS/Azure/GCP/vSphere/DigitalOcean/Oracle/OpenStack), and a **complete admin surface** — every navigation item is now a live page wired to its backend: Authentication (providers + SSO mappings + SCIM), Infrastructure (Zones/Servers/Pools/AutoScale/VM+DNS providers), Sessions (Staging/Casting), Storage Mappings, Connectivity (Proxies/Web Filtering/Browser Isolation/Egress), Observability (Reporting/Metrics/Audit Log/Log Forwarding), Developer (API Keys/Webhooks/API Docs), and Settings (General/Branding/Banners/Database/Config Import-Export).
+- ✅ **Phase 7** — enterprise identity, the full VM driver matrix, and at-rest secret hardening: **WebAuthn / passkeys** (passwordless login + enrollment), **SCIM 2.0** user/group provisioning, **OIDC** Authorization Code + PKCE with JWKS ID-token verification, **nonce-binding** and **RP-initiated logout**, **SAML Single Logout** (nameID + sessionIndex), eleven real VM-provider drivers (Proxmox/AWS/Azure/GCP/vSphere/DigitalOcean/Oracle/OpenStack/Nutanix/KubeVirt/Harvester), **AES-256-GCM secret-sealing at rest** for every provider, auth-config and webhook secret, and a **complete admin surface** — every navigation item is now a live page wired to its backend: Authentication (providers + SSO mappings + SCIM), Infrastructure (Zones/Servers/Pools/AutoScale/VM+DNS providers), Sessions (Staging/Casting), Storage Mappings, Connectivity (Proxies/Web Filtering/Browser Isolation/Egress), Observability (Reporting/Metrics/Audit Log/Log Forwarding), Developer (API Keys/Webhooks/API Docs), and Settings (General/Branding/Banners/Database/Config Import-Export/Security).
 
 ## License & ownership
 
