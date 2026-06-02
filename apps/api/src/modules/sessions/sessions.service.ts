@@ -34,6 +34,10 @@ export class SessionsService {
     if (!zone) throw new BadRequestException('No deployment zone available');
 
     const protocol = workspace.image?.protocol ?? 'KASMVNC';
+    // Hard lifetime cap: the reaper terminates the session once expiresAt passes.
+    const expiresAt = workspace.maxDurationMinutes
+      ? new Date(Date.now() + workspace.maxDurationMinutes * 60_000)
+      : null;
     const session = await prisma.session.create({
       data: {
         orgId: user.orgId,
@@ -46,6 +50,8 @@ export class SessionsService {
         workspaceName: workspace.friendlyName,
         imageName: workspace.image?.friendlyName,
         launchValues: (dto.launchValues ?? {}) as object,
+        expiresAt,
+        lastKeepaliveAt: new Date(),
       },
     });
 
@@ -130,23 +136,39 @@ export class SessionsService {
   async terminate(id: string, user: AuthUser) {
     const session = await prisma.session.findUnique({ where: { id } });
     if (!session) throw new NotFoundException('Session not found');
+    await this.destroy(session, 'admin_terminate', user.sub);
+    return { ok: true };
+  }
 
-    await prisma.session.update({ where: { id }, data: { status: 'TERMINATING' } });
+  /**
+   * Tear down a session and notify the owning agent. Shared by admin-initiated
+   * termination and the automated reaper; `actorUserId` is omitted for
+   * system-initiated reasons (expiry / idle).
+   */
+  async destroy(
+    session: { id: string; orgId: string; zoneId: string; containerId: string | null },
+    reason: string,
+    actorUserId?: string,
+  ) {
+    await prisma.session.update({
+      where: { id: session.id },
+      data: { status: 'TERMINATING', terminationReason: reason },
+    });
     const zone = await prisma.deploymentZone.findUnique({ where: { id: session.zoneId } });
     await this.redis.publish(RedisChannels.destroy(zone?.name ?? 'default'), {
-      sessionId: id,
+      sessionId: session.id,
       containerId: session.containerId ?? undefined,
-      reason: 'admin_terminate',
+      reason,
     });
     await this.audit.record({
-      orgId: user.orgId,
-      actorUserId: user.sub,
+      orgId: session.orgId,
+      actorUserId: actorUserId ?? 'system',
       action: 'session.terminate',
       targetType: 'Session',
-      targetId: id,
+      targetId: session.id,
+      metadata: { reason },
     });
-    await this.webhooks?.dispatch(user.orgId, 'session.terminated', { sessionId: id });
-    return { ok: true };
+    await this.webhooks?.dispatch(session.orgId, 'session.terminated', { sessionId: session.id, reason });
   }
 
   async keepalive(id: string) {

@@ -494,3 +494,38 @@ export const createRemoteAppSchema = z.object({
   args: z.string().max(500).optional(),
 });
 export type CreateRemoteAppDto = z.infer<typeof createRemoteAppSchema>;
+
+// ── Banners & watermarks ──────────────────────────────────────────────────────
+// Session overlay policy (compliance banner + forensic watermark). The viewer
+// renders the watermark text — including dynamic tokens like {{user}} — diagonally
+// across the stream so screen captures carry an attributable mark.
+export const upsertWatermarkSchema = z.object({
+  scope: z.enum(['USER', 'GROUP', 'WORKSPACE']).default('WORKSPACE'),
+  refId: z.string().min(1).optional(),
+  bannerText: z.string().max(200).optional(),
+  bannerColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'Expected a #rrggbb hex color')
+    .optional(),
+  watermarkText: z.string().max(200).optional(),
+  watermarkOpacity: z.number().min(0).max(1).default(0.15),
+});
+export type UpsertWatermarkDto = z.infer<typeof upsertWatermarkSchema>;
+
+// ── Log forwarding (SIEM) ─────────────────────────────────────────────────────
+// Ships audit + container logs to an external collector. The API can render a
+// ready-to-run Fluent Bit config for the chosen target (open-source shipper).
+export const upsertLogForwarderSchema = z.object({
+  name: z.string().min(1).max(120),
+  type: z.enum(['syslog', 'splunk_hec', 'elasticsearch', 'loki', 'http']),
+  endpoint: z.string().url().max(500).optional(),
+  config: z.record(z.unknown()).default({}),
+  secretRef: z.string().max(200).optional(),
+  enabled: z.boolean().default(false),
+});
+export type UpsertLogForwarderDto = z.infer<typeof upsertLogForwarderSchema>;
+
+export const updateLogForwarderSchema = upsertLogForwarderSchema
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateLogForwarderDto = z.infer<typeof updateLogForwarderSchema>;

@@ -38,6 +38,13 @@ export const envSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().default(''),
   S3_SECRET_ACCESS_KEY: z.string().default(''),
   S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
+
+  // Automated Postgres backups (pg_dump). Disabled by default; when enabled the
+  // scheduler writes a dump into BACKUP_DIR on the cron below and prunes old ones.
+  BACKUP_ENABLED: z.coerce.boolean().default(false),
+  BACKUP_DIR: z.string().default('/var/lib/chista/backups'),
+  BACKUP_CRON: z.string().default('0 3 * * *'),
+  BACKUP_RETENTION: z.coerce.number().int().min(1).default(7),
 });
 
 export type Env = z.infer<typeof envSchema>;

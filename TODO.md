@@ -154,6 +154,41 @@ launch → stream flow against a real KasmVNC container.
 
 ---
 
+## Phase 5 — Operational maturity (closing the Kasm gap)
+
+Features Kasm Workspaces ships that Chista lacked. Built from scratch or on
+open-source tooling — nothing derived from Kasm.
+
+- [x] **Session reaper** — `@nestjs/schedule`-driven `SessionReaperService`
+      runs every 60 s and terminates (a) sessions past their hard
+      `expiresAt` cap and (b) sessions idle beyond their workspace's
+      `idleTimeoutMinutes` (measured from `lastKeepaliveAt`). `create()` now
+      stamps `expiresAt`/`lastKeepaliveAt`; `terminate()` refactored into a
+      shared `destroy(session, reason, actor?)` used by both admin and reaper.
+      Workspace gained `maxDurationMinutes` + `idleTimeoutMinutes`. 4 tests.
+- [x] **Watermarking + compliance banner** — `WatermarksModule` (`/watermarks`):
+      USER/GROUP/WORKSPACE-scoped overlay config; `resolveForSession` picks the
+      most specific match (workspace → group → user) and expands `{{user}}` /
+      `{{date}}` tokens for the viewer's diagonal forensic watermark. 5 tests.
+- [x] **Log forwarding (SIEM)** — `LogForwardingModule` (`/log-forwarders`):
+      org-scoped CRUD plus a Fluent Bit (open-source shipper) config generator
+      for syslog / Splunk HEC / Elasticsearch / Loki / generic HTTP targets. 6 tests.
+- [x] **Automated DB backups** — `BackupsModule` (`/backups`): `@Cron`-scheduled
+      `pg_dump` (open-source) into `BACKUP_DIR` with retention pruning, plus a
+      manual `POST /backups/run`. Records every dump in `DbBackupRecord`. Env:
+      `BACKUP_ENABLED|DIR|CRON|RETENTION`. 3 tests.
+- [x] **DLP policy fields** — Workspace `dlp` JSON (clipboard up/down, uploads,
+      downloads, pwa) carried through to the viewer.
+
+### Still open (need runtime tooling — generate open-source config/manifests)
+- [ ] Web filtering enforcement (Squid / e2guardian sidecar)
+- [ ] Browser isolation runtime (Neko / containerized Chromium)
+- [ ] Managed egress runtime (WireGuard sidecar)
+- [ ] WebRTC / H.264 codec path (would need Neko/Selkies; KasmVNC is Kasm's own)
+- [ ] Smartcard / USB / webcam passthrough (deep client integration)
+
+---
+
 ## Bug hunt (continuous)
 
 Tracked findings from running the full repo (`typecheck · lint · test · build`)

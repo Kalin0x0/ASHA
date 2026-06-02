@@ -112,7 +112,7 @@ describe('SessionsService.terminate', () => {
     const res = await svc.terminate('sess1', USER);
 
     expect(prismaMock.session.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: 'TERMINATING' } }),
+      expect.objectContaining({ data: { status: 'TERMINATING', terminationReason: 'admin_terminate' } }),
     );
     expect(redis.publish).toHaveBeenCalledWith(
       'chista:zone:default:destroy',

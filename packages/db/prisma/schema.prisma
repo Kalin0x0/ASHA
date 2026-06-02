@@ -540,6 +540,12 @@ model Workspace {
   coresLimit    Float?
   memLimitMb    Int?
   gpuCount      Int           @default(0)
+  // Lifecycle limits enforced by the session reaper (null = unlimited)
+  maxDurationMinutes Int?
+  idleTimeoutMinutes Int?
+  // Data-loss-prevention + delivery policy:
+  // { clipboardUp, clipboardDown, uploads, downloads, pwa }
+  dlp           Json          @default("{}")
   launchSchema  Json? // dynamic launch-form JSON schema
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
