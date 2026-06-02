@@ -3,21 +3,36 @@
 import { ArrowRight, Fingerprint, KeyRound, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/lib/api/auth-context';
+import { isLive } from '@/lib/api/mode';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('admin@chista.local');
   const [password, setPassword] = useState('ChistaAdmin!2026');
   const [loading, setLoading] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => router.push('/dashboard'), 650);
+    if (!isLive) {
+      // Mock mode: any credentials are accepted.
+      setTimeout(() => router.push('/dashboard'), 650);
+      return;
+    }
+    try {
+      await login(email, password);
+      router.push('/dashboard');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Sign in failed');
+      setLoading(false);
+    }
   };
 
   return (

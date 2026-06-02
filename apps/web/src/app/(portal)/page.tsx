@@ -3,6 +3,7 @@
 import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { AuroraBackground } from '@/components/decor/aurora-background';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
 import { Input } from '@/components/ui/input';
@@ -27,12 +28,15 @@ export default function PortalHome() {
     [workspaces, query],
   );
 
-  const onLaunch = (id: string) => {
+  const onLaunch = async (id: string) => {
     setLaunchingId(id);
-    const session = launch(id);
-    setTimeout(() => {
-      router.push(`/session/${session?.id ?? 'new'}`);
-    }, 500);
+    const session = await launch(id);
+    if (!session) {
+      toast.error('Could not start the session');
+      setLaunchingId(null);
+      return;
+    }
+    router.push(`/session/${session.id}`);
   };
 
   return (

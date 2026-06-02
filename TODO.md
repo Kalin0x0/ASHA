@@ -28,11 +28,12 @@ launch → stream flow against a real KasmVNC container.
 - [x] **CI pipeline** (typecheck · lint · test · build on push/PR)
 
 ### Remaining (to truly close Phase 1)
-- [ ] **Live API client in web** — `NEXT_PUBLIC_API_MODE=live` is never read;
-      hooks are mock-only. Add a fetch/react-query data layer + auth context so
-      the UI can run against the real API.
-- [ ] **Real login** — wire the login form to `POST /auth/login` in live mode
-      (token storage, refresh, route guards).
+- [x] **Live API client in web** — `NEXT_PUBLIC_API_MODE=live` now selects a
+      react-query data layer (`hooks.live`) that calls the NestJS API, joins
+      sessions↔users/zones/agents/workspaces, and derives the dashboard. Mock
+      stays the default. Auth context + token store + refresh + route guard.
+- [x] **Real login** — login form calls `POST /auth/login` in live mode, stores
+      the JWT pair, auto-refreshes on 401, and `AuthGate` guards admin/portal.
 - [ ] **API integration tests** — session lifecycle (create → provision →
       status → terminate) with mocked Redis/Prisma.
 - [ ] **Workspace edit/delete** — controller routes exist; add service logic.

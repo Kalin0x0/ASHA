@@ -1,64 +1,27 @@
 'use client';
 
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import { store } from '@/lib/mock/store';
-
-function useVersion(): number {
-  return useSyncExternalStore(store.subscribe, store.getVersion, store.getServerVersion);
-}
-
 /**
- * Recomputes `select` against the mock store whenever the store emits (tracked
- * by the version counter) or any of `deps` change. The version is the memo's
- * invalidation key — it is deliberately not referenced inside `select`, so
- * exhaustive-deps is disabled for that one line.
+ * Data hooks barrel. `API_MODE` is a build-time constant, so the implementation
+ * is chosen once at module load — every component calls exactly one impl's hook,
+ * which keeps the rules of hooks intact across mock and live modes.
+ *
+ *   mock → deterministic in-memory store (no backend)
+ *   live → react-query against the NestJS API (NEXT_PUBLIC_API_MODE=live)
  */
-function useSnapshot<T>(select: () => T, deps: readonly unknown[] = []): T {
-  const v = useVersion();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(select, [v, ...deps]);
-}
+import { API_MODE } from '@/lib/api/mode';
+import * as live from './hooks.live';
+import * as mock from './hooks.mock';
 
-export function useDashboard() {
-  return useSnapshot(() => store.getDashboard());
-}
+const impl = API_MODE === 'live' ? live : mock;
 
-export function useSessions() {
-  return useSnapshot(() => store.getData().sessions);
-}
-
-export function useSession(id: string) {
-  return useSnapshot(() => store.getData().sessions.find((s) => s.id === id || s.kasmId === id), [id]);
-}
-
-export function useAgents() {
-  return useSnapshot(() => store.getData().agents);
-}
-
-export function useZones() {
-  return useSnapshot(() => store.getData().zones);
-}
-
-export function useWorkspaces() {
-  return useSnapshot(() => store.getData().workspaces);
-}
-
-export function useWorkspace(id: string) {
-  return useSnapshot(() => store.getData().workspaces.find((w) => w.id === id), [id]);
-}
-
-export function useUsers() {
-  return useSnapshot(() => store.getData().users);
-}
-
-export function useActivity() {
-  return useSnapshot(() => store.getData().activity);
-}
-
-export function useTerminateSession() {
-  return useCallback((id: string) => store.terminateSession(id), []);
-}
-
-export function useLaunchSession() {
-  return useCallback((workspaceId: string) => store.launchSession(workspaceId), []);
-}
+export const useDashboard = impl.useDashboard;
+export const useSessions = impl.useSessions;
+export const useSession = impl.useSession;
+export const useAgents = impl.useAgents;
+export const useZones = impl.useZones;
+export const useWorkspaces = impl.useWorkspaces;
+export const useWorkspace = impl.useWorkspace;
+export const useUsers = impl.useUsers;
+export const useActivity = impl.useActivity;
+export const useTerminateSession = impl.useTerminateSession;
+export const useLaunchSession = impl.useLaunchSession;

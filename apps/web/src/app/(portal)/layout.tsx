@@ -1,5 +1,6 @@
 import { LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
+import { AuthGate } from '@/components/auth-gate';
 import { Logo } from '@/components/brand/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   return (
+    <AuthGate>
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 flex h-[var(--spacing-topbar)] items-center gap-4 border-b border-border-subtle bg-[color-mix(in_srgb,var(--surface-1)_80%,transparent)] px-4 backdrop-blur-xl lg:px-8">
         <Link href="/" className="flex items-center">
@@ -31,5 +33,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       </header>
       <main className="flex-1">{children}</main>
     </div>
+    </AuthGate>
   );
 }

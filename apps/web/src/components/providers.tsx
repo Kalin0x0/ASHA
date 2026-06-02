@@ -5,6 +5,8 @@ import { ThemeProvider } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { Toaster } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { AuthProvider } from '@/lib/api/auth-context';
+import { isLive } from '@/lib/api/mode';
 import { store } from '@/lib/mock/store';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -17,8 +19,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }),
   );
 
-  // Start the live telemetry ticker once on the client (the "breathing" dashboard).
+  // Start the mock telemetry ticker (the "breathing" dashboard). Live mode is
+  // driven by the API + react-query refetching, so the ticker stays off there.
   useEffect(() => {
+    if (isLive) return;
     store.startTicker();
     return () => store.stopTicker();
   }, []);
@@ -26,9 +30,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider delayDuration={200} skipDelayDuration={300}>
-          {children}
-          <Toaster
+        <AuthProvider>
+          <TooltipProvider delayDuration={200} skipDelayDuration={300}>
+            {children}
+            <Toaster
             position="bottom-right"
             theme="dark"
             toastOptions={{
@@ -39,7 +44,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
               },
             }}
           />
-        </TooltipProvider>
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );
