@@ -228,9 +228,10 @@ open-source tooling — nothing derived from Kasm.
       hostPath volume + grants MKNOD/SYS_RAWIO. Viewer adds a getUserMedia webcam
       PiP preview and a USB/smartcard configuration helper.
 
-**Phase 5 is complete.** 177 tests, 25 typecheck+build tasks all green.
+**Phase 5 is complete.** 188 tests, 25 typecheck+build tasks all green.
 The entire Kasm feature gap is now closed using only custom code + open-source
-tooling (Squid, WireGuard, Neko, Fluent Bit, pg_dump) — nothing from Kasm.
+tooling (Squid, WireGuard, Neko, guacd, ssh2, Fluent Bit, pg_dump, Proxmox VE) —
+nothing from Kasm.
 
 ---
 
