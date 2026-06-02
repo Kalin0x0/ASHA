@@ -8,6 +8,7 @@ import { JwtAuthGuard } from './common/jwt-auth.guard';
 import { PermissionsGuard } from './common/permissions.guard';
 import { TenantInterceptor } from './common/tenant.interceptor';
 import { AgentsModule } from './modules/agents/agents.module';
+import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthProvidersModule } from './modules/auth-providers/auth-providers.module';
 import { BackupsModule } from './modules/backups/backups.module';
@@ -72,6 +73,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     LicensingModule,
     RegistryModule,
     ScimModule,
+    ApiKeysModule,
   ],
   providers: [
     // ThrottlerGuard runs first so rate-limit rejections short-circuit auth

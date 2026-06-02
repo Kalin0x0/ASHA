@@ -44,4 +44,14 @@ export class ReportingController {
   ) {
     return this.reporting.metricSeries(user.orgId, metric, hours ? Number(hours) : undefined);
   }
+
+  @RequirePermissions('AUDIT_VIEW')
+  @Get('audit-log')
+  auditLog(
+    @CurrentUser() user: AuthUser,
+    @Query('limit') limit?: string,
+    @Query('action') action?: string,
+  ) {
+    return this.reporting.auditLog(user.orgId, limit ? Number(limit) : undefined, action);
+  }
 }

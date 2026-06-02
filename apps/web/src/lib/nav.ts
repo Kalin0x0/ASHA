@@ -134,17 +134,17 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Observability',
     items: [
-      { label: 'Reporting', href: '/observability/reporting', icon: TrendingUp, phase: 3 },
-      { label: 'Audit Log', href: '/observability/audit-log', icon: ScrollText, phase: 3 },
-      { label: 'Metrics', href: '/observability/metrics', icon: Activity, phase: 3 },
-      { label: 'Log Forwarding', href: '/observability/log-forwarding', icon: Send, phase: 3 },
+      { label: 'Reporting', href: '/observability/reporting', icon: TrendingUp, built: true },
+      { label: 'Audit Log', href: '/observability/audit-log', icon: ScrollText, built: true },
+      { label: 'Metrics', href: '/observability/metrics', icon: Activity, built: true },
+      { label: 'Log Forwarding', href: '/observability/log-forwarding', icon: Send, built: true },
     ],
   },
   {
     label: 'Developer',
     items: [
-      { label: 'API Keys', href: '/developer/api-keys', icon: KeyRound, phase: 3 },
-      { label: 'Webhooks', href: '/developer/webhooks', icon: Webhook, phase: 3 },
+      { label: 'API Keys', href: '/developer/api-keys', icon: KeyRound, built: true },
+      { label: 'Webhooks', href: '/developer/webhooks', icon: Webhook, built: true },
       { label: 'API Docs', href: '/developer/api-docs', icon: BookOpen, phase: 1 },
     ],
   },

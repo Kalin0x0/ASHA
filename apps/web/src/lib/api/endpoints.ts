@@ -488,3 +488,129 @@ export const upsertAutoscale = (poolId: string, body: Partial<ApiAutoscaleConfig
   apiFetch<ApiAutoscaleConfig>(`/pools/${poolId}/autoscale`, { method: 'PUT', body });
 export const disableAutoscale = (poolId: string) =>
   apiFetch<{ ok: true }>(`/pools/${poolId}/autoscale`, { method: 'DELETE' });
+
+// ── Reporting + metrics + audit ───────────────────────────────────────────────
+
+export interface ApiReportSummary {
+  totalSessions: number;
+  activeSessions: number;
+  totalWorkspaces: number;
+  agents: { online: number; total: number };
+  recordings: number;
+}
+export interface ApiSessionsOverTime {
+  since: string;
+  series: Array<{ date: string; count: number }>;
+}
+export interface ApiTopWorkspace {
+  workspaceId: string;
+  name: string;
+  sessions: number;
+}
+export interface ApiMetricSeries {
+  metric: string;
+  since: string;
+  series: Array<{ hour: string; avg: number }>;
+}
+export interface ApiAuditEntry {
+  id: string;
+  action: string;
+  actorUserId: string | null;
+  targetType: string | null;
+  targetId: string | null;
+  ip: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export const getReportSummary = () => apiFetch<ApiReportSummary>('/reporting/summary');
+export const getSessionsOverTime = (days = 30) =>
+  apiFetch<ApiSessionsOverTime>(`/reporting/sessions-over-time?days=${days}`);
+export const getTopWorkspaces = (days = 30, limit = 10) =>
+  apiFetch<ApiTopWorkspace[]>(`/reporting/top-workspaces?days=${days}&limit=${limit}`);
+export const getMetricSeries = (metric: string, hours = 24) =>
+  apiFetch<ApiMetricSeries>(`/reporting/metrics?metric=${encodeURIComponent(metric)}&hours=${hours}`);
+export const getAuditLog = (limit = 100, action?: string) =>
+  apiFetch<ApiAuditEntry[]>(`/reporting/audit-log?limit=${limit}${action ? `&action=${encodeURIComponent(action)}` : ''}`);
+
+// ── Log forwarders ────────────────────────────────────────────────────────────
+
+export type LogForwarderType = 'syslog' | 'splunk_hec' | 'elasticsearch' | 'loki' | 'http';
+export interface ApiLogForwarder {
+  id: string;
+  name: string;
+  type: LogForwarderType;
+  endpoint: string | null;
+  enabled: boolean;
+  config: Record<string, unknown>;
+  createdAt: string;
+}
+export const getLogForwarders = () => apiFetch<ApiLogForwarder[]>('/log-forwarders');
+export const createLogForwarder = (body: {
+  name: string;
+  type: LogForwarderType;
+  endpoint?: string;
+  config?: Record<string, unknown>;
+  enabled?: boolean;
+}) => apiFetch<ApiLogForwarder>('/log-forwarders', { method: 'POST', body });
+export const updateLogForwarder = (id: string, body: Partial<{ name: string; endpoint: string; enabled: boolean; config: Record<string, unknown> }>) =>
+  apiFetch<ApiLogForwarder>(`/log-forwarders/${id}`, { method: 'PATCH', body });
+export const deleteLogForwarder = (id: string) =>
+  apiFetch<{ ok: true }>(`/log-forwarders/${id}`, { method: 'DELETE' });
+export const getFluentBitConfig = (id: string) =>
+  apiFetch<{ config: string }>(`/log-forwarders/${id}/fluent-bit-config`);
+
+// ── Webhooks ──────────────────────────────────────────────────────────────────
+
+export interface ApiWebhook {
+  id: string;
+  name: string;
+  url: string;
+  events: string[];
+  enabled: boolean;
+  createdAt: string;
+}
+export interface ApiWebhookDelivery {
+  id: string;
+  event: string;
+  status: number | null;
+  success: boolean;
+  createdAt: string;
+}
+export const getWebhooks = () => apiFetch<ApiWebhook[]>('/webhooks');
+export const createWebhook = (body: {
+  name: string;
+  url: string;
+  events: string[];
+  secret?: string;
+  enabled?: boolean;
+}) => apiFetch<ApiWebhook>('/webhooks', { method: 'POST', body });
+export const updateWebhook = (id: string, body: Partial<{ name: string; url: string; events: string[]; enabled: boolean }>) =>
+  apiFetch<ApiWebhook>(`/webhooks/${id}`, { method: 'PATCH', body });
+export const deleteWebhook = (id: string) =>
+  apiFetch<{ ok: true }>(`/webhooks/${id}`, { method: 'DELETE' });
+export const getWebhookDeliveries = (id: string) =>
+  apiFetch<ApiWebhookDelivery[]>(`/webhooks/${id}/deliveries`);
+export const testWebhook = (id: string) =>
+  apiFetch<{ ok: boolean; status?: number }>(`/webhooks/${id}/test`, { method: 'POST' });
+
+// ── API keys ──────────────────────────────────────────────────────────────────
+
+export interface ApiApiKey {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+export const getApiKeys = () => apiFetch<ApiApiKey[]>('/api-keys');
+export const createApiKey = (body: { name: string; scopes?: string[]; expiresInDays?: number }) =>
+  apiFetch<{ id: string; name: string; prefix: string; token: string; scopes: string[]; expiresAt: string | null }>(
+    '/api-keys',
+    { method: 'POST', body },
+  );
+export const revokeApiKey = (id: string) =>
+  apiFetch<{ ok: true }>(`/api-keys/${id}`, { method: 'DELETE' });

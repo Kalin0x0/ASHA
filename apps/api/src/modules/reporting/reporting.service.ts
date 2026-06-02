@@ -109,4 +109,14 @@ export class ReportingService {
         .sort((a, b) => a.hour.localeCompare(b.hour)),
     };
   }
+
+  /** Recent audit-log entries (most recent first), optionally filtered by action. */
+  async auditLog(orgId: string, limit = 100, action?: string) {
+    const take = Math.min(Math.max(limit, 1), 500);
+    return prisma.auditLog.findMany({
+      where: { orgId, ...(action ? { action: { contains: action, mode: 'insensitive' } } : {}) },
+      orderBy: { createdAt: 'desc' },
+      take,
+    });
+  }
 }
