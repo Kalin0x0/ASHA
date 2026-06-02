@@ -202,4 +202,10 @@ and reading the runtime paths.
       DB-level backstop (`packages/db/prisma/rls/tenant_isolation.sql`) —
       full enforcement requires connecting as a non-owner role with `SET LOCAL`
       inside every transaction (Phase 3+ deployment step).
-- [ ] Refresh-token reuse/family replay detection is not enforced (Phase 3).
+- [x] **Refresh-token reuse / family replay detection.** Rotation now carries
+      the `family` id forward across every refresh (was minting a fresh family
+      each time, breaking the chain). Presenting an already-rotated (revoked)
+      token is treated as a leak: the entire family is revoked in one sweep,
+      an `auth.refresh_replay_detected` audit record is written, and the caller
+      is forced to re-login. Forged, expired, and suspended-user paths reject
+      without touching the family. 6 unit tests.

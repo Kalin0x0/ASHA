@@ -75,14 +75,35 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
     const stored = await prisma.refreshToken.findUnique({ where: { tokenHash: hashToken(refreshToken) } });
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh token revoked or expired');
+    if (!stored) throw new UnauthorizedException('Invalid refresh token');
+
+    // Replay detection: a token that was already rotated (revoked) is being
+    // presented again. The legitimate client holds the *successor* token, so a
+    // hit here means the token leaked and an attacker is replaying it. Burn the
+    // entire rotation family — both the thief's and the victim's tokens — which
+    // forces a fresh login and contains the breach.
+    if (stored.revokedAt) {
+      await prisma.refreshToken.updateMany({
+        where: { family: stored.family, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await this.audit.record({
+        orgId: (await prisma.user.findUnique({ where: { id: stored.userId } }))?.orgId ?? 'unknown',
+        actorUserId: stored.userId,
+        action: 'auth.refresh_replay_detected',
+        metadata: { family: stored.family },
+      });
+      throw new UnauthorizedException('Refresh token reuse detected — all sessions revoked');
     }
+
+    if (stored.expiresAt < new Date()) throw new UnauthorizedException('Refresh token expired');
+
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user || user.status !== 'ACTIVE') throw new UnauthorizedException('User unavailable');
 
     await prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
-    return this.issueTokens(user);
+    // Carry the rotation family forward so the full chain stays linked.
+    return this.issueTokens(user, stored.family);
   }
 
   async logout(userId: string, refreshToken?: string) {
@@ -155,7 +176,15 @@ export class AuthService {
     return { ok: true };
   }
 
-  private async issueTokens(user: { id: string; orgId: string; email: string; isSystemAdmin: boolean }) {
+  /**
+   * Mint an access/refresh pair. On a fresh login `family` is omitted and a new
+   * rotation family is created; on refresh the caller passes the existing family
+   * so the chain stays linked and replay detection can burn it as a unit.
+   */
+  private async issueTokens(
+    user: { id: string; orgId: string; email: string; isSystemAdmin: boolean },
+    family?: string,
+  ) {
     const payload = {
       sub: user.id,
       orgId: user.orgId,
@@ -174,7 +203,7 @@ export class AuthService {
       data: {
         userId: user.id,
         tokenHash: hashToken(refreshToken),
-        family: randomToken(8),
+        family: family ?? randomToken(8),
         expiresAt: new Date(Date.now() + this.env.JWT_REFRESH_TTL * 1000),
       },
     });
