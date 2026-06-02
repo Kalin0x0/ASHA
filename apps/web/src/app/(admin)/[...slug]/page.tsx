@@ -18,7 +18,6 @@ export default async function CatchAllAdminPage({
         title={item?.label ?? 'Module'}
         section={match?.group.label}
         icon={item?.icon ?? Boxes}
-        phase={item?.phase ?? 2}
       />
     </div>
   );

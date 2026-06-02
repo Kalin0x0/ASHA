@@ -30,7 +30,6 @@ export default function RecordingsPage() {
       <PageHeader
         title="Session Recordings"
         description="Record, store and replay session streams. Recordings are saved to S3-compatible object storage and can be downloaded or reviewed in-browser."
-        actions={<Badge variant="info">Phase 2</Badge>}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

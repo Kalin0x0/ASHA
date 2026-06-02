@@ -3,7 +3,6 @@
 import { Link2, MessageSquare, Share2, Users } from 'lucide-react';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
-import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 
 export default function SharingPage() {
@@ -12,9 +11,6 @@ export default function SharingPage() {
       <PageHeader
         title="Session Sharing"
         description="Share live workspace sessions with collaborators using time-limited invite links. Guests can view or interact depending on the permission level you grant."
-        actions={
-          <Badge variant="info">Phase 2</Badge>
-        }
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

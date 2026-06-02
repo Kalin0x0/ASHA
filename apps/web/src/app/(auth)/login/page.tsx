@@ -19,8 +19,8 @@ import { isLive } from '@/lib/api/mode';
 export default function LoginPage() {
   const router = useRouter();
   const { login, loginWithPasskey } = useAuth();
-  const [email, setEmail] = useState('admin@chista.local');
-  const [password, setPassword] = useState('ChistaAdmin!2026');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [ssoProviders, setSsoProviders] = useState<ApiPublicAuthProvider[]>([]);
@@ -73,9 +73,12 @@ export default function LoginPage() {
   return (
     <div className="glass-strong rounded-2xl p-8 shadow-[var(--shadow-lifted)]">
       <div className="flex flex-col items-center gap-2 text-center">
-        <Logo />
-        <h1 className="mt-4 font-display text-2xl font-medium">Welcome back</h1>
-        <p className="text-sm text-muted-foreground">Sign in to your Chista deployment</p>
+        <div className="relative mb-1">
+          <Logo showMark={false} />
+          <div className="absolute -inset-3 rounded-full bg-gold-500/5 blur-xl" />
+        </div>
+        <h1 className="font-display text-2xl font-medium">Welcome back</h1>
+        <p className="text-sm text-muted-foreground">Sign in to continue to your workspace</p>
       </div>
 
       <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-4">

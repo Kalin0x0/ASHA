@@ -84,8 +84,8 @@ export function Topbar() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <div className="px-2.5 py-2">
-            <p className="text-sm font-medium">Shahin Naiemi</p>
-            <p className="text-xs text-muted-foreground">admin@chista.local</p>
+            <p className="text-sm font-medium">Administrator</p>
+            <p className="text-xs text-muted-foreground">Chista Admin</p>
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => router.push('/settings/general')}>

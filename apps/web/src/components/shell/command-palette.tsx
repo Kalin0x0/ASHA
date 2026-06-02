@@ -77,11 +77,6 @@ export function CommandPalette() {
                       icon={<item.icon className="size-4" />}
                     >
                       {item.label}
-                      {!item.built && (
-                        <span className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground/70">
-                          soon
-                        </span>
-                      )}
                     </Item>
                   ))}
                 </Command.Group>
