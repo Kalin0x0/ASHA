@@ -34,12 +34,16 @@ launch → stream flow against a real KasmVNC container.
       stays the default. Auth context + token store + refresh + route guard.
 - [x] **Real login** — login form calls `POST /auth/login` in live mode, stores
       the JWT pair, auto-refreshes on 401, and `AuthGate` guards admin/portal.
-- [ ] **API integration tests** — session lifecycle (create → provision →
-      status → terminate) with mocked Redis/Prisma.
-- [ ] **Workspace edit/delete** — controller routes exist; add service logic.
-- [ ] Persist Traefik certs (named volume) in docker-compose.
+- [x] **API integration tests** — SessionsService create/terminate lifecycle
+      (create → schedule → provision dispatch → terminate) with mocked
+      Prisma/Redis/deps (9 new tests; 68 total).
+- [x] **Workspace edit/delete** — `PATCH`/`DELETE /workspaces/:id` with
+      org-scoped update/deleteMany + `updateWorkspaceSchema` (partial, no-op
+      rejected).
+- [x] Persist Traefik certs — `traefik-acme` named volume + documented opt-in
+      Let's Encrypt resolver in docker-compose.
 - [ ] Embed verification: run a real `kasmweb/*` container and confirm the
-      viewer streams end to end.
+      viewer streams end to end. *(Phase-1 task #4 below)*
 
 ---
 

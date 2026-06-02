@@ -5,6 +5,7 @@ import {
   createWorkspaceSchema,
   loginSchema,
   sessionStatusSchema,
+  updateWorkspaceSchema,
 } from './index';
 
 describe('loginSchema', () => {
@@ -48,6 +49,25 @@ describe('createWorkspaceSchema', () => {
   it('rejects a negative gpuCount', () => {
     const result = createWorkspaceSchema.safeParse({ name: 'x', friendlyName: 'X', gpuCount: -1 });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('updateWorkspaceSchema', () => {
+  it('accepts a partial update', () => {
+    const r = updateWorkspaceSchema.safeParse({ enabled: false });
+    expect(r.success).toBe(true);
+  });
+  it('rejects an empty update (no fields)', () => {
+    expect(updateWorkspaceSchema.safeParse({}).success).toBe(false);
+  });
+  it('does not inject create defaults', () => {
+    const r = updateWorkspaceSchema.parse({ friendlyName: 'Renamed' });
+    expect(r).toEqual({ friendlyName: 'Renamed' });
+    expect('gpuCount' in r).toBe(false);
+  });
+  it('still validates field types', () => {
+    expect(updateWorkspaceSchema.safeParse({ gpuCount: -1 }).success).toBe(false);
+    expect(updateWorkspaceSchema.safeParse({ type: 'BOGUS' }).success).toBe(false);
   });
 });
 

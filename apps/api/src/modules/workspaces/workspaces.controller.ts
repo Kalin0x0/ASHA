@@ -1,6 +1,11 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { type CreateWorkspaceDto, createWorkspaceSchema } from '@chista/contracts';
+import {
+  type CreateWorkspaceDto,
+  createWorkspaceSchema,
+  type UpdateWorkspaceDto,
+  updateWorkspaceSchema,
+} from '@chista/contracts';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { WorkspacesService } from './workspaces.service';
@@ -33,5 +38,21 @@ export class WorkspacesController {
   @Post()
   create(@CurrentUser() user: AuthUser, @Body(new ZodPipe(createWorkspaceSchema)) dto: CreateWorkspaceDto) {
     return this.workspaces.create(user.orgId, dto);
+  }
+
+  @RequirePermissions('WORKSPACE_EDIT')
+  @Patch(':id')
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body(new ZodPipe(updateWorkspaceSchema)) dto: UpdateWorkspaceDto,
+  ) {
+    return this.workspaces.update(user.orgId, id, dto);
+  }
+
+  @RequirePermissions('WORKSPACE_DELETE')
+  @Delete(':id')
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.workspaces.remove(user.orgId, id);
   }
 }

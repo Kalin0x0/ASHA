@@ -13,6 +13,8 @@ networks:
 volumes:
   pg-data: {}
   redis-data: {}
+  # Persists ACME/Let's Encrypt certificates across restarts (see traefik below).
+  traefik-acme: {}
 
 services:
   traefik:
@@ -29,12 +31,20 @@ services:
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --api.dashboard=true
+      # Production TLS: uncomment to issue + auto-renew Let's Encrypt certs into
+      # the persisted /letsencrypt volume, then add
+      # `--label traefik.http.routers.<r>.tls.certresolver=le` (or set it on the
+      # session router labels). Dev uses Traefik's default self-signed cert.
+      # - --certificatesresolvers.le.acme.tlschallenge=true
+      # - --certificatesresolvers.le.acme.email=admin@chista.local
+      # - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
     ports:
       - '80:80'
       - '443:443'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik-acme:/letsencrypt
     networks: [chista-edge, chista-sessions]
 
   postgres:

@@ -34,6 +34,26 @@ export const createWorkspaceSchema = z.object({
 });
 export type CreateWorkspaceDto = z.infer<typeof createWorkspaceSchema>;
 
+// Partial update: every field optional, no defaults injected, plus an `enabled`
+// toggle. At least one field must be present so a no-op PATCH is rejected.
+export const updateWorkspaceSchema = z
+  .object({
+    name: z.string().min(1),
+    friendlyName: z.string().min(1),
+    description: z.string(),
+    type: z.enum(['CONTAINER', 'SERVER', 'REMOTE_APP', 'VM', 'LINK']),
+    imageId: z.string(),
+    categories: z.array(z.string()),
+    coresLimit: z.number(),
+    memLimitMb: z.number(),
+    gpuCount: z.number().int().min(0),
+    dockerConfig: z.record(z.unknown()),
+    enabled: z.boolean(),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateWorkspaceDto = z.infer<typeof updateWorkspaceSchema>;
+
 // ── Agent (internal) ─────────────────────────────────────────────────────────
 export const agentRegisterSchema = z.object({
   enrollmentToken: z.string().min(1),
