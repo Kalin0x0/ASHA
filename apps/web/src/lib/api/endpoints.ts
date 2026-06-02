@@ -378,3 +378,113 @@ export const updateVMProvider = (id: string, body: Partial<{ name: string; enabl
   apiFetch<ApiVMProvider>(`/providers/vm/${id}`, { method: 'PATCH', body });
 export const deleteVMProvider = (id: string) =>
   apiFetch<{ ok: true }>(`/providers/vm/${id}`, { method: 'DELETE' });
+
+// ── DNS providers ─────────────────────────────────────────────────────────────
+
+export type DNSProviderKind = 'AWS' | 'AZURE' | 'DIGITALOCEAN' | 'GCP' | 'ORACLE';
+
+export interface ApiDNSProvider {
+  id: string;
+  name: string;
+  provider: DNSProviderKind;
+  zoneName: string | null;
+  enabled: boolean;
+  config: Record<string, unknown>;
+  createdAt: string;
+}
+
+export const getDNSProviders = () => apiFetch<ApiDNSProvider[]>('/providers/dns');
+export const createDNSProvider = (body: {
+  name: string;
+  provider: DNSProviderKind;
+  zoneName?: string;
+  config: Record<string, unknown>;
+  enabled?: boolean;
+}) => apiFetch<ApiDNSProvider>('/providers/dns', { method: 'POST', body });
+export const updateDNSProvider = (id: string, body: Partial<{ name: string; zoneName: string; enabled: boolean; config: Record<string, unknown> }>) =>
+  apiFetch<ApiDNSProvider>(`/providers/dns/${id}`, { method: 'PATCH', body });
+export const deleteDNSProvider = (id: string) =>
+  apiFetch<{ ok: true }>(`/providers/dns/${id}`, { method: 'DELETE' });
+
+// ── Zones (CRUD) ──────────────────────────────────────────────────────────────
+
+export const createZone = (body: {
+  name: string;
+  region?: string;
+  isDefault?: boolean;
+  proxyBaseUrl?: string;
+}) => apiFetch<ApiZone>('/zones', { method: 'POST', body });
+export const updateZone = (id: string, body: Partial<{ name: string; region: string; isDefault: boolean; proxyBaseUrl: string }>) =>
+  apiFetch<ApiZone>(`/zones/${id}`, { method: 'PATCH', body });
+export const deleteZone = (id: string) =>
+  apiFetch<{ ok: true }>(`/zones/${id}`, { method: 'DELETE' });
+
+// ── Servers ─────────────────────────────────────────────────────────────────
+
+export interface ApiServer {
+  id: string;
+  zoneId: string;
+  hostname: string;
+  address: string;
+  connectionType: 'SSH' | 'RDP' | 'VNC';
+  authMode: 'PASSWORD' | 'KEY' | 'VMWARE_TEMPLATE';
+  continuity: 'NONE' | 'TMUX' | 'SCREEN';
+  maxSessions: number;
+  currentSessions?: number;
+  status?: string;
+  zone?: { name: string } | null;
+}
+
+export const getServers = () => apiFetch<ApiServer[]>('/servers');
+export const createServer = (body: {
+  zoneId: string;
+  hostname: string;
+  address: string;
+  connectionType?: 'SSH' | 'RDP' | 'VNC';
+  authMode?: 'PASSWORD' | 'KEY' | 'VMWARE_TEMPLATE';
+  continuity?: 'NONE' | 'TMUX' | 'SCREEN';
+  maxSessions?: number;
+}) => apiFetch<ApiServer>('/servers', { method: 'POST', body });
+export const updateServer = (id: string, body: Partial<{ hostname: string; address: string; maxSessions: number }>) =>
+  apiFetch<ApiServer>(`/servers/${id}`, { method: 'PATCH', body });
+export const deleteServer = (id: string) =>
+  apiFetch<{ ok: true }>(`/servers/${id}`, { method: 'DELETE' });
+
+// ── Server pools + autoscale ──────────────────────────────────────────────────
+
+export interface ApiAutoscaleConfig {
+  mode: 'SCHEDULE' | 'LOAD' | 'ACTIVE_DIRECTORY';
+  minStandby: number;
+  maxInstances: number;
+  perServerSessionLimit: number;
+  checkinIntervalSec: number;
+  downscaleBackoffSec: number;
+  vmProviderId: string | null;
+  dnsProviderId: string | null;
+}
+
+export interface ApiServerPool {
+  id: string;
+  name: string;
+  kind: 'SERVER' | 'AGENT';
+  startupScript: string | null;
+  enabled: boolean;
+  autoscaleConfig: ApiAutoscaleConfig | null;
+  _count?: { members: number };
+}
+
+export const getPools = () => apiFetch<ApiServerPool[]>('/pools');
+export const createPool = (body: {
+  name: string;
+  kind?: 'SERVER' | 'AGENT';
+  startupScript?: string;
+  enabled?: boolean;
+}) => apiFetch<ApiServerPool>('/pools', { method: 'POST', body });
+export const updatePool = (id: string, body: Partial<{ name: string; startupScript: string; enabled: boolean }>) =>
+  apiFetch<ApiServerPool>(`/pools/${id}`, { method: 'PATCH', body });
+export const deletePool = (id: string) =>
+  apiFetch<{ ok: true }>(`/pools/${id}`, { method: 'DELETE' });
+export const upsertAutoscale = (poolId: string, body: Partial<ApiAutoscaleConfig>) =>
+  apiFetch<ApiAutoscaleConfig>(`/pools/${poolId}/autoscale`, { method: 'PUT', body });
+export const disableAutoscale = (poolId: string) =>
+  apiFetch<{ ok: true }>(`/pools/${poolId}/autoscale`, { method: 'DELETE' });

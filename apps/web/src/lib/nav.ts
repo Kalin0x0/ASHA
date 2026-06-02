@@ -93,13 +93,13 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Infrastructure',
     items: [
-      { label: 'Zones', href: '/infrastructure/zones', icon: Globe, phase: 3 },
+      { label: 'Zones', href: '/infrastructure/zones', icon: Globe, built: true },
       { label: 'Agents', href: '/infrastructure/agents', icon: Server, built: true },
-      { label: 'Servers', href: '/infrastructure/servers', icon: HardDrive, phase: 2 },
-      { label: 'Server Pools', href: '/infrastructure/server-pools', icon: Network, phase: 3 },
-      { label: 'AutoScale', href: '/infrastructure/autoscale', icon: Gauge, phase: 3 },
+      { label: 'Servers', href: '/infrastructure/servers', icon: HardDrive, built: true },
+      { label: 'Server Pools', href: '/infrastructure/server-pools', icon: Network, built: true },
+      { label: 'AutoScale', href: '/infrastructure/autoscale', icon: Gauge, built: true },
       { label: 'VM Providers', href: '/infrastructure/vm-providers', icon: Cloud, built: true },
-      { label: 'DNS Providers', href: '/infrastructure/dns-providers', icon: Route, phase: 3 },
+      { label: 'DNS Providers', href: '/infrastructure/dns-providers', icon: Route, built: true },
     ],
   },
   {

@@ -1,0 +1,163 @@
+'use client';
+
+import { Globe, Loader2, Plus, Star, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { PageHeader } from '@/components/composite/page-header';
+import { StatCard } from '@/components/composite/stat-card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input, Label } from '@/components/ui/input';
+import {
+  type ApiZone,
+  createZone,
+  deleteZone,
+  getZones,
+  updateZone,
+} from '@/lib/api/endpoints';
+import { isLive } from '@/lib/api/mode';
+
+export default function ZonesPage() {
+  const [zones, setZones] = useState<ApiZone[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [region, setRegion] = useState('');
+  const [proxyBaseUrl, setProxyBaseUrl] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!isLive) return;
+    setLoading(true);
+    try {
+      setZones(await getZones());
+    } catch {
+      toast.error('Failed to load zones');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const onCreate = async () => {
+    if (!name) return;
+    setCreating(true);
+    try {
+      await createZone({ name, region: region || undefined, proxyBaseUrl: proxyBaseUrl || undefined });
+      toast.success('Zone created');
+      setName('');
+      setRegion('');
+      setProxyBaseUrl('');
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not create zone');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const onSetDefault = async (z: ApiZone) => {
+    setBusyId(z.id);
+    try {
+      await updateZone(z.id, { isDefault: true });
+      await refresh();
+    } catch {
+      toast.error('Could not set default');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const onDelete = async (id: string) => {
+    setBusyId(id);
+    try {
+      await deleteZone(id);
+      toast.success('Zone removed');
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not remove zone');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Zones"
+        description="Deployment zones group agents and servers by region for routing and capacity isolation."
+      />
+
+      {!isLive && (
+        <Card elevation={1} className="p-4 text-sm text-muted-foreground">
+          Zone management is live-backend only. Run with{' '}
+          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <StatCard label="Zones" value={zones.length} icon={Globe} primary />
+        <StatCard label="Regions" value={new Set(zones.map((z) => z.region).filter(Boolean)).size} icon={Globe} />
+      </div>
+
+      <Card elevation={1} className="overflow-hidden">
+        <div className="flex items-center justify-between border-b border-border-subtle p-4">
+          <h2 className="font-display text-lg font-medium">Configured zones</h2>
+          {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+        </div>
+        <div className="divide-y divide-border-subtle/60">
+          {zones.length === 0 ? (
+            <p className="p-5 text-sm text-muted-foreground">No zones configured yet.</p>
+          ) : (
+            zones.map((z) => (
+              <div key={z.id} className="flex items-center gap-3 px-5 py-3 text-sm">
+                <Globe className="size-4 text-gold-300" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{z.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{z.proxyBaseUrl ?? z.region ?? '—'}</p>
+                </div>
+                {z.region && <Badge variant="outline">{z.region}</Badge>}
+                {z.isDefault ? (
+                  <Badge variant="gold">Default</Badge>
+                ) : (
+                  <Button variant="ghost" size="icon-sm" title="Set default" disabled={busyId === z.id} onClick={() => void onSetDefault(z)}>
+                    <Star className="size-4" />
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon-sm" disabled={busyId === z.id} onClick={() => void onDelete(z.id)}>
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+
+      <Card elevation={1} className="space-y-4 p-5">
+        <h2 className="font-display text-lg font-medium">Add zone</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div>
+            <Label>Name</Label>
+            <Input placeholder="eu-central" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div>
+            <Label>Region (optional)</Label>
+            <Input placeholder="Frankfurt" value={region} onChange={(e) => setRegion(e.target.value)} />
+          </div>
+          <div>
+            <Label>Proxy Base URL (optional)</Label>
+            <Input placeholder="https://eu.chista.local" value={proxyBaseUrl} onChange={(e) => setProxyBaseUrl(e.target.value)} />
+          </div>
+        </div>
+        <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !name || creating}>
+          {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+          Add zone
+        </Button>
+      </Card>
+    </div>
+  );
+}
