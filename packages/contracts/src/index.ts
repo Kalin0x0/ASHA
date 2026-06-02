@@ -640,3 +640,26 @@ export const upsertLicenseSchema = z.object({
   features: z.record(z.unknown()).default({}),
 });
 export type UpsertLicenseDto = z.infer<typeof upsertLicenseSchema>;
+
+// ── Settings: branding + general + config import/export ───────────────────────
+export const upsertBrandingSchema = z.object({
+  productName: z.string().min(1).max(120).optional(),
+  logoUrl: z.string().url().max(1000).optional().or(z.literal('')),
+  faviconUrl: z.string().url().max(1000).optional().or(z.literal('')),
+  loginBackgroundUrl: z.string().url().max(1000).optional().or(z.literal('')),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Expected a #rrggbb hex color').optional(),
+  accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Expected a #rrggbb hex color').optional(),
+  customCss: z.string().max(20000).optional().or(z.literal('')),
+});
+export type UpsertBrandingDto = z.infer<typeof upsertBrandingSchema>;
+
+export const upsertSettingsSchema = z.object({
+  settings: z.array(z.object({ key: z.string().min(1).max(120), value: z.unknown() })).max(100),
+});
+export type UpsertSettingsDto = z.infer<typeof upsertSettingsSchema>;
+
+export const importConfigSchema = z.object({
+  branding: upsertBrandingSchema.optional(),
+  settings: z.array(z.object({ key: z.string().min(1).max(120), value: z.unknown() })).max(100).optional(),
+});
+export type ImportConfigDto = z.infer<typeof importConfigSchema>;

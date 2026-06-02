@@ -123,12 +123,12 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Settings',
     items: [
-      { label: 'General', href: '/settings/general', icon: Settings2, phase: 2 },
-      { label: 'Branding', href: '/settings/branding', icon: Palette, phase: 4 },
-      { label: 'Banners', href: '/settings/banners', icon: Flag, phase: 3 },
+      { label: 'General', href: '/settings/general', icon: Settings2, built: true },
+      { label: 'Branding', href: '/settings/branding', icon: Palette, built: true },
+      { label: 'Banners', href: '/settings/banners', icon: Flag, built: true },
       { label: 'Licensing', href: '/settings/licensing', icon: BadgeCheck, built: true },
       { label: 'Database', href: '/settings/database', icon: DatabaseBackup, built: true },
-      { label: 'Config Import/Export', href: '/settings/config', icon: FileJson, phase: 3 },
+      { label: 'Config Import/Export', href: '/settings/config', icon: FileJson, built: true },
     ],
   },
   {

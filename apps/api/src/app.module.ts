@@ -20,6 +20,7 @@ import { LicensingModule } from './modules/licensing/licensing.module';
 import { LogForwardingModule } from './modules/log-forwarding/log-forwarding.module';
 import { RegistryModule } from './modules/registry/registry.module';
 import { ScimModule } from './modules/scim/scim.module';
+import { SettingsModule } from './modules/settings/settings.module';
 import { PoolsModule } from './modules/pools/pools.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { RecordingsModule } from './modules/recordings/recordings.module';
@@ -74,6 +75,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     RegistryModule,
     ScimModule,
     ApiKeysModule,
+    SettingsModule,
   ],
   providers: [
     // ThrottlerGuard runs first so rate-limit rejections short-circuit auth

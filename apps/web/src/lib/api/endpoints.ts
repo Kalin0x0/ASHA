@@ -771,3 +771,61 @@ export const deleteEgressGateway = (id: string) =>
   apiFetch<{ ok: true }>(`/connectivity/egress/${id}`, { method: 'DELETE' });
 export const getWireguardConfig = (id: string) =>
   apiFetch<{ config: string }>(`/connectivity/egress/${id}/wireguard-config`);
+
+// ── Settings: branding, general, config import/export ─────────────────────────
+
+export interface ApiBranding {
+  productName: string;
+  logoUrl: string | null;
+  faviconUrl: string | null;
+  loginBackgroundUrl: string | null;
+  primaryColor: string;
+  accentColor: string;
+  customCss: string | null;
+}
+export const getBranding = () => apiFetch<ApiBranding>('/settings/branding');
+export const upsertBranding = (body: Partial<ApiBranding>) =>
+  apiFetch<ApiBranding>('/settings/branding', { method: 'PUT', body });
+
+export interface ApiSetting {
+  id: string;
+  key: string;
+  valueJson: unknown;
+  updatedAt: string;
+}
+export const getGeneralSettings = () => apiFetch<ApiSetting[]>('/settings/general');
+export const upsertGeneralSettings = (settings: { key: string; value: unknown }[]) =>
+  apiFetch<ApiSetting[]>('/settings/general', { method: 'PUT', body: { settings } });
+
+export interface ApiConfigExport {
+  version: number;
+  exportedAt: string;
+  branding: Partial<ApiBranding> | null;
+  settings: { key: string; value: unknown }[];
+}
+export const exportConfig = () => apiFetch<ApiConfigExport>('/settings/config/export');
+export const importConfig = (body: { branding?: Partial<ApiBranding>; settings?: { key: string; value: unknown }[] }) =>
+  apiFetch<{ ok: true }>('/settings/config/import', { method: 'POST', body });
+
+// ── Banners / watermarks ──────────────────────────────────────────────────────
+
+export interface ApiBannerConfig {
+  id: string;
+  scope: 'USER' | 'GROUP' | 'WORKSPACE';
+  refId: string | null;
+  bannerText: string | null;
+  bannerColor: string | null;
+  watermarkText: string | null;
+  watermarkOpacity: number;
+}
+export const getBanners = () => apiFetch<ApiBannerConfig[]>('/watermarks');
+export const upsertBanner = (body: {
+  scope?: 'USER' | 'GROUP' | 'WORKSPACE';
+  refId?: string;
+  bannerText?: string;
+  bannerColor?: string;
+  watermarkText?: string;
+  watermarkOpacity?: number;
+}) => apiFetch<ApiBannerConfig>('/watermarks', { method: 'PUT', body });
+export const deleteBanner = (id: string) =>
+  apiFetch<{ ok: true }>(`/watermarks/${id}`, { method: 'DELETE' });
