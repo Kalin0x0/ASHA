@@ -145,7 +145,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: 'API Keys', href: '/developer/api-keys', icon: KeyRound, built: true },
       { label: 'Webhooks', href: '/developer/webhooks', icon: Webhook, built: true },
-      { label: 'API Docs', href: '/developer/api-docs', icon: BookOpen, phase: 1 },
+      { label: 'API Docs', href: '/developer/api-docs', icon: BookOpen, built: true },
     ],
   },
 ];
