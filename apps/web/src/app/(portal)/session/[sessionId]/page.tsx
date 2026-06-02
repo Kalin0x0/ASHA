@@ -2,6 +2,8 @@
 
 import {
   AlertTriangle,
+  Camera,
+  CameraOff,
   Check,
   Clipboard,
   Loader2,
@@ -13,9 +15,10 @@ import {
   Upload,
   Volume2,
   Wifi,
+  Usb,
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { ChistaMark } from '@/components/brand/logo';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -54,12 +57,15 @@ export default function StreamingViewerPage() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [frameReady, setFrameReady] = useState(false);
   const [clock, setClock] = useState('');
+  const [webcamOpen, setWebcamOpen] = useState(false);
 
   const workspaceName = session?.workspaceName ?? 'Workspace';
   const status = session?.status;
   const isRunning = status === 'RUNNING' || status === 'DEGRADED';
   const isError = status === 'ERROR' || status === 'DESTROYED' || status === 'TERMINATING';
   const connectionUrl = session?.connectionUrl;
+  const isWebRtc = session?.connectionType === 'NEKO_WEBRTC';
+  const protocolLabel = isWebRtc ? 'WebRTC/H.264' : (session?.connectionType ?? 'KasmVNC');
   // Connected = the session is live AND its embedded client has finished loading
   // (or there is no real stream to wait on, i.e. the placeholder surface).
   const connected = isRunning && (frameReady || !connectionUrl);
@@ -129,7 +135,9 @@ export default function StreamingViewerPage() {
 
         {connected && (
           <div className="ml-2 hidden items-center gap-1.5 rounded-md bg-anthracite-900/60 px-2.5 py-1 font-mono text-[11px] text-muted-foreground sm:flex">
-            <Wifi className="size-3 text-success" /> Live · {session?.connectionType ?? 'KasmVNC'}
+            <Wifi className="size-3 text-success" />
+            Live ·{' '}
+            <span className={cn(isWebRtc && 'text-gold-400')}>{protocolLabel}</span>
           </div>
         )}
 
@@ -142,6 +150,23 @@ export default function StreamingViewerPage() {
           </ControlButton>
           <ControlButton label="Audio" onClick={() => toast('Audio is controlled inside the stream')}>
             <Volume2 className="size-4" />
+          </ControlButton>
+          <ControlButton
+            label={webcamOpen ? 'Close camera' : 'Camera / webcam'}
+            onClick={() => setWebcamOpen((v) => !v)}
+          >
+            {webcamOpen ? <CameraOff className="size-4 text-gold-400" /> : <Camera className="size-4" />}
+          </ControlButton>
+          <ControlButton
+            label="USB / smartcard devices"
+            onClick={() =>
+              toast('Device passthrough', {
+                description:
+                  'Add device paths (e.g. /dev/video0, /dev/bus/usb, /dev/pcsc) to the workspace dockerConfig.devices array to forward hardware into the session container.',
+              })
+            }
+          >
+            <Usb className="size-4" />
           </ControlButton>
           <ControlButton label="Share session" onClick={onShare}>
             <Share2 className="size-4" />
@@ -171,11 +196,17 @@ export default function StreamingViewerPage() {
           <LiveStream
             url={connectionUrl}
             workspaceName={workspaceName}
+            isWebRtc={isWebRtc}
             ready={frameReady}
             onReady={() => setFrameReady(true)}
           />
         ) : (
           <PlaceholderStream workspaceName={workspaceName} clock={clock} />
+        )}
+
+        {/* Floating webcam capture panel — getUserMedia, stays in-frame as PiP */}
+        {webcamOpen && isRunning && (
+          <WebcamPanel isWebRtc={isWebRtc} onClose={() => setWebcamOpen(false)} />
         )}
       </div>
     </div>
@@ -207,37 +238,107 @@ function ControlButton({
   );
 }
 
-/** The real KasmVNC web client, embedded for the running session. */
+/** Embeds either the KasmVNC or Neko (WebRTC/H.264) client inside the session frame. */
 function LiveStream({
   url,
   workspaceName,
+  isWebRtc,
   ready,
   onReady,
 }: {
   url: string;
   workspaceName: string;
+  isWebRtc: boolean;
   ready: boolean;
   onReady: () => void;
 }) {
+  const loadingText = isWebRtc
+    ? 'Negotiating WebRTC/H.264 channel…'
+    : 'Establishing secure channel…';
+
   return (
     <div className="absolute inset-0 pt-12">
       <iframe
         src={url}
-        title={`${workspaceName} — live stream`}
+        title={`${workspaceName} — ${isWebRtc ? 'WebRTC/H.264' : 'live stream'}`}
         onLoad={onReady}
         className="size-full border-0 bg-anthracite-950"
-        // KasmVNC's web client needs scripts, same-origin storage, clipboard and
-        // pointer/fullscreen access within its own (trusted) session origin, so
-        // the frame is granted those capabilities rather than sandboxed.
+        // Neko/KasmVNC both need scripts + clipboard/pointer/fullscreen + WebRTC media.
         allow="fullscreen; clipboard-read; clipboard-write; autoplay; microphone; camera; display-capture"
         allowFullScreen
       />
       {!ready && (
         <div className="absolute inset-0 top-12 flex flex-col items-center justify-center gap-3 bg-aurora">
           <Loader2 className="size-6 animate-spin text-gold-400" />
-          <p className="text-sm text-muted-foreground">Establishing secure channel…</p>
+          <p className="text-sm text-muted-foreground">{loadingText}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Floating picture-in-picture webcam capture panel.
+ *
+ * For NEKO_WEBRTC sessions: webcam/mic are handled natively inside the Neko
+ * iframe (the `allow="camera; microphone"` attribute forwards them). This panel
+ * shows a local preview so the user can verify the device is active.
+ *
+ * For KasmVNC sessions: the device needs `/dev/video0` passed through via
+ * workspace dockerConfig.devices; the application in the container then accesses
+ * it directly. This panel gives a local preview and tells the user what to do.
+ */
+function WebcamPanel({ isWebRtc, onClose }: { isWebRtc: boolean; onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const startCamera = useCallback(async () => {
+    try {
+      const ms = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      setStream(ms);
+      if (videoRef.current) videoRef.current.srcObject = ms;
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, []);
+
+  useEffect(() => {
+    void startCamera();
+    return () => {
+      stream?.getTracks().forEach((t) => t.stop());
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="absolute bottom-4 right-4 z-30 flex w-72 flex-col overflow-hidden rounded-xl border border-white/10 bg-anthracite-900/90 shadow-[var(--shadow-lifted)] backdrop-blur">
+      <div className="flex items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Camera className="size-3.5 text-gold-400" />
+          {isWebRtc ? 'Camera preview (WebRTC)' : 'Camera preview'}
+        </span>
+        <button onClick={onClose} className="hover:text-foreground">✕</button>
+      </div>
+
+      {error ? (
+        <div className="px-3 pb-3 text-[11px] text-destructive">{error}</div>
+      ) : (
+        // eslint-disable-next-line jsx-a11y/media-has-caption
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className="aspect-video w-full bg-anthracite-950 object-cover"
+        />
+      )}
+
+      <p className="px-3 pb-2.5 pt-1.5 text-[10px] leading-relaxed text-muted-foreground">
+        {isWebRtc
+          ? 'Neko handles camera/mic natively — it is forwarded into the session via WebRTC.'
+          : 'For KasmVNC: add /dev/video0 to workspace dockerConfig.devices to pass the device into the container.'}
+      </p>
     </div>
   );
 }

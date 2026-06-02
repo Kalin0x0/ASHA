@@ -31,6 +31,17 @@ const WORKSPACE = {
   friendlyName: 'Firefox',
 };
 
+const NEKO_WORKSPACE = {
+  ...WORKSPACE,
+  id: 'ws-neko',
+  image: {
+    protocol: 'WEBRTC',
+    dockerImage: 'ghcr.io/m1k1o/neko/firefox:latest',
+    runConfigDefaults: {},
+  },
+  dockerConfig: { devices: ['/dev/video0', '/dev/snd'] },
+};
+
 const USER = { sub: 'user1', orgId: 'org1' } as never;
 
 describe('SessionsService.create', () => {
@@ -89,6 +100,29 @@ describe('SessionsService.create', () => {
   it('rejects a disabled or missing workspace', async () => {
     prismaMock.workspace.findUnique.mockResolvedValue(null);
     await expect(svc.create(USER, { workspaceId: 'nope' })).rejects.toThrow();
+  });
+
+  it('sets NEKO_WEBRTC connectionType and port 8080 for a WEBRTC workspace', async () => {
+    scheduler.pickAgent.mockResolvedValue({ id: 'agent1' });
+    prismaMock.workspace.findUnique.mockResolvedValue(NEKO_WORKSPACE);
+    prismaMock.session.create.mockResolvedValue({ id: 'sess2', kasmId: 'kid2', orgId: 'org1', zoneId: 'zone1' });
+    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess2', kasmId: 'kid2', orgId: 'org1', zoneId: 'zone1' });
+
+    await svc.create(USER, { workspaceId: 'ws-neko' });
+
+    expect(prismaMock.session.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ connectionType: 'NEKO_WEBRTC' }) }),
+    );
+    expect(redis.publish).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        protocol: 'WEBRTC',
+        runConfig: expect.objectContaining({
+          ports: [8080],
+          devices: ['/dev/video0', '/dev/snd'],
+        }),
+      }),
+    );
   });
 });
 

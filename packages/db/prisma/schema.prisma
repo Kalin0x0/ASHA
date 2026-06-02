@@ -71,6 +71,7 @@ enum StreamProtocol {
   RDP
   VNC
   SSH
+  WEBRTC
 }
 
 enum RegistryType {
@@ -92,6 +93,7 @@ enum SessionStatus {
 
 enum ConnectionType {
   KASMVNC
+  NEKO_WEBRTC
   GUAC_RDP
   GUAC_VNC
   GUAC_SSH

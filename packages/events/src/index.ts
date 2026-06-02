@@ -28,6 +28,12 @@ export interface RunConfig {
   memLimitMb?: number;
   gpuCount?: number;
   volumes?: Array<{ source: string; target: string; readOnly?: boolean }>;
+  /**
+   * Host device paths to pass through into the container.
+   * Examples: "/dev/video0" (webcam), "/dev/bus/usb" (USB), "/dev/pcsc" (smartcard).
+   * Docker maps these 1:1; Kubernetes mounts them as CharDevice hostPath volumes.
+   */
+  devices?: string[];
 }
 
 /**
@@ -53,7 +59,7 @@ export interface ProvisionCommand {
   orgId: string;
   workspaceId: string;
   zone: string;
-  protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH';
+  protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' | 'WEBRTC';
   runConfig: RunConfig;
   /** Open-source sidecars to co-launch with the session container. */
   sidecars?: {

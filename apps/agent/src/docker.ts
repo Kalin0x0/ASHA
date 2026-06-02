@@ -86,6 +86,12 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
       Memory: cmd.runConfig.memLimitMb ? cmd.runConfig.memLimitMb * 2 ** 20 : undefined,
       NanoCpus: cmd.runConfig.cores ? Math.round(cmd.runConfig.cores * 1e9) : undefined,
       RestartPolicy: { Name: 'no' },
+      // Device passthrough: webcam (/dev/video0), USB (/dev/bus/usb), smartcard (/dev/pcsc), etc.
+      Devices: cmd.runConfig.devices?.map((p) => ({
+        PathOnHost: p,
+        PathInContainer: p,
+        CgroupPermissions: 'rwm',
+      })),
     },
   });
 

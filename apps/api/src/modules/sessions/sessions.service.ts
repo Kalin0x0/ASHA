@@ -36,6 +36,10 @@ export class SessionsService {
     if (!zone) throw new BadRequestException('No deployment zone available');
 
     const protocol = workspace.image?.protocol ?? 'KASMVNC';
+    const connectionType =
+      protocol === 'KASMVNC' ? 'KASMVNC'
+      : protocol === 'WEBRTC' ? 'NEKO_WEBRTC'
+      : 'GUAC_RDP';
     // Hard lifetime cap: the reaper terminates the session once expiresAt passes.
     const expiresAt = workspace.maxDurationMinutes
       ? new Date(Date.now() + workspace.maxDurationMinutes * 60_000)
@@ -48,7 +52,7 @@ export class SessionsService {
         imageId: workspace.imageId,
         zoneId: zone.id,
         status: 'REQUESTED',
-        connectionType: protocol === 'KASMVNC' ? 'KASMVNC' : 'GUAC_RDP',
+        connectionType,
         workspaceName: workspace.friendlyName,
         imageName: workspace.image?.friendlyName,
         launchValues: (dto.launchValues ?? {}) as object,
@@ -90,7 +94,7 @@ export class SessionsService {
     workspace: {
       id: string;
       orgId: string;
-      image: { dockerImage: string; runConfigDefaults: unknown } | null;
+      image: { dockerImage: string; runConfigDefaults: unknown; protocol?: string } | null;
       dockerConfig: unknown;
       coresLimit: number | null;
       memLimitMb: number | null;
@@ -99,21 +103,28 @@ export class SessionsService {
       egressGatewayId?: string | null;
       browserIsolationId?: string | null;
     },
-    protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH',
+    protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' | 'WEBRTC',
   ) {
     const session = await prisma.session.findUnique({ where: { id: sessionId } });
     if (!session) return;
 
     const defaults = (workspace.image?.runConfigDefaults ?? {}) as { ports?: number[] };
-    const dockerCfg = (workspace.dockerConfig ?? {}) as { shmSize?: string };
+    const dockerCfg = (workspace.dockerConfig ?? {}) as {
+      shmSize?: string;
+      /** Host device paths to pass through, e.g. "/dev/video0", "/dev/bus/usb", "/dev/pcsc". */
+      devices?: string[];
+    };
+    // Neko (WEBRTC) listens on 8080; all other images use the image's default (6901).
+    const defaultPort = protocol === 'WEBRTC' ? 8080 : 6901;
     const runConfig: RunConfig = {
       dockerImage: workspace.image?.dockerImage ?? 'kasmweb/firefox:1.16.0',
       env: {},
-      ports: defaults.ports ?? [6901],
-      shmSize: dockerCfg.shmSize ?? '1g',
+      ports: defaults.ports ?? [defaultPort],
+      shmSize: dockerCfg.shmSize ?? (protocol === 'WEBRTC' ? '2g' : '1g'),
       cores: workspace.coresLimit ?? undefined,
       memLimitMb: workspace.memLimitMb ?? undefined,
       gpuCount: workspace.gpuCount,
+      ...(dockerCfg.devices?.length ? { devices: dockerCfg.devices } : {}),
     };
 
     // Resolve open-source sidecar descriptors from workspace connectivity policy.

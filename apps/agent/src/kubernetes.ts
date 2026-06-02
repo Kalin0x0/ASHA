@@ -106,14 +106,21 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
               ...(cmd.runConfig.memLimitMb ? { memory: `${cmd.runConfig.memLimitMb}Mi` } : {}),
             },
           },
-          ...(cmd.runConfig.volumes?.length
-            ? {
-                volumeMounts: cmd.runConfig.volumes.map((v, i) => ({
-                  name: `vol-${i}`,
-                  mountPath: v.target,
-                  readOnly: v.readOnly,
-                })),
-              }
+          volumeMounts: [
+            ...(cmd.runConfig.volumes ?? []).map((v, i) => ({
+              name: `vol-${i}`,
+              mountPath: v.target,
+              readOnly: v.readOnly,
+            })),
+            // Device passthrough: each host device is mounted via a hostPath volume.
+            ...(cmd.runConfig.devices ?? []).map((devPath, i) => ({
+              name: `dev-${i}`,
+              mountPath: devPath,
+            })),
+          ],
+          // Devices need the container to run with device access capabilities.
+          ...(cmd.runConfig.devices?.length
+            ? { securityContext: { capabilities: { add: ['MKNOD', 'SYS_RAWIO'] } } }
             : {}),
         },
         ...sidecarContainers,
@@ -122,6 +129,11 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
         ...(cmd.runConfig.volumes ?? []).map((v, i) => ({
           name: `vol-${i}`,
           hostPath: { path: v.source },
+        })),
+        // One hostPath CharDevice volume per requested device.
+        ...(cmd.runConfig.devices ?? []).map((devPath, i) => ({
+          name: `dev-${i}`,
+          hostPath: { path: devPath, type: 'CharDevice' as const },
         })),
         ...sidecarVolumes,
       ],
