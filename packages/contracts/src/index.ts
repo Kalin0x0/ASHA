@@ -253,6 +253,18 @@ export const updateAuthConfigSchema = z
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 export type UpdateAuthConfigDto = z.infer<typeof updateAuthConfigSchema>;
 
+// Federated login (LDAP bind) + LDAP live-test diagnostic.
+export const ldapLoginSchema = z.object({
+  username: z.string().min(1).max(320),
+  password: z.string().min(1).max(1024),
+});
+export type LdapLoginDto = z.infer<typeof ldapLoginSchema>;
+
+export const ldapTestSchema = z.object({
+  sampleUsername: z.string().max(320).optional(),
+});
+export type LdapTestDto = z.infer<typeof ldapTestSchema>;
+
 export const createSsoMappingSchema = z.object({
   authConfigId: z.string().min(1),
   groupId: z.string().min(1),

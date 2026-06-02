@@ -67,6 +67,30 @@ export class AuthService {
     return { ...tokens, user: this.publicUser(user) };
   }
 
+  /**
+   * Issue a session for an already-authenticated user (federated SSO: SAML /
+   * OIDC / LDAP). The caller is responsible for verifying the external identity
+   * and provisioning the user; this only records the login and mints tokens.
+   */
+  async issueSession(
+    user: { id: string; orgId: string; email: string; username: string; displayName: string | null; isSystemAdmin: boolean },
+    method: string,
+    ip?: string,
+    userAgent?: string,
+  ) {
+    await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    await this.audit.record({
+      orgId: user.orgId,
+      actorUserId: user.id,
+      action: 'auth.login',
+      ip,
+      userAgent,
+      metadata: { method },
+    });
+    const tokens = await this.issueTokens(user);
+    return { ...tokens, user: this.publicUser(user) };
+  }
+
   async refresh(refreshToken: string) {
     let payload: { sub: string };
     try {
