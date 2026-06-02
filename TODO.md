@@ -76,4 +76,22 @@ launch → stream flow against a real KasmVNC container.
 ## Bug hunt (continuous)
 
 Tracked findings from running the full repo (`typecheck · lint · test · build`)
-and exercising the app. Fixes land with their own commits.
+and reading the runtime paths.
+
+### Fixed
+- [x] **Agent subscribed to the wrong zone channel.** The agent listened on
+      `provision/destroy(CHISTA_ZONE)` (local env) while the manager publishes on
+      the DB zone's `name`. When enrollment fell back to the default zone these
+      differed and provision commands were silently lost. `register()` now
+      returns the resolved zone name and the agent subscribes to that.
+- [x] **2FA auth bypass.** `login()` only checked for the *presence* of a TOTP
+      code, never verified it — any string passed. Now fails closed until real
+      TOTP verification ships (Phase 2). Dormant in Phase 1 (no seed user has
+      2FA), but the bypass is removed.
+
+### Known gaps (documented, deferred by design)
+- [ ] **Tenant isolation on update/delete-by-PK.** The Prisma tenant extension
+      auto-scopes reads + `create`, but `update`/`delete` by unique id are not
+      org-scoped (they rely on service-layer checks). Postgres RLS is the
+      intended backstop — Phase 3 security hardening.
+- [ ] Refresh-token reuse/family replay detection is not enforced (Phase 3).

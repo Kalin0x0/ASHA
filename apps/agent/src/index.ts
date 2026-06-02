@@ -14,11 +14,15 @@ async function main(): Promise<void> {
   log.info({ zone: agentEnv.zone, host: agentEnv.hostname, cores: agentEnv.cpuCores }, 'Chista agent starting');
 
   let agentId = '';
+  // Default to the local zone; replaced by the zone the manager actually
+  // enrolled us into so we listen on the same channels it publishes on.
+  let zoneName = agentEnv.zone;
   for (;;) {
     try {
       const result = await manager.register();
       agentId = result.agentId;
-      log.info({ agentId, zoneId: result.zoneId }, 'enrolled with manager');
+      zoneName = result.zoneName ?? agentEnv.zone;
+      log.info({ agentId, zoneId: result.zoneId, zone: zoneName }, 'enrolled with manager');
       break;
     } catch (e) {
       log.warn(`register failed: ${(e as Error).message} — retrying in 5s`);
@@ -33,8 +37,8 @@ async function main(): Promise<void> {
   sub.on('error', (e) => log.warn(`redis: ${e.message}`));
   await sub.connect().catch(() => log.warn('redis connect failed — provisioning will be idle'));
 
-  const provisionChannel = RedisChannels.provision(agentEnv.zone);
-  const destroyChannel = RedisChannels.destroy(agentEnv.zone);
+  const provisionChannel = RedisChannels.provision(zoneName);
+  const destroyChannel = RedisChannels.destroy(zoneName);
   await sub.subscribe(provisionChannel, destroyChannel).catch(() => undefined);
 
   sub.on('message', (channel: string, message: string) => {

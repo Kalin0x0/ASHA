@@ -29,9 +29,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // TOTP verification is not implemented yet (Phase 2). Fail closed: a user
+    // with a confirmed 2FA method cannot log in until real verification exists.
+    // Previously any non-empty `totp` value was accepted, which was a bypass.
     const requires2fa = user.twoFactorMethods.some((m) => m.confirmed);
-    if (requires2fa && !dto.totp) {
-      throw new UnauthorizedException('Two-factor code required');
+    if (requires2fa) {
+      throw new UnauthorizedException('Two-factor authentication is not yet supported');
     }
 
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });

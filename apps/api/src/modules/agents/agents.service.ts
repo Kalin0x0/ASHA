@@ -49,7 +49,16 @@ export class AgentsService {
         },
       });
       this.logger.log(`Agent ${dto.hostname} enrolled into zone ${zone.name}`);
-      return { agentId: agent.id, zoneId: zone.id, sessionNetwork: this.env.CHISTA_SESSION_NETWORK };
+      // Return the resolved zone NAME so the agent subscribes to the exact
+      // provision/destroy channels the manager publishes on. The requested zone
+      // (dto.zone) may not exist, in which case enrollment falls back to the
+      // default zone — the agent must follow that, not its local env value.
+      return {
+        agentId: agent.id,
+        zoneId: zone.id,
+        zoneName: zone.name,
+        sessionNetwork: this.env.CHISTA_SESSION_NETWORK,
+      };
     });
   }
 

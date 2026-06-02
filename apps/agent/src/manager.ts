@@ -21,6 +21,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 export interface RegisterResult {
   agentId: string;
   zoneId: string;
+  /** Resolved zone name — the agent subscribes to provision/destroy on this. */
+  zoneName: string;
   sessionNetwork: string;
 }
 
