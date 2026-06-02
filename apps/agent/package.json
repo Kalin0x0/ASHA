@@ -13,6 +13,7 @@
     "@chista/events": "workspace:*",
     "@chista/logger": "workspace:*",
     "@chista/proxy-labels": "workspace:*",
+    "@kubernetes/client-node": "^1.4.0",
     "dockerode": "^4.0.2",
     "ioredis": "^5.4.2"
   },

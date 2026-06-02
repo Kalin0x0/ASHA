@@ -2,11 +2,19 @@ import os from 'node:os';
 import { type DestroyCommand, type ProvisionCommand, RedisChannels } from '@chista/events';
 import { createLogger } from '@chista/logger';
 import Redis from 'ioredis';
-import { collectStats, destroyContainer, provisionContainer } from './docker.js';
 import { agentEnv } from './env.js';
 import { manager } from './manager.js';
 
 const log = createLogger('agent');
+
+// Select the container driver at startup. CHISTA_DRIVER=kubernetes switches
+// the agent from Docker to ephemeral Kubernetes Pods. All other code is
+// identical since both modules export the same provisionContainer / destroyContainer
+// / collectStats interface.
+const driver = process.env.CHISTA_DRIVER === 'kubernetes'
+  ? await import('./kubernetes.js')
+  : await import('./docker.js');
+const { provisionContainer, destroyContainer, collectStats } = driver;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

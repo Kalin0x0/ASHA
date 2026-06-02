@@ -410,3 +410,87 @@ export const updateWebhookSchema = z
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 export type UpdateWebhookDto = z.infer<typeof updateWebhookSchema>;
+
+// ── Connectivity: connection proxy ────────────────────────────────────────────
+export const createConnectionProxySchema = z.object({
+  name: z.string().min(1).max(120),
+  type: z.enum(['GUACAMOLE']).default('GUACAMOLE'),
+  host: z.string().min(1).max(253).optional(),
+  port: z.number().int().min(1).max(65535).optional(),
+  config: z.record(z.unknown()).default({}),
+  enabled: z.boolean().default(true),
+});
+export type CreateConnectionProxyDto = z.infer<typeof createConnectionProxySchema>;
+
+export const updateConnectionProxySchema = z
+  .object({
+    host: z.string().min(1).max(253).optional(),
+    port: z.number().int().min(1).max(65535).optional(),
+    config: z.record(z.unknown()).optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateConnectionProxyDto = z.infer<typeof updateConnectionProxySchema>;
+
+// ── Connectivity: egress gateways ─────────────────────────────────────────────
+export const createEgressGatewaySchema = z.object({
+  name: z.string().min(1).max(120),
+  provider: z.string().min(1).max(80),
+  config: z.record(z.unknown()).default({}),
+  enabled: z.boolean().default(true),
+});
+export type CreateEgressGatewayDto = z.infer<typeof createEgressGatewaySchema>;
+
+export const updateEgressGatewaySchema = z
+  .object({
+    config: z.record(z.unknown()).optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateEgressGatewayDto = z.infer<typeof updateEgressGatewaySchema>;
+
+// ── Connectivity: web filter ───────────────────────────────────────────────────
+export const createWebFilterSchema = z.object({
+  name: z.string().min(1).max(120),
+  categories: z.record(z.unknown()).default({}),
+  cacheTtl: z.number().int().min(60).max(86400).default(3600),
+  enabled: z.boolean().default(false),
+});
+export type CreateWebFilterDto = z.infer<typeof createWebFilterSchema>;
+
+export const updateWebFilterSchema = z
+  .object({
+    categories: z.record(z.unknown()).optional(),
+    cacheTtl: z.number().int().min(60).max(86400).optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateWebFilterDto = z.infer<typeof updateWebFilterSchema>;
+
+// ── Connectivity: browser isolation ──────────────────────────────────────────
+export const createBrowserIsolationSchema = z.object({
+  name: z.string().min(1).max(120),
+  forwardProxy: z.string().max(80).optional(),
+  config: z.record(z.unknown()).default({}),
+  enabled: z.boolean().default(false),
+});
+export type CreateBrowserIsolationDto = z.infer<typeof createBrowserIsolationSchema>;
+
+export const updateBrowserIsolationSchema = z
+  .object({
+    forwardProxy: z.string().max(80).optional(),
+    config: z.record(z.unknown()).optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateBrowserIsolationDto = z.infer<typeof updateBrowserIsolationSchema>;
+
+// ── Windows / RDS workspaces ──────────────────────────────────────────────────
+// RemoteApp entries published from an RDS farm or a single Windows server.
+export const createRemoteAppSchema = z.object({
+  workspaceId: z.string().min(1),
+  name: z.string().min(1).max(200),
+  path: z.string().min(1).max(500),
+  args: z.string().max(500).optional(),
+});
+export type CreateRemoteAppDto = z.infer<typeof createRemoteAppSchema>;
