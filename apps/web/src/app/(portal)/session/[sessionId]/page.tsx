@@ -9,6 +9,7 @@ import {
   Power,
   RotateCw,
   Settings,
+  Share2,
   Upload,
   Volume2,
   Wifi,
@@ -18,6 +19,8 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ChistaMark } from '@/components/brand/logo';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { createShare } from '@/lib/api/endpoints';
+import { isLive } from '@/lib/api/mode';
 import { useSession, useTerminateSession } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 
@@ -83,6 +86,23 @@ export default function StreamingViewerPage() {
   const fullscreen = () => {
     stageRef.current?.requestFullscreen?.().catch(() => {});
   };
+  const onShare = async () => {
+    if (!session) return;
+    if (!isLive) {
+      toast('Sharing needs the live backend', {
+        description: 'Run with NEXT_PUBLIC_API_MODE=live to generate a real invite link.',
+      });
+      return;
+    }
+    try {
+      const share = await createShare(session.id, { enableChat: true });
+      const link = `${window.location.origin}/share/${share.shareKey}`;
+      await navigator.clipboard.writeText(link).catch(() => {});
+      toast.success('Share link copied', { description: link });
+    } catch {
+      toast.error('Could not create share link');
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-anthracite-950">
@@ -122,6 +142,9 @@ export default function StreamingViewerPage() {
           </ControlButton>
           <ControlButton label="Audio" onClick={() => toast('Audio is controlled inside the stream')}>
             <Volume2 className="size-4" />
+          </ControlButton>
+          <ControlButton label="Share session" onClick={onShare}>
+            <Share2 className="size-4" />
           </ControlButton>
           <ControlButton label="Settings" onClick={() => toast('Stream settings')}>
             <Settings className="size-4" />

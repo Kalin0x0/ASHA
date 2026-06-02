@@ -83,10 +83,29 @@ export interface AgentHeartbeat {
   version: string;
 }
 
+export interface ShareChatEvent {
+  shareId: string;
+  sessionId: string;
+  messageId: string;
+  authorName: string;
+  body: string;
+  at: string;
+}
+
+export interface ShareParticipantEvent {
+  shareId: string;
+  sessionId: string;
+  participantId: string;
+  name: string;
+  joined: boolean;
+}
+
 /** Realtime events pushed to dashboards over the WebSocket gateway. */
 export type WsServerEvent =
   | { type: 'session.status'; payload: SessionStatusUpdate }
   | { type: 'session.stats'; payload: SessionStatSample }
   | { type: 'session.ready'; payload: { sessionId: string; connectionUrl: string } }
   | { type: 'agent.health'; payload: AgentHeartbeat & { status: string } }
-  | { type: 'alert.new'; payload: { level: 'info' | 'warn' | 'error'; message: string } };
+  | { type: 'alert.new'; payload: { level: 'info' | 'warn' | 'error'; message: string } }
+  | { type: 'share.chat'; payload: ShareChatEvent }
+  | { type: 'share.participant'; payload: ShareParticipantEvent };

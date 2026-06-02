@@ -63,6 +63,11 @@ export function useSessionHistory() {
   return useSnapshot(() => store.getData().history);
 }
 
+export function useRecordings() {
+  // No recordings are seeded in mock mode; the page shows its empty state.
+  return useSnapshot(() => store.getData().recordings);
+}
+
 export function useTerminateSession() {
   return useCallback((id: string) => store.terminateSession(id), []);
 }

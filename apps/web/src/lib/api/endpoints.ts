@@ -110,3 +110,75 @@ export const getLaunchableWorkspaces = () => apiFetch<ApiWorkspace[]>('/workspac
 export const getAgents = () => apiFetch<ApiAgent[]>('/agents');
 export const getZones = () => apiFetch<ApiZone[]>('/zones');
 export const getUsers = () => apiFetch<ApiUser[]>('/users');
+
+// ── Storage ────────────────────────────────────────────────────────────────
+
+export interface ApiVolumeMapping {
+  id: string;
+  name: string;
+  hostPath: string;
+  destPath: string;
+  readOnly: boolean;
+}
+export interface ApiFileMapping {
+  id: string;
+  name: string;
+  target: 'CONTAINER' | 'WINDOWS';
+  sourcePath: string;
+  destPath: string;
+  owner: string | null;
+  group: string | null;
+  mode: string | null;
+  isHomeProfile: boolean;
+  scope: 'USER' | 'GROUP' | 'WORKSPACE';
+}
+export interface ApiPersistentProfile {
+  id: string;
+  userId: string | null;
+  workspaceId: string | null;
+  volumeName: string;
+  backend: 'DOCKER_VOLUME' | 'S3';
+  sizeLimitMb: number | null;
+  lastUsedAt: string | null;
+}
+
+export const getVolumeMappings = () => apiFetch<ApiVolumeMapping[]>('/storage/volumes');
+export const getFileMappings = () => apiFetch<ApiFileMapping[]>('/storage/files');
+export const getPersistentProfiles = () => apiFetch<ApiPersistentProfile[]>('/storage/profiles');
+
+// ── Recordings ───────────────────────────────────────────────────────────────
+
+export interface ApiRecording {
+  id: string;
+  sessionId: string;
+  protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH';
+  status: 'RECORDING' | 'FINALIZING' | 'AVAILABLE' | 'FAILED';
+  bytes: number | string;
+  durationSec: number;
+  startedAt: string;
+  finalizedAt: string | null;
+  _count?: { artifacts: number };
+}
+
+export const getRecordings = () => apiFetch<ApiRecording[]>('/recordings');
+
+// ── Session sharing ──────────────────────────────────────────────────────────
+
+export interface ApiSessionShare {
+  id: string;
+  sessionId: string;
+  shareKey: string;
+  allowControl: boolean;
+  requireAuth: boolean;
+  enableChat: boolean;
+  enableAv: boolean;
+  expiresAt: string | null;
+}
+
+export const createShare = (
+  sessionId: string,
+  body: { allowControl?: boolean; requireAuth?: boolean; enableChat?: boolean; enableAv?: boolean; expiresInMinutes?: number },
+) => apiFetch<ApiSessionShare>(`/sessions/${sessionId}/share`, { method: 'POST', body });
+
+export const revokeShare = (sessionId: string) =>
+  apiFetch<{ ok: true }>(`/sessions/${sessionId}/share`, { method: 'DELETE' });

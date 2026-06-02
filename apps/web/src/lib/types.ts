@@ -105,6 +105,18 @@ export interface ImageRow {
   status: 'available' | 'pulling' | 'error';
 }
 
+export interface RecordingRow {
+  id: string;
+  sessionId: string;
+  workspaceName: string;
+  user: string;
+  protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH';
+  status: 'RECORDING' | 'FINALIZING' | 'AVAILABLE' | 'FAILED';
+  sizeMb: number;
+  durationSec: number;
+  startedAt: string;
+}
+
 export type SessionEndReason = 'USER' | 'TIMEOUT' | 'ADMIN' | 'ERROR';
 
 export interface HistoryRow {

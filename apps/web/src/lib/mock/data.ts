@@ -3,6 +3,7 @@ import type {
   ActivityItem,
   HistoryRow,
   ImageRow,
+  RecordingRow,
   SessionEndReason,
   SessionRow,
   SessionStatus,
@@ -55,6 +56,7 @@ export interface MockData {
   activity: ActivityItem[];
   history: HistoryRow[];
   images: ImageRow[];
+  recordings: RecordingRow[];
 }
 
 export function buildInitialData(): MockData {
@@ -223,5 +225,9 @@ export function buildInitialData(): MockData {
   }
   const images = [...imageMap.values()];
 
-  return { workspaces, zones, agents, sessions, users, activity, history, images };
+  // Recordings start empty in mock mode — the admin page shows its empty state
+  // until a real session is recorded against an S3-configured deployment.
+  const recordings: RecordingRow[] = [];
+
+  return { workspaces, zones, agents, sessions, users, activity, history, images, recordings };
 }

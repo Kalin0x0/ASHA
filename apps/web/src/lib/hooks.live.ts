@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import * as api from '@/lib/api/endpoints';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
-import type { ActivityItem, Agent, SessionRow, UserRow, Workspace, Zone } from '@/lib/types';
+import type { ActivityItem, Agent, RecordingRow, SessionRow, UserRow, Workspace, Zone } from '@/lib/types';
 
 const SESSIONS_KEY = ['sessions'] as const;
 const WORKSPACES_KEY = ['workspaces'] as const;
@@ -146,6 +146,25 @@ export function useImages() {
 export function useSessionHistory() {
   // History/audit endpoint not yet implemented; return empty until Phase 3.
   return [];
+}
+
+export function useRecordings(): RecordingRow[] {
+  const { data } = useQuery({ queryKey: ['recordings'], queryFn: api.getRecordings, refetchInterval: 15_000 });
+  return useMemo(
+    () =>
+      (data ?? []).map((r) => ({
+        id: r.id,
+        sessionId: r.sessionId,
+        workspaceName: r.sessionId.slice(0, 8),
+        user: '—',
+        protocol: r.protocol,
+        status: r.status,
+        sizeMb: Math.round(Number(r.bytes) / (1024 * 1024)),
+        durationSec: r.durationSec,
+        startedAt: r.startedAt,
+      })),
+    [data],
+  );
 }
 
 export function useTerminateSession() {

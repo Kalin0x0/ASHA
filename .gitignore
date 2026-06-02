@@ -46,3 +46,4 @@ test-results/
 infra/traefik/acme.json
 recordings/
 !apps/web/src/**/recordings/
+!apps/api/src/**/recordings/

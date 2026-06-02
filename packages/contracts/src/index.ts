@@ -65,6 +65,95 @@ export const updateWorkspaceSchema = z
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 export type UpdateWorkspaceDto = z.infer<typeof updateWorkspaceSchema>;
 
+// ── Storage: volume mappings ─────────────────────────────────────────────────
+export const createVolumeMappingSchema = z.object({
+  name: z.string().min(1),
+  hostPath: z.string().min(1),
+  destPath: z.string().min(1),
+  readOnly: z.boolean().default(false),
+  raw: z.record(z.unknown()).default({}),
+});
+export type CreateVolumeMappingDto = z.infer<typeof createVolumeMappingSchema>;
+
+export const updateVolumeMappingSchema = z
+  .object({
+    name: z.string().min(1),
+    hostPath: z.string().min(1),
+    destPath: z.string().min(1),
+    readOnly: z.boolean(),
+    raw: z.record(z.unknown()),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateVolumeMappingDto = z.infer<typeof updateVolumeMappingSchema>;
+
+// ── Storage: file mappings ───────────────────────────────────────────────────
+export const createFileMappingSchema = z.object({
+  name: z.string().min(1),
+  target: z.enum(['CONTAINER', 'WINDOWS']).default('CONTAINER'),
+  sourcePath: z.string().min(1),
+  destPath: z.string().min(1),
+  owner: z.string().optional(),
+  group: z.string().optional(),
+  mode: z
+    .string()
+    .regex(/^[0-7]{3,4}$/, 'Mode must be octal, e.g. 0644')
+    .optional(),
+  isHomeProfile: z.boolean().default(false),
+  scope: z.enum(['USER', 'GROUP', 'WORKSPACE']).default('WORKSPACE'),
+  userId: z.string().optional(),
+});
+export type CreateFileMappingDto = z.infer<typeof createFileMappingSchema>;
+
+export const updateFileMappingSchema = z
+  .object({
+    name: z.string().min(1),
+    target: z.enum(['CONTAINER', 'WINDOWS']),
+    sourcePath: z.string().min(1),
+    destPath: z.string().min(1),
+    owner: z.string(),
+    group: z.string(),
+    mode: z.string().regex(/^[0-7]{3,4}$/, 'Mode must be octal, e.g. 0644'),
+    isHomeProfile: z.boolean(),
+    scope: z.enum(['USER', 'GROUP', 'WORKSPACE']),
+    userId: z.string(),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateFileMappingDto = z.infer<typeof updateFileMappingSchema>;
+
+// ── Storage: persistent profiles ─────────────────────────────────────────────
+export const createPersistentProfileSchema = z.object({
+  userId: z.string().optional(),
+  workspaceId: z.string().optional(),
+  volumeName: z.string().min(1),
+  backend: z.enum(['DOCKER_VOLUME', 'S3']).default('DOCKER_VOLUME'),
+  sizeLimitMb: z.number().int().positive().optional(),
+});
+export type CreatePersistentProfileDto = z.infer<typeof createPersistentProfileSchema>;
+
+// ── Session sharing ──────────────────────────────────────────────────────────
+export const createShareSchema = z.object({
+  allowControl: z.boolean().default(false),
+  requireAuth: z.boolean().default(true),
+  enableChat: z.boolean().default(true),
+  enableAv: z.boolean().default(false),
+  /** Minutes until the share link expires; omit for no expiry. */
+  expiresInMinutes: z.number().int().positive().max(10080).optional(),
+});
+export type CreateShareDto = z.infer<typeof createShareSchema>;
+
+export const postChatMessageSchema = z.object({
+  body: z.string().min(1).max(2000),
+  authorName: z.string().min(1).max(120).optional(),
+});
+export type PostChatMessageDto = z.infer<typeof postChatMessageSchema>;
+
+export const joinShareSchema = z.object({
+  guestName: z.string().min(1).max(120).optional(),
+});
+export type JoinShareDto = z.infer<typeof joinShareSchema>;
+
 // ── Agent (internal) ─────────────────────────────────────────────────────────
 export const agentRegisterSchema = z.object({
   enrollmentToken: z.string().min(1),

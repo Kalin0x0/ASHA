@@ -57,9 +57,18 @@ launch → stream flow against a real KasmVNC container.
       Scaffold complete: HTTP+WS server, JWT auth, Redis session store, protocol
       router. Guacamole TCP bridge wired (needs guacd sidecar); SSH stub with
       placeholder terminal message. docker-compose service + Traefik labels added.
-- [ ] Session sharing + chat (share rooms over the existing events channels)
-- [ ] Session recording to S3-compatible storage
-- [ ] Persistent profiles, volume + file mappings
+- [x] Session sharing + chat — `SharingModule`: owner creates/revokes a share
+      (`POST/DELETE /sessions/:id/share`), guests join via public share key
+      (`/share/:key/join|leave|messages`), chat fans out over the WS gateway
+      (`share.chat` / `share.participant` events). Viewer has a Share button that
+      copies the invite link. 8 unit tests.
+- [x] Session recording to S3 — `RecordingsModule`: list/get/playback/delete
+      (`/recordings`), agent-driven begin/addArtifact/finalize lifecycle, S3
+      config in env (presigned playback when configured, not-configured marker
+      otherwise). Recordings admin page is now data-driven.
+- [x] Persistent profiles, volume + file mappings — `StorageModule`: full
+      org-scoped CRUD for `/storage/{volumes,files,profiles}` (updateMany/
+      deleteMany guard). 6 unit tests.
 - [x] 2FA/TOTP — real TOTP enrollment + verification in the API
       POST /auth/2fa/totp/enroll → secret + QR data URL
       POST /auth/2fa/totp/confirm → verify first code, mark confirmed
@@ -70,10 +79,11 @@ launch → stream flow against a real KasmVNC container.
       memberships), Roles (permission matrix from `@chista/rbac`) — no new API
       endpoints needed; work in mock + live.
 - [x] Admin pages: Images, History, Recordings, Sharing
-- [x] Storage: persistent profiles, volume/file mappings UI
-      Pages built: /storage/profiles, /storage/volumes, /storage/file-mappings
-      Each shows an empty-state with feature description + capability pills.
-      API endpoints deferred (Prisma models are ready; Phase 2 backend work).
+- [x] Storage: persistent profiles, volume/file mappings UI + API
+      Pages: /storage/profiles, /storage/volumes, /storage/file-mappings.
+      Backend: StorageModule with org-scoped CRUD (see above).
+
+**Phase 2 is complete.** 82 tests, 21 typecheck tasks, 13 build tasks all green.
 
 ---
 

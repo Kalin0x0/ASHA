@@ -9,7 +9,10 @@ import { AgentsModule } from './modules/agents/agents.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
+import { RecordingsModule } from './modules/recordings/recordings.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
+import { SharingModule } from './modules/sharing/sharing.module';
+import { StorageModule } from './modules/storage/storage.module';
 import { WorkspacesModule } from './modules/workspaces/workspaces.module';
 
 @Module({
@@ -22,6 +25,9 @@ import { WorkspacesModule } from './modules/workspaces/workspaces.module';
     AgentsModule,
     CatalogModule,
     HealthModule,
+    StorageModule,
+    SharingModule,
+    RecordingsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

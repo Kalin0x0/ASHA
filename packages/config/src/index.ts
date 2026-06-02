@@ -29,6 +29,15 @@ export const envSchema = z.object({
   CHISTA_BASE_DOMAIN: z.string().default('chista.local'),
   CHISTA_PUBLIC_URL: z.string().default('https://chista.local'),
   CHISTA_SESSION_NETWORK: z.string().default('chista-sessions'),
+
+  // S3-compatible object storage for session recordings. Left blank in dev,
+  // which puts recordings into "unconfigured" mode (metadata only, no upload).
+  S3_ENDPOINT: z.string().default(''),
+  S3_REGION: z.string().default('us-east-1'),
+  S3_BUCKET: z.string().default('chista-recordings'),
+  S3_ACCESS_KEY_ID: z.string().default(''),
+  S3_SECRET_ACCESS_KEY: z.string().default(''),
+  S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
 });
 
 export type Env = z.infer<typeof envSchema>;
