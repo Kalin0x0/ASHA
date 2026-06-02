@@ -7,7 +7,7 @@ import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { useFavorites } from '@/lib/favorites-store';
+import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
 import { navGroups } from '@/lib/nav';
 import { useUIStore } from '@/lib/ui-store';
@@ -21,7 +21,7 @@ export function CommandPalette() {
   const launch = useLaunchSession();
 
   const favWorkspaces = useMemo(
-    () => workspaces.filter((w) => w.enabled && favorites.ids.includes(w.id)),
+    () => orderByFavorites(workspaces.filter((w) => w.enabled), favorites.ids),
     [workspaces, favorites.ids],
   );
 

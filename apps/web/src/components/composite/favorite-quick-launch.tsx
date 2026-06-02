@@ -1,18 +1,22 @@
 'use client';
 
+import Link from 'next/link';
 import { Loader2, Play, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Monogram } from '@/components/composite/monogram';
-import { useFavorites } from '@/lib/favorites-store';
+import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
 
 /**
  * Compact favorites strip for the portal header — one-click launch of a
  * user's starred desktops from anywhere in the portal.
+ *
+ * @param limit how many chips to show inline before collapsing into a
+ *   "+N" link back to the portal (default 4).
  */
-export function FavoriteQuickLaunch() {
+export function FavoriteQuickLaunch({ limit = 4 }: { limit?: number }) {
   const router = useRouter();
   const workspaces = useWorkspaces();
   const launch = useLaunchSession();
@@ -20,11 +24,14 @@ export function FavoriteQuickLaunch() {
   const [launchingId, setLaunchingId] = useState<string | null>(null);
 
   const favWorkspaces = useMemo(
-    () => workspaces.filter((w) => w.enabled && favorites.ids.includes(w.id)),
+    () => orderByFavorites(workspaces.filter((w) => w.enabled), favorites.ids),
     [workspaces, favorites.ids],
   );
 
   if (favWorkspaces.length === 0) return null;
+
+  const shown = favWorkspaces.slice(0, limit);
+  const overflow = favWorkspaces.length - shown.length;
 
   const onLaunch = async (id: string) => {
     setLaunchingId(id);
@@ -44,7 +51,7 @@ export function FavoriteQuickLaunch() {
         Favorites
       </span>
       <div className="flex items-center gap-1.5">
-        {favWorkspaces.slice(0, 5).map((ws) => {
+        {shown.map((ws) => {
           const busy = launchingId === ws.id;
           return (
             <button
@@ -65,6 +72,15 @@ export function FavoriteQuickLaunch() {
             </button>
           );
         })}
+        {overflow > 0 && (
+          <Link
+            href="/"
+            title="See all favorites"
+            className="flex items-center rounded-full border border-border-subtle bg-[var(--surface-2)]/60 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[rgba(212,175,55,0.35)] hover:text-gold-300 ring-gold-focus"
+          >
+            +{overflow}
+          </Link>
+        )}
       </div>
     </div>
   );

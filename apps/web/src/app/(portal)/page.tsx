@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AuroraBackground } from '@/components/decor/aurora-background';
+import { FavoritesRail } from '@/components/composite/favorites-rail';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
 import { Input } from '@/components/ui/input';
-import { useFavorites } from '@/lib/favorites-store';
+import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
 
 export default function PortalHome() {
@@ -35,9 +36,10 @@ export default function PortalHome() {
     [workspaces, query],
   );
 
-  // Split favorites out so a user's starred desktops sit at the top.
+  // Split favorites out so a user's starred desktops sit at the top,
+  // in their chosen (drag-sorted) order.
   const favoriteList = useMemo(
-    () => enabled.filter((w) => favorites.ids.includes(w.id)),
+    () => orderByFavorites(enabled, favorites.ids),
     [enabled, favorites.ids],
   );
   const others = useMemo(
@@ -157,17 +159,25 @@ export default function PortalHome() {
           </div>
         ) : (
           <div className="space-y-10">
-            {/* Favorites section — only when present and not actively searching */}
+            {/* Favorites shelf — drag the grip to reorder; order persists */}
             {favoriteList.length > 0 && (
               <section>
                 <div className="mb-4 flex items-center gap-2">
                   <Star className="size-4 fill-gold-400 text-gold-300" />
                   <h2 className="font-display text-lg font-semibold">Favorites</h2>
                   <span className="text-xs text-muted-foreground">({favoriteList.length})</span>
+                  {favoriteList.length > 1 && (
+                    <span className="ml-1 hidden text-[11px] text-muted-foreground/50 sm:inline">
+                      · drag to reorder
+                    </span>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {favoriteList.map(renderCard)}
-                </div>
+                <FavoritesRail
+                  items={favoriteList}
+                  onLaunch={onLaunch}
+                  launchingId={launchingId}
+                  onToggleFavorite={onToggleFavorite}
+                />
               </section>
             )}
 
