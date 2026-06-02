@@ -92,7 +92,18 @@ launch → stream flow against a real KasmVNC container.
 - [ ] OIDC / SAML / LDAP authentication providers
 - [ ] Multi-zone, staging, casting
 - [ ] Server pools + autoscale + VM/DNS providers (Proxmox first)
-- [ ] Security hardening (Postgres RLS backstop, CSP, rate limiting)
+- [x] Security hardening (Postgres RLS backstop, CSP, rate limiting)
+      Rate limiting: `@nestjs/throttler` — 200 req/min global, 10 req/min on
+      `AuthController` (login, refresh, TOTP). Health routes skip throttle.
+      Helmet: API responses hardened (X-Content-Type-Options, X-Frame-Options,
+      HSTS 1 year, hide X-Powered-By, CSP for Swagger UI).
+      CSP + security headers: Next.js `headers()` — CSP, HSTS, X-Frame-Options,
+      Referrer-Policy, Permissions-Policy applied to all routes.
+      Prisma extension: `findUnique`/`update`/`delete` now also inject `orgId`
+      into the WHERE clause (closes the PK-bypass gap at application layer).
+      Postgres RLS backstop: `packages/db/prisma/rls/tenant_isolation.sql` —
+      permissive policies that enforce org-scoping when `app.current_org_id` is
+      set (activated in production via `SET LOCAL` inside transactions).
 - [ ] Reporting + webhooks
 
 ---
@@ -148,8 +159,10 @@ and reading the runtime paths.
       first), closing the enumeration vector.
 
 ### Known gaps (documented, deferred by design)
-- [ ] **Tenant isolation on update/delete-by-PK.** The Prisma tenant extension
-      auto-scopes reads + `create`, but `update`/`delete` by unique id are not
-      org-scoped (they rely on service-layer checks). Postgres RLS is the
-      intended backstop — Phase 3 security hardening.
+- [x] **Tenant isolation on update/delete-by-PK.** The Prisma tenant extension
+      now scopes `findUnique`/`update`/`delete` by injecting `orgId` into the
+      WHERE clause (`SCOPED_UNIQUE_OPS`). Postgres RLS SQL script added as a
+      DB-level backstop (`packages/db/prisma/rls/tenant_isolation.sql`) —
+      full enforcement requires connecting as a non-owner role with `SET LOCAL`
+      inside every transaction (Phase 3+ deployment step).
 - [ ] Refresh-token reuse/family replay detection is not enforced (Phase 3).

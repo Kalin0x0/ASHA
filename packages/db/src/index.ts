@@ -72,8 +72,8 @@ const TENANT_MODELS = new Set<string>([
   'ConfigExportBundle',
 ]);
 
-// Operations where injecting an extra `where: { orgId }` is valid & safe.
-const SCOPED_READ_OPS = new Set([
+// Batch operations: wrap where in AND so orgId is added as an extra filter.
+const SCOPED_BATCH_OPS = new Set([
   'findMany',
   'findFirst',
   'findFirstOrThrow',
@@ -82,6 +82,16 @@ const SCOPED_READ_OPS = new Set([
   'count',
   'aggregate',
   'groupBy',
+]);
+
+// Single-record operations: inject orgId directly into where.
+// Prisma accepts extra (non-unique) fields in findUnique/update/delete where clauses
+// and generates `WHERE id = ? AND org_id = ?` SQL — closing the PK-bypass gap.
+const SCOPED_UNIQUE_OPS = new Set([
+  'findUnique',
+  'findUniqueOrThrow',
+  'update',
+  'delete',
 ]);
 
 function buildClient() {
@@ -100,15 +110,22 @@ function buildClient() {
           if (orgId && !ctx?.unscoped && model && TENANT_MODELS.has(model)) {
             const a = (args ?? {}) as Record<string, unknown>;
 
-            if (SCOPED_READ_OPS.has(operation)) {
+            if (SCOPED_BATCH_OPS.has(operation)) {
               a.where = { AND: [a.where ?? {}, { orgId }] };
+              return query(a as never);
+            }
+
+            if (SCOPED_UNIQUE_OPS.has(operation)) {
+              // Inject orgId into the unique where so the generated SQL becomes
+              // WHERE id = ? AND org_id = ?, preventing cross-tenant PK lookups.
+              a.where = { ...((a.where as Record<string, unknown>) ?? {}), orgId };
+              return query(a as never);
             }
 
             if (operation === 'create') {
               a.data = { orgId, ...(a.data as Record<string, unknown>) };
+              return query(a as never);
             }
-
-            return query(a as never);
           }
 
           return query(args as never);

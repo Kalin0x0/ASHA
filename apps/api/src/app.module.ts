@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { CommonModule } from './common/common.module';
 import { EnvModule } from './common/env.module';
 import { JwtAuthGuard } from './common/jwt-auth.guard';
@@ -17,6 +18,12 @@ import { WorkspacesModule } from './modules/workspaces/workspaces.module';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      // Default: 200 requests per 60 s per IP — applied to all routes
+      { name: 'global', ttl: 60_000, limit: 200 },
+      // Tighter: 10 requests per 60 s — applied explicitly to auth endpoints
+      { name: 'auth', ttl: 60_000, limit: 10 },
+    ]),
     EnvModule,
     CommonModule,
     AuthModule,
@@ -30,6 +37,8 @@ import { WorkspacesModule } from './modules/workspaces/workspaces.module';
     RecordingsModule,
   ],
   providers: [
+    // ThrottlerGuard runs first so rate-limit rejections short-circuit auth
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_INTERCEPTOR, useClass: TenantInterceptor },
