@@ -55,6 +55,14 @@ export function useActivity() {
   return useSnapshot(() => store.getData().activity);
 }
 
+export function useImages() {
+  return useSnapshot(() => store.getData().images);
+}
+
+export function useSessionHistory() {
+  return useSnapshot(() => store.getData().history);
+}
+
 export function useTerminateSession() {
   return useCallback((id: string) => store.terminateSession(id), []);
 }

@@ -45,3 +45,4 @@ test-results/
 # Docker / runtime
 infra/traefik/acme.json
 recordings/
+!apps/web/src/**/recordings/

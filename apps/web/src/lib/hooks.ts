@@ -23,5 +23,7 @@ export const useWorkspaces = impl.useWorkspaces;
 export const useWorkspace = impl.useWorkspace;
 export const useUsers = impl.useUsers;
 export const useActivity = impl.useActivity;
+export const useImages = impl.useImages;
+export const useSessionHistory = impl.useSessionHistory;
 export const useTerminateSession = impl.useTerminateSession;
 export const useLaunchSession = impl.useLaunchSession;

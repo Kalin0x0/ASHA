@@ -66,7 +66,7 @@ export const navGroups: NavGroup[] = [
     label: 'Workspaces',
     items: [
       { label: 'Catalog', href: '/workspaces', icon: AppWindow, built: true },
-      { label: 'Images', href: '/workspaces/images', icon: Container, phase: 2 },
+      { label: 'Images', href: '/workspaces/images', icon: Container, built: true },
       { label: 'Registry', href: '/registry', icon: Boxes, phase: 3 },
     ],
   },
@@ -74,11 +74,11 @@ export const navGroups: NavGroup[] = [
     label: 'Sessions',
     items: [
       { label: 'Live Sessions', href: '/sessions', icon: MonitorPlay, built: true },
-      { label: 'History', href: '/sessions/history', icon: History, phase: 2 },
-      { label: 'Recordings', href: '/sessions/recordings', icon: Film, phase: 2 },
+      { label: 'History', href: '/sessions/history', icon: History, built: true },
+      { label: 'Recordings', href: '/sessions/recordings', icon: Film, built: true },
       { label: 'Staging', href: '/sessions/staging', icon: Layers, phase: 3 },
       { label: 'Casting', href: '/sessions/casting', icon: Cast, phase: 3 },
-      { label: 'Sharing', href: '/sessions/sharing', icon: Share2, phase: 2 },
+      { label: 'Sharing', href: '/sessions/sharing', icon: Share2, built: true },
     ],
   },
   {

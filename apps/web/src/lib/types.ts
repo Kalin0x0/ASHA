@@ -93,6 +93,33 @@ export interface ActivityItem {
   at: string;
 }
 
+export interface ImageRow {
+  id: string;
+  fullImage: string;
+  registry: string;
+  name: string;
+  tag: string;
+  workspaces: string[];
+  sizeMb: number;
+  pulledAt: string;
+  status: 'available' | 'pulling' | 'error';
+}
+
+export type SessionEndReason = 'USER' | 'TIMEOUT' | 'ADMIN' | 'ERROR';
+
+export interface HistoryRow {
+  id: string;
+  user: { id: string; name: string; email: string };
+  workspaceName: string;
+  zone: string;
+  agent: string;
+  startedAt: string;
+  endedAt: string;
+  durationSec: number;
+  endReason: SessionEndReason;
+  connectionType: string;
+}
+
 export interface KpiSeriesPoint {
   t: string;
   value: number;

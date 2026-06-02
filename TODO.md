@@ -61,7 +61,7 @@ launch → stream flow against a real KasmVNC container.
 - [x] Admin **Access** pages real: Users (live table), Groups (derived from
       memberships), Roles (permission matrix from `@chista/rbac`) — no new API
       endpoints needed; work in mock + live.
-- [ ] Admin pages: Images, History, Recordings, Sharing
+- [x] Admin pages: Images, History, Recordings, Sharing
 - [ ] Storage: persistent profiles, volume/file mappings UI + API
 
 ---
@@ -107,6 +107,12 @@ and reading the runtime paths.
       with HTTP 200, on the real build (mock mode, no backend).
 - [x] Streaming viewer embeds a real `<iframe>` when a stream URL is configured;
       falls back to the branded placeholder otherwise.
+
+### Fixed (continued)
+- [x] **Google Fonts TLS failure in build sandbox.** `next/font/google` fetches Fraunces
+      at build time; the sandbox proxy injects a self-signed cert causing
+      `SELF_SIGNED_CERT_IN_CHAIN`. Switched to `@fontsource-variable/fraunces` +
+      `next/font/local` — identical visual output, zero network dependency at build time.
 
 ### Known gaps (documented, deferred by design)
 - [ ] **Tenant isolation on update/delete-by-PK.** The Prisma tenant extension

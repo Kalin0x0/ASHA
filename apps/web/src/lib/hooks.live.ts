@@ -138,6 +138,16 @@ export function useActivity(): ActivityItem[] {
   return [];
 }
 
+export function useImages() {
+  // Images API endpoint not yet implemented; return empty until Phase 3.
+  return [];
+}
+
+export function useSessionHistory() {
+  // History/audit endpoint not yet implemented; return empty until Phase 3.
+  return [];
+}
+
 export function useTerminateSession() {
   const qc = useQueryClient();
   const { mutate } = useMutation({
