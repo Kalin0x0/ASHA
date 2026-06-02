@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { CreateSessionDto } from '@chista/contracts';
 import { prisma } from '@chista/db';
 import { type ProvisionCommand, RedisChannels, type RunConfig } from '@chista/events';
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
 import { RedisService } from '../../common/redis.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 import { SchedulerService } from './scheduler.service';
 
 @Injectable()
@@ -13,6 +14,9 @@ export class SessionsService {
     private readonly scheduler: SchedulerService,
     private readonly redis: RedisService,
     private readonly audit: AuditService,
+    // Optional so unit tests can construct the service without the webhook deps;
+    // when present, domain events fan out to subscribed webhooks.
+    @Optional() private readonly webhooks?: WebhooksService,
   ) {}
 
   async create(user: AuthUser, dto: CreateSessionDto) {
@@ -61,6 +65,12 @@ export class SessionsService {
       targetType: 'Session',
       targetId: session.id,
       metadata: { workspace: workspace.name },
+    });
+
+    await this.webhooks?.dispatch(user.orgId, 'session.created', {
+      sessionId: session.id,
+      workspaceId: workspace.id,
+      userId: user.sub,
     });
 
     return prisma.session.findUnique({ where: { id: session.id } });
@@ -135,6 +145,7 @@ export class SessionsService {
       targetType: 'Session',
       targetId: id,
     });
+    await this.webhooks?.dispatch(user.orgId, 'session.terminated', { sessionId: id });
     return { ok: true };
   }
 

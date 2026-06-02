@@ -8,13 +8,22 @@ import { PermissionsGuard } from './common/permissions.guard';
 import { TenantInterceptor } from './common/tenant.interceptor';
 import { AgentsModule } from './modules/agents/agents.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AuthProvidersModule } from './modules/auth-providers/auth-providers.module';
+import { CastingModule } from './modules/casting/casting.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
+import { PoolsModule } from './modules/pools/pools.module';
+import { ProvidersModule } from './modules/providers/providers.module';
 import { RecordingsModule } from './modules/recordings/recordings.module';
+import { ReportingModule } from './modules/reporting/reporting.module';
+import { ServersModule } from './modules/servers/servers.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { SharingModule } from './modules/sharing/sharing.module';
+import { StagingModule } from './modules/staging/staging.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { WorkspacesModule } from './modules/workspaces/workspaces.module';
+import { ZonesModule } from './modules/zones/zones.module';
 
 @Module({
   imports: [
@@ -35,6 +44,15 @@ import { WorkspacesModule } from './modules/workspaces/workspaces.module';
     StorageModule,
     SharingModule,
     RecordingsModule,
+    AuthProvidersModule,
+    ZonesModule,
+    StagingModule,
+    CastingModule,
+    ServersModule,
+    PoolsModule,
+    ProvidersModule,
+    WebhooksModule,
+    ReportingModule,
   ],
   providers: [
     // ThrottlerGuard runs first so rate-limit rejections short-circuit auth

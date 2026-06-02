@@ -89,9 +89,23 @@ launch → stream flow against a real KasmVNC container.
 
 ## Phase 3 — Identity, scale, hardening
 
-- [ ] OIDC / SAML / LDAP authentication providers
-- [ ] Multi-zone, staging, casting
-- [ ] Server pools + autoscale + VM/DNS providers (Proxmox first)
+- [x] OIDC / SAML / LDAP authentication providers — `AuthProvidersModule`:
+      org-scoped CRUD for `AuthConfig` (`/auth/providers`) with per-type config
+      validation (OIDC: issuer+clientId, SAML: idpMetadataUrl+spEntityId, LDAP:
+      url+baseDN) plus SSO group mappings (`/auth/providers/mappings`). 5 tests.
+- [x] Multi-zone, staging, casting —
+      `ZonesModule` (`/zones`): CRUD with single-default invariant (promoting a
+      new default demotes the old one in one tx; default zone can't be deleted).
+      `StagingModule` (`/staging`): pre-warmed session pools per workspace+zone.
+      `CastingModule` (`/casting`): public kiosk links with generated keys.
+      10 tests.
+- [x] Server pools + autoscale + VM/DNS providers (Proxmox first) —
+      `ServersModule` (`/servers`): persistent RDP/VNC/SSH host CRUD.
+      `PoolsModule` (`/pools`): pool CRUD + `PUT /pools/:id/autoscale` upserts an
+      AutoscaleConfig and replaces the weekly schedule grid wholesale.
+      `ProvidersModule` (`/providers/{vm,dns}`): VM/DNS provider registry with a
+      `ProxmoxDriver` (config validation real, API calls stubbed for deploy).
+      14 tests.
 - [x] Security hardening (Postgres RLS backstop, CSP, rate limiting)
       Rate limiting: `@nestjs/throttler` — 200 req/min global, 10 req/min on
       `AuthController` (login, refresh, TOTP). Health routes skip throttle.
@@ -104,7 +118,15 @@ launch → stream flow against a real KasmVNC container.
       Postgres RLS backstop: `packages/db/prisma/rls/tenant_isolation.sql` —
       permissive policies that enforce org-scoping when `app.current_org_id` is
       set (activated in production via `SET LOCAL` inside transactions).
-- [ ] Reporting + webhooks
+- [x] Reporting + webhooks —
+      `WebhooksModule` (`/webhooks`): CRUD + delivery log + `POST /:id/test`,
+      HMAC-SHA256 signing (`X-Chista-Signature: sha256=…`), secrets redacted on
+      read, `dispatch()` fans events to subscribed hooks. Wired into the session
+      lifecycle (`session.created` / `session.terminated`).
+      `ReportingModule` (`/reporting`): org-scoped summary, sessions-over-time,
+      top-workspaces, and hourly metric series (date ranges clamped). 9 tests.
+
+**Phase 3 is complete.** 121 tests, 25 typecheck+build tasks all green.
 
 ---
 

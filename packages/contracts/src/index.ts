@@ -198,3 +198,215 @@ export const sessionStatsSchema = z.object({
   ),
 });
 export type SessionStatsDto = z.infer<typeof sessionStatsSchema>;
+
+// ── Identity: auth providers (OIDC / SAML / LDAP) ────────────────────────────
+export const createAuthConfigSchema = z.object({
+  type: z.enum(['LOCAL', 'LDAP', 'SAML', 'OIDC']),
+  name: z.string().min(1).max(120),
+  enabled: z.boolean().default(false),
+  priority: z.number().int().min(0).max(1000).default(100),
+  // Provider-specific config. OIDC: { issuer, clientId, clientSecret, scopes }.
+  // SAML: { idpMetadataUrl, spEntityId, cert }. LDAP: { url, baseDN, bindDN, ... }.
+  config: z.record(z.unknown()).default({}),
+});
+export type CreateAuthConfigDto = z.infer<typeof createAuthConfigSchema>;
+
+export const updateAuthConfigSchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    enabled: z.boolean().optional(),
+    priority: z.number().int().min(0).max(1000).optional(),
+    config: z.record(z.unknown()).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateAuthConfigDto = z.infer<typeof updateAuthConfigSchema>;
+
+export const createSsoMappingSchema = z.object({
+  authConfigId: z.string().min(1),
+  groupId: z.string().min(1),
+  attribute: z.string().min(1).max(200),
+  value: z.string().min(1).max(400),
+});
+export type CreateSsoMappingDto = z.infer<typeof createSsoMappingSchema>;
+
+// ── Deployment zones ─────────────────────────────────────────────────────────
+export const createZoneSchema = z.object({
+  name: z.string().min(1).max(120),
+  region: z.string().max(120).optional(),
+  isDefault: z.boolean().default(false),
+  proxyBaseUrl: z.string().url().optional(),
+  settings: z.record(z.unknown()).default({}),
+});
+export type CreateZoneDto = z.infer<typeof createZoneSchema>;
+
+export const updateZoneSchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    region: z.string().max(120).optional(),
+    isDefault: z.boolean().optional(),
+    proxyBaseUrl: z.string().url().optional(),
+    settings: z.record(z.unknown()).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateZoneDto = z.infer<typeof updateZoneSchema>;
+
+// ── Session staging (pre-warmed pools) ───────────────────────────────────────
+export const createStagingSchema = z.object({
+  workspaceId: z.string().min(1),
+  zoneId: z.string().min(1),
+  desiredSessions: z.number().int().min(0).max(1000).default(0),
+  enabled: z.boolean().default(true),
+});
+export type CreateStagingDto = z.infer<typeof createStagingSchema>;
+
+export const updateStagingSchema = z
+  .object({
+    desiredSessions: z.number().int().min(0).max(1000).optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateStagingDto = z.infer<typeof updateStagingSchema>;
+
+// ── Casting (public kiosk links) ─────────────────────────────────────────────
+export const createCastingSchema = z.object({
+  workspaceId: z.string().min(1),
+  allowAnonymous: z.boolean().default(false),
+  requireAuth: z.boolean().default(true),
+  groupId: z.string().optional(),
+  errorPageId: z.string().optional(),
+  maxConcurrent: z.number().int().positive().optional(),
+  enabled: z.boolean().default(true),
+});
+export type CreateCastingDto = z.infer<typeof createCastingSchema>;
+
+export const updateCastingSchema = z
+  .object({
+    allowAnonymous: z.boolean().optional(),
+    requireAuth: z.boolean().optional(),
+    groupId: z.string().optional(),
+    errorPageId: z.string().optional(),
+    maxConcurrent: z.number().int().positive().optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateCastingDto = z.infer<typeof updateCastingSchema>;
+
+// ── Servers (persistent RDP/VNC/SSH hosts) ───────────────────────────────────
+export const createServerSchema = z.object({
+  zoneId: z.string().min(1),
+  hostname: z.string().min(1).max(253),
+  address: z.string().min(1).max(253),
+  connectionType: z.enum(['SSH', 'RDP', 'VNC']).default('RDP'),
+  authMode: z.enum(['PASSWORD', 'KEY', 'VMWARE_TEMPLATE']).default('PASSWORD'),
+  continuity: z.enum(['NONE', 'TMUX', 'SCREEN']).default('NONE'),
+  vmTemplate: z.string().optional(),
+  vmProviderId: z.string().optional(),
+  maxSessions: z.number().int().min(1).max(1000).default(1),
+});
+export type CreateServerDto = z.infer<typeof createServerSchema>;
+
+export const updateServerSchema = z
+  .object({
+    address: z.string().min(1).max(253).optional(),
+    connectionType: z.enum(['SSH', 'RDP', 'VNC']).optional(),
+    authMode: z.enum(['PASSWORD', 'KEY', 'VMWARE_TEMPLATE']).optional(),
+    continuity: z.enum(['NONE', 'TMUX', 'SCREEN']).optional(),
+    vmTemplate: z.string().optional(),
+    vmProviderId: z.string().optional(),
+    maxSessions: z.number().int().min(1).max(1000).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateServerDto = z.infer<typeof updateServerSchema>;
+
+// ── Server pools + autoscale ─────────────────────────────────────────────────
+export const createPoolSchema = z.object({
+  name: z.string().min(1).max(120),
+  kind: z.enum(['SERVER', 'AGENT']).default('AGENT'),
+  startupScript: z.string().optional(),
+  enabled: z.boolean().default(true),
+});
+export type CreatePoolDto = z.infer<typeof createPoolSchema>;
+
+export const updatePoolSchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    startupScript: z.string().optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdatePoolDto = z.infer<typeof updatePoolSchema>;
+
+export const upsertAutoscaleSchema = z.object({
+  mode: z.enum(['SCHEDULE', 'LOAD', 'ACTIVE_DIRECTORY']).default('SCHEDULE'),
+  minStandby: z.number().int().min(0).default(0),
+  maxInstances: z.number().int().min(1).default(1),
+  perServerSessionLimit: z.number().int().min(1).default(1),
+  checkinIntervalSec: z.number().int().min(10).default(60),
+  downscaleBackoffSec: z.number().int().min(0).default(300),
+  vmProviderId: z.string().optional(),
+  dnsProviderId: z.string().optional(),
+  schedules: z
+    .array(
+      z.object({
+        dayOfWeek: z.number().int().min(0).max(6),
+        hour: z.number().int().min(0).max(23),
+        minStandby: z.number().int().min(0).default(0),
+        maxInstances: z.number().int().min(1).default(1),
+      }),
+    )
+    .max(168)
+    .optional(),
+});
+export type UpsertAutoscaleDto = z.infer<typeof upsertAutoscaleSchema>;
+
+// ── VM / DNS providers ───────────────────────────────────────────────────────
+export const createVMProviderSchema = z.object({
+  name: z.string().min(1).max(120),
+  provider: z.enum([
+    'AWS', 'AZURE', 'DIGITALOCEAN', 'GCP', 'HARVESTER', 'ORACLE',
+    'NUTANIX', 'PROXMOX', 'VSPHERE', 'OPENSTACK', 'KUBEVIRT',
+  ]),
+  config: z.record(z.unknown()).default({}),
+  enabled: z.boolean().default(true),
+});
+export type CreateVMProviderDto = z.infer<typeof createVMProviderSchema>;
+
+export const createDNSProviderSchema = z.object({
+  name: z.string().min(1).max(120),
+  provider: z.enum(['AWS', 'AZURE', 'DIGITALOCEAN', 'GCP', 'ORACLE']),
+  zoneName: z.string().max(253).optional(),
+  config: z.record(z.unknown()).default({}),
+  enabled: z.boolean().default(true),
+});
+export type CreateDNSProviderDto = z.infer<typeof createDNSProviderSchema>;
+
+export const updateProviderSchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    zoneName: z.string().max(253).optional(),
+    config: z.record(z.unknown()).optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateProviderDto = z.infer<typeof updateProviderSchema>;
+
+// ── Webhooks ─────────────────────────────────────────────────────────────────
+export const createWebhookSchema = z.object({
+  name: z.string().min(1).max(120),
+  url: z.string().url(),
+  events: z.array(z.string().min(1)).min(1),
+  secret: z.string().min(8).max(200).optional(),
+  enabled: z.boolean().default(true),
+});
+export type CreateWebhookDto = z.infer<typeof createWebhookSchema>;
+
+export const updateWebhookSchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    url: z.string().url().optional(),
+    events: z.array(z.string().min(1)).min(1).optional(),
+    secret: z.string().min(8).max(200).optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateWebhookDto = z.infer<typeof updateWebhookSchema>;
