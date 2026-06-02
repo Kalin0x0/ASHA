@@ -182,6 +182,40 @@ export class ConnectivityRenderService {
     };
   }
 
+  /**
+   * Build a PulseAudio (open-source, LGPL) audio-bridge sidecar. The session
+   * container forwards its audio to this sink over TCP (PULSE_SERVER); the sink
+   * mixes and exposes it so the viewer's stream carries sound. Pure — no DB.
+   * @param image override for the PulseAudio image (operator-configurable).
+   */
+  resolveAudioSidecar(image = 'ich777/pulseaudio:latest'): SessionSidecar {
+    return {
+      image,
+      env: {
+        // Accept TCP connections from the session container on the shared network.
+        PULSE_SERVER_PORT: '4713',
+        PULSE_ALLOW_NETWORK: '1',
+      },
+      ports: [4713],
+    };
+  }
+
+  /**
+   * Build a CUPS (open-source, Apache-2.0) virtual-printer sidecar. Print jobs
+   * from the session are captured to PDF and exposed for download. Pure — no DB.
+   * @param image override for the CUPS image (operator-configurable).
+   */
+  resolvePrintingSidecar(image = 'olbat/cupsd:latest'): SessionSidecar {
+    return {
+      image,
+      env: {
+        // A PDF "printer" queue; jobs land in /var/spool/cups-pdf for retrieval.
+        CUPS_PDF_ENABLED: '1',
+      },
+      ports: [631],
+    };
+  }
+
   /** Squid dstdomain ACLs match a leading dot as "domain and subdomains". */
   private dotPrefix(domain: string): string {
     const d = domain.trim();

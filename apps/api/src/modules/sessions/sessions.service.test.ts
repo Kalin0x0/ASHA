@@ -160,3 +160,58 @@ describe('SessionsService.terminate', () => {
     await expect(svc.terminate('ghost', USER)).rejects.toThrow();
   });
 });
+
+describe('SessionsService pause / resume / resize', () => {
+  let svc: SessionsService;
+  let redis: { publish: ReturnType<typeof vi.fn> };
+  let audit: { record: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    redis = { publish: vi.fn().mockResolvedValue(undefined) };
+    audit = { record: vi.fn().mockResolvedValue(undefined) };
+    svc = new SessionsService({} as never, redis as never, audit as never);
+    prismaMock.deploymentZone.findUnique.mockResolvedValue({ id: 'zone1', name: 'default' });
+    prismaMock.session.update.mockResolvedValue({});
+  });
+
+  it('pauses a RUNNING session: emits PAUSE control + sets PAUSED', async () => {
+    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
+    const res = await svc.pause('s1', USER);
+    expect(redis.publish).toHaveBeenCalledWith(
+      'chista:zone:default:control',
+      expect.objectContaining({ sessionId: 's1', action: 'PAUSE', containerId: 'c1' }),
+    );
+    expect(prismaMock.session.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: 'PAUSED' } }),
+    );
+    expect(res).toEqual({ ok: true });
+  });
+
+  it('refuses to pause a session that is not RUNNING/DEGRADED', async () => {
+    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'PROVISIONING' });
+    await expect(svc.pause('s1', USER)).rejects.toThrow(/expected one of/);
+    expect(redis.publish).not.toHaveBeenCalled();
+  });
+
+  it('resumes only a PAUSED session', async () => {
+    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'PAUSED' });
+    await svc.resume('s1', USER);
+    expect(redis.publish).toHaveBeenCalledWith(
+      'chista:zone:default:control',
+      expect.objectContaining({ action: 'RESUME' }),
+    );
+    expect(prismaMock.session.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'RUNNING' }) }),
+    );
+  });
+
+  it('emits a RESIZE control frame with geometry', async () => {
+    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
+    await svc.resize('s1', 1920, 1080);
+    expect(redis.publish).toHaveBeenCalledWith(
+      'chista:zone:default:control',
+      expect.objectContaining({ action: 'RESIZE', width: 1920, height: 1080 }),
+    );
+  });
+});

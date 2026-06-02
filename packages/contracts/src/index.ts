@@ -31,6 +31,27 @@ export const createSessionSchema = z.object({
 export type CreateSessionDto = z.infer<typeof createSessionSchema>;
 
 // ── Workspaces ───────────────────────────────────────────────────────────────
+// Data-loss-prevention policy. Each flag grants a capability; absent = denied.
+export const dlpPolicySchema = z.object({
+  clipboardUp: z.boolean().optional(),
+  clipboardDown: z.boolean().optional(),
+  uploads: z.boolean().optional(),
+  downloads: z.boolean().optional(),
+  printing: z.boolean().optional(),
+  audioIn: z.boolean().optional(),
+  audioOut: z.boolean().optional(),
+  pwa: z.boolean().optional(),
+});
+export type DlpPolicyDto = z.infer<typeof dlpPolicySchema>;
+
+// Hardware H.264 encoding (NVENC/VAAPI). Open-source encoders only.
+export const gpuConfigSchema = z.object({
+  count: z.number().int().min(0).optional(),
+  encoder: z.enum(['none', 'nvenc', 'vaapi']).optional(),
+  renderDevice: z.string().optional(),
+});
+export type GpuConfigDto = z.infer<typeof gpuConfigSchema>;
+
 export const createWorkspaceSchema = z.object({
   name: z.string().min(1),
   friendlyName: z.string().min(1),
@@ -41,6 +62,8 @@ export const createWorkspaceSchema = z.object({
   coresLimit: z.number().optional(),
   memLimitMb: z.number().optional(),
   gpuCount: z.number().int().min(0).default(0),
+  gpu: gpuConfigSchema.optional(),
+  dlp: dlpPolicySchema.optional(),
   dockerConfig: z.record(z.unknown()).default({}),
 });
 export type CreateWorkspaceDto = z.infer<typeof createWorkspaceSchema>;
@@ -58,6 +81,8 @@ export const updateWorkspaceSchema = z
     coresLimit: z.number(),
     memLimitMb: z.number(),
     gpuCount: z.number().int().min(0),
+    gpu: gpuConfigSchema,
+    dlp: dlpPolicySchema,
     dockerConfig: z.record(z.unknown()),
     enabled: z.boolean(),
   })
@@ -176,7 +201,7 @@ export const agentHeartbeatSchema = z.object({
 export type AgentHeartbeatDto = z.infer<typeof agentHeartbeatSchema>;
 
 export const sessionStatusSchema = z.object({
-  status: z.enum(['PROVISIONING', 'RUNNING', 'DEGRADED', 'DESTROYED', 'ERROR']),
+  status: z.enum(['PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED', 'DESTROYED', 'ERROR']),
   containerId: z.string().optional(),
   internalHost: z.string().optional(),
   host: z.string().optional(),
@@ -536,3 +561,46 @@ export const updateLogForwarderSchema = upsertLogForwarderSchema
   .partial()
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 export type UpdateLogForwarderDto = z.infer<typeof updateLogForwarderSchema>;
+
+// ── Session control (pause / resume / resize) ─────────────────────────────────
+export const resizeSessionSchema = z.object({
+  width: z.number().int().min(320).max(7680),
+  height: z.number().int().min(240).max(4320),
+});
+export type ResizeSessionDto = z.infer<typeof resizeSessionSchema>;
+
+// ── Image registries & marketplace ────────────────────────────────────────────
+export const createRegistrySchema = z.object({
+  name: z.string().min(1).max(120),
+  url: z.string().url(),
+  type: z.enum(['FIRST_PARTY', 'THIRD_PARTY']).default('THIRD_PARTY'),
+  enabled: z.boolean().default(true),
+});
+export type CreateRegistryDto = z.infer<typeof createRegistrySchema>;
+
+export const updateRegistrySchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    url: z.string().url().optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateRegistryDto = z.infer<typeof updateRegistrySchema>;
+
+// Install a registry entry → creates an Image (and optionally a Workspace).
+export const installRegistryEntrySchema = z.object({
+  createWorkspace: z.boolean().default(false),
+});
+export type InstallRegistryEntryDto = z.infer<typeof installRegistryEntrySchema>;
+
+// ── Licensing ──────────────────────────────────────────────────────────────────
+export const upsertLicenseSchema = z.object({
+  type: z.enum(['CONCURRENT', 'NAMED_USER']).default('CONCURRENT'),
+  seats: z.number().int().min(1).max(1_000_000).default(5),
+  concurrentSessions: z.number().int().min(1).max(1_000_000).default(5),
+  issuedTo: z.string().max(200).optional(),
+  notBefore: z.coerce.date().optional(),
+  notAfter: z.coerce.date().optional(),
+  features: z.record(z.unknown()).default({}),
+});
+export type UpsertLicenseDto = z.infer<typeof upsertLicenseSchema>;

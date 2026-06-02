@@ -1,11 +1,19 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { CreateSessionDto } from '@chista/contracts';
 import { prisma } from '@chista/db';
-import { type ProvisionCommand, RedisChannels, type RunConfig } from '@chista/events';
+import {
+  type DlpPolicy,
+  type GpuConfig,
+  type ProvisionCommand,
+  RedisChannels,
+  type RunConfig,
+  type SessionControlCommand,
+} from '@chista/events';
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
 import { RedisService } from '../../common/redis.service';
 import { ConnectivityRenderService } from '../connectivity/connectivity-render.service';
+import { LicensingService } from '../licensing/licensing.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { SchedulerService } from './scheduler.service';
 
@@ -19,9 +27,15 @@ export class SessionsService {
     // Optional so unit tests can construct the service without the webhook deps;
     // when present, domain events fan out to subscribed webhooks.
     @Optional() private readonly webhooks?: WebhooksService,
+    // Optional so unit tests can construct the service without licensing;
+    // when present, the per-org session cap is enforced before launch.
+    @Optional() private readonly licensing?: LicensingService,
   ) {}
 
   async create(user: AuthUser, dto: CreateSessionDto) {
+    // License gate first — refuse before we allocate any resources.
+    await this.licensing?.assertCanLaunch(user.orgId, user.sub);
+
     const workspace = await prisma.workspace.findUnique({
       where: { id: dto.workspaceId },
       include: { image: true },
@@ -99,6 +113,8 @@ export class SessionsService {
       coresLimit: number | null;
       memLimitMb: number | null;
       gpuCount: number;
+      gpu?: unknown;
+      dlp?: unknown;
       webFilterId?: string | null;
       egressGatewayId?: string | null;
       browserIsolationId?: string | null;
@@ -113,22 +129,28 @@ export class SessionsService {
       shmSize?: string;
       /** Host device paths to pass through, e.g. "/dev/video0", "/dev/bus/usb", "/dev/pcsc". */
       devices?: string[];
+      audioImage?: string;
+      printerImage?: string;
     };
+    const gpu = (workspace.gpu ?? {}) as GpuConfig;
+    const dlp = (workspace.dlp ?? {}) as DlpPolicy;
     // Neko (WEBRTC) listens on 8080; all other images use the image's default (6901).
     const defaultPort = protocol === 'WEBRTC' ? 8080 : 6901;
     const runConfig: RunConfig = {
       dockerImage: workspace.image?.dockerImage ?? 'kasmweb/firefox:1.16.0',
-      env: {},
+      // DLP flags are surfaced to KasmVNC/Neko as env vars the image honours.
+      env: dlpEnv(dlp),
       ports: defaults.ports ?? [defaultPort],
       shmSize: dockerCfg.shmSize ?? (protocol === 'WEBRTC' ? '2g' : '1g'),
       cores: workspace.coresLimit ?? undefined,
       memLimitMb: workspace.memLimitMb ?? undefined,
-      gpuCount: workspace.gpuCount,
+      gpuCount: gpu.count ?? workspace.gpuCount,
+      ...(gpu.encoder && gpu.encoder !== 'none' ? { gpu } : {}),
       ...(dockerCfg.devices?.length ? { devices: dockerCfg.devices } : {}),
     };
 
     // Resolve open-source sidecar descriptors from workspace connectivity policy.
-    const sidecars: ProvisionCommand['sidecars'] = {};
+    const sidecars: NonNullable<ProvisionCommand['sidecars']> = {};
     if (this.render) {
       if (workspace.webFilterId) {
         sidecars.squid = await this.render
@@ -149,6 +171,9 @@ export class SessionsService {
           .resolveNekoSidecar(workspace.orgId, workspace.browserIsolationId, squidUrl)
           .catch(() => undefined);
       }
+      // DLP-gated capability sidecars (open-source PulseAudio / CUPS).
+      if (dlp.audioOut) sidecars.audio = this.render.resolveAudioSidecar(dockerCfg.audioImage);
+      if (dlp.printing) sidecars.printing = this.render.resolvePrintingSidecar(dockerCfg.printerImage);
     }
 
     const command: ProvisionCommand = {
@@ -159,6 +184,7 @@ export class SessionsService {
       zone: zoneName,
       protocol,
       runConfig,
+      ...(Object.keys(dlp).length > 0 ? { dlp } : {}),
       ...(Object.keys(sidecars).length > 0 ? { sidecars } : {}),
     };
     await this.redis.publish(RedisChannels.provision(zoneName), command);
@@ -228,6 +254,101 @@ export class SessionsService {
   async connection(id: string) {
     const session = await prisma.session.findUnique({ where: { id } });
     if (!session) throw new NotFoundException('Session not found');
-    return { connectionUrl: session.connectionUrl, status: session.status };
+    const workspace = session.workspaceId
+      ? await prisma.workspace.findUnique({ where: { id: session.workspaceId } })
+      : null;
+    return {
+      connectionUrl: session.connectionUrl,
+      status: session.status,
+      // The viewer reads the DLP policy back to grey out disallowed controls.
+      dlp: (workspace?.dlp ?? {}) as DlpPolicy,
+    };
   }
+
+  /** Freeze a running session's container (no compute, state retained). */
+  async pause(id: string, user: AuthUser) {
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED']);
+    await this.sendControl(session, { action: 'PAUSE' });
+    await prisma.session.update({ where: { id }, data: { status: 'PAUSED' } });
+    await this.audit.record({
+      orgId: session.orgId,
+      actorUserId: user.sub,
+      action: 'session.pause',
+      targetType: 'Session',
+      targetId: id,
+      metadata: {},
+    });
+    await this.webhooks?.dispatch(session.orgId, 'session.paused', { sessionId: id });
+    return { ok: true };
+  }
+
+  /** Thaw a paused session's container. */
+  async resume(id: string, user: AuthUser) {
+    const session = await this.requireControllable(id, ['PAUSED']);
+    await this.sendControl(session, { action: 'RESUME' });
+    await prisma.session.update({
+      where: { id },
+      data: { status: 'RUNNING', lastKeepaliveAt: new Date() },
+    });
+    await this.audit.record({
+      orgId: session.orgId,
+      actorUserId: user.sub,
+      action: 'session.resume',
+      targetType: 'Session',
+      targetId: id,
+      metadata: {},
+    });
+    await this.webhooks?.dispatch(session.orgId, 'session.resumed', { sessionId: id });
+    return { ok: true };
+  }
+
+  /** Request a screen-geometry change for multi-monitor / responsive layouts. */
+  async resize(id: string, width: number, height: number) {
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED']);
+    await this.sendControl(session, { action: 'RESIZE', width, height });
+    return { ok: true };
+  }
+
+  private async requireControllable(id: string, allowed: string[]) {
+    const session = await prisma.session.findUnique({ where: { id } });
+    if (!session) throw new NotFoundException('Session not found');
+    if (!allowed.includes(session.status)) {
+      throw new BadRequestException(`Session is ${session.status}; expected one of ${allowed.join(', ')}`);
+    }
+    return session;
+  }
+
+  private async sendControl(
+    session: { id: string; zoneId: string; containerId: string | null },
+    partial: Omit<SessionControlCommand, 'sessionId' | 'containerId'>,
+  ) {
+    const zone = await prisma.deploymentZone.findUnique({ where: { id: session.zoneId } });
+    const command: SessionControlCommand = {
+      sessionId: session.id,
+      containerId: session.containerId ?? undefined,
+      ...partial,
+    };
+    await this.redis.publish(RedisChannels.control(zone?.name ?? 'default'), command);
+  }
+}
+
+/**
+ * Translate a DLP policy into container env vars. KasmVNC and Neko both read
+ * these to enable/disable clipboard, upload/download, audio and printing. A
+ * flag that is explicitly false disables the feature; absent leaves the image
+ * default. We only emit the restrictive ("0") values so permissive defaults
+ * still work for workspaces with no DLP policy.
+ */
+function dlpEnv(dlp: DlpPolicy): Record<string, string> {
+  const env: Record<string, string> = {};
+  const deny = (flag: boolean | undefined) => flag === false;
+  if (deny(dlp.clipboardUp)) env.KASM_CLIPBOARD_UP = '0';
+  if (deny(dlp.clipboardDown)) env.KASM_CLIPBOARD_DOWN = '0';
+  if (deny(dlp.uploads)) env.KASM_UPLOADS = '0';
+  if (deny(dlp.downloads)) env.KASM_DOWNLOADS = '0';
+  if (deny(dlp.printing)) env.KASM_PRINTING = '0';
+  if (deny(dlp.audioIn)) env.KASM_AUDIO_INPUT = '0';
+  if (deny(dlp.audioOut)) env.KASM_AUDIO = '0';
+  if (deny(dlp.pwa)) env.KASM_PWA = '0';
+  return env;
 }

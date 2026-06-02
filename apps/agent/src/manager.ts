@@ -51,7 +51,7 @@ export const manager = {
     agentId: string,
     sessionId: string,
     body: {
-      status: 'PROVISIONING' | 'RUNNING' | 'DEGRADED' | 'DESTROYED' | 'ERROR';
+      status: 'PROVISIONING' | 'RUNNING' | 'DEGRADED' | 'PAUSED' | 'DESTROYED' | 'ERROR';
       containerId?: string;
       internalHost?: string;
       host?: string;
