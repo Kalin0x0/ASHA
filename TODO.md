@@ -132,10 +132,25 @@ launch → stream flow against a real KasmVNC container.
 
 ## Phase 4 — Storage, isolation, Kubernetes, Windows
 
-- [ ] Storage mappings, browser isolation / web filtering / egress
-- [ ] Kubernetes driver: agent DaemonSet, ephemeral session pods, per-session
-      ingress, HPA
-- [ ] Windows / RDS workspaces
+- [x] Browser isolation / web filtering / egress / connection proxies —
+      `ConnectivityModule` (`/connectivity`): org-scoped CRUD for
+      `ConnectionProxyConfig` (`/proxies`), `EgressGateway` (`/egress`),
+      `WebFilterConfig` (`/filters`) and `BrowserIsolationConfig` (`/isolation`),
+      each with audit records. 16 tests.
+- [x] Kubernetes driver: agent DaemonSet, ephemeral session pods, per-session
+      ingress, HPA —
+      Agent: dynamic driver selection (`CHISTA_DRIVER=kubernetes|docker`);
+      `kubernetes.ts` provisions session Pod + ClusterIP Service + per-session
+      Ingress via `@kubernetes/client-node`, collects metrics, tears down with
+      `Promise.allSettled`. Helm: agent DaemonSet (conditional Docker-socket /
+      ServiceAccount), RBAC (ClusterRole node reads + Role session CRUD), session
+      namespace with ResourceQuota + NetworkPolicy (blocks control plane), HPA for
+      API (CPU+mem) and Web (CPU).
+- [x] Windows / RDS workspaces — `WindowsModule`
+      (`/workspaces/:workspaceId/remote-apps`): RemoteApp CRUD, org-scoped via
+      workspace join. 6 tests.
+
+**Phase 4 is complete.** 144 tests, 25 typecheck+build tasks all green.
 
 ---
 
