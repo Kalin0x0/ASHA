@@ -199,9 +199,22 @@ open-source tooling — nothing derived from Kasm.
       injects sidecar containers + a per-Pod ConfigMap for config mounts. Squid's
       proxy URL is auto-wired into Neko when both are active.
 
-### Still open (need deep client/host integration)
-- [ ] WebRTC / H.264 codec path (would need Neko/Selkies; KasmVNC is Kasm's own)
-- [ ] Smartcard / USB / webcam passthrough (deep client integration)
+- [x] **WebRTC / H.264 codec path** — Neko (`ghcr.io/m1k1o/neko/*`, Apache-2.0)
+      is now a first-class primary stream. `StreamProtocol.WEBRTC` →
+      `ConnectionType.NEKO_WEBRTC`; the session container runs Neko (port 8080,
+      2 GB shm) and serves its built-in WebRTC/H.264 web client. The viewer shows
+      a gold "WebRTC/H.264" badge and Neko-specific negotiation copy. No KasmVNC
+      codec dependency on this path.
+- [x] **Smartcard / USB / webcam passthrough** — `RunConfig.devices[]` carries
+      host device paths (`/dev/video0`, `/dev/bus/usb`, `/dev/pcsc`, …) declared
+      in `workspace.dockerConfig.devices`. Docker driver maps them 1:1 as
+      `HostConfig.Devices` (rwm); Kubernetes driver mounts each as a CharDevice
+      hostPath volume + grants MKNOD/SYS_RAWIO. Viewer adds a getUserMedia webcam
+      PiP preview and a USB/smartcard configuration helper.
+
+**Phase 5 is complete.** 177 tests, 25 typecheck+build tasks all green.
+The entire Kasm feature gap is now closed using only custom code + open-source
+tooling (Squid, WireGuard, Neko, Fluent Bit, pg_dump) — nothing from Kasm.
 
 ---
 
