@@ -37,12 +37,25 @@ export class FederationService {
           username,
           displayName: profile.displayName ?? null,
           status: 'ACTIVE',
+          // Bind the identity to the provider that created it.
+          federatedFrom: authConfigId,
         },
       });
       this.logger.log(`JIT-provisioned SSO user ${email} in org ${orgId}`);
-    } else if (user.status !== 'ACTIVE') {
-      // A disabled/locked account must not be revived by SSO.
-      throw new Error('User account is not active');
+    } else {
+      if (user.status !== 'ACTIVE') {
+        // A disabled/locked account must not be revived by SSO.
+        throw new Error('User account is not active');
+      }
+      // The account already belongs to a *different* identity provider — refuse
+      // to let this IdP shadow it by email. Accounts not yet bound to any IdP
+      // (legacy/local) are claimed by the first SSO login that reaches them.
+      if (user.federatedFrom && user.federatedFrom !== authConfigId) {
+        throw new Error('Account belongs to a different identity provider');
+      }
+      if (!user.federatedFrom) {
+        user = await prisma.user.update({ where: { id: user.id }, data: { federatedFrom: authConfigId } });
+      }
     }
 
     await this.syncGroups(orgId, authConfigId, user.id, profile.attributes ?? {});

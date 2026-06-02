@@ -148,15 +148,21 @@ export class AgentsService {
         this.gateway.emitToSession(session.id, { type: 'session.ready', payload: { sessionId: session.id, connectionUrl } });
       }
 
+      // Release the slot the scheduler reserved once the session reaches a
+      // terminal state — DESTROYED (ran then torn down) or ERROR (never came
+      // up). Only the *first* active→terminal transition decrements, so an
+      // ERROR later followed by DESTROYED cleanup cannot double-release.
+      const wasActive = session.status !== 'DESTROYED' && session.status !== 'ERROR';
+      if ((dto.status === 'DESTROYED' || dto.status === 'ERROR') && session.agentId && wasActive) {
+        await prisma.agent.updateMany({
+          where: { id: session.agentId, currentSessions: { gt: 0 } },
+          data: { currentSessions: { decrement: 1 } },
+        });
+      }
+
       if (dto.status === 'DESTROYED') {
         data.destroyedAt = new Date();
         await this.redis.del(`chista:proxy:session:${session.kasmId}`);
-        if (session.agentId) {
-          await prisma.agent.updateMany({
-            where: { id: session.agentId, currentSessions: { gt: 0 } },
-            data: { currentSessions: { decrement: 1 } },
-          });
-        }
       }
 
       await prisma.session.update({ where: { id: sessionId }, data });

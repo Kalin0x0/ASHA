@@ -277,6 +277,13 @@ model User {
   avatarUrl     String?
   /** SCIM externalId from the upstream IdP (e.g. Okta sub). */
   externalId    String?
+  /**
+   * AuthConfig.id of the identity provider that owns this federated identity.
+   * Set on first SSO provisioning; once bound, a *different* IdP cannot claim
+   * the account by email alone (prevents one IdP shadowing another's users).
+   * Null for local (password) accounts.
+   */
+  federatedFrom String?
   status        UserStatus @default(ACTIVE)
   isSystemAdmin Boolean    @default(false)
   locale        String     @default("en")

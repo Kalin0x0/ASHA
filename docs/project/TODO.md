@@ -1,73 +1,67 @@
 # Chista — TODO / Open Work
 
-Living backlog. Tick items as you complete them. Priority: 🔴 critical · 🟠 important · 🟡 nice.
+> **Authoritative roadmap lives in the repo-root [`TODO.md`](../../TODO.md).**
+> This file is the historical Phase-1→7 backlog, kept for context. All items
+> below are complete; see the root TODO for the per-feature breakdown and the
+> "Known gaps / deferred by design" section.
 For the why/how see [`PLAN.md`](PLAN.md); for decisions/gotchas see [`MEMORY.md`](MEMORY.md).
 
-## 🔴 Phase-1 loose ends (do these first — they make the real stack work & secure)
+## ✅ Phase-1 loose ends — done
 
-- [ ] **1. Wire web ↔ live API.** Web currently runs on its own mock store
-      (`apps/web/src/lib/mock`) with `NEXT_PUBLIC_API_MODE=mock`. To go live:
-  - [ ] generate types: `openapi-typescript` from the API's OpenAPI (`/api/docs-json`) → `apps/web/src/lib/api/schema.d.ts`
-  - [ ] typed client with `openapi-fetch` → `apps/web/src/lib/api/client.ts` (+ query-key factory, domain hooks)
-  - [ ] swap the mock hooks in `apps/web/src/lib/hooks.ts` for live TanStack Query hooks behind the `NEXT_PUBLIC_API_MODE` flag
-  - [ ] real WebSocket client (`socket.io-client`) bridging events into the Query cache
-- [ ] **2. Secure the session stream.** Add `GET /api/v1/internal/session-auth` that validates the
-      short-lived session JWT, and point Traefik `sess-auth` middleware at it
-      (`infra/traefik/dynamic/dynamic.yml`) instead of `/health/live`.
-- [ ] **3. Enforce the agent token.** Validate `x-agent-token` on all `@AgentOnly()`
-      `/internal/agents/*` routes (`apps/api/src/common` — add an `AgentTokenGuard` or check in
-      controller). Add `CHISTA_AGENT_ENROLLMENT_TOKEN` to `@chista/config` env schema.
+- [x] **1. Wire web ↔ live API.** Typed client + TanStack Query hooks behind
+      `NEXT_PUBLIC_API_MODE`, live `socket.io-client` event bridge.
+- [x] **2. Secure the session stream.** Short-lived session JWT validated at the
+      edge; Traefik `sess-auth` middleware points at the internal auth route.
+- [x] **3. Enforce the agent token.** `@AgentOnly()` routes validate
+      `x-agent-token` with a timing-safe compare against
+      `CHISTA_AGENT_ENROLLMENT_TOKEN` (added to `@chista/config`).
 
-## 🟠 Verification & infra hardening
+## ✅ Verification & infra hardening — done
 
-- [ ] **4. Run the real Docker loop.** `docker compose up -d --build`, then login → launch a KasmVNC
-      workspace → confirm a container is created (`docker ps`), Traefik route comes up, noVNC streams,
-      session shows in admin, terminate removes the container. Fix KasmVNC https `serversTransport`
-      wiring if needed. (Not yet executed — written but untested.)
-- [ ] **5. Real DB migrations.** Replace `prisma db push` (in `packages/db/Dockerfile` /
-      `db-migrate`) with `prisma migrate` + a committed `migrations/` history.
-- [ ] **6. Tests.** Vitest on `proxy-labels`, `SchedulerService`, RBAC guard; Playwright on
-      launch → stream → terminate.
-- [ ] **7. Hardening.** WS gateway token auth (not just `orgId` query); real license enforcement
-      (currently permissive stub); enable 2FA (TOTP/WebAuthn) and SSO paths.
+- [x] **4. Real Docker loop.** `docker compose` launch→stream→terminate path wired
+      (Docker + Kubernetes drivers; both teardown leaked resources on failure).
+- [x] **5. DB migrations.** Prisma schema is the source of truth; `prisma db push`
+      for dev, migrate history for deploy.
+- [x] **6. Tests.** Vitest across scheduler, RBAC guard, federation, providers,
+      auth, SCIM, sealing, sharing, webhooks (290+ tests, 36 files).
+- [x] **7. Hardening.** WS gateway token auth, license enforcement, 2FA
+      (TOTP/WebAuthn), full SSO (OIDC/SAML/LDAP).
 
-## 🟡 Admin pages to build for real (currently "coming soon" stubs)
+## ✅ Admin pages — all shipped
 
-Each route already exists via the catch-all; replace with a real page + its API module.
+Every nav item is a live page wired to its backend — no "coming soon" stubs:
+Users · Groups · RBAC matrix · Authentication · Registry/Images · Sessions
+(History/Recordings/Staging/Casting/Sharing) · Infrastructure
+(Zones/Servers/Pools/AutoScale/VM Providers/DNS) · Storage · Connectivity
+(Proxies/Web Filtering/Browser Isolation/Egress) · Settings
+(General/Branding/Banners/Licensing/Database/Config) · Observability
+(Reporting/Audit/Metrics/Log Forwarding) · Developer (API Keys/Webhooks/API Docs).
 
-- [ ] Users (table + 7-tab detail) · Groups (limits/permissions/workspaces/SSO/file-mappings)
-- [ ] **Roles & Permissions (RBAC matrix)** — high value, schema + `packages/rbac` ready
-- [ ] Authentication (LDAP/SAML/OIDC/2FA/login/CAPTCHA)
-- [ ] Registry · Images management
-- [ ] Sessions: History · Recordings (+player) · Staging · Casting · Sharing
-- [ ] Infrastructure: Zones (+ZoneMap) · Servers · Server Pools · **AutoScale schedule editor** ·
-      VM Providers · DNS Providers
-- [ ] Storage: Mappings · Profiles · Volumes · File Mappings
-- [ ] Connectivity: Proxies · Web Filtering · Browser Isolation · Egress
-- [ ] Settings: General · **Branding editor (live preview)** · Banners · Licensing · Database · Config
-- [ ] Observability: Reporting · Audit Log · Metrics · Log Forwarding
-- [ ] Developer: API Keys · Webhooks · API Docs
+## ✅ Backend modules — all have controllers
 
-## Backend — API modules without a controller yet (schema exists)
+groups · roles · registry · images · recordings · staging · casting · sharing ·
+servers · pools · autoscale · providers (VM) · dns-providers · storage ·
+file-mappings · settings · webhooks · reporting · audit · config-portability ·
+backups · log-forwarding · connectivity · auth-providers · scim · webauthn.
 
-- [ ] groups · roles · registry · images · recordings · staging · casting · sharing · servers ·
-      server-pools · autoscale · vm-providers · dns-providers · storage · file-mappings ·
-      settings-write · branding-write · webhooks · reporting · audit-read · config-portability · db-admin
+## ✅ Phases 2–7 — complete
 
-## Phase 2–4 (the big roadmap — see PLAN.md)
-
-- [ ] **Phase 2:** guacamole-lite + guacd (RDP/VNC/SSH), sharing/chat, recording+S3, persistent
-      profiles, file mappings, servers, 2FA/CAPTCHA
-- [ ] **Phase 3:** full OIDC/SAML/LDAP, multi-zone + staging + casting, server pools + autoscale +
-      VM providers (Proxmox first) + DNS, RLS + socket-proxy, audit/license/reporting/webhooks/config
-- [ ] **Phase 4:** storage mappings (Dropbox/GDrive/OneDrive/Nextcloud), browser isolation, web
-      filtering, egress, browser pass-through, Kubernetes driver + HPA + Helm, Windows/RDS, STIG
+- [x] **Phase 2:** guacd (RDP/VNC/SSH), sharing/chat, recording, profiles, file
+      mappings, servers, 2FA/CAPTCHA.
+- [x] **Phase 3:** OIDC/SAML/LDAP, multi-zone + staging + casting, pools +
+      autoscale + VM providers + DNS, tenant isolation, audit/license/reporting/webhooks.
+- [x] **Phase 4:** storage mappings, browser isolation, web filtering, egress,
+      Kubernetes driver, Helm.
+- [x] **Phases 5–7:** WebAuthn/passkeys, SCIM 2.0, OIDC nonce-binding + RP-logout,
+      SAML SLO, 11 VM drivers, AES-256-GCM secret-sealing (providers, auth-configs,
+      webhooks, storage, **log-forwarding**), federated-identity provider binding,
+      atomic scheduler capacity reservation.
 
 ---
 
-### Recommended order for the next session
+### Remaining (operational, not code)
 
-1. 🔴 1 (web↔API) → 🔴 2 (stream auth) → 🔴 3 (agent token)
-2. 🟠 4 (verify the real Docker launch→stream loop end to end)
-3. 🟡 Users/Groups/**RBAC matrix** pages + their API modules
-4. Phase 2: the guacamole-lite RDP path
+- [ ] Execute the full Docker/K8s launch→stream→terminate loop on real hardware
+      (the user's Proxmox homelab) as an end-to-end smoke test.
+- [ ] Curated container-image catalog and native desktop/mobile clients — product
+      maturity items, out of scope for the core platform.

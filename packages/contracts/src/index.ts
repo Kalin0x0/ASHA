@@ -587,8 +587,9 @@ export const upsertLogForwarderSchema = z.object({
   name: z.string().min(1).max(120),
   type: z.enum(['syslog', 'splunk_hec', 'elasticsearch', 'loki', 'http']),
   endpoint: z.string().url().max(500).optional(),
+  // Secret-looking fields (token, password, …) are sealed server-side into the
+  // row's `secretRef` column; only a redacted copy is persisted in `config`.
   config: z.record(z.unknown()).default({}),
-  secretRef: z.string().max(200).optional(),
   enabled: z.boolean().default(false),
 });
 export type UpsertLogForwarderDto = z.infer<typeof upsertLogForwarderSchema>;

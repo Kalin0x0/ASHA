@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
-    user: { findFirst: vi.fn(), create: vi.fn() },
+    user: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     ssoMapping: { findMany: vi.fn() },
     userGroup: { findMany: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
   },
@@ -33,16 +33,42 @@ describe('FederationService.provision', () => {
     expect(user.id).toBe('u1');
   });
 
-  it('reuses an existing active user', async () => {
-    prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', orgId: 'org1', email: 'b@x.io', status: 'ACTIVE' });
+  it('reuses an existing user already bound to the same provider', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', orgId: 'org1', email: 'b@x.io', status: 'ACTIVE', federatedFrom: 'ac1' });
     const user = await svc.provision('org1', 'ac1', { email: 'b@x.io' });
     expect(prismaMock.user.create).not.toHaveBeenCalled();
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
     expect(user.id).toBe('u2');
   });
 
   it('refuses a disabled account', async () => {
     prismaMock.user.findFirst.mockResolvedValue({ id: 'u3', orgId: 'org1', email: 'c@x.io', status: 'DISABLED' });
     await expect(svc.provision('org1', 'ac1', { email: 'c@x.io' })).rejects.toThrow(/not active/);
+  });
+
+  it('binds federatedFrom on JIT create', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({ id: 'u1', orgId: 'org1', email: 'a@x.io', status: 'ACTIVE', federatedFrom: 'ac1' });
+    await svc.provision('org1', 'ac1', { email: 'a@x.io' });
+    expect(prismaMock.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ federatedFrom: 'ac1' }) }),
+    );
+  });
+
+  it('refuses a login when the account belongs to a different IdP (no shadowing)', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'u4', orgId: 'org1', email: 'd@x.io', status: 'ACTIVE', federatedFrom: 'ac-other' });
+    await expect(svc.provision('org1', 'ac1', { email: 'd@x.io' })).rejects.toThrow(/different identity provider/);
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+  });
+
+  it('claims an unbound (legacy/local) account on first SSO login', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'u5', orgId: 'org1', email: 'e@x.io', status: 'ACTIVE', federatedFrom: null });
+    prismaMock.user.update.mockResolvedValue({ id: 'u5', orgId: 'org1', email: 'e@x.io', status: 'ACTIVE', federatedFrom: 'ac1' });
+    const user = await svc.provision('org1', 'ac1', { email: 'e@x.io' });
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'u5' }, data: { federatedFrom: 'ac1' } }),
+    );
+    expect(user.federatedFrom).toBe('ac1');
   });
 });
 

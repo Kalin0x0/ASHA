@@ -15,17 +15,23 @@ const { prismaMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+// Reversible stand-ins so the sealing round-trip is observable in assertions.
+vi.mock('@chista/crypto', () => ({
+  seal: (plaintext: string) => `sealed:${plaintext}`,
+  unseal: (stored: string) => stored.replace(/^sealed:/, ''),
+}));
 
 import { LogForwardingService } from './log-forwarding.service';
 
 const audit = { record: vi.fn().mockResolvedValue(undefined) };
+const env = { SECRET_SEAL_KEY: '0'.repeat(64) } as never;
 
 describe('LogForwardingService', () => {
   let svc: LogForwardingService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new LogForwardingService(audit as never);
+    svc = new LogForwardingService(audit as never, env);
   });
 
   it('create records audit with the forwarder type', async () => {
@@ -36,9 +42,40 @@ describe('LogForwardingService', () => {
     );
   });
 
+  it('seals secret-looking config fields on create (token never stored in plaintext)', async () => {
+    prismaMock.logForwarderConfig.create.mockResolvedValue({ id: 'f1' });
+    await svc.create('org1', 'u1', {
+      name: 'splunk',
+      type: 'splunk_hec',
+      config: { host: 'splunk.internal', token: 'super-secret-hec' },
+      enabled: true,
+    });
+    const data = prismaMock.logForwarderConfig.create.mock.calls[0][0].data;
+    // Non-secret field kept; secret masked in the persisted config copy.
+    expect((data.config as Record<string, unknown>).host).toBe('splunk.internal');
+    expect(JSON.stringify(data.config)).not.toContain('super-secret-hec');
+    // Full config (incl. the secret) lives only in the sealed secretRef.
+    expect(data.secretRef).toContain('super-secret-hec');
+  });
+
   it('update throws NotFoundException when nothing matched the org', async () => {
-    prismaMock.logForwarderConfig.updateMany.mockResolvedValue({ count: 0 });
+    prismaMock.logForwarderConfig.findFirst.mockResolvedValue(null);
     await expect(svc.update('org1', 'u1', 'missing', { enabled: false })).rejects.toThrow(NotFoundException);
+  });
+
+  it('update preserves the stored secret when the incoming config masks it', async () => {
+    prismaMock.logForwarderConfig.findFirst.mockResolvedValue({
+      id: 'f1',
+      orgId: 'org1',
+      secretRef: 'sealed:{"host":"splunk.internal","token":"original-secret"}',
+      config: { host: 'splunk.internal', token: '••••••••' },
+    });
+    prismaMock.logForwarderConfig.updateMany.mockResolvedValue({ count: 1 });
+    await svc.update('org1', 'u1', 'f1', { config: { host: 'new-host', token: '••••••••' } });
+    const data = prismaMock.logForwarderConfig.updateMany.mock.calls[0][0].data;
+    // Masked token => unchanged original; host updated.
+    expect(data.secretRef).toContain('original-secret');
+    expect(data.secretRef).toContain('new-host');
   });
 
   it('renders a syslog Fluent Bit config from the endpoint URL', async () => {
