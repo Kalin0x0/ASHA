@@ -1,6 +1,13 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { type LoginDto, loginSchema, type RefreshDto, refreshSchema } from '@chista/contracts';
+import {
+  type ConfirmTotpDto,
+  confirmTotpSchema,
+  type LoginDto,
+  loginSchema,
+  type RefreshDto,
+  refreshSchema,
+} from '@chista/contracts';
 import { type AuthUser, CurrentUser, Public } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { AuthService } from './auth.service';
@@ -32,5 +39,28 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: AuthUser) {
     return this.auth.me(user.sub);
+  }
+
+  // ── TOTP / 2FA ──────────────────────────────────────────────────────────────
+
+  @ApiBearerAuth()
+  @Post('2fa/totp/enroll')
+  enrollTotp(@CurrentUser() user: AuthUser) {
+    return this.auth.enrollTotp(user.sub);
+  }
+
+  @ApiBearerAuth()
+  @Post('2fa/totp/confirm')
+  confirmTotp(
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodPipe(confirmTotpSchema)) dto: ConfirmTotpDto,
+  ) {
+    return this.auth.confirmTotp(user.sub, dto);
+  }
+
+  @ApiBearerAuth()
+  @Delete('2fa/totp')
+  disableTotp(@CurrentUser() user: AuthUser) {
+    return this.auth.disableTotp(user.sub);
   }
 }

@@ -60,7 +60,12 @@ launch → stream flow against a real KasmVNC container.
 - [ ] Session sharing + chat (share rooms over the existing events channels)
 - [ ] Session recording to S3-compatible storage
 - [ ] Persistent profiles, volume + file mappings
-- [ ] 2FA/TOTP (the auth stub) + CAPTCHA
+- [x] 2FA/TOTP — real TOTP enrollment + verification in the API
+      POST /auth/2fa/totp/enroll → secret + QR data URL
+      POST /auth/2fa/totp/confirm → verify first code, mark confirmed
+      DELETE /auth/2fa/totp → disable
+      Login now verifies TOTP via otplib when a confirmed method exists.
+      CAPTCHA deferred.
 - [x] Admin **Access** pages real: Users (live table), Groups (derived from
       memberships), Roles (permission matrix from `@chista/rbac`) — no new API
       endpoints needed; work in mock + live.

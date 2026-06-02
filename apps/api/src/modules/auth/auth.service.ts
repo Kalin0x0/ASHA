@@ -1,9 +1,11 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import type { LoginDto } from '@chista/contracts';
+import type { ConfirmTotpDto, LoginDto } from '@chista/contracts';
 import { hashToken, randomToken, verifyPassword } from '@chista/crypto';
 import { prisma } from '@chista/db';
 import type { Env } from '@chista/config';
+import { generateSecret, generateURI, verify as verifyOtp } from 'otplib';
+import qrcode from 'qrcode';
 import { AuditService } from '../../common/audit.service';
 import { ENV } from '../../common/env.module';
 import { RbacService } from '../../common/rbac.service';
@@ -29,12 +31,15 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // TOTP verification is not implemented yet (Phase 2). Fail closed: a user
-    // with a confirmed 2FA method cannot log in until real verification exists.
-    // Previously any non-empty `totp` value was accepted, which was a bypass.
-    const requires2fa = user.twoFactorMethods.some((m) => m.confirmed);
-    if (requires2fa) {
-      throw new UnauthorizedException('Two-factor authentication is not yet supported');
+    const confirmedTotp = user.twoFactorMethods.find((m) => m.confirmed && m.type === 'TOTP');
+    if (confirmedTotp) {
+      if (!dto.totp) throw new UnauthorizedException('Two-factor code required');
+      const result = await verifyOtp({ secret: confirmedTotp.secret, token: dto.totp });
+      if (!result.valid) throw new UnauthorizedException('Invalid two-factor code');
+      await prisma.twoFactorMethod.update({
+        where: { id: confirmedTotp.id },
+        data: { lastUsedAt: new Date() },
+      });
     }
 
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
@@ -81,7 +86,7 @@ export class AuthService {
   async me(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { groups: { include: { group: true } } },
+      include: { groups: { include: { group: true } }, twoFactorMethods: { where: { confirmed: true } } },
     });
     if (!user) throw new UnauthorizedException();
     const permissions = [...(await this.rbac.effectivePermissions(userId))];
@@ -89,7 +94,53 @@ export class AuthService {
       ...this.publicUser(user),
       groups: user.groups.map((g) => g.group.name),
       permissions,
+      twoFactor: { enabled: user.twoFactorMethods.length > 0 },
     };
+  }
+
+  /** Step 1: Generate a new TOTP secret and return the OTP URI + QR code data URL. */
+  async enrollTotp(userId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const secret = generateSecret();
+    const otpUri = generateURI({ issuer: 'Chista', label: user.email, secret });
+    const qrDataUrl = await qrcode.toDataURL(otpUri);
+
+    const method = await prisma.twoFactorMethod.create({
+      data: {
+        userId,
+        type: 'TOTP',
+        label: 'Authenticator app',
+        secret,
+        confirmed: false,
+      },
+    });
+
+    return { methodId: method.id, otpUri, qrDataUrl };
+  }
+
+  /** Step 2: Verify the first code and mark the method as confirmed. */
+  async confirmTotp(userId: string, dto: ConfirmTotpDto) {
+    const method = await prisma.twoFactorMethod.findFirst({
+      where: { id: dto.methodId, userId, type: 'TOTP', confirmed: false },
+    });
+    if (!method) throw new NotFoundException('Pending TOTP enrollment not found');
+
+    const result = await verifyOtp({ secret: method.secret, token: dto.code });
+    if (!result.valid) throw new BadRequestException('Invalid TOTP code');
+
+    await prisma.twoFactorMethod.update({
+      where: { id: method.id },
+      data: { confirmed: true, lastUsedAt: new Date() },
+    });
+    return { ok: true };
+  }
+
+  /** Remove all TOTP methods from a user account. */
+  async disableTotp(userId: string) {
+    await prisma.twoFactorMethod.deleteMany({ where: { userId, type: 'TOTP' } });
+    return { ok: true };
   }
 
   private async issueTokens(user: { id: string; orgId: string; email: string; isSystemAdmin: boolean }) {

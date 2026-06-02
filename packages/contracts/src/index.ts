@@ -11,6 +11,17 @@ export type LoginDto = z.infer<typeof loginSchema>;
 export const refreshSchema = z.object({ refreshToken: z.string().min(1) });
 export type RefreshDto = z.infer<typeof refreshSchema>;
 
+export const confirmTotpSchema = z.object({
+  methodId: z.string().min(1),
+  code: z.string().length(6).regex(/^\d{6}$/),
+});
+export type ConfirmTotpDto = z.infer<typeof confirmTotpSchema>;
+
+export const verifyTotpSchema = z.object({
+  code: z.string().length(6).regex(/^\d{6}$/),
+});
+export type VerifyTotpDto = z.infer<typeof verifyTotpSchema>;
+
 // ── Sessions ─────────────────────────────────────────────────────────────────
 export const createSessionSchema = z.object({
   workspaceId: z.string().min(1),
