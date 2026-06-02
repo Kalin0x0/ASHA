@@ -18,11 +18,14 @@
  * surface so the launch → stream flow is still demonstrable without Docker.
  */
 
-const DEMO_STREAM_BASE = (process.env.NEXT_PUBLIC_DEMO_STREAM_URL ?? '').trim().replace(/\/+$/, '');
+/** Normalised demo stream base URL, or '' when unset. */
+function streamBase(): string {
+  return (process.env.NEXT_PUBLIC_DEMO_STREAM_URL ?? '').trim().replace(/\/+$/, '');
+}
 
 /** True when a real KasmVNC endpoint is configured for the mock/demo flow. */
 export function isStreamConfigured(): boolean {
-  return DEMO_STREAM_BASE.length > 0;
+  return streamBase().length > 0;
 }
 
 /**
@@ -31,10 +34,11 @@ export function isStreamConfigured(): boolean {
  * viewer renders its placeholder surface instead of an <iframe>.
  */
 export function resolveStreamUrl(kasmId?: string): string | undefined {
-  if (!DEMO_STREAM_BASE) return undefined;
+  const base = streamBase();
+  if (!base) return undefined;
   let url: URL;
   try {
-    url = new URL(DEMO_STREAM_BASE);
+    url = new URL(base);
   } catch {
     return undefined;
   }
@@ -42,7 +46,7 @@ export function resolveStreamUrl(kasmId?: string): string | undefined {
   // web client; embed it as-is. A base that already carries a path is treated
   // as the Traefik proxy that path-routes each session under /session/<id>/.
   if (kasmId && url.pathname !== '/') {
-    return `${DEMO_STREAM_BASE}/session/${kasmId}/`;
+    return `${base}/session/${kasmId}/`;
   }
-  return DEMO_STREAM_BASE;
+  return base;
 }

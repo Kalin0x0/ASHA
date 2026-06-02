@@ -1,0 +1,79 @@
+# Chista — Roadmap & TODO
+
+Living checklist tracking the build-out phase by phase. Status legend:
+`[x]` done · `[~]` partial / scaffolded · `[ ]` not started.
+
+---
+
+## Phase 1 — Foundation & the launch → stream showpiece
+
+The monorepo, data model, design system, admin shell, and the end-user
+launch → stream flow against a real KasmVNC container.
+
+### Done
+- [x] pnpm + turbo monorepo, shared tsconfig, 10 packages + 3 apps
+- [x] Prisma data model (40+ models, multi-tenant, enums) + seed
+- [x] Design system (Tailwind v4 + Radix, anthracite/gold, charts, components)
+- [x] Admin shell: dashboard, live sessions, agent fleet, workspace catalog
+- [x] End-user portal: workspace launcher
+- [x] NestJS API: auth, sessions, workspaces, agents, catalog, health + WS gateway
+- [x] RBAC: permission catalog, role matrix, policy evaluation
+- [x] Agent: dockerode provision/destroy/stats + Redis command bus
+- [x] proxy-labels, events, crypto, config, logger packages
+- [x] Single-node docker-compose (traefik, postgres, redis, api, web, agent)
+- [x] Helm skeleton (api + web deployments)
+- [x] **Real KasmVNC stream in the session viewer** (iframe driven by live status)
+- [x] **Test framework (Vitest) + unit suites** for rbac, proxy-labels, crypto,
+      contracts, web stream helper (59 tests)
+- [x] **CI pipeline** (typecheck · lint · test · build on push/PR)
+
+### Remaining (to truly close Phase 1)
+- [ ] **Live API client in web** — `NEXT_PUBLIC_API_MODE=live` is never read;
+      hooks are mock-only. Add a fetch/react-query data layer + auth context so
+      the UI can run against the real API.
+- [ ] **Real login** — wire the login form to `POST /auth/login` in live mode
+      (token storage, refresh, route guards).
+- [ ] **API integration tests** — session lifecycle (create → provision →
+      status → terminate) with mocked Redis/Prisma.
+- [ ] **Workspace edit/delete** — controller routes exist; add service logic.
+- [ ] Persist Traefik certs (named volume) in docker-compose.
+- [ ] Embed verification: run a real `kasmweb/*` container and confirm the
+      viewer streams end to end.
+
+---
+
+## Phase 2 — Connectivity, sharing, persistence
+
+- [ ] `@chista/connection-proxy` app — guacamole-lite bridge for RDP/VNC/SSH
+- [ ] Session sharing + chat (share rooms over the existing events channels)
+- [ ] Session recording to S3-compatible storage
+- [ ] Persistent profiles, volume + file mappings
+- [ ] 2FA/TOTP (the auth stub) + CAPTCHA
+- [ ] Admin pages: Images, History, Recordings, Sharing, Users, Groups, Roles
+- [ ] Storage: persistent profiles, volume/file mappings UI + API
+
+---
+
+## Phase 3 — Identity, scale, hardening
+
+- [ ] OIDC / SAML / LDAP authentication providers
+- [ ] Multi-zone, staging, casting
+- [ ] Server pools + autoscale + VM/DNS providers (Proxmox first)
+- [ ] Security hardening (Postgres RLS backstop, CSP, rate limiting)
+- [ ] Reporting + webhooks
+
+---
+
+## Phase 4 — Storage, isolation, Kubernetes, Windows
+
+- [ ] Storage mappings, browser isolation / web filtering / egress
+- [ ] Kubernetes driver: agent DaemonSet, ephemeral session pods, per-session
+      ingress, HPA
+- [ ] Windows / RDS workspaces
+
+---
+
+## Bug hunt (continuous)
+
+Tracked findings from running the full repo (`typecheck · lint · test · build`)
+and exercising the app. Fixes land with their own commits.
