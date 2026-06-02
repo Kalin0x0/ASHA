@@ -13,6 +13,8 @@ networks:
 volumes:
   pg-data: {}
   redis-data: {}
+  # Persists ACME/Let's Encrypt certificates across restarts (see traefik below).
+  traefik-acme: {}
 
 services:
   traefik:
@@ -29,12 +31,20 @@ services:
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --api.dashboard=true
+      # Production TLS: uncomment to issue + auto-renew Let's Encrypt certs into
+      # the persisted /letsencrypt volume, then add
+      # `--label traefik.http.routers.<r>.tls.certresolver=le` (or set it on the
+      # session router labels). Dev uses Traefik's default self-signed cert.
+      # - --certificatesresolvers.le.acme.tlschallenge=true
+      # - --certificatesresolvers.le.acme.email=admin@chista.local
+      # - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
     ports:
       - '80:80'
       - '443:443'
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik-acme:/letsencrypt
     networks: [chista-edge, chista-sessions]
 
   postgres:
@@ -135,3 +145,35 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on: [api, redis]
     networks: [chista-core, chista-sessions]
+
+  connection-proxy:
+    build: { context: ., dockerfile: apps/connection-proxy/Dockerfile }
+    restart: unless-stopped
+    environment:
+      PROXY_PORT: "4100"
+      REDIS_URL: redis://redis:6379
+      CHISTA_API_URL: http://api:4000
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      # Set GUACD_HOST to the guacamole/guacd container once you enable RDP/VNC
+      GUACD_HOST: ${GUACD_HOST:-guacd}
+      GUACD_PORT: ${GUACD_PORT:-4822}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=chista-edge
+      - traefik.http.routers.proxy.rule=Host(`${CHISTA_BASE_DOMAIN:-chista.local}`) && PathPrefix(`/proxy`)
+      - traefik.http.routers.proxy.entrypoints=websecure
+      - traefik.http.routers.proxy.tls=true
+      - traefik.http.middlewares.proxy-strip.stripprefix.prefixes=/proxy
+      - traefik.http.routers.proxy.middlewares=proxy-strip
+      - traefik.http.services.proxy.loadbalancer.server.port=4100
+    depends_on: [api, redis, guacd]
+    networks: [chista-core, chista-edge]
+
+  # Guacamole daemon — performs the actual RDP/VNC negotiation. The
+  # connection-proxy bridges browser WebSockets to this over the Guacamole
+  # protocol (GUACD_HOST/GUACD_PORT). Only needed for RDP/VNC workspaces;
+  # KasmVNC sessions don't use it.
+  guacd:
+    image: guacamole/guacd:1.5.5
+    restart: unless-stopped
+    networks: [chista-core]

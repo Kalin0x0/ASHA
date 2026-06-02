@@ -1,9 +1,11 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import type { LoginDto } from '@chista/contracts';
+import type { ConfirmTotpDto, LoginDto } from '@chista/contracts';
 import { hashToken, randomToken, verifyPassword } from '@chista/crypto';
 import { prisma } from '@chista/db';
 import type { Env } from '@chista/config';
+import { generateSecret, generateURI, verify as verifyOtp } from 'otplib';
+import qrcode from 'qrcode';
 import { AuditService } from '../../common/audit.service';
 import { ENV } from '../../common/env.module';
 import { RbacService } from '../../common/rbac.service';
@@ -29,9 +31,27 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const requires2fa = user.twoFactorMethods.some((m) => m.confirmed);
-    if (requires2fa && !dto.totp) {
-      throw new UnauthorizedException('Two-factor code required');
+    const confirmedTotp = user.twoFactorMethods.find((m) => m.confirmed && m.type === 'TOTP');
+    if (confirmedTotp) {
+      if (!dto.totp) throw new UnauthorizedException('Two-factor code required');
+
+      // Replay protection: reject if the same 30-second window was already used.
+      // lastUsedAt represents the last successful verification; if it falls within
+      // the current TOTP period, the code has already been consumed.
+      const TOTP_PERIOD_MS = 30_000;
+      if (confirmedTotp.lastUsedAt) {
+        const windowStart = Math.floor(Date.now() / TOTP_PERIOD_MS) * TOTP_PERIOD_MS;
+        if (confirmedTotp.lastUsedAt.getTime() >= windowStart) {
+          throw new UnauthorizedException('Two-factor code already used — wait for the next code');
+        }
+      }
+
+      const result = await verifyOtp({ secret: confirmedTotp.secret, token: dto.totp });
+      if (!result.valid) throw new UnauthorizedException('Invalid two-factor code');
+      await prisma.twoFactorMethod.update({
+        where: { id: confirmedTotp.id },
+        data: { lastUsedAt: new Date() },
+      });
     }
 
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
@@ -55,14 +75,35 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
     const stored = await prisma.refreshToken.findUnique({ where: { tokenHash: hashToken(refreshToken) } });
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh token revoked or expired');
+    if (!stored) throw new UnauthorizedException('Invalid refresh token');
+
+    // Replay detection: a token that was already rotated (revoked) is being
+    // presented again. The legitimate client holds the *successor* token, so a
+    // hit here means the token leaked and an attacker is replaying it. Burn the
+    // entire rotation family — both the thief's and the victim's tokens — which
+    // forces a fresh login and contains the breach.
+    if (stored.revokedAt) {
+      await prisma.refreshToken.updateMany({
+        where: { family: stored.family, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await this.audit.record({
+        orgId: (await prisma.user.findUnique({ where: { id: stored.userId } }))?.orgId ?? 'unknown',
+        actorUserId: stored.userId,
+        action: 'auth.refresh_replay_detected',
+        metadata: { family: stored.family },
+      });
+      throw new UnauthorizedException('Refresh token reuse detected — all sessions revoked');
     }
+
+    if (stored.expiresAt < new Date()) throw new UnauthorizedException('Refresh token expired');
+
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user || user.status !== 'ACTIVE') throw new UnauthorizedException('User unavailable');
 
     await prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
-    return this.issueTokens(user);
+    // Carry the rotation family forward so the full chain stays linked.
+    return this.issueTokens(user, stored.family);
   }
 
   async logout(userId: string, refreshToken?: string) {
@@ -78,7 +119,7 @@ export class AuthService {
   async me(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { groups: { include: { group: true } } },
+      include: { groups: { include: { group: true } }, twoFactorMethods: { where: { confirmed: true } } },
     });
     if (!user) throw new UnauthorizedException();
     const permissions = [...(await this.rbac.effectivePermissions(userId))];
@@ -86,10 +127,64 @@ export class AuthService {
       ...this.publicUser(user),
       groups: user.groups.map((g) => g.group.name),
       permissions,
+      twoFactor: { enabled: user.twoFactorMethods.length > 0 },
     };
   }
 
-  private async issueTokens(user: { id: string; orgId: string; email: string; isSystemAdmin: boolean }) {
+  /** Step 1: Generate a new TOTP secret and return the OTP URI + QR code data URL. */
+  async enrollTotp(userId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const secret = generateSecret();
+    const otpUri = generateURI({ issuer: 'Chista', label: user.email, secret });
+    const qrDataUrl = await qrcode.toDataURL(otpUri);
+
+    const method = await prisma.twoFactorMethod.create({
+      data: {
+        userId,
+        type: 'TOTP',
+        label: 'Authenticator app',
+        secret,
+        confirmed: false,
+      },
+    });
+
+    return { methodId: method.id, otpUri, qrDataUrl };
+  }
+
+  /** Step 2: Verify the first code and mark the method as confirmed. */
+  async confirmTotp(userId: string, dto: ConfirmTotpDto) {
+    const method = await prisma.twoFactorMethod.findFirst({
+      where: { id: dto.methodId, userId, type: 'TOTP', confirmed: false },
+    });
+    if (!method) throw new NotFoundException('Pending TOTP enrollment not found');
+
+    const result = await verifyOtp({ secret: method.secret, token: dto.code });
+    if (!result.valid) throw new BadRequestException('Invalid TOTP code');
+
+    await prisma.twoFactorMethod.update({
+      where: { id: method.id },
+      data: { confirmed: true, lastUsedAt: new Date() },
+    });
+    return { ok: true };
+  }
+
+  /** Remove all TOTP methods from a user account. */
+  async disableTotp(userId: string) {
+    await prisma.twoFactorMethod.deleteMany({ where: { userId, type: 'TOTP' } });
+    return { ok: true };
+  }
+
+  /**
+   * Mint an access/refresh pair. On a fresh login `family` is omitted and a new
+   * rotation family is created; on refresh the caller passes the existing family
+   * so the chain stays linked and replay detection can burn it as a unit.
+   */
+  private async issueTokens(
+    user: { id: string; orgId: string; email: string; isSystemAdmin: boolean },
+    family?: string,
+  ) {
     const payload = {
       sub: user.id,
       orgId: user.orgId,
@@ -108,7 +203,7 @@ export class AuthService {
       data: {
         userId: user.id,
         tokenHash: hashToken(refreshToken),
-        family: randomToken(8),
+        family: family ?? randomToken(8),
         expiresAt: new Date(Date.now() + this.env.JWT_REFRESH_TTL * 1000),
       },
     });

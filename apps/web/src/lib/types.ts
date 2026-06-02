@@ -42,6 +42,12 @@ export interface SessionRow {
   uptimeSec: number;
   createdAt: string;
   connectionType: string;
+  /**
+   * Public URL of the session's KasmVNC web client, embedded by the streaming
+   * viewer. Populated once the session reaches RUNNING. Undefined while
+   * provisioning, or in mock mode when no demo stream URL is configured.
+   */
+  connectionUrl?: string;
 }
 
 export interface Agent {
@@ -85,6 +91,45 @@ export interface ActivityItem {
   actor: string;
   message: string;
   at: string;
+}
+
+export interface ImageRow {
+  id: string;
+  fullImage: string;
+  registry: string;
+  name: string;
+  tag: string;
+  workspaces: string[];
+  sizeMb: number;
+  pulledAt: string;
+  status: 'available' | 'pulling' | 'error';
+}
+
+export interface RecordingRow {
+  id: string;
+  sessionId: string;
+  workspaceName: string;
+  user: string;
+  protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH';
+  status: 'RECORDING' | 'FINALIZING' | 'AVAILABLE' | 'FAILED';
+  sizeMb: number;
+  durationSec: number;
+  startedAt: string;
+}
+
+export type SessionEndReason = 'USER' | 'TIMEOUT' | 'ADMIN' | 'ERROR';
+
+export interface HistoryRow {
+  id: string;
+  user: { id: string; name: string; email: string };
+  workspaceName: string;
+  zone: string;
+  agent: string;
+  startedAt: string;
+  endedAt: string;
+  durationSec: number;
+  endReason: SessionEndReason;
+  connectionType: string;
 }
 
 export interface KpiSeriesPoint {

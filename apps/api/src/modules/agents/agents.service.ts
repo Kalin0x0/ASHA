@@ -5,7 +5,22 @@ import { prisma, runUnscoped } from '@chista/db';
 import { sessionConnectionUrl } from '@chista/proxy-labels';
 import type { Env } from '@chista/config';
 import { ENV } from '../../common/env.module';
+import { RedisService } from '../../common/redis.service';
 import { SessionsGateway } from '../sessions/sessions.gateway';
+
+/** Maps the session's stored ConnectionType to the proxy's protocol tag. */
+function proxyProtocol(connectionType: string): 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' {
+  switch (connectionType) {
+    case 'GUAC_RDP':
+      return 'RDP';
+    case 'GUAC_VNC':
+      return 'VNC';
+    case 'GUAC_SSH':
+      return 'SSH';
+    default:
+      return 'KASMVNC';
+  }
+}
 
 @Injectable()
 export class AgentsService {
@@ -14,6 +29,7 @@ export class AgentsService {
   constructor(
     private readonly gateway: SessionsGateway,
     private readonly jwt: JwtService,
+    private readonly redis: RedisService,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -49,7 +65,16 @@ export class AgentsService {
         },
       });
       this.logger.log(`Agent ${dto.hostname} enrolled into zone ${zone.name}`);
-      return { agentId: agent.id, zoneId: zone.id, sessionNetwork: this.env.CHISTA_SESSION_NETWORK };
+      // Return the resolved zone NAME so the agent subscribes to the exact
+      // provision/destroy channels the manager publishes on. The requested zone
+      // (dto.zone) may not exist, in which case enrollment falls back to the
+      // default zone — the agent must follow that, not its local env value.
+      return {
+        agentId: agent.id,
+        zoneId: zone.id,
+        zoneName: zone.name,
+        sessionNetwork: this.env.CHISTA_SESSION_NETWORK,
+      };
     });
   }
 
@@ -97,11 +122,35 @@ export class AgentsService {
         data.connectionUrl = connectionUrl;
         data.startedAt = session.startedAt ?? new Date();
 
+        // Publish the connection record the connection-proxy reads to bridge
+        // RDP/VNC/SSH sessions (keyed by kasmId). KasmVNC goes straight through
+        // Traefik and doesn't need this, but writing it is harmless.
+        await this.redis.set(
+          `chista:proxy:session:${session.kasmId}`,
+          {
+            sessionId: session.id,
+            kasmId: session.kasmId,
+            orgId: session.orgId,
+            userId: session.userId,
+            protocol: proxyProtocol(session.connectionType),
+            internalHost: dto.internalHost ?? session.internalHost ?? undefined,
+            internalPort: dto.port ?? session.port ?? undefined,
+            status: 'RUNNING',
+            sshUser: dto.sshUser,
+            sshPassword: dto.sshPassword,
+            sshPrivateKey: dto.sshPrivateKey,
+            rdpUser: dto.rdpUser,
+            rdpPassword: dto.rdpPassword,
+          },
+          3600,
+        );
+
         this.gateway.emitToSession(session.id, { type: 'session.ready', payload: { sessionId: session.id, connectionUrl } });
       }
 
       if (dto.status === 'DESTROYED') {
         data.destroyedAt = new Date();
+        await this.redis.del(`chista:proxy:session:${session.kasmId}`);
         if (session.agentId) {
           await prisma.agent.updateMany({
             where: { id: session.agentId, currentSessions: { gt: 0 } },

@@ -36,6 +36,28 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /** Set a JSON value with an optional TTL (seconds). No-op when Redis is down. */
+  async set(key: string, value: unknown, ttlSec?: number): Promise<void> {
+    if (!this.connected) return;
+    try {
+      const payload = JSON.stringify(value);
+      if (ttlSec) await this.client.set(key, payload, 'EX', ttlSec);
+      else await this.client.set(key, payload);
+    } catch (e) {
+      this.logger.warn(`set failed: ${(e as Error).message}`);
+    }
+  }
+
+  /** Delete a key. No-op when Redis is down. */
+  async del(key: string): Promise<void> {
+    if (!this.connected) return;
+    try {
+      await this.client.del(key);
+    } catch (e) {
+      this.logger.warn(`del failed: ${(e as Error).message}`);
+    }
+  }
+
   onModuleDestroy(): void {
     this.client.disconnect();
   }

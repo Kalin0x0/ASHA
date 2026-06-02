@@ -1,21 +1,29 @@
 'use client';
 
 import {
+  AlertTriangle,
+  Camera,
+  CameraOff,
   Check,
   Clipboard,
   Loader2,
   Maximize2,
   Power,
+  RotateCw,
   Settings,
+  Share2,
   Upload,
   Volume2,
   Wifi,
+  Usb,
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { ChistaMark } from '@/components/brand/logo';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { createShare } from '@/lib/api/endpoints';
+import { isLive } from '@/lib/api/mode';
 import { useSession, useTerminateSession } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 
@@ -26,27 +34,41 @@ const STEPS = [
   'Establishing secure channel',
 ];
 
+/** Maps the live session status onto the provisioning checklist index. */
+function stepForStatus(status: string | undefined): number {
+  switch (status) {
+    case 'REQUESTED':
+      return 0;
+    case 'SCHEDULED':
+      return 1;
+    case 'PROVISIONING':
+      return 3;
+    default:
+      return 0;
+  }
+}
+
 export default function StreamingViewerPage() {
   const params = useParams<{ sessionId: string }>();
   const router = useRouter();
   const session = useSession(params.sessionId);
   const terminate = useTerminateSession();
 
-  const [step, setStep] = useState(0);
-  const [connected, setConnected] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [frameReady, setFrameReady] = useState(false);
   const [clock, setClock] = useState('');
+  const [webcamOpen, setWebcamOpen] = useState(false);
 
   const workspaceName = session?.workspaceName ?? 'Workspace';
-
-  useEffect(() => {
-    if (connected) return;
-    if (step >= STEPS.length) {
-      const t = setTimeout(() => setConnected(true), 400);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => setStep((s) => s + 1), 850);
-    return () => clearTimeout(t);
-  }, [step, connected]);
+  const status = session?.status;
+  const isRunning = status === 'RUNNING' || status === 'DEGRADED';
+  const isError = status === 'ERROR' || status === 'DESTROYED' || status === 'TERMINATING';
+  const connectionUrl = session?.connectionUrl;
+  const isWebRtc = session?.connectionType === 'NEKO_WEBRTC';
+  const protocolLabel = isWebRtc ? 'WebRTC/H.264' : (session?.connectionType ?? 'KasmVNC');
+  // Connected = the session is live AND its embedded client has finished loading
+  // (or there is no real stream to wait on, i.e. the placeholder surface).
+  const connected = isRunning && (frameReady || !connectionUrl);
 
   useEffect(() => {
     const tick = () =>
@@ -56,6 +78,11 @@ export default function StreamingViewerPage() {
     return () => clearInterval(i);
   }, []);
 
+  // Reset the load gate whenever the embedded URL changes (e.g. reconnect).
+  useEffect(() => {
+    setFrameReady(false);
+  }, [connectionUrl]);
+
   const disconnect = () => router.push('/');
   const onTerminate = () => {
     if (session) terminate(session.id);
@@ -63,8 +90,23 @@ export default function StreamingViewerPage() {
     router.push('/');
   };
   const fullscreen = () => {
-    if (typeof document !== 'undefined' && document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().catch(() => {});
+    stageRef.current?.requestFullscreen?.().catch(() => {});
+  };
+  const onShare = async () => {
+    if (!session) return;
+    if (!isLive) {
+      toast('Sharing needs the live backend', {
+        description: 'Run with NEXT_PUBLIC_API_MODE=live to generate a real invite link.',
+      });
+      return;
+    }
+    try {
+      const share = await createShare(session.id, { enableChat: true });
+      const link = `${window.location.origin}/share/${share.shareKey}`;
+      await navigator.clipboard.writeText(link).catch(() => {});
+      toast.success('Share link copied', { description: link });
+    } catch {
+      toast.error('Could not create share link');
     }
   };
 
@@ -78,34 +120,56 @@ export default function StreamingViewerPage() {
           <span
             className={cn(
               'ml-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs',
-              connected ? 'text-success' : 'text-warning',
+              isError ? 'text-destructive' : connected ? 'text-success' : 'text-warning',
             )}
           >
             <span
               className={cn(
                 'size-1.5 rounded-full',
-                connected ? 'bg-success animate-pulse-ring' : 'bg-warning',
+                isError ? 'bg-destructive' : connected ? 'bg-success animate-pulse-ring' : 'bg-warning',
               )}
             />
-            {connected ? 'Connected' : 'Connecting'}
+            {isError ? 'Disconnected' : connected ? 'Connected' : 'Connecting'}
           </span>
         </div>
 
         {connected && (
           <div className="ml-2 hidden items-center gap-1.5 rounded-md bg-anthracite-900/60 px-2.5 py-1 font-mono text-[11px] text-muted-foreground sm:flex">
-            <Wifi className="size-3 text-success" /> 42 ms · 60 fps · {session?.connectionType ?? 'KasmVNC'}
+            <Wifi className="size-3 text-success" />
+            Live ·{' '}
+            <span className={cn(isWebRtc && 'text-gold-400')}>{protocolLabel}</span>
           </div>
         )}
 
         <div className="ml-auto flex items-center gap-1">
-          <ControlButton label="Clipboard" onClick={() => toast('Clipboard synced')}>
+          <ControlButton label="Clipboard" onClick={() => toast('Use the in-session toolbar for clipboard sync')}>
             <Clipboard className="size-4" />
           </ControlButton>
-          <ControlButton label="Upload file" onClick={() => toast('File upload')}>
+          <ControlButton label="Upload file" onClick={() => toast('Use the in-session toolbar to upload files')}>
             <Upload className="size-4" />
           </ControlButton>
-          <ControlButton label="Audio" onClick={() => toast('Audio enabled')}>
+          <ControlButton label="Audio" onClick={() => toast('Audio is controlled inside the stream')}>
             <Volume2 className="size-4" />
+          </ControlButton>
+          <ControlButton
+            label={webcamOpen ? 'Close camera' : 'Camera / webcam'}
+            onClick={() => setWebcamOpen((v) => !v)}
+          >
+            {webcamOpen ? <CameraOff className="size-4 text-gold-400" /> : <Camera className="size-4" />}
+          </ControlButton>
+          <ControlButton
+            label="USB / smartcard devices"
+            onClick={() =>
+              toast('Device passthrough', {
+                description:
+                  'Add device paths (e.g. /dev/video0, /dev/bus/usb, /dev/pcsc) to the workspace dockerConfig.devices array to forward hardware into the session container.',
+              })
+            }
+          >
+            <Usb className="size-4" />
+          </ControlButton>
+          <ControlButton label="Share session" onClick={onShare}>
+            <Share2 className="size-4" />
           </ControlButton>
           <ControlButton label="Settings" onClick={() => toast('Stream settings')}>
             <Settings className="size-4" />
@@ -123,11 +187,26 @@ export default function StreamingViewerPage() {
       </div>
 
       {/* Stage */}
-      <div className="relative flex-1 overflow-hidden">
-        {!connected ? (
-          <Provisioning step={step} workspaceName={workspaceName} />
+      <div ref={stageRef} className="relative flex-1 overflow-hidden bg-anthracite-950">
+        {isError ? (
+          <Disconnected workspaceName={workspaceName} onRetry={() => router.refresh()} onBack={disconnect} />
+        ) : !isRunning ? (
+          <Provisioning status={status} workspaceName={workspaceName} />
+        ) : connectionUrl ? (
+          <LiveStream
+            url={connectionUrl}
+            workspaceName={workspaceName}
+            isWebRtc={isWebRtc}
+            ready={frameReady}
+            onReady={() => setFrameReady(true)}
+          />
         ) : (
-          <RemoteDesktop workspaceName={workspaceName} clock={clock} onDisconnect={disconnect} />
+          <PlaceholderStream workspaceName={workspaceName} clock={clock} />
+        )}
+
+        {/* Floating webcam capture panel — getUserMedia, stays in-frame as PiP */}
+        {webcamOpen && isRunning && (
+          <WebcamPanel isWebRtc={isWebRtc} onClose={() => setWebcamOpen(false)} />
         )}
       </div>
     </div>
@@ -159,7 +238,113 @@ function ControlButton({
   );
 }
 
-function Provisioning({ step, workspaceName }: { step: number; workspaceName: string }) {
+/** Embeds either the KasmVNC or Neko (WebRTC/H.264) client inside the session frame. */
+function LiveStream({
+  url,
+  workspaceName,
+  isWebRtc,
+  ready,
+  onReady,
+}: {
+  url: string;
+  workspaceName: string;
+  isWebRtc: boolean;
+  ready: boolean;
+  onReady: () => void;
+}) {
+  const loadingText = isWebRtc
+    ? 'Negotiating WebRTC/H.264 channel…'
+    : 'Establishing secure channel…';
+
+  return (
+    <div className="absolute inset-0 pt-12">
+      <iframe
+        src={url}
+        title={`${workspaceName} — ${isWebRtc ? 'WebRTC/H.264' : 'live stream'}`}
+        onLoad={onReady}
+        className="size-full border-0 bg-anthracite-950"
+        // Neko/KasmVNC both need scripts + clipboard/pointer/fullscreen + WebRTC media.
+        allow="fullscreen; clipboard-read; clipboard-write; autoplay; microphone; camera; display-capture"
+        allowFullScreen
+      />
+      {!ready && (
+        <div className="absolute inset-0 top-12 flex flex-col items-center justify-center gap-3 bg-aurora">
+          <Loader2 className="size-6 animate-spin text-gold-400" />
+          <p className="text-sm text-muted-foreground">{loadingText}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Floating picture-in-picture webcam capture panel.
+ *
+ * For NEKO_WEBRTC sessions: webcam/mic are handled natively inside the Neko
+ * iframe (the `allow="camera; microphone"` attribute forwards them). This panel
+ * shows a local preview so the user can verify the device is active.
+ *
+ * For KasmVNC sessions: the device needs `/dev/video0` passed through via
+ * workspace dockerConfig.devices; the application in the container then accesses
+ * it directly. This panel gives a local preview and tells the user what to do.
+ */
+function WebcamPanel({ isWebRtc, onClose }: { isWebRtc: boolean; onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const startCamera = useCallback(async () => {
+    try {
+      const ms = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      setStream(ms);
+      if (videoRef.current) videoRef.current.srcObject = ms;
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, []);
+
+  useEffect(() => {
+    void startCamera();
+    return () => {
+      stream?.getTracks().forEach((t) => t.stop());
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="absolute bottom-4 right-4 z-30 flex w-72 flex-col overflow-hidden rounded-xl border border-white/10 bg-anthracite-900/90 shadow-[var(--shadow-lifted)] backdrop-blur">
+      <div className="flex items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Camera className="size-3.5 text-gold-400" />
+          {isWebRtc ? 'Camera preview (WebRTC)' : 'Camera preview'}
+        </span>
+        <button onClick={onClose} className="hover:text-foreground">✕</button>
+      </div>
+
+      {error ? (
+        <div className="px-3 pb-3 text-[11px] text-destructive">{error}</div>
+      ) : (
+        // eslint-disable-next-line jsx-a11y/media-has-caption
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className="aspect-video w-full bg-anthracite-950 object-cover"
+        />
+      )}
+
+      <p className="px-3 pb-2.5 pt-1.5 text-[10px] leading-relaxed text-muted-foreground">
+        {isWebRtc
+          ? 'Neko handles camera/mic natively — it is forwarded into the session via WebRTC.'
+          : 'For KasmVNC: add /dev/video0 to workspace dockerConfig.devices to pass the device into the container.'}
+      </p>
+    </div>
+  );
+}
+
+function Provisioning({ status, workspaceName }: { status: string | undefined; workspaceName: string }) {
+  const step = stepForStatus(status);
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-8 bg-aurora">
       <div className="flex flex-col items-center gap-4">
@@ -205,23 +390,54 @@ function Provisioning({ step, workspaceName }: { step: number; workspaceName: st
   );
 }
 
-function RemoteDesktop({
+function Disconnected({
   workspaceName,
-  clock,
-  onDisconnect,
+  onRetry,
+  onBack,
 }: {
   workspaceName: string;
-  clock: string;
-  onDisconnect: () => void;
+  onRetry: () => void;
+  onBack: () => void;
 }) {
   return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-aurora">
+      <AlertTriangle className="size-12 rounded-full bg-destructive/15 p-2.5 text-destructive" />
+      <div className="text-center">
+        <h2 className="font-display text-2xl font-medium">Session disconnected</h2>
+        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+          The stream for {workspaceName} is no longer available. It may have been terminated or timed out.
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onRetry}
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-border-subtle px-4 text-sm transition-colors hover:bg-secondary ring-gold-focus"
+        >
+          <RotateCw className="size-4" /> Retry
+        </button>
+        <button
+          onClick={onBack}
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-gold-500/90 px-4 text-sm font-medium text-anthracite-950 transition-colors hover:bg-gold-500 ring-gold-focus"
+        >
+          Back to workspaces
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Shown when a session is live but no real stream endpoint is configured
+ * (mock mode without NEXT_PUBLIC_DEMO_STREAM_URL). Keeps the launch → stream
+ * flow demonstrable and tells the operator exactly how to wire a real one.
+ */
+function PlaceholderStream({ workspaceName, clock }: { workspaceName: string; clock: string }) {
+  return (
     <div className="absolute inset-0 pt-12">
-      {/* Desktop wallpaper */}
       <div className="relative size-full bg-[radial-gradient(120%_120%_at_30%_10%,#23234a_0%,#14141f_55%,#0e0e1a_100%)]">
         <div className="absolute inset-0 bg-grid opacity-30" />
         <ChistaMark className="absolute left-1/2 top-1/2 size-72 -translate-x-1/2 -translate-y-1/2 opacity-[0.05]" />
 
-        {/* Window */}
         <div className="absolute left-1/2 top-1/2 w-[min(880px,86vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-white/10 shadow-[var(--shadow-lifted)]">
           <div className="flex items-center gap-2 bg-anthracite-800/90 px-4 py-2.5 backdrop-blur">
             <span className="size-3 rounded-full bg-error-500/80" />
@@ -231,15 +447,21 @@ function RemoteDesktop({
           </div>
           <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 bg-anthracite-900/80 p-12 text-center backdrop-blur">
             <Check className="size-10 rounded-full bg-success/15 p-2 text-success" />
-            <p className="font-display text-xl">You&apos;re connected</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              This is a live demo surface for the Chista streaming viewer. With the full stack running, your
-              real {workspaceName} container streams here over a secure websocket.
+            <p className="font-display text-xl">Session is live</p>
+            <p className="max-w-md text-sm text-muted-foreground">
+              No stream endpoint is configured, so this is a placeholder. To embed the real{' '}
+              {workspaceName} client here, run a KasmVNC container and point the viewer at it:
             </p>
+            <pre className="mt-1 overflow-x-auto rounded-md border border-border-subtle bg-anthracite-950/80 px-4 py-3 text-left text-[11px] leading-relaxed text-muted-foreground">
+              {`docker run --rm -p 6901:6901 \\
+  -e VNC_PW=password kasmweb/firefox:1.16.0-rolling
+
+# .env
+NEXT_PUBLIC_DEMO_STREAM_URL=https://localhost:6901`}
+            </pre>
           </div>
         </div>
 
-        {/* Taskbar */}
         <div className="absolute inset-x-0 bottom-0 flex h-11 items-center gap-3 bg-anthracite-800/80 px-4 backdrop-blur-xl">
           <button className="flex items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-white/5">
             <ChistaMark className="size-4" /> Start

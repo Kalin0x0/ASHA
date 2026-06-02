@@ -1,61 +1,30 @@
 'use client';
 
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import { store } from '@/lib/mock/store';
+/**
+ * Data hooks barrel. `API_MODE` is a build-time constant, so the implementation
+ * is chosen once at module load — every component calls exactly one impl's hook,
+ * which keeps the rules of hooks intact across mock and live modes.
+ *
+ *   mock → deterministic in-memory store (no backend)
+ *   live → react-query against the NestJS API (NEXT_PUBLIC_API_MODE=live)
+ */
+import { API_MODE } from '@/lib/api/mode';
+import * as live from './hooks.live';
+import * as mock from './hooks.mock';
 
-function useVersion(): number {
-  return useSyncExternalStore(store.subscribe, store.getVersion, store.getServerVersion);
-}
+const impl = API_MODE === 'live' ? live : mock;
 
-export function useDashboard() {
-  const v = useVersion();
-  return useMemo(() => store.getDashboard(), [v]);
-}
-
-export function useSessions() {
-  const v = useVersion();
-  return useMemo(() => store.getData().sessions, [v]);
-}
-
-export function useSession(id: string) {
-  const v = useVersion();
-  return useMemo(() => store.getData().sessions.find((s) => s.id === id || s.kasmId === id), [v, id]);
-}
-
-export function useAgents() {
-  const v = useVersion();
-  return useMemo(() => store.getData().agents, [v]);
-}
-
-export function useZones() {
-  const v = useVersion();
-  return useMemo(() => store.getData().zones, [v]);
-}
-
-export function useWorkspaces() {
-  const v = useVersion();
-  return useMemo(() => store.getData().workspaces, [v]);
-}
-
-export function useWorkspace(id: string) {
-  const v = useVersion();
-  return useMemo(() => store.getData().workspaces.find((w) => w.id === id), [v, id]);
-}
-
-export function useUsers() {
-  const v = useVersion();
-  return useMemo(() => store.getData().users, [v]);
-}
-
-export function useActivity() {
-  const v = useVersion();
-  return useMemo(() => store.getData().activity, [v]);
-}
-
-export function useTerminateSession() {
-  return useCallback((id: string) => store.terminateSession(id), []);
-}
-
-export function useLaunchSession() {
-  return useCallback((workspaceId: string) => store.launchSession(workspaceId), []);
-}
+export const useDashboard = impl.useDashboard;
+export const useSessions = impl.useSessions;
+export const useSession = impl.useSession;
+export const useAgents = impl.useAgents;
+export const useZones = impl.useZones;
+export const useWorkspaces = impl.useWorkspaces;
+export const useWorkspace = impl.useWorkspace;
+export const useUsers = impl.useUsers;
+export const useActivity = impl.useActivity;
+export const useImages = impl.useImages;
+export const useSessionHistory = impl.useSessionHistory;
+export const useRecordings = impl.useRecordings;
+export const useTerminateSession = impl.useTerminateSession;
+export const useLaunchSession = impl.useLaunchSession;

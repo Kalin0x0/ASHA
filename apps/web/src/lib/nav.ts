@@ -66,7 +66,7 @@ export const navGroups: NavGroup[] = [
     label: 'Workspaces',
     items: [
       { label: 'Catalog', href: '/workspaces', icon: AppWindow, built: true },
-      { label: 'Images', href: '/workspaces/images', icon: Container, phase: 2 },
+      { label: 'Images', href: '/workspaces/images', icon: Container, built: true },
       { label: 'Registry', href: '/registry', icon: Boxes, phase: 3 },
     ],
   },
@@ -74,19 +74,19 @@ export const navGroups: NavGroup[] = [
     label: 'Sessions',
     items: [
       { label: 'Live Sessions', href: '/sessions', icon: MonitorPlay, built: true },
-      { label: 'History', href: '/sessions/history', icon: History, phase: 2 },
-      { label: 'Recordings', href: '/sessions/recordings', icon: Film, phase: 2 },
+      { label: 'History', href: '/sessions/history', icon: History, built: true },
+      { label: 'Recordings', href: '/sessions/recordings', icon: Film, built: true },
       { label: 'Staging', href: '/sessions/staging', icon: Layers, phase: 3 },
       { label: 'Casting', href: '/sessions/casting', icon: Cast, phase: 3 },
-      { label: 'Sharing', href: '/sessions/sharing', icon: Share2, phase: 2 },
+      { label: 'Sharing', href: '/sessions/sharing', icon: Share2, built: true },
     ],
   },
   {
     label: 'Access',
     items: [
-      { label: 'Users', href: '/users', icon: Users, phase: 2 },
-      { label: 'Groups', href: '/groups', icon: UsersRound, phase: 2 },
-      { label: 'Roles', href: '/roles', icon: ShieldCheck, phase: 2 },
+      { label: 'Users', href: '/users', icon: Users, built: true },
+      { label: 'Groups', href: '/groups', icon: UsersRound, built: true },
+      { label: 'Roles', href: '/roles', icon: ShieldCheck, built: true },
       { label: 'Authentication', href: '/authentication', icon: KeyRound, phase: 3 },
     ],
   },
@@ -106,9 +106,9 @@ export const navGroups: NavGroup[] = [
     label: 'Storage',
     items: [
       { label: 'Storage Mappings', href: '/storage/mappings', icon: FolderTree, phase: 4 },
-      { label: 'Persistent Profiles', href: '/storage/profiles', icon: FolderCog, phase: 2 },
-      { label: 'Volume Mappings', href: '/storage/volumes', icon: Database, phase: 2 },
-      { label: 'File Mappings', href: '/storage/file-mappings', icon: FileCog, phase: 2 },
+      { label: 'Persistent Profiles', href: '/storage/profiles', icon: FolderCog, built: true },
+      { label: 'Volume Mappings', href: '/storage/volumes', icon: Database, built: true },
+      { label: 'File Mappings', href: '/storage/file-mappings', icon: FileCog, built: true },
     ],
   },
   {

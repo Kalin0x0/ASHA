@@ -1,0 +1,83 @@
+import 'reflect-metadata';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { prismaMock } = vi.hoisted(() => ({
+  prismaMock: {
+    session: { findMany: vi.fn() },
+    workspace: { findMany: vi.fn() },
+  },
+}));
+
+vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+
+import { SessionReaperService } from './session-reaper.service';
+
+describe('SessionReaperService', () => {
+  let svc: SessionReaperService;
+  let sessions: { destroy: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessions = { destroy: vi.fn().mockResolvedValue(undefined) };
+    svc = new SessionReaperService(sessions as never);
+  });
+
+  it('terminates expired sessions with reason "expired"', async () => {
+    prismaMock.session.findMany.mockResolvedValueOnce([
+      { id: 's1', orgId: 'o1', zoneId: 'z1', containerId: 'c1' },
+      { id: 's2', orgId: 'o1', zoneId: 'z1', containerId: null },
+    ]);
+    prismaMock.workspace.findMany.mockResolvedValue([]); // no idle timeouts
+
+    await svc.reap();
+
+    expect(sessions.destroy).toHaveBeenCalledTimes(2);
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 's1' }), 'expired');
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 's2' }), 'expired');
+  });
+
+  it('only queries active sessions that are actually past expiry', async () => {
+    prismaMock.session.findMany.mockResolvedValueOnce([]);
+    prismaMock.workspace.findMany.mockResolvedValue([]);
+
+    await svc.reap();
+
+    expect(prismaMock.session.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: expect.arrayContaining(['RUNNING', 'PAUSED']) },
+          expiresAt: { not: null, lte: expect.any(Date) },
+        }),
+      }),
+    );
+  });
+
+  it('terminates idle sessions per-workspace using its idleTimeoutMinutes', async () => {
+    prismaMock.session.findMany
+      .mockResolvedValueOnce([]) // no expired
+      .mockResolvedValueOnce([{ id: 'idle1', orgId: 'o1', zoneId: 'z1', containerId: 'c9' }]); // idle in ws1
+    prismaMock.workspace.findMany.mockResolvedValue([{ id: 'ws1', idleTimeoutMinutes: 15 }]);
+
+    await svc.reap();
+
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 'idle1' }), 'idle_timeout');
+    // idle query is scoped to the workspace with a cutoff derived from its timeout
+    expect(prismaMock.session.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          workspaceId: 'ws1',
+          lastKeepaliveAt: { lt: expect.any(Date) },
+        }),
+      }),
+    );
+  });
+
+  it('does nothing when no sessions are due', async () => {
+    prismaMock.session.findMany.mockResolvedValue([]);
+    prismaMock.workspace.findMany.mockResolvedValue([{ id: 'ws1', idleTimeoutMinutes: 30 }]);
+
+    await svc.reap();
+
+    expect(sessions.destroy).not.toHaveBeenCalled();
+  });
+});

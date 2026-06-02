@@ -1,0 +1,47 @@
+import { Controller, Get, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
+import { ReportingService } from './reporting.service';
+
+@ApiTags('reporting')
+@ApiBearerAuth()
+@Controller('reporting')
+export class ReportingController {
+  constructor(private readonly reporting: ReportingService) {}
+
+  @RequirePermissions('REPORTING_VIEW')
+  @Get('summary')
+  summary(@CurrentUser() user: AuthUser) {
+    return this.reporting.summary(user.orgId);
+  }
+
+  @RequirePermissions('REPORTING_VIEW')
+  @Get('sessions-over-time')
+  sessionsOverTime(@CurrentUser() user: AuthUser, @Query('days') days?: string) {
+    return this.reporting.sessionsOverTime(user.orgId, days ? Number(days) : undefined);
+  }
+
+  @RequirePermissions('REPORTING_VIEW')
+  @Get('top-workspaces')
+  topWorkspaces(
+    @CurrentUser() user: AuthUser,
+    @Query('days') days?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.reporting.topWorkspaces(
+      user.orgId,
+      days ? Number(days) : undefined,
+      limit ? Number(limit) : undefined,
+    );
+  }
+
+  @RequirePermissions('REPORTING_VIEW')
+  @Get('metrics')
+  metricSeries(
+    @CurrentUser() user: AuthUser,
+    @Query('metric') metric: string,
+    @Query('hours') hours?: string,
+  ) {
+    return this.reporting.metricSeries(user.orgId, metric, hours ? Number(hours) : undefined);
+  }
+}

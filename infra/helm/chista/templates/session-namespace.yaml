@@ -1,0 +1,55 @@
+{{- if and .Values.agent.enabled (eq (.Values.agent.driver | default "docker") "kubernetes") }}
+# ── Session namespace ─────────────────────────────────────────────────────────
+# Isolated namespace for ephemeral session Pods. Separated from the control
+# plane namespace so network policies, quotas, and RBAC apply only to sessions.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.agent.k8sSessionNs | default "chista-sessions" }}
+  labels:
+    app.kubernetes.io/managed-by: chista
+    {{- include "chista.labels" . | nindent 4 }}
+---
+# ResourceQuota — prevent runaway session pods from starving the cluster.
+# Override .Values.agent.sessionQuota in production.
+{{- with .Values.agent.sessionQuota }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: chista-session-quota
+  namespace: {{ $.Values.agent.k8sSessionNs | default "chista-sessions" }}
+spec:
+  hard:
+    pods: {{ .maxPods | default "200" | quote }}
+    requests.cpu: {{ .cpuRequest | default "100" | quote }}
+    requests.memory: {{ .memRequest | default "200Gi" | quote }}
+    limits.cpu: {{ .cpuLimit | default "200" | quote }}
+    limits.memory: {{ .memLimit | default "400Gi" | quote }}
+{{- end }}
+---
+# NetworkPolicy — session pods may only reach the internet (for kiosk/browsing
+# workspaces) and the proxy; they cannot reach the control-plane namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: chista-session-isolation
+  namespace: {{ .Values.agent.k8sSessionNs | default "chista-sessions" }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Allow the ingress controller to forward traffic into session pods
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+  egress:
+    # Allow DNS
+    - ports: [{ port: 53, protocol: UDP }, { port: 53, protocol: TCP }]
+    # Allow internet + external services; block the cluster control-plane CIDR
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.96.0.0/12  # default cluster service CIDR
+{{- end }}

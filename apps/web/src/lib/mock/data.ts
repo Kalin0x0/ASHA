@@ -1,4 +1,16 @@
-import type { Agent, ActivityItem, SessionRow, SessionStatus, UserRow, Workspace, Zone } from '@/lib/types';
+import type {
+  Agent,
+  ActivityItem,
+  HistoryRow,
+  ImageRow,
+  RecordingRow,
+  SessionEndReason,
+  SessionRow,
+  SessionStatus,
+  UserRow,
+  Workspace,
+  Zone,
+} from '@/lib/types';
 import { mulberry32 } from '@/lib/utils';
 
 const SEED = 20260601;
@@ -42,6 +54,9 @@ export interface MockData {
   sessions: SessionRow[];
   users: UserRow[];
   activity: ActivityItem[];
+  history: HistoryRow[];
+  images: ImageRow[];
+  recordings: RecordingRow[];
 }
 
 export function buildInitialData(): MockData {
@@ -153,5 +168,66 @@ export function buildInitialData(): MockData {
     { id: 'a10', kind: 'agent', actor: 'system', message: 'agent homelab-agent-02 entered draining state', at: '1h ago' },
   ];
 
-  return { workspaces, zones, agents, sessions, users, activity };
+  // ── Session history (terminated/destroyed sessions) ──────────────────────
+  const END_REASONS: SessionEndReason[] = ['USER', 'USER', 'USER', 'TIMEOUT', 'ADMIN', 'ERROR'];
+  const history: HistoryRow[] = Array.from({ length: 40 }, (_, i) => {
+    const ws = pick(WORKSPACE_DEFS.filter((w) => w.enabled));
+    const user = pick(users.filter((u) => u.status === 'ACTIVE'));
+    const agent = pick(onlineAgents);
+    const durationSec = Math.floor(between(120, 7200));
+    const endedMs = Date.now() - Math.floor(between(0, 7 * 24 * 3600)) * 1000;
+    const startedMs = endedMs - durationSec * 1000;
+    return {
+      id: `hist-${i + 1}`,
+      user: { id: user.id, name: user.name, email: user.email },
+      workspaceName: ws.friendlyName,
+      zone: agent.zone,
+      agent: agent.hostname,
+      startedAt: new Date(startedMs).toISOString(),
+      endedAt: new Date(endedMs).toISOString(),
+      durationSec,
+      endReason: pick(END_REASONS),
+      connectionType: ws.protocol === 'KASMVNC' ? 'KasmVNC' : ws.protocol,
+    };
+  }).sort((a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime());
+
+  // ── Container image registry (derived from workspace definitions) ────────
+  const imageSizes: Record<string, number> = {
+    firefox: 1380, chrome: 1520, 'tor-browser': 1240, desktop: 2100, 'vs-code': 2640,
+    terminal: 890, 'kali-rolling-desktop': 4200, gimp: 1760, blender: 3100,
+    'libre-office': 1450, postman: 1680,
+  };
+  const imageMap = new Map<string, ImageRow>();
+  for (const ws of WORKSPACE_DEFS) {
+    const img = ws.dockerImage;
+    if (img === 'native/rdp') continue;
+    const [nameAndReg = img, tag = 'latest'] = img.split(':') as [string, string?];
+    const segments = nameAndReg.split('/');
+    const imageName = segments[segments.length - 1] ?? nameAndReg;
+    const registry = segments.length >= 2 ? (segments[0] ?? 'docker.io') : 'docker.io';
+    const sizeMb = imageSizes[imageName] ?? 1200;
+    const pulledAt = new Date(Date.now() - Math.floor(between(1, 30)) * 24 * 3600 * 1000).toISOString();
+    if (!imageMap.has(img)) {
+      imageMap.set(img, {
+        id: `img-${imageMap.size + 1}`,
+        fullImage: img,
+        registry,
+        name: imageName,
+        tag,
+        workspaces: [ws.friendlyName],
+        sizeMb,
+        pulledAt,
+        status: 'available',
+      });
+    } else {
+      imageMap.get(img)!.workspaces.push(ws.friendlyName);
+    }
+  }
+  const images = [...imageMap.values()];
+
+  // Recordings start empty in mock mode — the admin page shows its empty state
+  // until a real session is recorded against an S3-configured deployment.
+  const recordings: RecordingRow[] = [];
+
+  return { workspaces, zones, agents, sessions, users, activity, history, images, recordings };
 }

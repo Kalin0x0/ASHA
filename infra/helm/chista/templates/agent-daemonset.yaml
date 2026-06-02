@@ -1,0 +1,96 @@
+{{- if .Values.agent.enabled }}
+# ── Chista Agent — DaemonSet ─────────────────────────────────────────────────
+# Runs one agent per schedulable node so every node can be used for session
+# provisioning. The agent auto-enrolls with the API and subscribes to its
+# zone's provision/destroy Redis channels.
+#
+# Driver selection:
+#   CHISTA_DRIVER=docker    → Docker socket mount (default; needs privileged or
+#                             docker.sock access)
+#   CHISTA_DRIVER=kubernetes → K8s API via ServiceAccount (no Docker socket
+#                              needed; preferred in managed clusters)
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: chista-agent
+  labels:
+    app.kubernetes.io/name: chista-agent
+    {{- include "chista.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: chista-agent
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: chista-agent
+        {{- include "chista.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: chista-agent
+      # Tolerate all nodes (including tainted GPU / dedicated session nodes).
+      tolerations:
+        - operator: Exists
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: agent
+          image: {{ printf "%s/chista-agent:%s" .Values.image.registry .Values.image.tag | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: CHISTA_DRIVER
+              value: {{ .Values.agent.driver | default "docker" | quote }}
+            - name: CHISTA_MANAGER_URL
+              value: {{ printf "http://chista-api:%d" (int .Values.api.port) | quote }}
+            - name: REDIS_URL
+              value: {{ .Values.redis.url | quote }}
+            - name: CHISTA_ZONE
+              value: {{ .Values.agent.zone | default "default" | quote }}
+            - name: CHISTA_AGENT_ENROLLMENT_TOKEN
+              value: {{ .Values.secrets.agentEnrollmentToken | quote }}
+            - name: CHISTA_TRAEFIK_DOMAIN
+              value: {{ .Values.domain | quote }}
+            - name: CHISTA_AGENT_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- if eq (.Values.agent.driver | default "docker") "kubernetes" }}
+            - name: CHISTA_K8S_SESSION_NS
+              value: {{ .Values.agent.k8sSessionNs | default "chista-sessions" | quote }}
+            - name: CHISTA_K8S_INGRESS_CLASS
+              value: {{ .Values.agent.k8sIngressClass | default "traefik" | quote }}
+            - name: CHISTA_K8S_INGRESS_HOST
+              value: {{ .Values.domain | quote }}
+            {{- else }}
+            - name: CHISTA_SESSION_NETWORK
+              value: {{ .Values.agent.sessionNetwork | default "chista-sessions" | quote }}
+            - name: DOCKER_SOCKET
+              value: /var/run/docker.sock
+            {{- end }}
+          {{- if ne (.Values.agent.driver | default "docker") "kubernetes" }}
+          volumeMounts:
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+          securityContext:
+            privileged: false
+          {{- end }}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      {{- if ne (.Values.agent.driver | default "docker") "kubernetes" }}
+      volumes:
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+      {{- end }}
+      {{- with .Values.agent.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
