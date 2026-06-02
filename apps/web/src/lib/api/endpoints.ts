@@ -3,6 +3,7 @@
 import type { SessionStatus } from '@/lib/types';
 import type { AuthTokens, AuthUser } from './auth-store';
 import { apiFetch } from './client';
+import { API_BASE_URL } from './mode';
 
 // ── API response shapes (as returned by the NestJS API) ──────────────────────
 
@@ -260,3 +261,89 @@ export const createShare = (
 
 export const revokeShare = (sessionId: string) =>
   apiFetch<{ ok: true }>(`/sessions/${sessionId}/share`, { method: 'DELETE' });
+
+// ── Identity: auth providers (OIDC / SAML / LDAP) ────────────────────────────
+
+export type AuthProviderType = 'LOCAL' | 'LDAP' | 'SAML' | 'OIDC';
+
+export interface ApiAuthProvider {
+  id: string;
+  orgId: string;
+  type: AuthProviderType;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  config: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface ApiPublicAuthProvider {
+  id: string;
+  orgId: string;
+  type: 'OIDC' | 'SAML' | 'LDAP';
+  name: string;
+}
+
+export const getAuthProviders = () => apiFetch<ApiAuthProvider[]>('/auth/providers');
+export const getPublicAuthProviders = () =>
+  apiFetch<ApiPublicAuthProvider[]>('/auth/providers/public', { auth: false });
+export const createAuthProvider = (body: {
+  type: AuthProviderType;
+  name: string;
+  enabled?: boolean;
+  priority?: number;
+  config?: Record<string, unknown>;
+}) => apiFetch<ApiAuthProvider>('/auth/providers', { method: 'POST', body });
+export const updateAuthProvider = (id: string, body: Partial<{ name: string; enabled: boolean; priority: number; config: Record<string, unknown> }>) =>
+  apiFetch<ApiAuthProvider>(`/auth/providers/${id}`, { method: 'PATCH', body });
+export const deleteAuthProvider = (id: string) =>
+  apiFetch<{ ok: true }>(`/auth/providers/${id}`, { method: 'DELETE' });
+export const testLdapProvider = (id: string, sampleUsername?: string) =>
+  apiFetch<{ ok: boolean; message?: string; entries?: number }>(`/auth/providers/${id}/ldap-test`, {
+    method: 'POST',
+    body: { sampleUsername },
+  });
+
+/** Build the SP-initiated login redirect URL for an SSO provider. */
+export function ssoLoginUrl(provider: ApiPublicAuthProvider, returnTo = '/dashboard'): string {
+  const base = API_BASE_URL;
+  const rt = encodeURIComponent(returnTo);
+  if (provider.type === 'OIDC') return `${base}/auth/oidc/${provider.id}/login?returnTo=${rt}`;
+  if (provider.type === 'SAML') return `${base}/auth/saml/${provider.id}/login?returnTo=${rt}`;
+  // LDAP has no redirect — handled by a username/password form.
+  return '';
+}
+
+// ── SCIM 2.0 provisioning tokens ─────────────────────────────────────────────
+
+export const issueScimToken = () =>
+  apiFetch<{ token: string; id: string }>('/scim/v2/tokens', { method: 'POST' });
+export const revokeScimToken = (id: string) =>
+  apiFetch<void>(`/scim/v2/tokens/${id}`, { method: 'DELETE' });
+
+// ── VM providers ─────────────────────────────────────────────────────────────
+
+export type VMProviderKind =
+  | 'AWS' | 'AZURE' | 'DIGITALOCEAN' | 'GCP' | 'HARVESTER' | 'ORACLE'
+  | 'NUTANIX' | 'PROXMOX' | 'VSPHERE' | 'OPENSTACK' | 'KUBEVIRT';
+
+export interface ApiVMProvider {
+  id: string;
+  name: string;
+  provider: VMProviderKind;
+  enabled: boolean;
+  config: Record<string, unknown>;
+  createdAt: string;
+}
+
+export const getVMProviders = () => apiFetch<ApiVMProvider[]>('/providers/vm');
+export const createVMProvider = (body: {
+  name: string;
+  provider: VMProviderKind;
+  config: Record<string, unknown>;
+  enabled?: boolean;
+}) => apiFetch<ApiVMProvider>('/providers/vm', { method: 'POST', body });
+export const updateVMProvider = (id: string, body: Partial<{ name: string; enabled: boolean; config: Record<string, unknown> }>) =>
+  apiFetch<ApiVMProvider>(`/providers/vm/${id}`, { method: 'PATCH', body });
+export const deleteVMProvider = (id: string) =>
+  apiFetch<{ ok: true }>(`/providers/vm/${id}`, { method: 'DELETE' });

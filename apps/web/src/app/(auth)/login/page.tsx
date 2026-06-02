@@ -1,14 +1,19 @@
 'use client';
 
-import { ArrowRight, Fingerprint, KeyRound, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Fingerprint, KeyRound, Network, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/lib/api/auth-context';
+import {
+  type ApiPublicAuthProvider,
+  getPublicAuthProviders,
+  ssoLoginUrl,
+} from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 
 export default function LoginPage() {
@@ -17,6 +22,15 @@ export default function LoginPage() {
   const [email, setEmail] = useState('admin@chista.local');
   const [password, setPassword] = useState('ChistaAdmin!2026');
   const [loading, setLoading] = useState(false);
+  const [ssoProviders, setSsoProviders] = useState<ApiPublicAuthProvider[]>([]);
+
+  // Discover enabled SSO providers so the buttons reflect the live config.
+  useEffect(() => {
+    if (!isLive) return;
+    getPublicAuthProviders()
+      .then(setSsoProviders)
+      .catch(() => setSsoProviders([]));
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,14 +98,35 @@ export default function LoginPage() {
         <Separator className="flex-1" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Button variant="secondary" type="button" onClick={() => router.push('/dashboard')}>
-          <KeyRound className="size-4" /> SSO / OIDC
-        </Button>
-        <Button variant="secondary" type="button" onClick={() => router.push('/dashboard')}>
-          <Fingerprint className="size-4" /> Passkey
-        </Button>
-      </div>
+      {/* Live SSO providers, when configured; otherwise the default placeholders. */}
+      {isLive && ssoProviders.filter((p) => p.type !== 'LDAP').length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {ssoProviders
+            .filter((p) => p.type !== 'LDAP')
+            .map((p) => (
+              <Button
+                key={p.id}
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  window.location.href = ssoLoginUrl(p);
+                }}
+              >
+                <Network className="size-4" /> {p.name}
+                <span className="text-xs text-muted-foreground">({p.type})</span>
+              </Button>
+            ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="secondary" type="button" onClick={() => router.push('/dashboard')}>
+            <KeyRound className="size-4" /> SSO / OIDC
+          </Button>
+          <Button variant="secondary" type="button" onClick={() => router.push('/dashboard')}>
+            <Fingerprint className="size-4" /> Passkey
+          </Button>
+        </div>
+      )}
 
       <div className="mt-8 rounded-lg border border-border-subtle bg-[var(--surface-1)]/60 p-3">
         <p className="flex items-center gap-2 text-xs text-muted-foreground">

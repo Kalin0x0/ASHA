@@ -43,10 +43,17 @@ describe('ProvidersService — VM', () => {
     );
   });
 
-  it('accepts a provider with no concrete driver yet (e.g. AWS)', async () => {
+  it('accepts a provider with no concrete driver yet (e.g. DIGITALOCEAN)', async () => {
     prismaMock.vMProvider.create.mockResolvedValue({ id: 'vp2' });
-    await svc.createVM('org1', 'u1', { name: 'aws', provider: 'AWS', config: {}, enabled: true });
+    await svc.createVM('org1', 'u1', { name: 'do', provider: 'DIGITALOCEAN', config: {}, enabled: true });
     expect(prismaMock.vMProvider.create).toHaveBeenCalled();
+  });
+
+  it('validates config up-front for a provider with a concrete driver (AWS)', async () => {
+    prismaMock.vMProvider.create.mockResolvedValue({ id: 'vp3' });
+    await expect(
+      svc.createVM('org1', 'u1', { name: 'aws', provider: 'AWS', config: {}, enabled: true }),
+    ).rejects.toThrow(/AWS config missing/);
   });
 
   it('throws 404 deleting a VM provider in another org', async () => {

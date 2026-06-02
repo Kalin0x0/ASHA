@@ -87,7 +87,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Users', href: '/users', icon: Users, built: true },
       { label: 'Groups', href: '/groups', icon: UsersRound, built: true },
       { label: 'Roles', href: '/roles', icon: ShieldCheck, built: true },
-      { label: 'Authentication', href: '/authentication', icon: KeyRound, phase: 3 },
+      { label: 'Authentication', href: '/authentication', icon: KeyRound, built: true },
     ],
   },
   {
@@ -98,7 +98,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Servers', href: '/infrastructure/servers', icon: HardDrive, phase: 2 },
       { label: 'Server Pools', href: '/infrastructure/server-pools', icon: Network, phase: 3 },
       { label: 'AutoScale', href: '/infrastructure/autoscale', icon: Gauge, phase: 3 },
-      { label: 'VM Providers', href: '/infrastructure/vm-providers', icon: Cloud, phase: 3 },
+      { label: 'VM Providers', href: '/infrastructure/vm-providers', icon: Cloud, built: true },
       { label: 'DNS Providers', href: '/infrastructure/dns-providers', icon: Route, phase: 3 },
     ],
   },

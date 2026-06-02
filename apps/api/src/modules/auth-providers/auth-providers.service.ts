@@ -26,6 +26,26 @@ export class AuthProvidersService {
     });
   }
 
+  /**
+   * Public-safe listing for the login screen: only enabled non-local providers,
+   * exposing nothing sensitive (no config/secrets) — just enough to render the
+   * SSO buttons and build the right login redirect. When no orgId is given
+   * (the pre-auth login page can't know it) the default org is used.
+   */
+  async publicList(orgId?: string) {
+    // Pre-auth login page can't know the org; fall back to the primary
+    // (oldest) org. Multi-tenant deployments should pass an explicit orgId.
+    const resolvedOrgId =
+      orgId ??
+      (await prisma.org.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true } }))?.id;
+    if (!resolvedOrgId) return [];
+    return prisma.authConfig.findMany({
+      where: { orgId: resolvedOrgId, enabled: true, type: { in: ['OIDC', 'SAML', 'LDAP'] } },
+      orderBy: [{ priority: 'asc' }, { name: 'asc' }],
+      select: { id: true, type: true, name: true, orgId: true },
+    });
+  }
+
   async get(orgId: string, id: string) {
     const cfg = await prisma.authConfig.findFirst({ where: { id, orgId } });
     if (!cfg) throw new NotFoundException('Auth provider not found');

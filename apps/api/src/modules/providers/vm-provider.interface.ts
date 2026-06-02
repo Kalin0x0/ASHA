@@ -647,10 +647,15 @@ export function resolveVMDriver(
   switch (provider) {
     case 'PROXMOX':
       return new ProxmoxDriver(config);
+    // Accept both the contract enum names (AWS/AZURE/GCP) and the explicit
+    // service-qualified aliases (AWS_EC2/AZURE_VM/GCP_CE).
+    case 'AWS':
     case 'AWS_EC2':
       return new AwsEc2Driver(config);
+    case 'AZURE':
     case 'AZURE_VM':
       return new AzureVmDriver(config);
+    case 'GCP':
     case 'GCP_CE':
       return new GcpDriver(config);
     case 'VSPHERE':

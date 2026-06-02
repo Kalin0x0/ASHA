@@ -68,10 +68,11 @@ Built from scratch or on open-source tooling — **nothing derived from any prop
 - **Connectivity sidecars** — Squid (web filtering), WireGuard (egress), Neko (browser isolation), PulseAudio (audio bridge), CUPS (virtual printing), auto-launched alongside sessions and torn down with them.
 - **DLP enforcement** — per-workspace clipboard/upload/download/printing/audio/PWA policy injected as container env and **enforced in the viewer** (controls greyed out by policy).
 - **Multi-tenancy & RBAC** — 40+ Prisma models, permission matrix, app-layer org scoping + Postgres RLS backstop.
-- **Identity** — OIDC / SAML / LDAP providers + SSO group mappings, TOTP 2FA. **SAML 2.0 SP-initiated flow** (login redirect, ACS, SP metadata) and **LDAP bind login + live-test**, with JIT user provisioning and group sync — all on open-source `@node-saml/node-saml` + `ldapts`.
+- **Identity** — OIDC / SAML / LDAP providers + SSO group mappings, TOTP 2FA. **OIDC Authorization Code + PKCE flow** (discovery, token exchange, UserInfo), **SAML 2.0 SP-initiated flow** (login redirect, ACS, SP metadata), and **LDAP bind login + live-test**, with JIT user provisioning and group sync — on open-source `@node-saml/node-saml` + `ldapts` plus a zero-dependency OIDC client. The login screen renders live SSO buttons from the enabled providers.
+- **SCIM 2.0** — automated user + group provisioning/deprovisioning (RFC 7643/7644) for Okta, Azure AD, OneLogin: Users + Groups CRUD, PATCH ops, SCIM filters, bearer-token auth, and ServiceProviderConfig/ResourceTypes discovery.
 - **Licensing** — CONCURRENT and NAMED_USER enforcement gating session launch, with a live utilization page.
 - **Marketplace** — image-registry CRUD + catalog sync + one-click workspace install from an open-format registry index.
-- **Scale** — multi-zone, staging pools, casting, server pools + autoscale, VM/DNS providers (real Proxmox VE driver).
+- **Scale** — multi-zone, staging pools, casting, server pools + autoscale, DNS providers, and real VM-provider drivers for **Proxmox VE, AWS EC2** (inline SigV4), **Azure, GCP, and VMware vSphere**.
 - **Sessions** — sharing + live chat, recording to S3, idle/max-duration reaper, forensic watermarking + compliance banner.
 - **Ops & compliance** — SIEM log forwarding (Fluent Bit: syslog/Splunk/ES/Loki/HTTP), automated `pg_dump` backups with retention, webhooks (HMAC-signed) + reporting.
 - **Deploy** — single-node Docker Compose (Traefik, Postgres, Redis, guacd) and a Helm chart with the Kubernetes agent DaemonSet, session namespace, RBAC, and HPA.
