@@ -54,7 +54,10 @@ launch → stream flow against a real KasmVNC container.
 - [ ] Session recording to S3-compatible storage
 - [ ] Persistent profiles, volume + file mappings
 - [ ] 2FA/TOTP (the auth stub) + CAPTCHA
-- [ ] Admin pages: Images, History, Recordings, Sharing, Users, Groups, Roles
+- [x] Admin **Access** pages real: Users (live table), Groups (derived from
+      memberships), Roles (permission matrix from `@chista/rbac`) — no new API
+      endpoints needed; work in mock + live.
+- [ ] Admin pages: Images, History, Recordings, Sharing
 - [ ] Storage: persistent profiles, volume/file mappings UI + API
 
 ---

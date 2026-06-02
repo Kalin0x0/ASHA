@@ -84,9 +84,9 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Access',
     items: [
-      { label: 'Users', href: '/users', icon: Users, phase: 2 },
-      { label: 'Groups', href: '/groups', icon: UsersRound, phase: 2 },
-      { label: 'Roles', href: '/roles', icon: ShieldCheck, phase: 2 },
+      { label: 'Users', href: '/users', icon: Users, built: true },
+      { label: 'Groups', href: '/groups', icon: UsersRound, built: true },
+      { label: 'Roles', href: '/roles', icon: ShieldCheck, built: true },
       { label: 'Authentication', href: '/authentication', icon: KeyRound, phase: 3 },
     ],
   },
