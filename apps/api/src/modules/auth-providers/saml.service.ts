@@ -95,4 +95,21 @@ export class SamlService {
     const client = this.buildClient(id, cfg.config as Record<string, unknown>);
     return client.generateServiceProviderMetadata(null, null);
   }
+
+  /**
+   * SP-initiated Single Logout (SLO). Builds the IdP logout redirect URL for the
+   * given subject. `nameID` (and ideally `sessionIndex`) come from the original
+   * assertion. When the IdP advertises no SLO endpoint node-saml throws, and the
+   * call site falls back to a local-only logout.
+   */
+  async logoutRedirectUrl(
+    id: string,
+    subject: { nameID: string; nameIDFormat?: string; sessionIndex?: string },
+    relayState = '/',
+  ): Promise<{ url: string }> {
+    const cfg = await this.load(undefined, id);
+    const client = this.buildClient(id, cfg.config as Record<string, unknown>);
+    const url = await client.getLogoutUrlAsync(subject as never, relayState, {} as never);
+    return { url };
+  }
 }

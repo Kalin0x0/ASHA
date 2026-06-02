@@ -144,6 +144,31 @@ describe('OidcService', () => {
     expect(profile.displayName).toBe('ID User');
   });
 
+  it('accepts an ID token whose nonce matches the authorization request', async () => {
+    const { url, state } = await service.authorizationUrl('cfg1');
+    const nonce = new URL(url).searchParams.get('nonce')!;
+    const idToken = signIdToken(standardClaims({ email: 'n@idtoken.com', nonce }));
+
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: 'tok', id_token: idToken }), text: async () => '' })
+      .mockResolvedValueOnce(jwksResponse)
+      .mockResolvedValueOnce({ ok: false, text: async () => 'error' });
+
+    const { profile } = await service.handleCallback('cfg1', 'code-nonce', state);
+    expect(profile.email).toBe('n@idtoken.com');
+  });
+
+  it('rejects an ID token whose nonce does not match', async () => {
+    const { state } = await service.authorizationUrl('cfg1');
+    const idToken = signIdToken(standardClaims({ email: 'n@idtoken.com', nonce: 'attacker-nonce' }));
+
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: 'tok', id_token: idToken }), text: async () => '' })
+      .mockResolvedValueOnce(jwksResponse);
+
+    await expect(service.handleCallback('cfg1', 'code-bad-nonce', state)).rejects.toThrow(/nonce mismatch/i);
+  });
+
   it('rejects an ID token with a tampered signature', async () => {
     const { state } = await service.authorizationUrl('cfg1');
     const good = signIdToken(standardClaims({ email: 'x@y.com' }));

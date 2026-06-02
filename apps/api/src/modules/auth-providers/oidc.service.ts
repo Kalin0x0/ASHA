@@ -35,6 +35,7 @@ interface PendingState {
   authConfigId: string;
   orgId: string;
   verifier: string;
+  nonce: string;
   returnTo: string;
   expiresAt: number;
 }
@@ -178,6 +179,9 @@ export class OidcService {
 
     const verifier = this.generateVerifier();
     const state = randomBytes(16).toString('hex');
+    // Nonce binds the ID token to this very authorization request, defeating
+    // token replay/injection — verified against the id_token `nonce` claim.
+    const nonce = randomBytes(16).toString('hex');
     const scopes = cfg.scopes ?? ['openid', 'email', 'profile'];
     const redirectUri = cfg.redirectUri ?? `${process.env.CHISTA_BASE_URL ?? ''}/auth/oidc/${id}/callback`;
 
@@ -187,6 +191,7 @@ export class OidcService {
       redirect_uri: redirectUri,
       scope: scopes.join(' '),
       state,
+      nonce,
       code_challenge: this.challenge(verifier),
       code_challenge_method: 'S256',
     });
@@ -196,6 +201,7 @@ export class OidcService {
       authConfigId: id,
       orgId,
       verifier,
+      nonce,
       returnTo,
       expiresAt: Date.now() + 10 * 60_000,
     });
@@ -272,6 +278,12 @@ export class OidcService {
         // Verify the signature against the IdP JWKS and validate iss/aud/exp.
         claims = await this.verifyIdToken(tokens.id_token, cfg, doc);
       }
+
+      // Nonce binding: when the IdP echoes a nonce it MUST match the one we
+      // issued for this authorization request (skipped only when unverified).
+      if (!cfg.skipIdTokenVerification && claims['nonce'] !== undefined && claims['nonce'] !== pending.nonce) {
+        throw new UnauthorizedException('OIDC ID token nonce mismatch');
+      }
     }
 
     if (doc.userinfo_endpoint) {
@@ -307,6 +319,25 @@ export class OidcService {
     };
 
     return { orgId: pending.orgId, profile, returnTo: pending.returnTo };
+  }
+
+  /**
+   * RP-initiated logout (OIDC Session Management). Returns the IdP
+   * end_session_endpoint URL to redirect the browser to, so the IdP session is
+   * terminated too — not just the local Chista session. Falls back to the local
+   * post-logout target when the IdP advertises no end_session_endpoint.
+   */
+  async logoutUrl(id: string, postLogoutRedirect: string, idTokenHint?: string): Promise<{ url: string }> {
+    const { cfg } = await this.loadConfig(id);
+    const doc = await this.discover(cfg.issuer);
+    if (!doc.end_session_endpoint) return { url: postLogoutRedirect };
+
+    const params = new URLSearchParams({
+      post_logout_redirect_uri: postLogoutRedirect,
+      client_id: cfg.clientId,
+    });
+    if (idTokenHint) params.set('id_token_hint', idTokenHint);
+    return { url: `${doc.end_session_endpoint}?${params.toString()}` };
   }
 }
 

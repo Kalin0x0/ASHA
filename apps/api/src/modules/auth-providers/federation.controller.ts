@@ -129,4 +129,49 @@ export class FederationController {
     const user = await this.federation.provision(orgId, id, profile);
     return this.auth.issueSession(user, 'oidc', req.ip, req.headers['user-agent']);
   }
+
+  /**
+   * OIDC RP-initiated logout: 302 to the IdP end_session_endpoint so the IdP
+   * session is also terminated, then back to postLogoutRedirect.
+   */
+  @Public()
+  @Get('oidc/:id/logout')
+  async oidcLogout(
+    @Param('id') id: string,
+    @Query('returnTo') returnTo: string | undefined,
+    @Query('idTokenHint') idTokenHint: string | undefined,
+    @Res() res: Redirectable,
+  ) {
+    const postLogout = returnTo ?? `${process.env.CHISTA_BASE_URL ?? ''}/login`;
+    const { url } = await this.oidc.logoutUrl(id, postLogout, idTokenHint);
+    res.redirect(url);
+  }
+
+  /**
+   * SAML SP-initiated Single Logout: 302 to the IdP SLO endpoint. `nameID`
+   * (and optionally `sessionIndex`) identify the subject's IdP session. If the
+   * IdP advertises no SLO endpoint, redirect to the local post-logout target.
+   */
+  @Public()
+  @Get('saml/:id/logout')
+  async samlLogout(
+    @Param('id') id: string,
+    @Query('nameID') nameID: string | undefined,
+    @Query('sessionIndex') sessionIndex: string | undefined,
+    @Query('returnTo') returnTo: string | undefined,
+    @Res() res: Redirectable,
+  ) {
+    const relayState = returnTo ?? '/login';
+    if (!nameID) {
+      res.redirect(relayState);
+      return;
+    }
+    try {
+      const { url } = await this.saml.logoutRedirectUrl(id, { nameID, sessionIndex }, relayState);
+      res.redirect(url);
+    } catch {
+      // IdP has no SLO endpoint (or rejected) — fall back to local logout.
+      res.redirect(relayState);
+    }
+  }
 }
