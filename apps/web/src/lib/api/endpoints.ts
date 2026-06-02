@@ -614,3 +614,86 @@ export const createApiKey = (body: { name: string; scopes?: string[]; expiresInD
   );
 export const revokeApiKey = (id: string) =>
   apiFetch<{ ok: true }>(`/api-keys/${id}`, { method: 'DELETE' });
+
+// ── Session staging ───────────────────────────────────────────────────────────
+
+export interface ApiStaging {
+  id: string;
+  workspaceId: string;
+  zoneId: string;
+  desiredSessions: number;
+  enabled: boolean;
+  workspace?: { id: string; name: string; friendlyName: string | null } | null;
+}
+export const getStaging = () => apiFetch<ApiStaging[]>('/staging');
+export const createStaging = (body: { workspaceId: string; zoneId: string; desiredSessions?: number; enabled?: boolean }) =>
+  apiFetch<ApiStaging>('/staging', { method: 'POST', body });
+export const updateStaging = (id: string, body: Partial<{ desiredSessions: number; enabled: boolean }>) =>
+  apiFetch<ApiStaging>(`/staging/${id}`, { method: 'PATCH', body });
+export const deleteStaging = (id: string) =>
+  apiFetch<{ ok: true }>(`/staging/${id}`, { method: 'DELETE' });
+
+// ── Casting ───────────────────────────────────────────────────────────────────
+
+export interface ApiCasting {
+  id: string;
+  workspaceId: string;
+  allowAnonymous: boolean;
+  requireAuth: boolean;
+  maxConcurrent: number | null;
+  enabled: boolean;
+  workspace?: { id: string; name: string; friendlyName: string | null } | null;
+}
+export const getCasting = () => apiFetch<ApiCasting[]>('/casting');
+export const createCasting = (body: {
+  workspaceId: string;
+  allowAnonymous?: boolean;
+  requireAuth?: boolean;
+  maxConcurrent?: number;
+  enabled?: boolean;
+}) => apiFetch<ApiCasting>('/casting', { method: 'POST', body });
+export const updateCasting = (id: string, body: Partial<{ allowAnonymous: boolean; requireAuth: boolean; maxConcurrent: number; enabled: boolean }>) =>
+  apiFetch<ApiCasting>(`/casting/${id}`, { method: 'PATCH', body });
+export const deleteCasting = (id: string) =>
+  apiFetch<{ ok: true }>(`/casting/${id}`, { method: 'DELETE' });
+
+// ── Storage mappings (network/object storage mounts) ──────────────────────────
+
+export type StorageKind = 'DROPBOX' | 'GDRIVE' | 'NEXTCLOUD' | 'ONEDRIVE' | 'S3' | 'CUSTOM';
+export interface ApiStorageMapping {
+  id: string;
+  name: string;
+  kind: StorageKind;
+  mountPath: string;
+  readOnly: boolean;
+  scope: 'USER' | 'GROUP' | 'WORKSPACE';
+  enabled: boolean;
+  config: Record<string, unknown>;
+  createdAt: string;
+}
+export const getStorageMappings = () => apiFetch<ApiStorageMapping[]>('/storage/mappings');
+export const createStorageMapping = (body: {
+  name: string;
+  kind: StorageKind;
+  mountPath: string;
+  readOnly?: boolean;
+  scope?: 'USER' | 'GROUP' | 'WORKSPACE';
+  config?: Record<string, unknown>;
+  enabled?: boolean;
+}) => apiFetch<ApiStorageMapping>('/storage/mappings', { method: 'POST', body });
+export const updateStorageMapping = (id: string, body: Partial<{ name: string; mountPath: string; readOnly: boolean; enabled: boolean; config: Record<string, unknown> }>) =>
+  apiFetch<ApiStorageMapping>(`/storage/mappings/${id}`, { method: 'PATCH', body });
+export const deleteStorageMapping = (id: string) =>
+  apiFetch<{ ok: true }>(`/storage/mappings/${id}`, { method: 'DELETE' });
+
+// ── Database backups ──────────────────────────────────────────────────────────
+
+export interface ApiBackup {
+  id: string;
+  filename: string;
+  bytes: number;
+  status: string;
+  createdAt: string;
+}
+export const getBackups = () => apiFetch<ApiBackup[]>('/backups');
+export const runBackup = () => apiFetch<{ ok: boolean; id?: string }>('/backups/run', { method: 'POST' });

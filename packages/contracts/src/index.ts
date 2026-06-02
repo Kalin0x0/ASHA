@@ -100,6 +100,30 @@ export const createVolumeMappingSchema = z.object({
 });
 export type CreateVolumeMappingDto = z.infer<typeof createVolumeMappingSchema>;
 
+// Network / object storage mounts (S3, NextCloud, GDrive, …) attached to sessions.
+export const createStorageMappingSchema = z.object({
+  name: z.string().min(1).max(120),
+  kind: z.enum(['DROPBOX', 'GDRIVE', 'NEXTCLOUD', 'ONEDRIVE', 'S3', 'CUSTOM']),
+  mountPath: z.string().min(1).max(400),
+  readOnly: z.boolean().default(false),
+  scope: z.enum(['USER', 'GROUP', 'WORKSPACE']).default('GROUP'),
+  config: z.record(z.unknown()).default({}),
+  enabled: z.boolean().default(true),
+});
+export type CreateStorageMappingDto = z.infer<typeof createStorageMappingSchema>;
+
+export const updateStorageMappingSchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    mountPath: z.string().min(1).max(400).optional(),
+    readOnly: z.boolean().optional(),
+    scope: z.enum(['USER', 'GROUP', 'WORKSPACE']).optional(),
+    config: z.record(z.unknown()).optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateStorageMappingDto = z.infer<typeof updateStorageMappingSchema>;
+
 export const updateVolumeMappingSchema = z
   .object({
     name: z.string().min(1),

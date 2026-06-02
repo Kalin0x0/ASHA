@@ -2,8 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type {
   CreateFileMappingDto,
   CreatePersistentProfileDto,
+  CreateStorageMappingDto,
   CreateVolumeMappingDto,
   UpdateFileMappingDto,
+  UpdateStorageMappingDto,
   UpdateVolumeMappingDto,
 } from '@chista/contracts';
 import { prisma } from '@chista/db';
@@ -129,6 +131,49 @@ export class StorageService {
   async removeProfile(orgId: string, id: string) {
     const res = await prisma.persistentProfile.deleteMany({ where: { id, orgId } });
     if (res.count === 0) throw new NotFoundException('Persistent profile not found');
+    return { ok: true };
+  }
+
+  // ── Storage mappings (network/object storage mounts) ─────────────────────────
+
+  listStorageMappings(orgId: string) {
+    return prisma.storageMapping.findMany({ where: { orgId }, orderBy: { createdAt: 'desc' } });
+  }
+
+  createStorageMapping(orgId: string, dto: CreateStorageMappingDto) {
+    return prisma.storageMapping.create({
+      data: {
+        orgId,
+        name: dto.name,
+        kind: dto.kind,
+        mountPath: dto.mountPath,
+        readOnly: dto.readOnly,
+        scope: dto.scope,
+        config: dto.config as object,
+        enabled: dto.enabled,
+      },
+    });
+  }
+
+  async updateStorageMapping(orgId: string, id: string, dto: UpdateStorageMappingDto) {
+    const res = await prisma.storageMapping.updateMany({
+      where: { id, orgId },
+      data: {
+        name: dto.name,
+        mountPath: dto.mountPath,
+        readOnly: dto.readOnly,
+        scope: dto.scope,
+        config: dto.config as object | undefined,
+        enabled: dto.enabled,
+      },
+    });
+    if (res.count === 0) throw new NotFoundException('Storage mapping not found');
+    return prisma.storageMapping.findFirst({ where: { id, orgId } });
+  }
+
+  async removeStorageMapping(orgId: string, id: string) {
+    const res = await prisma.storageMapping.deleteMany({ where: { id, orgId } });
+    if (res.count === 0) throw new NotFoundException('Storage mapping not found');
     return { ok: true };
   }
 }

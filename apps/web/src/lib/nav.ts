@@ -76,8 +76,8 @@ export const navGroups: NavGroup[] = [
       { label: 'Live Sessions', href: '/sessions', icon: MonitorPlay, built: true },
       { label: 'History', href: '/sessions/history', icon: History, built: true },
       { label: 'Recordings', href: '/sessions/recordings', icon: Film, built: true },
-      { label: 'Staging', href: '/sessions/staging', icon: Layers, phase: 3 },
-      { label: 'Casting', href: '/sessions/casting', icon: Cast, phase: 3 },
+      { label: 'Staging', href: '/sessions/staging', icon: Layers, built: true },
+      { label: 'Casting', href: '/sessions/casting', icon: Cast, built: true },
       { label: 'Sharing', href: '/sessions/sharing', icon: Share2, built: true },
     ],
   },
@@ -105,7 +105,7 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Storage',
     items: [
-      { label: 'Storage Mappings', href: '/storage/mappings', icon: FolderTree, phase: 4 },
+      { label: 'Storage Mappings', href: '/storage/mappings', icon: FolderTree, built: true },
       { label: 'Persistent Profiles', href: '/storage/profiles', icon: FolderCog, built: true },
       { label: 'Volume Mappings', href: '/storage/volumes', icon: Database, built: true },
       { label: 'File Mappings', href: '/storage/file-mappings', icon: FileCog, built: true },
@@ -127,7 +127,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Branding', href: '/settings/branding', icon: Palette, phase: 4 },
       { label: 'Banners', href: '/settings/banners', icon: Flag, phase: 3 },
       { label: 'Licensing', href: '/settings/licensing', icon: BadgeCheck, built: true },
-      { label: 'Database', href: '/settings/database', icon: DatabaseBackup, phase: 3 },
+      { label: 'Database', href: '/settings/database', icon: DatabaseBackup, built: true },
       { label: 'Config Import/Export', href: '/settings/config', icon: FileJson, phase: 3 },
     ],
   },
