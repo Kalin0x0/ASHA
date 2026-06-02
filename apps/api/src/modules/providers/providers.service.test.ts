@@ -61,8 +61,8 @@ describe('resolveVMDriver', () => {
     expect(driver).toBeInstanceOf(ProxmoxDriver);
   });
 
-  it('returns null for an unimplemented provider', () => {
-    expect(resolveVMDriver('VSPHERE', {})).toBeNull();
+  it('returns null for a completely unknown provider', () => {
+    expect(resolveVMDriver('UNKNOWN_XYZ', {})).toBeNull();
   });
 
   it('ProxmoxDriver.validateConfig flags missing keys', () => {

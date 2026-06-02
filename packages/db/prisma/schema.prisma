@@ -275,6 +275,8 @@ model User {
   username      String
   displayName   String?
   avatarUrl     String?
+  /** SCIM externalId from the upstream IdP (e.g. Okta sub). */
+  externalId    String?
   status        UserStatus @default(ACTIVE)
   isSystemAdmin Boolean    @default(false)
   locale        String     @default("en")

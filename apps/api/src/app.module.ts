@@ -18,6 +18,7 @@ import { HealthModule } from './modules/health/health.module';
 import { LicensingModule } from './modules/licensing/licensing.module';
 import { LogForwardingModule } from './modules/log-forwarding/log-forwarding.module';
 import { RegistryModule } from './modules/registry/registry.module';
+import { ScimModule } from './modules/scim/scim.module';
 import { PoolsModule } from './modules/pools/pools.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { RecordingsModule } from './modules/recordings/recordings.module';
@@ -70,6 +71,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     BackupsModule,
     LicensingModule,
     RegistryModule,
+    ScimModule,
   ],
   providers: [
     // ThrottlerGuard runs first so rate-limit rejections short-circuit auth

@@ -12,6 +12,7 @@ import { ZodPipe } from '../../common/zod.pipe';
 import { AuthService } from '../auth/auth.service';
 import { FederationService } from './federation.service';
 import { LdapService } from './ldap.service';
+import { OidcService } from './oidc.service';
 import { SamlService } from './saml.service';
 
 /** Minimal Express-ish response surface we use (avoids a hard express type dep). */
@@ -29,6 +30,7 @@ export class FederationController {
   constructor(
     private readonly saml: SamlService,
     private readonly ldap: LdapService,
+    private readonly oidc: OidcService,
     private readonly federation: FederationService,
     private readonly auth: AuthService,
   ) {}
@@ -91,5 +93,40 @@ export class FederationController {
     @Body(new ZodPipe(ldapTestSchema)) dto: LdapTestDto,
   ) {
     return this.ldap.test(user.orgId, id, dto.sampleUsername);
+  }
+
+  // ── OIDC Authorization Code + PKCE ────────────────────────────────────────
+
+  /** Redirect the browser to the IdP authorization endpoint. */
+  @Public()
+  @Get('oidc/:id/login')
+  async oidcLogin(
+    @Param('id') id: string,
+    @Query('returnTo') returnTo: string | undefined,
+    @Res() res: Redirectable,
+  ) {
+    const { url } = await this.oidc.authorizationUrl(id, returnTo ?? '/');
+    res.redirect(url);
+  }
+
+  /**
+   * OIDC callback: receives `code` + `state`, exchanges for tokens, fetches
+   * UserInfo, provisions/updates the user, and issues a Chista session.
+   */
+  @Public()
+  @Throttle({ auth: { ttl: 60_000, limit: 20 } })
+  @Get('oidc/:id/callback')
+  async oidcCallback(
+    @Param('id') id: string,
+    @Query('code') code: string | undefined,
+    @Query('state') state: string | undefined,
+    @Query('error') error: string | undefined,
+    @Req() req: ReqMeta,
+  ) {
+    if (error) return { error };
+    if (!code || !state) return { error: 'Missing code or state' };
+    const { orgId, profile, returnTo: _returnTo } = await this.oidc.handleCallback(id, code, state);
+    const user = await this.federation.provision(orgId, id, profile);
+    return this.auth.issueSession(user, 'oidc', req.ip, req.headers['user-agent']);
   }
 }

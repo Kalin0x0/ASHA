@@ -168,6 +168,477 @@ function insecureDispatcher(): unknown {
   return new undici.Agent({ connect: { rejectUnauthorized: false } });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AWS EC2 driver
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { createHash, createHmac } from 'crypto';
+
+interface AwsConfig {
+  accessKeyId: string;
+  secretAccessKey: string;
+  region: string;
+  /** AMI ID to launch. */
+  imageId: string;
+  instanceType: string;
+  /** Optional: security group IDs. */
+  securityGroupIds?: string[];
+  /** Optional: subnet ID. */
+  subnetId?: string;
+  /** Optional: key pair name for SSH. */
+  keyName?: string;
+}
+
+/**
+ * AWS EC2 driver. Uses the Query API (application/x-www-form-urlencoded) with
+ * SigV4 signing — no AWS SDK required.
+ */
+export class AwsEc2Driver implements VMProviderDriver {
+  readonly kind = 'AWS_EC2';
+
+  constructor(private readonly config: Record<string, unknown>) {}
+
+  private cfg(): AwsConfig {
+    return this.config as unknown as AwsConfig;
+  }
+
+  validateConfig(): { ok: true } | { ok: false; reason: string } {
+    const required = ['accessKeyId', 'secretAccessKey', 'region', 'imageId', 'instanceType'];
+    const missing = required.filter((k) => !this.config[k]);
+    if (missing.length) return { ok: false, reason: `AWS config missing: ${missing.join(', ')}` };
+    return { ok: true };
+  }
+
+  private sign(
+    method: string,
+    service: string,
+    region: string,
+    host: string,
+    path: string,
+    body: string,
+    accessKeyId: string,
+    secretAccessKey: string,
+  ): Record<string, string> {
+    const now = new Date();
+    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '').slice(0, 15) + 'Z';
+    const dateStamp = amzDate.slice(0, 8);
+
+    const payloadHash = createHash('sha256').update(body).digest('hex');
+    const canonicalHeaders = `content-type:application/x-www-form-urlencoded\nhost:${host}\nx-amz-date:${amzDate}\n`;
+    const signedHeaders = 'content-type;host;x-amz-date';
+    const canonicalRequest = [method, path, '', canonicalHeaders, signedHeaders, payloadHash].join('\n');
+    const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
+    const stringToSign = ['AWS4-HMAC-SHA256', amzDate, credentialScope,
+      createHash('sha256').update(canonicalRequest).digest('hex')].join('\n');
+
+    const hmac = (key: Buffer | string, data: string) =>
+      createHmac('sha256', key).update(data).digest();
+    const signingKey = hmac(
+      hmac(hmac(hmac(`AWS4${secretAccessKey}`, dateStamp), region), service),
+      'aws4_request',
+    );
+    const signature = createHmac('sha256', signingKey).update(stringToSign).digest('hex');
+    const authorization =
+      `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+    return {
+      Authorization: authorization,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-Amz-Date': amzDate,
+    };
+  }
+
+  private async ec2Query<T = unknown>(params: Record<string, string>): Promise<T> {
+    const c = this.cfg();
+    const host = `ec2.${c.region}.amazonaws.com`;
+    const body = new URLSearchParams({ ...params, Version: '2016-11-15' }).toString();
+    const headers = this.sign('POST', 'ec2', c.region, host, '/', body, c.accessKeyId, c.secretAccessKey);
+    const res = await fetch(`https://${host}/`, { method: 'POST', headers, body });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`AWS EC2 error: ${res.status} ${text}`);
+    // Minimal XML extraction for the fields we need (avoids xml parser dep).
+    return parseSimpleXml(text) as T;
+  }
+
+  async createInstance(spec: VMInstanceSpec): Promise<VMInstance> {
+    const c = this.cfg();
+    const params: Record<string, string> = {
+      Action: 'RunInstances',
+      ImageId: spec.template || c.imageId,
+      InstanceType: c.instanceType,
+      MinCount: '1',
+      MaxCount: '1',
+      'TagSpecification.1.ResourceType': 'instance',
+      'TagSpecification.1.Tag.1.Key': 'Name',
+      'TagSpecification.1.Tag.1.Value': spec.name,
+    };
+    if (c.keyName) params['KeyName'] = c.keyName;
+    if (c.subnetId) params['SubnetId'] = c.subnetId;
+    if (c.securityGroupIds) {
+      c.securityGroupIds.forEach((sg, i) => { params[`SecurityGroupId.${i + 1}`] = sg; });
+    }
+    if (spec.resources?.cores) params['CpuOptions.CoreCount'] = String(spec.resources.cores);
+
+    const result = xmlValue(await this.ec2Query<string>(params), 'instanceId') ?? 'unknown';
+    return { id: result, name: spec.name, status: 'provisioning' };
+  }
+
+  async destroyInstance(id: string): Promise<void> {
+    await this.ec2Query({ Action: 'TerminateInstances', 'InstanceId.1': id });
+  }
+
+  async getInstance(id: string): Promise<VMInstance | null> {
+    try {
+      const res = await this.ec2Query<string>({
+        Action: 'DescribeInstances',
+        'InstanceId.1': id,
+      });
+      const state = xmlValue(res, 'name') ?? 'unknown';
+      const name = xmlValue(res, 'value') ?? id;
+      const status: VMInstance['status'] =
+        state === 'running' ? 'running' : state === 'stopped' ? 'stopped' : 'provisioning';
+      return { id, name, status };
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Azure VM driver
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface AzureConfig {
+  tenantId: string;
+  clientId: string;
+  clientSecret: string;
+  subscriptionId: string;
+  resourceGroup: string;
+  location: string;
+  /** VM size, e.g. Standard_B2s */
+  vmSize: string;
+  /** Reference: publisher/offer/sku */
+  imagePublisher?: string;
+  imageOffer?: string;
+  imageSku?: string;
+}
+
+export class AzureVmDriver implements VMProviderDriver {
+  readonly kind = 'AZURE_VM';
+  private tokenCache: { token: string; expiresAt: number } | null = null;
+
+  constructor(private readonly config: Record<string, unknown>) {}
+
+  private cfg(): AzureConfig {
+    return this.config as unknown as AzureConfig;
+  }
+
+  validateConfig(): { ok: true } | { ok: false; reason: string } {
+    const required = ['tenantId', 'clientId', 'clientSecret', 'subscriptionId', 'resourceGroup', 'location', 'vmSize'];
+    const missing = required.filter((k) => !this.config[k]);
+    if (missing.length) return { ok: false, reason: `Azure config missing: ${missing.join(', ')}` };
+    return { ok: true };
+  }
+
+  private async getToken(): Promise<string> {
+    if (this.tokenCache && this.tokenCache.expiresAt > Date.now() + 60_000) {
+      return this.tokenCache.token;
+    }
+    const c = this.cfg();
+    const res = await fetch(
+      `https://login.microsoftonline.com/${c.tenantId}/oauth2/v2.0/token`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_id: c.clientId,
+          client_secret: c.clientSecret,
+          scope: 'https://management.azure.com/.default',
+        }).toString(),
+      },
+    );
+    if (!res.ok) throw new Error(`Azure token error: ${await res.text()}`);
+    const data = (await res.json()) as { access_token: string; expires_in: number };
+    this.tokenCache = { token: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 };
+    return data.access_token;
+  }
+
+  private async arm<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+    const token = await this.getToken();
+    const url = `https://management.azure.com${path}?api-version=2023-09-01`;
+    const res = await fetch(url, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error(`Azure ARM ${method} ${path}: ${await res.text()}`);
+    if (res.status === 204) return {} as T;
+    return res.json() as Promise<T>;
+  }
+
+  async createInstance(spec: VMInstanceSpec): Promise<VMInstance> {
+    const c = this.cfg();
+    const base = `/subscriptions/${c.subscriptionId}/resourceGroups/${c.resourceGroup}`;
+    const vmBody = {
+      location: c.location,
+      properties: {
+        hardwareProfile: { vmSize: c.vmSize },
+        storageProfile: {
+          imageReference: {
+            publisher: c.imagePublisher ?? 'Canonical',
+            offer: c.imageOffer ?? 'UbuntuServer',
+            sku: c.imageSku ?? '22_04-lts',
+            version: 'latest',
+          },
+          osDisk: { createOption: 'FromImage', deleteOption: 'Delete' },
+        },
+        osProfile: {
+          computerName: spec.name.slice(0, 15),
+          adminUsername: 'chista',
+          linuxConfiguration: { disablePasswordAuthentication: true },
+        },
+        networkProfile: { networkInterfaces: [] },
+      },
+    };
+    const vm = await this.arm<{ name: string }>('PUT', `${base}/virtualMachines/${spec.name}`, vmBody);
+    return { id: `${base}/virtualMachines/${vm.name ?? spec.name}`, name: spec.name, status: 'provisioning' };
+  }
+
+  async destroyInstance(id: string): Promise<void> {
+    await this.arm('DELETE', id).catch(() => undefined);
+  }
+
+  async getInstance(id: string): Promise<VMInstance | null> {
+    try {
+      const vm = await this.arm<{ name?: string; properties?: { provisioningState?: string } }>(
+        'GET', `${id}?$expand=instanceView`,
+      );
+      const state = (vm.properties?.provisioningState ?? '').toLowerCase();
+      const status: VMInstance['status'] =
+        state === 'succeeded' ? 'running' : state === 'deleting' ? 'stopped' : 'provisioning';
+      return { id, name: vm.name ?? id, status };
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GCP Compute Engine driver
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface GcpConfig {
+  projectId: string;
+  zone: string;
+  /** Service account email. */
+  serviceAccountEmail: string;
+  /** PEM-encoded private key (RSA). */
+  privateKeyPem: string;
+  machineType: string;
+  /** Source image, e.g. projects/debian-cloud/global/images/family/debian-12 */
+  sourceImage: string;
+}
+
+export class GcpDriver implements VMProviderDriver {
+  readonly kind = 'GCP_CE';
+  private tokenCache: { token: string; expiresAt: number } | null = null;
+
+  constructor(private readonly config: Record<string, unknown>) {}
+
+  private cfg(): GcpConfig {
+    return this.config as unknown as GcpConfig;
+  }
+
+  validateConfig(): { ok: true } | { ok: false; reason: string } {
+    const required = ['projectId', 'zone', 'serviceAccountEmail', 'privateKeyPem', 'machineType', 'sourceImage'];
+    const missing = required.filter((k) => !this.config[k]);
+    if (missing.length) return { ok: false, reason: `GCP config missing: ${missing.join(', ')}` };
+    return { ok: true };
+  }
+
+  private async getToken(): Promise<string> {
+    if (this.tokenCache && this.tokenCache.expiresAt > Date.now() + 60_000) return this.tokenCache.token;
+    const c = this.cfg();
+    const now = Math.floor(Date.now() / 1000);
+    const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(JSON.stringify({
+      iss: c.serviceAccountEmail,
+      scope: 'https://www.googleapis.com/auth/compute',
+      aud: 'https://oauth2.googleapis.com/token',
+      iat: now,
+      exp: now + 3600,
+    })).toString('base64url');
+    const { createSign } = await import('crypto');
+    const sign = createSign('RSA-SHA256');
+    sign.update(`${header}.${payload}`);
+    const sig = sign.sign(c.privateKeyPem, 'base64url');
+    const jwt = `${header}.${payload}.${sig}`;
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth2:grant-type:jwt-bearer', assertion: jwt }).toString(),
+    });
+    if (!res.ok) throw new Error(`GCP token error: ${await res.text()}`);
+    const data = (await res.json()) as { access_token: string; expires_in: number };
+    this.tokenCache = { token: data.access_token, expiresAt: Date.now() + data.expires_in * 1000 };
+    return data.access_token;
+  }
+
+  private async gce<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+    const token = await this.getToken();
+    const c = this.cfg();
+    const base = `https://compute.googleapis.com/compute/v1/projects/${c.projectId}/zones/${c.zone}`;
+    const res = await fetch(`${base}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error(`GCP ${method} ${path}: ${await res.text()}`);
+    if (res.status === 204) return {} as T;
+    return res.json() as Promise<T>;
+  }
+
+  async createInstance(spec: VMInstanceSpec): Promise<VMInstance> {
+    const c = this.cfg();
+    const body = {
+      name: spec.name,
+      machineType: `zones/${c.zone}/machineTypes/${c.machineType}`,
+      disks: [{ boot: true, autoDelete: true, initializeParams: { sourceImage: c.sourceImage } }],
+      networkInterfaces: [{ accessConfigs: [{ type: 'ONE_TO_ONE_NAT' }] }],
+    };
+    const op = await this.gce<{ name: string }>('POST', '/instances', body);
+    return { id: `${spec.name}`, name: spec.name, status: 'provisioning', address: op.name };
+  }
+
+  async destroyInstance(id: string): Promise<void> {
+    await this.gce('DELETE', `/instances/${id}`).catch(() => undefined);
+  }
+
+  async getInstance(id: string): Promise<VMInstance | null> {
+    try {
+      const inst = await this.gce<{ name: string; status: string; networkInterfaces?: Array<{ accessConfigs?: Array<{ natIP?: string }> }> }>(
+        'GET', `/instances/${id}`,
+      );
+      const status: VMInstance['status'] =
+        inst.status === 'RUNNING' ? 'running' : inst.status === 'TERMINATED' ? 'stopped' : 'provisioning';
+      const address = inst.networkInterfaces?.[0]?.accessConfigs?.[0]?.natIP;
+      return { id, name: inst.name, status, address };
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VMware vSphere driver
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface VSphereConfig {
+  vcenterUrl: string;  // e.g. https://vcenter.example.com
+  username: string;
+  password: string;
+  datacenter?: string;
+  cluster?: string;
+  datastore?: string;
+  /** Name of the template/snapshot to clone from. */
+  template: string;
+  /** VM folder path. */
+  folder?: string;
+  /** Allow self-signed certs. */
+  insecureTls?: boolean;
+}
+
+export class VSphereDriver implements VMProviderDriver {
+  readonly kind = 'VSPHERE';
+  private sessionId: string | null = null;
+  private sessionExpiresAt = 0;
+
+  constructor(private readonly config: Record<string, unknown>) {}
+
+  private cfg(): VSphereConfig {
+    return this.config as unknown as VSphereConfig;
+  }
+
+  validateConfig(): { ok: true } | { ok: false; reason: string } {
+    const required = ['vcenterUrl', 'username', 'password', 'template'];
+    const missing = required.filter((k) => !this.config[k]);
+    if (missing.length) return { ok: false, reason: `vSphere config missing: ${missing.join(', ')}` };
+    return { ok: true };
+  }
+
+  private async getSession(): Promise<string> {
+    if (this.sessionId && this.sessionExpiresAt > Date.now() + 60_000) return this.sessionId;
+    const c = this.cfg();
+    const base64 = Buffer.from(`${c.username}:${c.password}`).toString('base64');
+    const res = await fetch(`${c.vcenterUrl}/api/session`, {
+      method: 'POST',
+      headers: { Authorization: `Basic ${base64}` },
+    });
+    if (!res.ok) throw new Error(`vSphere session error: ${res.status}`);
+    const id = (await res.json()) as string;
+    this.sessionId = id;
+    this.sessionExpiresAt = Date.now() + 20 * 60_000;
+    return id;
+  }
+
+  private async vsphere<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+    const sid = await this.getSession();
+    const c = this.cfg();
+    const res = await fetch(`${c.vcenterUrl}/api${path}`, {
+      method,
+      headers: { 'vmware-api-session-id': sid, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error(`vSphere ${method} ${path}: ${res.status} ${await res.text()}`);
+    if (res.status === 204) return {} as T;
+    return res.json() as Promise<T>;
+  }
+
+  async createInstance(spec: VMInstanceSpec): Promise<VMInstance> {
+    const c = this.cfg();
+    const params = new URLSearchParams({ action: 'instant-clone' });
+    const body = {
+      name: spec.name,
+      source_vm: spec.template || c.template,
+    };
+    const id = await this.vsphere<string>('POST', `/vcenter/vm?${params.toString()}`, body);
+    return { id: String(id), name: spec.name, status: 'provisioning' };
+  }
+
+  async destroyInstance(id: string): Promise<void> {
+    await this.vsphere('DELETE', `/vcenter/vm/${id}`).catch(() => undefined);
+  }
+
+  async getInstance(id: string): Promise<VMInstance | null> {
+    try {
+      const vm = await this.vsphere<{ name: string; power_state: string }>(
+        'GET', `/vcenter/vm/${id}`,
+      );
+      const status: VMInstance['status'] =
+        vm.power_state === 'POWERED_ON' ? 'running' : vm.power_state === 'POWERED_OFF' ? 'stopped' : 'provisioning';
+      return { id, name: vm.name, status };
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// XML helpers (minimal — avoids xml parser dep for the EC2 Query API)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function xmlValue(xml: unknown, tag: string): string | undefined {
+  if (typeof xml !== 'string') return undefined;
+  const re = new RegExp(`<${tag}[^>]*>([^<]+)<\\/${tag}>`);
+  return re.exec(xml)?.[1];
+}
+
+/** Minimal XML to text (returns raw XML as-is; callers use xmlValue()). */
+function parseSimpleXml(text: string): string {
+  return text;
+}
+
 /** Factory: resolve a driver for a stored VMProvider row. */
 export function resolveVMDriver(
   provider: string,
@@ -176,8 +647,15 @@ export function resolveVMDriver(
   switch (provider) {
     case 'PROXMOX':
       return new ProxmoxDriver(config);
+    case 'AWS_EC2':
+      return new AwsEc2Driver(config);
+    case 'AZURE_VM':
+      return new AzureVmDriver(config);
+    case 'GCP_CE':
+      return new GcpDriver(config);
+    case 'VSPHERE':
+      return new VSphereDriver(config);
     default:
-      // Other providers (AWS, Azure, vSphere, …) not yet implemented.
       return null;
   }
 }
