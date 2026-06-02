@@ -1,0 +1,89 @@
+'use client';
+
+import { ArrowRight, Fingerprint, KeyRound, ShieldCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { Logo } from '@/components/brand/logo';
+import { Button } from '@/components/ui/button';
+import { Input, Label } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('admin@chista.local');
+  const [password, setPassword] = useState('ChistaAdmin!2026');
+  const [loading, setLoading] = useState(false);
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(() => router.push('/dashboard'), 650);
+  };
+
+  return (
+    <div className="glass-strong rounded-2xl p-8 shadow-[var(--shadow-lifted)]">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <Logo />
+        <h1 className="mt-4 font-display text-2xl font-medium">Welcome back</h1>
+        <p className="text-sm text-muted-foreground">Sign in to your Chista deployment</p>
+      </div>
+
+      <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="email">Email or username</Label>
+          <Input
+            id="email"
+            type="text"
+            autoComplete="username"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Password</Label>
+            <button type="button" className="text-xs text-gold-300 hover:underline">
+              Forgot?
+            </button>
+          </div>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+
+        <Button type="submit" loading={loading} className="mt-1 w-full">
+          {!loading && <ArrowRight className="size-4" />}
+          Sign in
+        </Button>
+      </form>
+
+      <div className="my-6 flex items-center gap-3">
+        <Separator className="flex-1" />
+        <span className="text-xs text-muted-foreground">or continue with</span>
+        <Separator className="flex-1" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Button variant="secondary" type="button" onClick={() => router.push('/dashboard')}>
+          <KeyRound className="size-4" /> SSO / OIDC
+        </Button>
+        <Button variant="secondary" type="button" onClick={() => router.push('/dashboard')}>
+          <Fingerprint className="size-4" /> Passkey
+        </Button>
+      </div>
+
+      <div className="mt-8 rounded-lg border border-border-subtle bg-[var(--surface-1)]/60 p-3">
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+          <ShieldCheck className="size-4 shrink-0 text-gold-400" />
+          Authorized access only. Activity on this private deployment may be monitored.
+        </p>
+      </div>
+    </div>
+  );
+}

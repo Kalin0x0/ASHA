@@ -1,0 +1,346 @@
+/* eslint-disable no-console */
+import { Prisma, PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
+// Raw client on purpose: seeding must not be tenant-scoped.
+const prisma = new PrismaClient();
+
+const ADMIN_EMAIL = 'admin@chista.local';
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD = process.env.CHISTA_SEED_ADMIN_PASSWORD ?? 'ChistaAdmin!2026';
+
+// ── Permission catalog (canonical copy mirrored in @chista/rbac) ─────────────
+const PERMISSIONS: Array<{ key: string; category: string; description: string }> = [
+  // Sessions
+  { key: 'SESSION_VIEW', category: 'Sessions', description: 'View own sessions' },
+  { key: 'SESSION_VIEW_ANY', category: 'Sessions', description: 'View all sessions' },
+  { key: 'SESSION_LAUNCH', category: 'Sessions', description: 'Launch workspaces' },
+  { key: 'SESSION_TERMINATE_OWN', category: 'Sessions', description: 'Terminate own sessions' },
+  { key: 'SESSION_TERMINATE_ANY', category: 'Sessions', description: 'Terminate any session' },
+  { key: 'SESSION_CONTROL_ANY', category: 'Sessions', description: 'Take control of any session' },
+  { key: 'SESSION_SHARE', category: 'Sessions', description: 'Share sessions' },
+  { key: 'RECORDING_VIEW', category: 'Sessions', description: 'View session recordings' },
+  // Workspaces
+  { key: 'WORKSPACE_VIEW', category: 'Workspaces', description: 'View workspaces' },
+  { key: 'WORKSPACE_CREATE', category: 'Workspaces', description: 'Create workspaces' },
+  { key: 'WORKSPACE_EDIT', category: 'Workspaces', description: 'Edit workspaces' },
+  { key: 'WORKSPACE_DELETE', category: 'Workspaces', description: 'Delete workspaces' },
+  { key: 'REGISTRY_MANAGE', category: 'Workspaces', description: 'Manage registries' },
+  { key: 'IMAGE_MANAGE', category: 'Workspaces', description: 'Manage images' },
+  // Access
+  { key: 'USER_VIEW', category: 'Access', description: 'View users' },
+  { key: 'USER_CREATE', category: 'Access', description: 'Create users' },
+  { key: 'USER_EDIT', category: 'Access', description: 'Edit users' },
+  { key: 'USER_DELETE', category: 'Access', description: 'Delete users' },
+  { key: 'GROUP_MANAGE', category: 'Access', description: 'Manage groups' },
+  { key: 'ROLE_MANAGE', category: 'Access', description: 'Manage roles & permissions' },
+  { key: 'AUTH_MANAGE', category: 'Access', description: 'Manage authentication providers' },
+  // Infrastructure
+  { key: 'ZONE_MANAGE', category: 'Infrastructure', description: 'Manage deployment zones' },
+  { key: 'AGENT_VIEW', category: 'Infrastructure', description: 'View agents' },
+  { key: 'AGENT_MANAGE', category: 'Infrastructure', description: 'Manage agents' },
+  { key: 'SERVER_MANAGE', category: 'Infrastructure', description: 'Manage servers' },
+  { key: 'POOL_MANAGE', category: 'Infrastructure', description: 'Manage server pools' },
+  { key: 'AUTOSCALE_MANAGE', category: 'Infrastructure', description: 'Manage autoscale configs' },
+  { key: 'PROVIDER_MANAGE', category: 'Infrastructure', description: 'Manage VM/DNS providers' },
+  // Storage / connectivity
+  { key: 'STORAGE_MANAGE', category: 'Storage', description: 'Manage storage & file mappings' },
+  { key: 'CONNECTIVITY_MANAGE', category: 'Connectivity', description: 'Manage proxies/egress/filtering' },
+  // Settings
+  { key: 'SETTINGS_MANAGE', category: 'Settings', description: 'Manage global settings' },
+  { key: 'BRANDING_MANAGE', category: 'Settings', description: 'Manage branding' },
+  { key: 'LICENSE_MANAGE', category: 'Settings', description: 'Manage licensing' },
+  // Observability / developer
+  { key: 'AUDIT_VIEW', category: 'Observability', description: 'View audit logs' },
+  { key: 'REPORTING_VIEW', category: 'Observability', description: 'View reports & metrics' },
+  { key: 'WEBHOOK_MANAGE', category: 'Developer', description: 'Manage webhooks' },
+  { key: 'APIKEY_MANAGE', category: 'Developer', description: 'Manage API keys' },
+];
+
+const ALL_KEYS = PERMISSIONS.map((p) => p.key);
+
+const ROLE_DEFS: Array<{ name: string; description: string; keys: string[] }> = [
+  { name: 'Super Admin', description: 'Full unrestricted access', keys: ALL_KEYS },
+  {
+    name: 'Administrator',
+    description: 'Manage the deployment',
+    keys: ALL_KEYS.filter((k) => k !== 'LICENSE_MANAGE'),
+  },
+  {
+    name: 'Operator',
+    description: 'Monitor and operate sessions & infrastructure',
+    keys: [
+      'SESSION_VIEW',
+      'SESSION_VIEW_ANY',
+      'SESSION_LAUNCH',
+      'SESSION_TERMINATE_ANY',
+      'SESSION_CONTROL_ANY',
+      'RECORDING_VIEW',
+      'WORKSPACE_VIEW',
+      'AGENT_VIEW',
+      'REPORTING_VIEW',
+      'AUDIT_VIEW',
+    ],
+  },
+  {
+    name: 'User',
+    description: 'Launch and use workspaces',
+    keys: ['SESSION_VIEW', 'SESSION_LAUNCH', 'SESSION_TERMINATE_OWN', 'SESSION_SHARE', 'WORKSPACE_VIEW'],
+  },
+];
+
+async function upsertSystemRole(name: string, description: string) {
+  const existing = await prisma.role.findFirst({ where: { orgId: null, name } });
+  if (existing) {
+    return prisma.role.update({ where: { id: existing.id }, data: { description, isSystem: true } });
+  }
+  return prisma.role.create({ data: { name, description, isSystem: true, orgId: null } });
+}
+
+async function main() {
+  console.log('▸ Seeding permissions…');
+  for (const p of PERMISSIONS) {
+    await prisma.permission.upsert({
+      where: { key: p.key },
+      update: { category: p.category, description: p.description },
+      create: p,
+    });
+  }
+  const perms = await prisma.permission.findMany();
+  const permId = new Map(perms.map((p) => [p.key, p.id]));
+
+  console.log('▸ Seeding roles…');
+  const roleByName = new Map<string, string>();
+  for (const r of ROLE_DEFS) {
+    const role = await upsertSystemRole(r.name, r.description);
+    roleByName.set(r.name, role.id);
+    await prisma.rolePermission.deleteMany({ where: { roleId: role.id } });
+    await prisma.rolePermission.createMany({
+      data: r.keys.map((k) => ({ roleId: role.id, permissionId: permId.get(k)! })),
+      skipDuplicates: true,
+    });
+  }
+
+  console.log('▸ Seeding organisation…');
+  const org = await prisma.org.upsert({
+    where: { slug: 'chista' },
+    update: {},
+    create: { name: 'Chista', slug: 'chista' },
+  });
+
+  console.log('▸ Seeding default zone…');
+  await prisma.deploymentZone.upsert({
+    where: { id: 'seed-zone-default' },
+    update: {},
+    create: {
+      id: 'seed-zone-default',
+      orgId: org.id,
+      name: 'default',
+      region: 'on-prem',
+      isDefault: true,
+      proxyBaseUrl: process.env.CHISTA_PUBLIC_URL ?? 'https://chista.local',
+    },
+  });
+
+  console.log('▸ Seeding groups…');
+  const adminGroup = await prisma.group.upsert({
+    where: { orgId_name: { orgId: org.id, name: 'Administrators' } },
+    update: {},
+    create: { id: 'seed-group-admins', orgId: org.id, name: 'Administrators', priority: 1 },
+  });
+  const allUsers = await prisma.group.upsert({
+    where: { orgId_name: { orgId: org.id, name: 'All Users' } },
+    update: {},
+    create: {
+      id: 'seed-group-all',
+      orgId: org.id,
+      name: 'All Users',
+      priority: 1000,
+      isDefault: true,
+      idleDisconnectSec: 3600,
+      keepaliveExpirationSec: 28800,
+    },
+  });
+
+  // group → role
+  async function linkGroupRole(groupId: string, roleName: string) {
+    const roleId = roleByName.get(roleName)!;
+    await prisma.groupRole.upsert({
+      where: { groupId_roleId: { groupId, roleId } },
+      update: {},
+      create: { groupId, roleId },
+    });
+  }
+  await linkGroupRole(adminGroup.id, 'Super Admin');
+  await linkGroupRole(allUsers.id, 'User');
+
+  console.log('▸ Seeding admin user…');
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+  const admin = await prisma.user.upsert({
+    where: { orgId_email: { orgId: org.id, email: ADMIN_EMAIL } },
+    update: { isSystemAdmin: true, status: 'ACTIVE' },
+    create: {
+      orgId: org.id,
+      email: ADMIN_EMAIL,
+      username: ADMIN_USERNAME,
+      displayName: 'Chista Administrator',
+      isSystemAdmin: true,
+      status: 'ACTIVE',
+    },
+  });
+  await prisma.userCredential.deleteMany({ where: { userId: admin.id, kind: 'PASSWORD' } });
+  await prisma.userCredential.create({
+    data: { userId: admin.id, kind: 'PASSWORD', secret: passwordHash },
+  });
+  await prisma.userGroup.upsert({
+    where: { userId_groupId: { userId: admin.id, groupId: adminGroup.id } },
+    update: {},
+    create: { orgId: org.id, userId: admin.id, groupId: adminGroup.id },
+  });
+  await prisma.userGroup.upsert({
+    where: { userId_groupId: { userId: admin.id, groupId: allUsers.id } },
+    update: {},
+    create: { orgId: org.id, userId: admin.id, groupId: allUsers.id },
+  });
+
+  console.log('▸ Seeding images & workspaces…');
+  const images = [
+    {
+      id: 'seed-img-firefox',
+      name: 'firefox',
+      friendlyName: 'Firefox',
+      dockerImage: 'kasmweb/firefox:1.16.0',
+      iconUrl: 'https://kasm-static-content.s3.amazonaws.com/icons/firefox.svg',
+    },
+    {
+      id: 'seed-img-chrome',
+      name: 'chrome',
+      friendlyName: 'Google Chrome',
+      dockerImage: 'kasmweb/chrome:1.16.0',
+      iconUrl: 'https://kasm-static-content.s3.amazonaws.com/icons/chrome.svg',
+    },
+    {
+      id: 'seed-img-desktop',
+      name: 'ubuntu-desktop',
+      friendlyName: 'Ubuntu Desktop',
+      dockerImage: 'kasmweb/desktop:1.16.0',
+      iconUrl: 'https://kasm-static-content.s3.amazonaws.com/icons/ubuntu.svg',
+    },
+    {
+      id: 'seed-img-terminal',
+      name: 'terminal',
+      friendlyName: 'Terminal',
+      dockerImage: 'kasmweb/terminal:1.16.0',
+      iconUrl: 'https://kasm-static-content.s3.amazonaws.com/icons/terminal.svg',
+    },
+  ];
+
+  for (const img of images) {
+    await prisma.image.upsert({
+      where: { id: img.id },
+      update: { dockerImage: img.dockerImage, available: true },
+      create: {
+        id: img.id,
+        orgId: org.id,
+        name: img.name,
+        friendlyName: img.friendlyName,
+        dockerImage: img.dockerImage,
+        channel: 'CORE',
+        protocol: 'KASMVNC',
+        available: true,
+        runConfigDefaults: { ports: [6901], env: { VNC_PW: 'generated-at-runtime' } },
+      },
+    });
+
+    const ws = await prisma.workspace.upsert({
+      where: { orgId_name: { orgId: org.id, name: img.name } },
+      update: { imageId: img.id, enabled: true },
+      create: {
+        orgId: org.id,
+        name: img.name,
+        friendlyName: img.friendlyName,
+        description: `${img.friendlyName} streamed in an isolated container.`,
+        type: 'CONTAINER',
+        imageId: img.id,
+        iconUrl: img.iconUrl,
+        categories: img.name === 'ubuntu-desktop' ? ['Desktops'] : ['Browsers'],
+        enabled: true,
+        coresLimit: 2,
+        memLimitMb: 2768,
+        dockerConfig: { shmSize: '1g', ports: [6901] },
+      },
+    });
+    // grant the default group access
+    await prisma.workspace.update({
+      where: { id: ws.id },
+      data: { groups: { connect: { id: allUsers.id } } },
+    });
+  }
+
+  console.log('▸ Seeding license, branding, settings…');
+  await prisma.license.upsert({
+    where: { id: 'seed-license' },
+    update: {},
+    create: {
+      id: 'seed-license',
+      orgId: org.id,
+      type: 'CONCURRENT',
+      seats: 25,
+      concurrentSessions: 25,
+      issuedTo: 'Chista Development',
+      features: { branding: true, recording: true, autoscale: true, sso: true },
+    },
+  });
+
+  await prisma.branding.upsert({
+    where: { scope_orgId_groupId: { scope: 'ORG', orgId: org.id, groupId: '' } },
+    update: {},
+    create: {
+      scope: 'ORG',
+      orgId: org.id,
+      groupId: '',
+      productName: 'Chista',
+      primaryColor: '#1a1a2e',
+      accentColor: '#d4af37',
+    },
+  });
+
+  await prisma.loginConfig.upsert({
+    where: { orgId: org.id },
+    update: {},
+    create: {
+      orgId: org.id,
+      noticeTitle: 'Authorized access only',
+      noticeBody: 'This is a private Chista deployment. Activity may be monitored.',
+    },
+  });
+
+  for (const [key, value] of Object.entries({
+    'session.default_idle_disconnect_sec': 3600,
+    'session.default_keepalive_sec': 28800,
+    'branding.product_name': 'Chista',
+    'security.enforce_2fa': false,
+  })) {
+    await prisma.setting.upsert({
+      where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId: org.id, zoneId: '', key } },
+      update: { valueJson: value as Prisma.InputJsonValue },
+      create: { scope: 'ORG', orgId: org.id, zoneId: '', key, valueJson: value as Prisma.InputJsonValue },
+    });
+  }
+
+  console.log('\n✓ Seed complete.');
+  console.log('  ┌──────────────────────────────────────────────┐');
+  console.log('  │  Admin login                                  │');
+  console.log(`  │  email:    ${ADMIN_EMAIL.padEnd(34)}│`);
+  console.log(`  │  password: ${ADMIN_PASSWORD.padEnd(34)}│`);
+  console.log('  └──────────────────────────────────────────────┘');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

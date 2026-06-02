@@ -1,0 +1,423 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================================
+   LAYER 1 — PRIMITIVES  (raw scales → become Tailwind utilities)
+   ============================================================================ */
+@theme {
+  /* Anthracite — blue-leaning charcoal neutral base */
+  --color-anthracite-950: #0e0e1a;
+  --color-anthracite-900: #14141f;
+  --color-anthracite-850: #181826;
+  --color-anthracite-800: #1a1a2e; /* BRAND base */
+  --color-anthracite-750: #1f1f38;
+  --color-anthracite-700: #242442;
+  --color-anthracite-600: #2d2d50;
+  --color-anthracite-500: #3a3a63;
+  --color-anthracite-400: #4b4b7a;
+  --color-anthracite-300: #6b6b94;
+  --color-anthracite-200: #9a9ab8;
+  --color-anthracite-100: #c4c4d6;
+  --color-anthracite-50: #e8e8f0;
+
+  /* Gold — warm, AA-tuned accent */
+  --color-gold-950: #2e2410;
+  --color-gold-900: #4a3a16;
+  --color-gold-800: #6b541f;
+  --color-gold-700: #8f7129;
+  --color-gold-600: #b8923a;
+  --color-gold-500: #d4af37; /* BRAND accent */
+  --color-gold-400: #e0c25c;
+  --color-gold-300: #ecd584; /* AA text on dark */
+  --color-gold-200: #f3e3ad;
+  --color-gold-100: #f9f1d6;
+  --color-gold-50: #fdf9ec;
+
+  /* Semantic hues — harmonized toward gold */
+  --color-success-600: #4aa37c;
+  --color-success-500: #5fb88f;
+  --color-success-400: #7fcaa6;
+  --color-warn-600: #c9933b;
+  --color-warn-500: #e0a84a;
+  --color-warn-400: #edbd6e;
+  --color-error-600: #bd564d;
+  --color-error-500: #d2685f;
+  --color-error-400: #e08980;
+  --color-info-600: #587bb0;
+  --color-info-500: #6a8fc4;
+  --color-info-400: #8aa8d6;
+
+  /* Chart palette (gold-anchored) */
+  --color-chart-1: #d4af37;
+  --color-chart-2: #6a8fc4;
+  --color-chart-3: #5fb88f;
+  --color-chart-4: #b07fc4;
+  --color-chart-5: #e0a84a;
+  --color-chart-6: #c4708f;
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+
+  /* Fonts (CSS vars injected by next/font in layout) */
+  --font-display: var(--font-fraunces), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', monospace;
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Layout */
+  --spacing-sidebar: 264px;
+  --spacing-sidebar-collapsed: 76px;
+  --spacing-topbar: 60px;
+}
+
+/* ============================================================================
+   LAYER 2 — SEMANTIC  (shadcn-compatible names; default = DARK / brand)
+   ============================================================================ */
+:root,
+.dark {
+  --background: var(--color-anthracite-900);
+  --foreground: var(--color-anthracite-50);
+
+  --surface-1: var(--color-anthracite-800);
+  --surface-2: var(--color-anthracite-700);
+  --surface-3: var(--color-anthracite-600);
+
+  --card: var(--color-anthracite-800);
+  --card-foreground: var(--color-anthracite-50);
+  --popover: var(--color-anthracite-700);
+  --popover-foreground: var(--color-anthracite-50);
+
+  --primary: var(--color-gold-500);
+  --primary-foreground: var(--color-anthracite-950);
+  --secondary: var(--color-anthracite-700);
+  --secondary-foreground: var(--color-anthracite-50);
+  --muted: var(--color-anthracite-750);
+  --muted-foreground: var(--color-anthracite-200);
+  --accent: var(--color-anthracite-700);
+  --accent-foreground: var(--color-gold-300);
+
+  --success: var(--color-success-500);
+  --warning: var(--color-warn-500);
+  --destructive: var(--color-error-500);
+  --destructive-foreground: var(--color-anthracite-50);
+  --info: var(--color-info-500);
+
+  --border: var(--color-anthracite-500);
+  --border-subtle: var(--color-anthracite-700);
+  --input: var(--color-anthracite-600);
+  --ring: var(--color-gold-500);
+
+  --highlight-top: rgba(255, 255, 255, 0.05);
+  --gold-glow: 0 0 0 1px rgba(212, 175, 55, 0.25), 0 0 24px -6px rgba(212, 175, 55, 0.35);
+  --shadow-ambient: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --shadow-lifted: 0 2px 4px rgba(0, 0, 0, 0.5), 0 16px 48px -16px rgba(0, 0, 0, 0.7);
+  --grain-opacity: 0.022;
+}
+
+.light {
+  --background: #f4f4f7;
+  --foreground: var(--color-anthracite-900);
+
+  --surface-1: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #ffffff;
+
+  --card: #ffffff;
+  --card-foreground: var(--color-anthracite-900);
+  --popover: #ffffff;
+  --popover-foreground: var(--color-anthracite-900);
+
+  --primary: var(--color-gold-700);
+  --primary-foreground: #ffffff;
+  --secondary: #ececf2;
+  --secondary-foreground: var(--color-anthracite-900);
+  --muted: #ececf2;
+  --muted-foreground: #5b5b73;
+  --accent: #f3ead3;
+  --accent-foreground: var(--color-gold-800);
+
+  --success: var(--color-success-600);
+  --warning: var(--color-warn-600);
+  --destructive: var(--color-error-600);
+  --destructive-foreground: #ffffff;
+  --info: var(--color-info-600);
+
+  --border: #d9d9e3;
+  --border-subtle: #e8e8ef;
+  --input: #d4d4e0;
+  --ring: var(--color-gold-600);
+
+  --highlight-top: rgba(255, 255, 255, 0.8);
+  --gold-glow: 0 0 0 1px rgba(184, 146, 58, 0.3), 0 0 20px -8px rgba(184, 146, 58, 0.3);
+  --shadow-ambient: 0 1px 2px rgba(16, 16, 30, 0.06), 0 8px 24px -16px rgba(16, 16, 30, 0.12);
+  --shadow-lifted: 0 2px 6px rgba(16, 16, 30, 0.08), 0 18px 40px -18px rgba(16, 16, 30, 0.18);
+  --grain-opacity: 0;
+}
+
+/* ============================================================================
+   LAYER 3 — bridge semantic vars into the Tailwind color namespace
+   ============================================================================ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-info: var(--info);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius: var(--radius-md);
+}
+
+/* ============================================================================
+   BASE
+   ============================================================================ */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+  }
+
+  /* tabular figures for all numeric data */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background-color: rgba(212, 175, 55, 0.28);
+    color: var(--color-anthracite-50);
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Themed scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-anthracite-600) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-anthracite-600);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-anthracite-500);
+  }
+}
+
+/* ============================================================================
+   COMPONENTS — signature surfaces & accents
+   ============================================================================ */
+@layer components {
+  /* Elevation — depth via luminosity, not heavy shadows */
+  .elev-0 {
+    background-color: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+  }
+  .elev-1 {
+    background-color: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-ambient), inset 0 1px 0 var(--highlight-top);
+  }
+  .elev-2 {
+    background-color: var(--surface-3);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lifted), inset 0 1px 0 var(--highlight-top);
+  }
+  .elev-gold {
+    box-shadow: var(--gold-glow), var(--shadow-ambient), inset 0 1px 0 var(--highlight-top);
+    border-color: rgba(212, 175, 55, 0.4);
+  }
+
+  /* Glass — overlays only */
+  .glass {
+    background-color: color-mix(in srgb, var(--surface-1) 72%, transparent);
+    backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid var(--border-subtle);
+  }
+  .glass-strong {
+    background-color: color-mix(in srgb, var(--surface-2) 85%, transparent);
+    backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid var(--border);
+  }
+
+  .gold-hairline {
+    position: relative;
+  }
+  .gold-hairline::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(212, 175, 55, 0.6),
+      transparent
+    );
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(135deg, var(--color-gold-300), var(--color-gold-500) 55%, var(--color-gold-700));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .ring-gold-focus:focus-visible {
+    box-shadow: var(--gold-glow);
+  }
+}
+
+/* ============================================================================
+   UTILITIES — backgrounds, grain, animations
+   ============================================================================ */
+@layer utilities {
+  /* Animated aurora mesh — anthracite base with deep-gold + steel blooms */
+  .bg-aurora {
+    background-color: var(--color-anthracite-950);
+    background-image:
+      radial-gradient(60% 55% at 18% 20%, rgba(212, 175, 55, 0.16), transparent 60%),
+      radial-gradient(55% 50% at 82% 28%, rgba(106, 143, 196, 0.12), transparent 62%),
+      radial-gradient(70% 60% at 50% 100%, rgba(212, 175, 55, 0.1), transparent 70%);
+    background-size: 200% 200%;
+    animation: aurora-drift 32s var(--ease-in-out-soft) infinite alternate;
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  /* Film grain overlay (apply to a fixed, pointer-events-none element) */
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .animate-shimmer {
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  .animate-pulse-ring {
+    animation: pulse-ring 2.4s var(--ease-out-soft) infinite;
+  }
+  .animate-rise {
+    animation: rise 0.4s var(--ease-out-soft) both;
+  }
+}
+
+@keyframes aurora-drift {
+  0% {
+    background-position: 0% 0%, 100% 0%, 50% 100%;
+  }
+  100% {
+    background-position: 30% 20%, 70% 30%, 40% 80%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(212, 175, 55, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-aurora,
+  .animate-shimmer,
+  .animate-pulse-ring,
+  .animate-rise {
+    animation: none !important;
+  }
+}

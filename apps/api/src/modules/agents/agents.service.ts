@@ -1,0 +1,150 @@
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import type { AgentHeartbeatDto, AgentRegisterDto, SessionStatsDto, SessionStatusDto } from '@chista/contracts';
+import { prisma, runUnscoped } from '@chista/db';
+import { sessionConnectionUrl } from '@chista/proxy-labels';
+import type { Env } from '@chista/config';
+import { ENV } from '../../common/env.module';
+import { SessionsGateway } from '../sessions/sessions.gateway';
+
+@Injectable()
+export class AgentsService {
+  private readonly logger = new Logger('Agents');
+
+  constructor(
+    private readonly gateway: SessionsGateway,
+    private readonly jwt: JwtService,
+    @Inject(ENV) private readonly env: Env,
+  ) {}
+
+  async register(dto: AgentRegisterDto) {
+    return runUnscoped(async () => {
+      const zone =
+        (await prisma.deploymentZone.findFirst({ where: { name: dto.zone } })) ??
+        (await prisma.deploymentZone.findFirst({ where: { isDefault: true } })) ??
+        (await prisma.deploymentZone.findFirst({}));
+      if (!zone) throw new NotFoundException('No deployment zone to enroll into');
+
+      const agent = await prisma.agent.upsert({
+        where: { orgId_hostname: { orgId: zone.orgId, hostname: dto.hostname } },
+        update: {
+          status: 'ONLINE',
+          version: dto.version,
+          cpuCores: dto.cpuCores,
+          memTotalMb: dto.memTotalMb,
+          maxSessions: Math.max(1, Math.floor(dto.cpuCores / 2)),
+          lastHeartbeatAt: new Date(),
+        },
+        create: {
+          orgId: zone.orgId,
+          zoneId: zone.id,
+          hostname: dto.hostname,
+          kind: 'DOCKER',
+          status: 'ONLINE',
+          version: dto.version,
+          cpuCores: dto.cpuCores,
+          memTotalMb: dto.memTotalMb,
+          maxSessions: Math.max(1, Math.floor(dto.cpuCores / 2)),
+          lastHeartbeatAt: new Date(),
+        },
+      });
+      this.logger.log(`Agent ${dto.hostname} enrolled into zone ${zone.name}`);
+      return { agentId: agent.id, zoneId: zone.id, sessionNetwork: this.env.CHISTA_SESSION_NETWORK };
+    });
+  }
+
+  async heartbeat(agentId: string, dto: AgentHeartbeatDto) {
+    await runUnscoped(() =>
+      prisma.agent.update({
+        where: { id: agentId },
+        data: {
+          status: 'ONLINE',
+          memFreeMb: dto.memFreeMb,
+          loadPercent: dto.loadPercent,
+          currentSessions: dto.currentSessions,
+          version: dto.version,
+          lastHeartbeatAt: new Date(),
+        },
+      }),
+    );
+    return { ok: true };
+  }
+
+  async updateSessionStatus(sessionId: string, dto: SessionStatusDto) {
+    return runUnscoped(async () => {
+      const session = await prisma.session.findUnique({ where: { id: sessionId } });
+      if (!session) throw new NotFoundException('Session not found');
+
+      const data: Record<string, unknown> = { status: dto.status };
+      if (dto.containerId) data.containerId = dto.containerId;
+      if (dto.internalHost) data.internalHost = dto.internalHost;
+      if (dto.host) data.host = dto.host;
+      if (dto.port) data.port = dto.port;
+      if (dto.traefikRouterName) data.traefikRouterName = dto.traefikRouterName;
+      if (dto.error) data.errorMessage = dto.error;
+
+      if (dto.status === 'RUNNING') {
+        const zone = await prisma.deploymentZone.findUnique({ where: { id: session.zoneId } });
+        const token = await this.jwt.signAsync(
+          { sid: session.id, kasmId: session.kasmId },
+          { secret: this.env.SESSION_TOKEN_SECRET, expiresIn: this.env.SESSION_TOKEN_TTL },
+        );
+        const connectionUrl = sessionConnectionUrl({
+          kasmId: session.kasmId,
+          proxyBaseUrl: zone?.proxyBaseUrl ?? this.env.CHISTA_PUBLIC_URL,
+          token,
+        });
+        data.connectionUrl = connectionUrl;
+        data.startedAt = session.startedAt ?? new Date();
+
+        this.gateway.emitToSession(session.id, { type: 'session.ready', payload: { sessionId: session.id, connectionUrl } });
+      }
+
+      if (dto.status === 'DESTROYED') {
+        data.destroyedAt = new Date();
+        if (session.agentId) {
+          await prisma.agent.updateMany({
+            where: { id: session.agentId, currentSessions: { gt: 0 } },
+            data: { currentSessions: { decrement: 1 } },
+          });
+        }
+      }
+
+      await prisma.session.update({ where: { id: sessionId }, data });
+      this.gateway.emitToOrg(session.orgId, {
+        type: 'session.status',
+        payload: { sessionId, status: dto.status, containerId: dto.containerId },
+      });
+      return { ok: true };
+    });
+  }
+
+  async ingestStats(dto: SessionStatsDto) {
+    for (const sample of dto.samples) {
+      await runUnscoped(() =>
+        prisma.session.updateMany({
+          where: { id: sample.sessionId },
+          data: { resources: { cpuPct: sample.cpuPct, memMb: sample.memMb } as object },
+        }),
+      ).catch(() => undefined);
+      const session = await prisma.session.findUnique({ where: { id: sample.sessionId } });
+      if (session) {
+        this.gateway.emitToOrg(session.orgId, { type: 'session.stats', payload: sample });
+      }
+    }
+    return { ok: true };
+  }
+
+  async listAgents() {
+    return prisma.agent.findMany({ orderBy: { hostname: 'asc' }, include: { zone: { select: { name: true } } } });
+  }
+
+  async setAgentState(id: string, status: 'ONLINE' | 'DRAINING' | 'OFFLINE') {
+    return prisma.agent.update({ where: { id }, data: { status } });
+  }
+
+  async remove(id: string) {
+    await prisma.agent.delete({ where: { id } });
+    return { ok: true };
+  }
+}

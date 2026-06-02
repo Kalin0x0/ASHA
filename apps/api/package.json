@@ -1,0 +1,39 @@
+{
+  "name": "@chista/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "start:dev": "nest start --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@chista/config": "workspace:*",
+    "@chista/contracts": "workspace:*",
+    "@chista/crypto": "workspace:*",
+    "@chista/db": "workspace:*",
+    "@chista/events": "workspace:*",
+    "@chista/logger": "workspace:*",
+    "@chista/proxy-labels": "workspace:*",
+    "@chista/rbac": "workspace:*",
+    "@nestjs/common": "^10.4.15",
+    "@nestjs/core": "^10.4.15",
+    "@nestjs/jwt": "^10.2.0",
+    "@nestjs/platform-express": "^10.4.15",
+    "@nestjs/platform-socket.io": "^10.4.15",
+    "@nestjs/swagger": "^7.4.2",
+    "@nestjs/websockets": "^10.4.15",
+    "ioredis": "^5.4.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "socket.io": "^4.8.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.4.9",
+    "@nestjs/schematics": "^10.2.3",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

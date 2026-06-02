@@ -1,0 +1,32 @@
+# Chista Helm values (skeleton — Phase 4 will flesh out agents-as-DaemonSet,
+# sessions-as-Pods with per-session Ingress, HPA, and the connection proxy).
+
+image:
+  registry: ghcr.io/naiemi
+  pullPolicy: IfNotPresent
+  tag: '0.1.0'
+
+domain: chista.local
+
+postgres:
+  url: postgresql://chista:chista@postgres:5432/chista?schema=public
+
+redis:
+  url: redis://redis:6379
+
+api:
+  replicas: 1
+  port: 4000
+
+web:
+  replicas: 1
+  port: 3000
+  apiUrl: https://chista.local/api/v1
+  wsUrl: wss://chista.local
+  apiMode: live
+
+# Replace with sealed secrets / external-secrets in production.
+secrets:
+  jwtAccess: dev-access-secret-change-me-please-32++chars
+  jwtRefresh: dev-refresh-secret-change-me-please-32++chars
+  sessionToken: dev-session-token-secret-change-me-32++chars
