@@ -67,6 +67,30 @@ export class AuthService {
     return { ...tokens, user: this.publicUser(user) };
   }
 
+  /**
+   * Issue a session for an already-authenticated user (federated SSO: SAML /
+   * OIDC / LDAP). The caller is responsible for verifying the external identity
+   * and provisioning the user; this only records the login and mints tokens.
+   */
+  async issueSession(
+    user: { id: string; orgId: string; email: string; username: string; displayName: string | null; isSystemAdmin: boolean },
+    method: string,
+    ip?: string,
+    userAgent?: string,
+  ) {
+    await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    await this.audit.record({
+      orgId: user.orgId,
+      actorUserId: user.id,
+      action: 'auth.login',
+      ip,
+      userAgent,
+      metadata: { method },
+    });
+    const tokens = await this.issueTokens(user);
+    return { ...tokens, user: this.publicUser(user) };
+  }
+
   async refresh(refreshToken: string) {
     let payload: { sub: string };
     try {
@@ -163,9 +187,12 @@ export class AuthService {
     const result = await verifyOtp({ secret: method.secret, token: dto.code });
     if (!result.valid) throw new BadRequestException('Invalid TOTP code');
 
+    // Mark confirmed but do NOT stamp lastUsedAt here: that field tracks login
+    // replay, and setting it at enrollment would make the very first login in the
+    // same 30s window fail the "code already used" replay check.
     await prisma.twoFactorMethod.update({
       where: { id: method.id },
-      data: { confirmed: true, lastUsedAt: new Date() },
+      data: { confirmed: true },
     });
     return { ok: true };
   }

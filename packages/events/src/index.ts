@@ -9,6 +9,8 @@ export const RedisChannels = {
   provision: (zone: string) => `chista:zone:${zone}:provision`,
   /** Manager → agents in a zone: destroy a session. */
   destroy: (zone: string) => `chista:zone:${zone}:destroy`,
+  /** Manager → agents in a zone: pause/resume/control an existing session. */
+  control: (zone: string) => `chista:zone:${zone}:control`,
   /** Agent → manager: lifecycle/status updates. */
   agentStatus: 'chista:agent:status',
   /** Agent → manager: batched resource stats. */
@@ -19,6 +21,19 @@ export const RedisChannels = {
   share: (shareId: string) => `chista:share:${shareId}`,
 } as const;
 
+/**
+ * Hardware GPU encoding for the session stream. Open-source encoders only:
+ *   • nvenc — NVIDIA NVENC via the nvidia-container-runtime (NVIDIA_VISIBLE_DEVICES).
+ *   • vaapi — Intel/AMD VAAPI via the /dev/dri render node.
+ * `none` (default) means software x264 encoding inside the image.
+ */
+export interface GpuConfig {
+  count?: number;
+  encoder?: 'none' | 'nvenc' | 'vaapi';
+  /** Host DRI render node for VAAPI, e.g. "/dev/dri/renderD128". */
+  renderDevice?: string;
+}
+
 export interface RunConfig {
   dockerImage: string;
   env: Record<string, string>;
@@ -27,6 +42,8 @@ export interface RunConfig {
   cores?: number;
   memLimitMb?: number;
   gpuCount?: number;
+  /** Hardware H.264 encoding configuration (NVENC / VAAPI). */
+  gpu?: GpuConfig;
   volumes?: Array<{ source: string; target: string; readOnly?: boolean }>;
   /**
    * Host device paths to pass through into the container.
@@ -34,6 +51,31 @@ export interface RunConfig {
    * Docker maps these 1:1; Kubernetes mounts them as CharDevice hostPath volumes.
    */
   devices?: string[];
+}
+
+/**
+ * Data-Loss-Prevention policy enforced at the session boundary. Each flag is a
+ * capability the user is *allowed* to use; a missing/false flag disables it.
+ * The agent injects these as container env vars (KasmVNC/Neko honour them) and
+ * the viewer reads them back to grey out the matching toolbar controls.
+ */
+export interface DlpPolicy {
+  /** Host → session paste. */
+  clipboardUp?: boolean;
+  /** Session → host copy. */
+  clipboardDown?: boolean;
+  /** File upload into the session. */
+  uploads?: boolean;
+  /** File download out of the session. */
+  downloads?: boolean;
+  /** Virtual printing (CUPS → PDF → download). */
+  printing?: boolean;
+  /** Microphone passthrough. */
+  audioIn?: boolean;
+  /** Speaker/audio-out passthrough. */
+  audioOut?: boolean;
+  /** Install-as-PWA / open-in-new-tab. */
+  pwa?: boolean;
 }
 
 /**
@@ -61,6 +103,8 @@ export interface ProvisionCommand {
   zone: string;
   protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' | 'WEBRTC';
   runConfig: RunConfig;
+  /** Data-loss-prevention policy applied to the session container. */
+  dlp?: DlpPolicy;
   /** Open-source sidecars to co-launch with the session container. */
   sidecars?: {
     /** Squid (squid-cache.org) web-filter proxy sidecar. */
@@ -69,6 +113,10 @@ export interface ProvisionCommand {
     wireguard?: SessionSidecar;
     /** Neko (github.com/m1k1o/neko) isolated-browser sidecar. */
     neko?: SessionSidecar;
+    /** PulseAudio-over-WebSocket audio bridge sidecar. */
+    audio?: SessionSidecar;
+    /** CUPS virtual-printer → PDF sidecar. */
+    printing?: SessionSidecar;
   };
 }
 
@@ -79,10 +127,24 @@ export interface DestroyCommand {
   preserveVolumes?: boolean;
 }
 
+/**
+ * Manager → agent control message for an already-running session. `resize`
+ * carries new screen geometry; pause/resume freeze/thaw the container.
+ */
+export interface SessionControlCommand {
+  sessionId: string;
+  containerId?: string;
+  action: 'PAUSE' | 'RESUME' | 'RESIZE';
+  /** For RESIZE. */
+  width?: number;
+  height?: number;
+}
+
 export type SessionLifecycleStatus =
   | 'PROVISIONING'
   | 'RUNNING'
   | 'DEGRADED'
+  | 'PAUSED'
   | 'DESTROYED'
   | 'ERROR';
 

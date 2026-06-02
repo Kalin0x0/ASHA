@@ -1,21 +1,30 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   CreateDNSProviderDto,
   CreateVMProviderDto,
   UpdateProviderDto,
 } from '@chista/contracts';
+import type { Env } from '@chista/config';
 import { prisma } from '@chista/db';
 import { AuditService } from '../../common/audit.service';
+import { mergeSealedConfig, redactConfig, sealConfig, unsealConfig } from '../../common/config-seal';
+import { ENV } from '../../common/env.module';
 import { resolveVMDriver } from './vm-provider.interface';
 
 /**
  * VM and DNS provider registry. VM providers back autoscaled server pools; DNS
- * providers register per-session/per-server records. Config is validated
- * against the concrete driver where one exists (Proxmox today).
+ * providers register per-session/per-server records.
+ *
+ * Secrets in provider configs (tokens, passwords, private keys) are sealed
+ * (AES-256-GCM) into the row's `secretRef`; `config` holds a redacted copy so
+ * API responses never expose secrets. Drivers run against the unsealed config.
  */
 @Injectable()
 export class ProvidersService {
-  constructor(private readonly audit: AuditService) {}
+  constructor(
+    private readonly audit: AuditService,
+    @Inject(ENV) private readonly env: Env,
+  ) {}
 
   // ── VM providers ──────────────────────────────────────────────────────────
 
@@ -23,8 +32,17 @@ export class ProvidersService {
     return prisma.vMProvider.findMany({ where: { orgId }, orderBy: { name: 'asc' } });
   }
 
+  /** Internal: recover the unsealed config for a provider (driver use only). */
+  async resolveVMConfig(orgId: string, id: string): Promise<Record<string, unknown> | null> {
+    const row = await prisma.vMProvider.findFirst({ where: { id, orgId } });
+    if (!row) return null;
+    return row.secretRef
+      ? unsealConfig(row.secretRef, this.env.SECRET_SEAL_KEY)
+      : (row.config as Record<string, unknown>);
+  }
+
   async createVM(orgId: string, actorUserId: string, dto: CreateVMProviderDto) {
-    // If we have a concrete driver, validate the config up front.
+    // Validate the (plaintext) config against the concrete driver up front.
     const driver = resolveVMDriver(dto.provider, dto.config);
     if (driver) {
       const check = driver.validateConfig();
@@ -36,7 +54,8 @@ export class ProvidersService {
         orgId,
         name: dto.name,
         provider: dto.provider,
-        config: dto.config as object,
+        config: redactConfig(dto.config) as object,
+        secretRef: sealConfig(dto.config, this.env.SECRET_SEAL_KEY),
         enabled: dto.enabled,
       },
     });
@@ -52,11 +71,25 @@ export class ProvidersService {
   }
 
   async updateVM(orgId: string, actorUserId: string, id: string, dto: UpdateProviderDto) {
-    const res = await prisma.vMProvider.updateMany({
-      where: { id, orgId },
-      data: { name: dto.name, config: dto.config as object | undefined, enabled: dto.enabled },
+    const existing = await prisma.vMProvider.findFirst({ where: { id, orgId } });
+    if (!existing) throw new NotFoundException('VM provider not found');
+
+    // Merge an incoming config over the sealed one (masked values = unchanged).
+    let sealed: string | undefined;
+    let redacted: object | undefined;
+    if (dto.config) {
+      const prev = existing.secretRef
+        ? unsealConfig(existing.secretRef, this.env.SECRET_SEAL_KEY)
+        : (existing.config as Record<string, unknown>);
+      const merged = mergeSealedConfig(prev, dto.config);
+      sealed = sealConfig(merged, this.env.SECRET_SEAL_KEY);
+      redacted = redactConfig(merged) as object;
+    }
+
+    await prisma.vMProvider.update({
+      where: { id },
+      data: { name: dto.name, config: redacted, secretRef: sealed, enabled: dto.enabled },
     });
-    if (res.count === 0) throw new NotFoundException('VM provider not found');
     await this.audit.record({
       orgId,
       actorUserId,
@@ -86,6 +119,15 @@ export class ProvidersService {
     return prisma.dNSProvider.findMany({ where: { orgId }, orderBy: { name: 'asc' } });
   }
 
+  /** Internal: recover the unsealed config for a DNS provider. */
+  async resolveDNSConfig(orgId: string, id: string): Promise<Record<string, unknown> | null> {
+    const row = await prisma.dNSProvider.findFirst({ where: { id, orgId } });
+    if (!row) return null;
+    return row.secretRef
+      ? unsealConfig(row.secretRef, this.env.SECRET_SEAL_KEY)
+      : (row.config as Record<string, unknown>);
+  }
+
   async createDNS(orgId: string, actorUserId: string, dto: CreateDNSProviderDto) {
     const created = await prisma.dNSProvider.create({
       data: {
@@ -93,7 +135,8 @@ export class ProvidersService {
         name: dto.name,
         provider: dto.provider,
         zoneName: dto.zoneName,
-        config: dto.config as object,
+        config: redactConfig(dto.config) as object,
+        secretRef: sealConfig(dto.config, this.env.SECRET_SEAL_KEY),
         enabled: dto.enabled,
       },
     });
@@ -109,16 +152,24 @@ export class ProvidersService {
   }
 
   async updateDNS(orgId: string, actorUserId: string, id: string, dto: UpdateProviderDto) {
-    const res = await prisma.dNSProvider.updateMany({
-      where: { id, orgId },
-      data: {
-        name: dto.name,
-        zoneName: dto.zoneName,
-        config: dto.config as object | undefined,
-        enabled: dto.enabled,
-      },
+    const existing = await prisma.dNSProvider.findFirst({ where: { id, orgId } });
+    if (!existing) throw new NotFoundException('DNS provider not found');
+
+    let sealed: string | undefined;
+    let redacted: object | undefined;
+    if (dto.config) {
+      const prev = existing.secretRef
+        ? unsealConfig(existing.secretRef, this.env.SECRET_SEAL_KEY)
+        : (existing.config as Record<string, unknown>);
+      const merged = mergeSealedConfig(prev, dto.config);
+      sealed = sealConfig(merged, this.env.SECRET_SEAL_KEY);
+      redacted = redactConfig(merged) as object;
+    }
+
+    await prisma.dNSProvider.update({
+      where: { id },
+      data: { name: dto.name, zoneName: dto.zoneName, config: redacted, secretRef: sealed, enabled: dto.enabled },
     });
-    if (res.count === 0) throw new NotFoundException('DNS provider not found');
     await this.audit.record({
       orgId,
       actorUserId,

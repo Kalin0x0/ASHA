@@ -1,5 +1,10 @@
 import os from 'node:os';
-import { type DestroyCommand, type ProvisionCommand, RedisChannels } from '@chista/events';
+import {
+  type DestroyCommand,
+  type ProvisionCommand,
+  RedisChannels,
+  type SessionControlCommand,
+} from '@chista/events';
 import { createLogger } from '@chista/logger';
 import Redis from 'ioredis';
 import { agentEnv } from './env.js';
@@ -10,11 +15,12 @@ const log = createLogger('agent');
 // Select the container driver at startup. CHISTA_DRIVER=kubernetes switches
 // the agent from Docker to ephemeral Kubernetes Pods. All other code is
 // identical since both modules export the same provisionContainer / destroyContainer
-// / collectStats interface.
+// / collectStats / pauseContainer / unpauseContainer / resizeContainer interface.
 const driver = process.env.CHISTA_DRIVER === 'kubernetes'
   ? await import('./kubernetes.js')
   : await import('./docker.js');
-const { provisionContainer, destroyContainer, collectStats } = driver;
+const { provisionContainer, destroyContainer, collectStats, pauseContainer, unpauseContainer, resizeContainer } =
+  driver;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -47,7 +53,8 @@ async function main(): Promise<void> {
 
   const provisionChannel = RedisChannels.provision(zoneName);
   const destroyChannel = RedisChannels.destroy(zoneName);
-  await sub.subscribe(provisionChannel, destroyChannel).catch(() => undefined);
+  const controlChannel = RedisChannels.control(zoneName);
+  await sub.subscribe(provisionChannel, destroyChannel, controlChannel).catch(() => undefined);
 
   sub.on('message', (channel: string, message: string) => {
     void (async () => {
@@ -56,6 +63,8 @@ async function main(): Promise<void> {
           await handleProvision(agentId, JSON.parse(message) as ProvisionCommand, containerBySession, sessionByContainer);
         } else if (channel === destroyChannel) {
           await handleDestroy(agentId, JSON.parse(message) as DestroyCommand, containerBySession, sessionByContainer);
+        } else if (channel === controlChannel) {
+          await handleControl(agentId, JSON.parse(message) as SessionControlCommand, containerBySession);
         }
       } catch (e) {
         log.error(`message handling failed: ${(e as Error).message}`);
@@ -91,23 +100,62 @@ async function handleProvision(
 ): Promise<void> {
   log.info({ sessionId: cmd.sessionId, image: cmd.runConfig.dockerImage }, 'provisioning session');
   await manager.reportStatus(agentId, cmd.sessionId, { status: 'PROVISIONING' }).catch(() => undefined);
+  let result;
   try {
-    const result = await provisionContainer(cmd);
-    bySession.set(cmd.sessionId, result.containerId);
-    byContainer.set(result.containerId, cmd.sessionId);
-    await manager.reportStatus(agentId, cmd.sessionId, {
+    result = await provisionContainer(cmd);
+  } catch (e) {
+    // The container itself failed to come up — report ERROR.
+    log.error(`provision failed: ${(e as Error).message}`);
+    await manager
+      .reportStatus(agentId, cmd.sessionId, { status: 'ERROR', error: (e as Error).message })
+      .catch(() => undefined);
+    return;
+  }
+
+  // The container is up and tracked. A transient failure to report RUNNING must
+  // NOT flip the session to ERROR (the container is healthy) — log and let the
+  // next heartbeat reconcile instead.
+  bySession.set(cmd.sessionId, result.containerId);
+  byContainer.set(result.containerId, cmd.sessionId);
+  log.info({ sessionId: cmd.sessionId }, 'session running');
+  await manager
+    .reportStatus(agentId, cmd.sessionId, {
       status: 'RUNNING',
       containerId: result.containerId,
       internalHost: result.internalHost,
       port: result.port,
       traefikRouterName: result.routerName,
-    });
-    log.info({ sessionId: cmd.sessionId }, 'session running');
+    })
+    .catch((e) =>
+      log.warn(`failed to report RUNNING for ${cmd.sessionId}: ${(e as Error).message} — container is up; will reconcile on heartbeat`),
+    );
+}
+
+async function handleControl(
+  agentId: string,
+  cmd: SessionControlCommand,
+  bySession: Map<string, string>,
+): Promise<void> {
+  const containerId = cmd.containerId ?? bySession.get(cmd.sessionId);
+  if (!containerId) {
+    log.warn(`control ${cmd.action} for unknown session ${cmd.sessionId}`);
+    return;
+  }
+  try {
+    if (cmd.action === 'PAUSE') {
+      await pauseContainer(containerId);
+      await manager.reportStatus(agentId, cmd.sessionId, { status: 'PAUSED', containerId }).catch(() => undefined);
+      log.info({ sessionId: cmd.sessionId }, 'session paused');
+    } else if (cmd.action === 'RESUME') {
+      await unpauseContainer(containerId);
+      await manager.reportStatus(agentId, cmd.sessionId, { status: 'RUNNING', containerId }).catch(() => undefined);
+      log.info({ sessionId: cmd.sessionId }, 'session resumed');
+    } else if (cmd.action === 'RESIZE') {
+      await resizeContainer(containerId, cmd.width ?? 1280, cmd.height ?? 720);
+      log.info({ sessionId: cmd.sessionId, w: cmd.width, h: cmd.height }, 'session resized');
+    }
   } catch (e) {
-    log.error(`provision failed: ${(e as Error).message}`);
-    await manager
-      .reportStatus(agentId, cmd.sessionId, { status: 'ERROR', error: (e as Error).message })
-      .catch(() => undefined);
+    log.error(`control ${cmd.action} failed: ${(e as Error).message}`);
   }
 }
 

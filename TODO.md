@@ -3,11 +3,13 @@
 A **Naiemi Group** product. Checklist tracking the build-out phase by phase.
 Status legend: `[x]` done · `[~]` partial / scaffolded · `[ ]` not started.
 
-> **All five phases are complete.** 188 unit tests; `typecheck · lint · test ·
-> build` green across 25 workspace tasks. Every Kasm-parity feature was built
+> **All seven phases are complete.** 276 unit tests; `typecheck · lint · test ·
+> build` green across 26 workspace tasks. Every Kasm-parity feature was built
 > from scratch or on open-source tooling (KasmVNC, Neko, Squid, WireGuard, guacd,
-> ssh2, Fluent Bit, pg_dump, Proxmox VE API) — nothing derived from any
-> proprietary product.
+> ssh2, Fluent Bit, pg_dump, Proxmox VE API, @node-saml/node-saml, ldapts,
+> @simplewebauthn/server, PulseAudio, CUPS) — nothing derived from any
+> proprietary product. Identity (passkeys, SCIM, OIDC nonce-binding) and the VM
+> driver matrix (8 providers) now exceed Kasm's open tier.
 
 ---
 
@@ -232,6 +234,88 @@ open-source tooling — nothing derived from Kasm.
 The entire Kasm feature gap is now closed using only custom code + open-source
 tooling (Squid, WireGuard, Neko, guacd, ssh2, Fluent Bit, pg_dump, Proxmox VE) —
 nothing from Kasm.
+
+---
+
+## Phase 6 — Closing the last gaps to the incumbents
+
+Everything Kasm still had that Chista didn't — built from scratch / open-source.
+
+### Done
+- [x] **Session pause/resume** — `control` Redis channel + `SessionControlCommand`;
+      API `POST /sessions/:id/{pause,resume}`; Docker `pause`/`unpause`; K8s no-op
+      parity; `PAUSED` status end-to-end; viewer pause overlay + button.
+- [x] **Live resize / multi-monitor** — `POST /sessions/:id/resize`; agent
+      best-effort exec; viewer resolution selector (incl. dual-monitor geometry).
+- [x] **GPU hardware encoding** — `GpuConfig` (none|nvenc|vaapi); Docker
+      `DeviceRequests`/DRI device + env; K8s `nvidia.com/gpu` limit + render node.
+- [x] **Runtime DLP enforcement** — `DlpPolicy` on the workspace, injected as
+      container env (`KASM_*`) by the agent **and** enforced in the viewer
+      (clipboard/upload/audio/printing controls greyed out by policy).
+- [x] **Audio bridge** — PulseAudio (LGPL) sidecar resolver, DLP-gated.
+- [x] **Virtual printing** — CUPS (Apache-2.0) sidecar resolver, DLP-gated.
+- [x] **SAML 2.0 SP-initiated** — `@node-saml/node-saml`: login redirect, ACS
+      assertion validation, SP metadata endpoint.
+- [x] **LDAP** — `ldapts`: service-bind + user search + password re-bind login,
+      RFC-4515-safe live-test diagnostic endpoint.
+- [x] **JIT provisioning + group sync** — `FederationService` creates SSO users
+      on first login and reconciles mapped groups against the assertion.
+- [x] **License enforcement** — CONCURRENT + NAMED_USER caps gating session
+      launch; `GET /license/usage`; admin licensing page with live meters.
+- [x] **Image registry + marketplace** — registry CRUD + JSON-index sync +
+      one-click workspace install; admin `/registry` page.
+- [x] **Drag-and-drop upload** + **mobile/touch** viewer optimizations.
+
+**Phase 6 is complete.** 210 tests (+22), 25 typecheck+build tasks all green.
+New open-source deps: `@node-saml/node-saml`, `ldapts`; runtime sidecars use
+PulseAudio + CUPS images. Nothing from Kasm.
+
+---
+
+## Phase 7 — Enterprise identity, the full driver matrix & secret hardening
+
+The features Kasm only ships in its top enterprise tier, plus the cloud/VM
+driver breadth and at-rest secret hardening the incumbents keep closed-source.
+
+### Done
+- [x] **WebAuthn / Passkeys** — `WebauthnModule` on `@simplewebauthn/server` (MIT):
+      registration options/verify (authenticated enrollment), passwordless login
+      options/verify (no account enumeration), credential list/remove. Passkeys
+      stored as `UserCredential(kind=WEBAUTHN)` with COSE public key + signature
+      counter (clone detection). Web: `/security` enrollment page + a real passkey
+      button on the login screen via `@simplewebauthn/browser`. 6 tests.
+- [x] **SCIM 2.0 provisioning** — `ScimModule`: ServiceProviderConfig /
+      ResourceTypes, bearer-token-guarded Users + Groups CRUD against the org's
+      API-key store, `externalId` round-trip for IdP-driven user lifecycle.
+      Real HTTP integration tests via supertest (auth, listing, create). 13 tests.
+- [x] **OIDC hardening** — per-request **nonce binding** (verified against the
+      `id_token` nonce claim), JWKS signature verification (RS/PS/ES family) with
+      key-rotation re-fetch, iss/aud/exp/nbf validation, and **RP-initiated
+      logout** (`end_session_endpoint`). 11 tests.
+- [x] **SAML Single Logout (SLO)** — `getLogoutUrlAsync` SP-initiated logout;
+      `consumeAssertion` now surfaces `nameID` + `sessionIndex`, returned from the
+      ACS callback so the client can drive SLO. Falls back to local logout when
+      the IdP advertises no SLO endpoint.
+- [x] **Full VM driver matrix (11)** — beyond Proxmox: **AWS** EC2 (inline SigV4),
+      **Azure** VM, **GCP** Compute, **vSphere**, **DigitalOcean**, **Oracle OCI**
+      (request signing), **OpenStack** (Keystone v3), **Nutanix** (Prism Central
+      v3), **KubeVirt** and **Harvester** (VirtualMachine CRDs over the K8s API).
+      Every one of the 11 provider enum values resolves to a concrete driver. 29 tests.
+- [x] **Secret-sealing at rest (AES-256-GCM)** — `config-seal` helper seals the
+      whole provider-config blob into `secretRef`; `config` keeps a redacted copy
+      so API responses never expose secrets. Applied to **VM/DNS providers,
+      auth providers** (OIDC clientSecret, SAML idpCert, LDAP bindPassword) **and
+      webhook HMAC keys**. Masked values on update mean "unchanged" so editing a
+      form never overwrites a stored secret. 4 + integration tests.
+- [x] **SSO mapping UI + admin Block A** — every nav placeholder replaced with a
+      real backend-wired page (zones, servers, pools, autoscale, DNS providers,
+      reporting, audit log, metrics, log forwarding, webhooks, API keys, API docs,
+      staging, casting, storage mappings, connectivity, settings, branding,
+      banners, config import/export, security/passkeys). Zero `phase:` stubs left.
+
+**Phase 7 is complete.** 276 tests (+66), 26 typecheck+lint+build tasks all green.
+New open-source deps: `@simplewebauthn/server` + `@simplewebauthn/browser`.
+Nothing from Kasm.
 
 ---
 

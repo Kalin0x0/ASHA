@@ -31,6 +31,27 @@ export const createSessionSchema = z.object({
 export type CreateSessionDto = z.infer<typeof createSessionSchema>;
 
 // ── Workspaces ───────────────────────────────────────────────────────────────
+// Data-loss-prevention policy. Each flag grants a capability; absent = denied.
+export const dlpPolicySchema = z.object({
+  clipboardUp: z.boolean().optional(),
+  clipboardDown: z.boolean().optional(),
+  uploads: z.boolean().optional(),
+  downloads: z.boolean().optional(),
+  printing: z.boolean().optional(),
+  audioIn: z.boolean().optional(),
+  audioOut: z.boolean().optional(),
+  pwa: z.boolean().optional(),
+});
+export type DlpPolicyDto = z.infer<typeof dlpPolicySchema>;
+
+// Hardware H.264 encoding (NVENC/VAAPI). Open-source encoders only.
+export const gpuConfigSchema = z.object({
+  count: z.number().int().min(0).optional(),
+  encoder: z.enum(['none', 'nvenc', 'vaapi']).optional(),
+  renderDevice: z.string().optional(),
+});
+export type GpuConfigDto = z.infer<typeof gpuConfigSchema>;
+
 export const createWorkspaceSchema = z.object({
   name: z.string().min(1),
   friendlyName: z.string().min(1),
@@ -41,6 +62,8 @@ export const createWorkspaceSchema = z.object({
   coresLimit: z.number().optional(),
   memLimitMb: z.number().optional(),
   gpuCount: z.number().int().min(0).default(0),
+  gpu: gpuConfigSchema.optional(),
+  dlp: dlpPolicySchema.optional(),
   dockerConfig: z.record(z.unknown()).default({}),
 });
 export type CreateWorkspaceDto = z.infer<typeof createWorkspaceSchema>;
@@ -58,6 +81,8 @@ export const updateWorkspaceSchema = z
     coresLimit: z.number(),
     memLimitMb: z.number(),
     gpuCount: z.number().int().min(0),
+    gpu: gpuConfigSchema,
+    dlp: dlpPolicySchema,
     dockerConfig: z.record(z.unknown()),
     enabled: z.boolean(),
   })
@@ -74,6 +99,30 @@ export const createVolumeMappingSchema = z.object({
   raw: z.record(z.unknown()).default({}),
 });
 export type CreateVolumeMappingDto = z.infer<typeof createVolumeMappingSchema>;
+
+// Network / object storage mounts (S3, NextCloud, GDrive, …) attached to sessions.
+export const createStorageMappingSchema = z.object({
+  name: z.string().min(1).max(120),
+  kind: z.enum(['DROPBOX', 'GDRIVE', 'NEXTCLOUD', 'ONEDRIVE', 'S3', 'CUSTOM']),
+  mountPath: z.string().min(1).max(400),
+  readOnly: z.boolean().default(false),
+  scope: z.enum(['USER', 'GROUP', 'WORKSPACE']).default('GROUP'),
+  config: z.record(z.unknown()).default({}),
+  enabled: z.boolean().default(true),
+});
+export type CreateStorageMappingDto = z.infer<typeof createStorageMappingSchema>;
+
+export const updateStorageMappingSchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    mountPath: z.string().min(1).max(400).optional(),
+    readOnly: z.boolean().optional(),
+    scope: z.enum(['USER', 'GROUP', 'WORKSPACE']).optional(),
+    config: z.record(z.unknown()).optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateStorageMappingDto = z.infer<typeof updateStorageMappingSchema>;
 
 export const updateVolumeMappingSchema = z
   .object({
@@ -176,7 +225,7 @@ export const agentHeartbeatSchema = z.object({
 export type AgentHeartbeatDto = z.infer<typeof agentHeartbeatSchema>;
 
 export const sessionStatusSchema = z.object({
-  status: z.enum(['PROVISIONING', 'RUNNING', 'DEGRADED', 'DESTROYED', 'ERROR']),
+  status: z.enum(['PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED', 'DESTROYED', 'ERROR']),
   containerId: z.string().optional(),
   internalHost: z.string().optional(),
   host: z.string().optional(),
@@ -227,6 +276,18 @@ export const updateAuthConfigSchema = z
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 export type UpdateAuthConfigDto = z.infer<typeof updateAuthConfigSchema>;
+
+// Federated login (LDAP bind) + LDAP live-test diagnostic.
+export const ldapLoginSchema = z.object({
+  username: z.string().min(1).max(320),
+  password: z.string().min(1).max(1024),
+});
+export type LdapLoginDto = z.infer<typeof ldapLoginSchema>;
+
+export const ldapTestSchema = z.object({
+  sampleUsername: z.string().max(320).optional(),
+});
+export type LdapTestDto = z.infer<typeof ldapTestSchema>;
 
 export const createSsoMappingSchema = z.object({
   authConfigId: z.string().min(1),
@@ -536,3 +597,69 @@ export const updateLogForwarderSchema = upsertLogForwarderSchema
   .partial()
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 export type UpdateLogForwarderDto = z.infer<typeof updateLogForwarderSchema>;
+
+// ── Session control (pause / resume / resize) ─────────────────────────────────
+export const resizeSessionSchema = z.object({
+  width: z.number().int().min(320).max(7680),
+  height: z.number().int().min(240).max(4320),
+});
+export type ResizeSessionDto = z.infer<typeof resizeSessionSchema>;
+
+// ── Image registries & marketplace ────────────────────────────────────────────
+export const createRegistrySchema = z.object({
+  name: z.string().min(1).max(120),
+  url: z.string().url(),
+  type: z.enum(['FIRST_PARTY', 'THIRD_PARTY']).default('THIRD_PARTY'),
+  enabled: z.boolean().default(true),
+});
+export type CreateRegistryDto = z.infer<typeof createRegistrySchema>;
+
+export const updateRegistrySchema = z
+  .object({
+    name: z.string().min(1).max(120).optional(),
+    url: z.string().url().optional(),
+    enabled: z.boolean().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateRegistryDto = z.infer<typeof updateRegistrySchema>;
+
+// Install a registry entry → creates an Image (and optionally a Workspace).
+export const installRegistryEntrySchema = z.object({
+  createWorkspace: z.boolean().default(false),
+});
+export type InstallRegistryEntryDto = z.infer<typeof installRegistryEntrySchema>;
+
+// ── Licensing ──────────────────────────────────────────────────────────────────
+export const upsertLicenseSchema = z.object({
+  type: z.enum(['CONCURRENT', 'NAMED_USER']).default('CONCURRENT'),
+  seats: z.number().int().min(1).max(1_000_000).default(5),
+  concurrentSessions: z.number().int().min(1).max(1_000_000).default(5),
+  issuedTo: z.string().max(200).optional(),
+  notBefore: z.coerce.date().optional(),
+  notAfter: z.coerce.date().optional(),
+  features: z.record(z.unknown()).default({}),
+});
+export type UpsertLicenseDto = z.infer<typeof upsertLicenseSchema>;
+
+// ── Settings: branding + general + config import/export ───────────────────────
+export const upsertBrandingSchema = z.object({
+  productName: z.string().min(1).max(120).optional(),
+  logoUrl: z.string().url().max(1000).optional().or(z.literal('')),
+  faviconUrl: z.string().url().max(1000).optional().or(z.literal('')),
+  loginBackgroundUrl: z.string().url().max(1000).optional().or(z.literal('')),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Expected a #rrggbb hex color').optional(),
+  accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Expected a #rrggbb hex color').optional(),
+  customCss: z.string().max(20000).optional().or(z.literal('')),
+});
+export type UpsertBrandingDto = z.infer<typeof upsertBrandingSchema>;
+
+export const upsertSettingsSchema = z.object({
+  settings: z.array(z.object({ key: z.string().min(1).max(120), value: z.unknown() })).max(100),
+});
+export type UpsertSettingsDto = z.infer<typeof upsertSettingsSchema>;
+
+export const importConfigSchema = z.object({
+  branding: upsertBrandingSchema.optional(),
+  settings: z.array(z.object({ key: z.string().min(1).max(120), value: z.unknown() })).max(100).optional(),
+});
+export type ImportConfigDto = z.infer<typeof importConfigSchema>;

@@ -14,6 +14,14 @@ export const metadata: Metadata = {
   description:
     'Chista streams containerized desktops, browsers, and apps to any browser. Self-hosted, multi-tenant, enterprise-grade.',
   applicationName: 'Chista',
+  icons: {
+    icon: [
+      { url: '/chista-logo.svg', type: 'image/svg+xml' },
+      { url: '/chista-logo.png', type: 'image/png' },
+    ],
+    apple: '/chista-logo.png',
+    shortcut: '/chista-logo.png',
+  },
 };
 
 export const viewport: Viewport = {

@@ -53,6 +53,30 @@ export interface ProvisionResult {
   routerName: string;
 }
 
+/** Host devices to pass through, including the VAAPI render node when selected. */
+function gpuDevices(cmd: ProvisionCommand): string[] {
+  const devices = [...(cmd.runConfig.devices ?? [])];
+  if (cmd.runConfig.gpu?.encoder === 'vaapi') {
+    devices.push(cmd.runConfig.gpu.renderDevice ?? '/dev/dri/renderD128');
+  }
+  return devices;
+}
+
+/** Env hints the streaming image reads to pick its hardware encoder. */
+function gpuEnv(cmd: ProvisionCommand): Record<string, string> {
+  const gpu = cmd.runConfig.gpu;
+  if (!gpu || gpu.encoder === 'none' || !gpu.encoder) return {};
+  if (gpu.encoder === 'nvenc') {
+    return {
+      NVIDIA_VISIBLE_DEVICES: 'all',
+      NVIDIA_DRIVER_CAPABILITIES: 'all',
+      CHISTA_HW_ENCODER: 'nvenc',
+    };
+  }
+  // vaapi
+  return { CHISTA_HW_ENCODER: 'vaapi', LIBVA_DRIVER_NAME: 'iHD' };
+}
+
 export async function provisionContainer(cmd: ProvisionCommand): Promise<ProvisionResult> {
   await ensureImage(cmd.runConfig.dockerImage);
 
@@ -78,7 +102,10 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
   const container = await docker.createContainer({
     name: `chista-sess-${cmd.kasmId}`,
     Image: cmd.runConfig.dockerImage,
-    Env: [`VNC_PW=${vncPw}`, ...Object.entries(cmd.runConfig.env).map(([k, v]) => `${k}=${v}`)],
+    Env: [
+      `VNC_PW=${vncPw}`,
+      ...Object.entries({ ...gpuEnv(cmd), ...cmd.runConfig.env }).map(([k, v]) => `${k}=${v}`),
+    ],
     Labels: labels,
     HostConfig: {
       NetworkMode: agentEnv.sessionNetwork,
@@ -87,26 +114,44 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
       NanoCpus: cmd.runConfig.cores ? Math.round(cmd.runConfig.cores * 1e9) : undefined,
       RestartPolicy: { Name: 'no' },
       // Device passthrough: webcam (/dev/video0), USB (/dev/bus/usb), smartcard (/dev/pcsc), etc.
-      Devices: cmd.runConfig.devices?.map((p) => ({
+      // VAAPI adds the DRI render node for hardware H.264 encoding.
+      Devices: gpuDevices(cmd).map((p) => ({
         PathOnHost: p,
         PathInContainer: p,
         CgroupPermissions: 'rwm',
       })),
+      // NVENC requests an NVIDIA GPU via the nvidia-container-runtime.
+      ...(cmd.runConfig.gpu?.encoder === 'nvenc'
+        ? {
+            DeviceRequests: [
+              { Driver: 'nvidia', Count: cmd.runConfig.gpu.count ?? -1, Capabilities: [['gpu']] },
+            ],
+          }
+        : {}),
     },
   });
 
-  await container.start();
-  const info = await container.inspect();
-  const ip = info.NetworkSettings?.Networks?.[agentEnv.sessionNetwork]?.IPAddress ?? '';
+  try {
+    await container.start();
+    const info = await container.inspect();
+    const ip = info.NetworkSettings?.Networks?.[agentEnv.sessionNetwork]?.IPAddress ?? '';
 
-  // Launch optional open-source sidecars on the same session network.
-  if (cmd.sidecars && Object.keys(cmd.sidecars).length > 0) {
-    await launchSidecars(cmd.kasmId, cmd.sidecars);
+    // Launch optional open-source sidecars on the same session network.
+    if (cmd.sidecars && Object.keys(cmd.sidecars).length > 0) {
+      await launchSidecars(cmd.kasmId, cmd.sidecars);
+    }
+
+    await waitForPort(ip, port, 30_000).catch(() => undefined);
+
+    return { containerId: container.id, internalHost: ip, port, routerName: router };
+  } catch (e) {
+    // Provisioning failed after the container was created. The manager never
+    // learns the container id (provisionContainer rejects), so it can't call
+    // destroyContainer later — tear the container + any sidecars down here to
+    // avoid leaking a running container.
+    await destroyContainer(`chista-sess-${cmd.kasmId}`).catch(() => undefined);
+    throw e;
   }
-
-  await waitForPort(ip, port, 30_000).catch(() => undefined);
-
-  return { containerId: container.id, internalHost: ip, port, routerName: router };
 }
 
 async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCommand['sidecars']>): Promise<void> {
@@ -117,6 +162,8 @@ async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCom
     ...(sidecars.squid ? [{ name: `chista-squid-${kasmId}`, spec: sidecars.squid }] : []),
     ...(sidecars.wireguard ? [{ name: `chista-wg-${kasmId}`, spec: sidecars.wireguard }] : []),
     ...(sidecars.neko ? [{ name: `chista-neko-${kasmId}`, spec: sidecars.neko }] : []),
+    ...(sidecars.audio ? [{ name: `chista-audio-${kasmId}`, spec: sidecars.audio }] : []),
+    ...(sidecars.printing ? [{ name: `chista-print-${kasmId}`, spec: sidecars.printing }] : []),
   ];
 
   for (const { name, spec } of entries) {
@@ -166,6 +213,8 @@ async function destroySidecars(kasmId: string): Promise<void> {
     `chista-squid-${kasmId}`,
     `chista-wg-${kasmId}`,
     `chista-neko-${kasmId}`,
+    `chista-audio-${kasmId}`,
+    `chista-print-${kasmId}`,
   ];
   await Promise.allSettled(
     names.map(async (name) => {
@@ -176,6 +225,34 @@ async function destroySidecars(kasmId: string): Promise<void> {
   );
   // Remove config files written for this session.
   rmSync(join(SIDECAR_DIR, kasmId), { recursive: true, force: true });
+}
+
+/** Freeze all processes in the session container (SIGSTOP via the freezer cgroup). */
+export async function pauseContainer(idOrName: string): Promise<void> {
+  await docker.getContainer(idOrName).pause();
+}
+
+/** Thaw a previously paused container. */
+export async function unpauseContainer(idOrName: string): Promise<void> {
+  await docker.getContainer(idOrName).unpause();
+}
+
+/**
+ * Push a new screen geometry into the running session. KasmVNC/Neko images read
+ * CHISTA_RESIZE from a helper; we exec `chista-resize` if present, otherwise this
+ * is a best-effort no-op (the browser-side client also negotiates geometry).
+ */
+export async function resizeContainer(idOrName: string, width: number, height: number): Promise<void> {
+  try {
+    const exec = await docker.getContainer(idOrName).exec({
+      Cmd: ['/bin/sh', '-c', `command -v chista-resize >/dev/null 2>&1 && chista-resize ${width} ${height} || true`],
+      AttachStdout: false,
+      AttachStderr: false,
+    });
+    await exec.start({ Detach: true });
+  } catch {
+    // Geometry is also negotiated client-side; ignore images without the helper.
+  }
 }
 
 /** map: containerId → sessionId */

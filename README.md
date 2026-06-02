@@ -20,8 +20,12 @@ Stream containerized desktops, browsers, and apps to any browser — self-hosted
 > WireGuard, guacd, Fluent Bit), Chista consumes them as **unmodified runtime container images or
 > generated config**, never linked into our source, so licenses stay clean.
 
-> **Status:** Phases 1–5 complete. **188 unit tests**, full `typecheck · lint · test · build`
-> green across 25 workspace tasks. See [`TODO.md`](TODO.md) for the phase-by-phase build log.
+> **Status:** Phases 1–7 complete. **276 unit tests**, full `typecheck · lint · test · build`
+> green across 26 workspace tasks. Identity (WebAuthn passkeys, SCIM 2.0, OIDC nonce-binding +
+> RP-logout, SAML SLO), an 11-provider VM driver matrix (Proxmox, AWS, Azure, GCP, vSphere,
+> DigitalOcean, Oracle OCI, OpenStack, Nutanix, KubeVirt, Harvester) and AES-256-GCM
+> secret-sealing at rest now exceed Kasm's open tier. See [`TODO.md`](TODO.md) for the
+> phase-by-phase build log.
 
 ## Architecture
 
@@ -61,14 +65,21 @@ Stream containerized desktops, browsers, and apps to any browser — self-hosted
 Built from scratch or on open-source tooling — **nothing derived from any proprietary product**.
 
 - **Streaming** — KasmVNC (HTTPS iframe) **and** WebRTC/H.264 via Neko as a first-class protocol.
+- **GPU encoding** — hardware H.264 via NVENC (nvidia-container-runtime) or VAAPI (DRI render node), wired into both the Docker and Kubernetes drivers.
 - **Remote protocols** — RDP/VNC through guacd, SSH through ssh2 (full PTY, resize, key/password auth).
+- **Session control** — pause/resume (container freeze), live resize, and a multi-monitor resolution selector in the viewer.
 - **Device passthrough** — webcam / USB / smartcard (`/dev/video0`, `/dev/bus/usb`, `/dev/pcsc`) into the session container (Docker `Devices`, Kubernetes `CharDevice` hostPath + capabilities).
-- **Connectivity sidecars** — Squid (web filtering), WireGuard (egress), Neko (browser isolation), auto-launched alongside sessions and torn down with them.
+- **Connectivity sidecars** — Squid (web filtering), WireGuard (egress), Neko (browser isolation), PulseAudio (audio bridge), CUPS (virtual printing), auto-launched alongside sessions and torn down with them.
+- **DLP enforcement** — per-workspace clipboard/upload/download/printing/audio/PWA policy injected as container env and **enforced in the viewer** (controls greyed out by policy).
 - **Multi-tenancy & RBAC** — 40+ Prisma models, permission matrix, app-layer org scoping + Postgres RLS backstop.
-- **Identity** — OIDC / SAML / LDAP providers + SSO group mappings, TOTP 2FA.
-- **Scale** — multi-zone, staging pools, casting, server pools + autoscale, VM/DNS providers (real Proxmox VE driver).
+- **Identity** — OIDC / SAML / LDAP providers + SSO group mappings, TOTP 2FA. **OIDC Authorization Code + PKCE flow** with **JWKS ID-token signature verification** (RS/PS/ES256-512, iss/aud/exp validation), **SAML 2.0 SP-initiated flow** (login redirect, ACS, SP metadata), and **LDAP bind login + live-test**, with JIT user provisioning and IdP-attribute→group mapping — on open-source `@node-saml/node-saml` + `ldapts` plus a zero-dependency OIDC client. The login screen renders live SSO buttons, and the Authentication admin page manages providers, SSO group mappings, and SCIM tokens.
+- **Passkeys / WebAuthn** — passwordless, phishing-resistant sign-in on open-source `@simplewebauthn/server`: passkey enrollment (Settings → Security) and a passkey login button on the sign-in screen, with signature-counter clone detection.
+- **SCIM 2.0** — automated user + group provisioning/deprovisioning (RFC 7643/7644) for Okta, Azure AD, OneLogin: Users + Groups CRUD, PATCH ops, SCIM filters, bearer-token auth, and ServiceProviderConfig/ResourceTypes discovery.
+- **Licensing** — CONCURRENT and NAMED_USER enforcement gating session launch, with a live utilization page.
+- **Marketplace** — image-registry CRUD + catalog sync + one-click workspace install from an open-format registry index.
+- **Scale** — multi-zone, staging pools, casting, server pools + autoscale, DNS providers, and real VM-provider drivers for **all eleven** backends: Proxmox VE, AWS EC2 (inline SigV4), Azure, GCP, VMware vSphere, DigitalOcean, Oracle OCI (request signing), OpenStack (Keystone v3), Nutanix AHV (Prism Central v3), and KubeVirt / Harvester (VirtualMachine CRDs over the Kubernetes API).
 - **Sessions** — sharing + live chat, recording to S3, idle/max-duration reaper, forensic watermarking + compliance banner.
-- **Ops & compliance** — SIEM log forwarding (Fluent Bit: syslog/Splunk/ES/Loki/HTTP), automated `pg_dump` backups with retention, webhooks (HMAC-signed) + reporting, DLP policy fields.
+- **Ops & compliance** — SIEM log forwarding (Fluent Bit: syslog/Splunk/ES/Loki/HTTP), automated `pg_dump` backups with retention, webhooks (HMAC-signed) + reporting.
 - **Deploy** — single-node Docker Compose (Traefik, Postgres, Redis, guacd) and a Helm chart with the Kubernetes agent DaemonSet, session namespace, RBAC, and HPA.
 
 ## Quick start
@@ -119,13 +130,15 @@ pnpm dev                                        # turbo runs web + api + agent
 
 ## Roadmap
 
-All five phases are complete. The full per-item build log lives in [`TODO.md`](TODO.md).
+All seven phases are complete. The full per-item build log lives in [`TODO.md`](TODO.md).
 
 - ✅ **Phase 1** — monorepo, full data model, the Chista design system, admin shell + live dashboard + sessions, the end-user **launch → stream** flow against a real KasmVNC container, single-node Docker Compose, Helm skeleton.
 - ✅ **Phase 2** — RDP/VNC via guacd + SSH via ssh2, session sharing & chat, recording (S3), persistent profiles & file mappings, TOTP 2FA.
 - ✅ **Phase 3** — full OIDC/SAML/LDAP, multi-zone + staging + casting, server pools + autoscale + VM/DNS providers (real Proxmox VE driver), security hardening, reporting/webhooks.
 - ✅ **Phase 4** — storage mappings, browser isolation / web filtering / egress, Kubernetes driver + HPA, Windows/RDS.
 - ✅ **Phase 5** — session reaper, forensic watermarking, SIEM log forwarding, automated backups, DLP, WebRTC/H.264 (Neko), device passthrough, connectivity sidecars wired into provisioning.
+- ✅ **Phase 6** — closing the gaps to the incumbents: session pause/resume/resize + multi-monitor, GPU encoding (NVENC/VAAPI), runtime DLP enforcement (agent + viewer), PulseAudio + CUPS sidecars, full SAML SP-initiated flow + LDAP bind/live-test with JIT provisioning, license enforcement, image-registry marketplace, drag-and-drop upload, and mobile/touch-optimized viewer.
+- ✅ **Phase 7** — enterprise identity, the full VM driver matrix, and at-rest secret hardening: **WebAuthn / passkeys** (passwordless login + enrollment), **SCIM 2.0** user/group provisioning, **OIDC** Authorization Code + PKCE with JWKS ID-token verification, **nonce-binding** and **RP-initiated logout**, **SAML Single Logout** (nameID + sessionIndex), eleven real VM-provider drivers (Proxmox/AWS/Azure/GCP/vSphere/DigitalOcean/Oracle/OpenStack/Nutanix/KubeVirt/Harvester), **AES-256-GCM secret-sealing at rest** for every provider, auth-config and webhook secret, and a **complete admin surface** — every navigation item is now a live page wired to its backend: Authentication (providers + SSO mappings + SCIM), Infrastructure (Zones/Servers/Pools/AutoScale/VM+DNS providers), Sessions (Staging/Casting), Storage Mappings, Connectivity (Proxies/Web Filtering/Browser Isolation/Egress), Observability (Reporting/Metrics/Audit Log/Log Forwarding), Developer (API Keys/Webhooks/API Docs), and Settings (General/Branding/Banners/Database/Config Import-Export/Security).
 
 ## License & ownership
 

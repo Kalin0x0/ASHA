@@ -31,6 +31,8 @@ export class WorkspacesService {
         coresLimit: dto.coresLimit,
         memLimitMb: dto.memLimitMb,
         gpuCount: dto.gpuCount,
+        gpu: (dto.gpu ?? {}) as object,
+        dlp: (dto.dlp ?? {}) as object,
         dockerConfig: dto.dockerConfig as object,
       },
     });
@@ -51,6 +53,8 @@ export class WorkspacesService {
         coresLimit: dto.coresLimit,
         memLimitMb: dto.memLimitMb,
         gpuCount: dto.gpuCount,
+        gpu: dto.gpu as object | undefined,
+        dlp: dto.dlp as object | undefined,
         dockerConfig: dto.dockerConfig as object | undefined,
         enabled: dto.enabled,
       },

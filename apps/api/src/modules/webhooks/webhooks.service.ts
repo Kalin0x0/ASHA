@@ -1,8 +1,11 @@
 import { createHmac } from 'node:crypto';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { CreateWebhookDto, UpdateWebhookDto } from '@chista/contracts';
+import type { Env } from '@chista/config';
+import { seal, unseal } from '@chista/crypto';
 import { prisma } from '@chista/db';
 import { AuditService } from '../../common/audit.service';
+import { ENV } from '../../common/env.module';
 
 /**
  * Outbound webhooks: operators register an endpoint + event filter; the
@@ -17,7 +20,28 @@ import { AuditService } from '../../common/audit.service';
 export class WebhooksService {
   private readonly logger = new Logger('Webhooks');
 
-  constructor(private readonly audit: AuditService) {}
+  constructor(
+    private readonly audit: AuditService,
+    @Inject(ENV) private readonly env: Env,
+  ) {}
+
+  /** Seal a webhook signing secret; returns null when no secret is set. */
+  private sealSecret(secret: string | undefined | null): string | null {
+    return secret ? seal(secret, this.env.SECRET_SEAL_KEY) : null;
+  }
+
+  /**
+   * Recover the plaintext HMAC key. New records store the sealed blob; legacy
+   * records stored plaintext — detect by trying unseal first.
+   */
+  private unsealSecret(stored: string | null): string | null {
+    if (!stored) return null;
+    try {
+      return unseal(stored, this.env.SECRET_SEAL_KEY);
+    } catch {
+      return stored; // legacy plaintext fallback
+    }
+  }
 
   list(orgId: string) {
     return prisma.webhook.findMany({
@@ -34,7 +58,7 @@ export class WebhooksService {
         name: dto.name,
         url: dto.url,
         events: dto.events,
-        secret: dto.secret,
+        secret: this.sealSecret(dto.secret),
         enabled: dto.enabled,
       },
     });
@@ -55,7 +79,7 @@ export class WebhooksService {
         name: dto.name,
         url: dto.url,
         events: dto.events,
-        secret: dto.secret,
+        secret: dto.secret !== undefined ? this.sealSecret(dto.secret) : undefined,
         enabled: dto.enabled,
       },
     });
@@ -122,8 +146,9 @@ export class WebhooksService {
       'user-agent': 'Chista-Webhooks/1.0',
       'x-chista-event': event,
     };
-    if (hook.secret) {
-      const sig = createHmac('sha256', hook.secret).update(body).digest('hex');
+    const plainSecret = this.unsealSecret(hook.secret);
+    if (plainSecret) {
+      const sig = createHmac('sha256', plainSecret).update(body).digest('hex');
       headers['x-chista-signature'] = `sha256=${sig}`;
     }
 

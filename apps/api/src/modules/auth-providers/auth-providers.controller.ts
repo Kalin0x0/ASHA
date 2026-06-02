@@ -8,7 +8,7 @@ import {
   type UpdateAuthConfigDto,
   updateAuthConfigSchema,
 } from '@chista/contracts';
-import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
+import { type AuthUser, CurrentUser, Public, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { AuthProvidersService } from './auth-providers.service';
 
@@ -17,6 +17,16 @@ import { AuthProvidersService } from './auth-providers.service';
 @Controller('auth/providers')
 export class AuthProvidersController {
   constructor(private readonly providers: AuthProvidersService) {}
+
+  /**
+   * Public listing for the login screen — enabled OIDC/SAML/LDAP providers only,
+   * no secrets. Reached pre-auth, so it resolves the default org when none given.
+   */
+  @Public()
+  @Get('public')
+  publicList() {
+    return this.providers.publicList();
+  }
 
   @RequirePermissions('AUTH_MANAGE')
   @Get()

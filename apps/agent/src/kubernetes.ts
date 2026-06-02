@@ -69,6 +69,11 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
   const { sidecarContainers, sidecarVolumes, configMap } = buildSidecars(cmd, name);
   const cmName = `${name}-cfg`;
 
+  // Everything from the first resource creation through readiness is wrapped so
+  // a failure (notably a waitForPodRunning timeout) tears down the Pod, Service,
+  // Ingress and ConfigMap instead of orphaning them — the manager never learns
+  // the name to call destroyContainer otherwise.
+  try {
   if (configMap && Object.keys(configMap).length > 0) {
     const cm: V1ConfigMap = {
       apiVersion: 'v1',
@@ -94,7 +99,7 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
           ports: [{ containerPort: port }],
           env: [
             { name: 'VNC_PW', value: vncPw },
-            ...Object.entries(cmd.runConfig.env).map(([n, v]) => ({ name: n, value: v })),
+            ...Object.entries({ ...gpuEnv(cmd), ...cmd.runConfig.env }).map(([n, v]) => ({ name: n, value: v })),
           ],
           resources: {
             requests: {
@@ -104,6 +109,10 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
             limits: {
               ...(cmd.runConfig.cores ? { cpu: `${cmd.runConfig.cores}` } : {}),
               ...(cmd.runConfig.memLimitMb ? { memory: `${cmd.runConfig.memLimitMb}Mi` } : {}),
+              // NVENC requests a GPU from the NVIDIA device plugin.
+              ...(cmd.runConfig.gpu?.encoder === 'nvenc'
+                ? { 'nvidia.com/gpu': `${cmd.runConfig.gpu.count ?? 1}` }
+                : {}),
             },
           },
           volumeMounts: [
@@ -113,13 +122,14 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
               readOnly: v.readOnly,
             })),
             // Device passthrough: each host device is mounted via a hostPath volume.
-            ...(cmd.runConfig.devices ?? []).map((devPath, i) => ({
+            // VAAPI adds the DRI render node for hardware H.264 encoding.
+            ...gpuDevices(cmd).map((devPath, i) => ({
               name: `dev-${i}`,
               mountPath: devPath,
             })),
           ],
           // Devices need the container to run with device access capabilities.
-          ...(cmd.runConfig.devices?.length
+          ...(gpuDevices(cmd).length
             ? { securityContext: { capabilities: { add: ['MKNOD', 'SYS_RAWIO'] } } }
             : {}),
         },
@@ -130,8 +140,8 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
           name: `vol-${i}`,
           hostPath: { path: v.source },
         })),
-        // One hostPath CharDevice volume per requested device.
-        ...(cmd.runConfig.devices ?? []).map((devPath, i) => ({
+        // One hostPath CharDevice volume per requested device (incl. VAAPI render node).
+        ...gpuDevices(cmd).map((devPath, i) => ({
           name: `dev-${i}`,
           hostPath: { path: devPath, type: 'CharDevice' as const },
         })),
@@ -194,6 +204,10 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
 
   const internalHost = `${name}.${SESSION_NS}.svc.cluster.local`;
   return { containerId: name, internalHost, port, routerName: router };
+  } catch (e) {
+    await destroyContainer(name).catch(() => undefined);
+    throw e;
+  }
 }
 
 export async function destroyContainer(podName: string): Promise<void> {
@@ -252,6 +266,8 @@ function buildSidecars(
     ...(cmd.sidecars?.squid ? [{ key: 'squid', spec: cmd.sidecars.squid }] : []),
     ...(cmd.sidecars?.wireguard ? [{ key: 'wireguard', spec: cmd.sidecars.wireguard }] : []),
     ...(cmd.sidecars?.neko ? [{ key: 'neko', spec: cmd.sidecars.neko }] : []),
+    ...(cmd.sidecars?.audio ? [{ key: 'audio', spec: cmd.sidecars.audio }] : []),
+    ...(cmd.sidecars?.printing ? [{ key: 'printing', spec: cmd.sidecars.printing }] : []),
   ];
 
   for (const { key, spec } of sidecars) {
@@ -286,6 +302,47 @@ function buildSidecars(
   }
 
   return { sidecarContainers, sidecarVolumes, configMap };
+}
+
+/**
+ * Kubernetes has no native pod-freeze primitive, so pause/resume are best-effort
+ * no-ops in the K8s driver (the session keeps running; the viewer simply detaches).
+ * Exposed to keep the driver interface identical to docker.ts.
+ */
+export async function pauseContainer(_podName: string): Promise<void> {
+  // No-op: see note above. The manager still records PAUSED for UI parity.
+}
+
+export async function unpauseContainer(_podName: string): Promise<void> {
+  // No-op: counterpart of pauseContainer.
+}
+
+/** Geometry is negotiated client-side for K8s sessions; this is a no-op. */
+export async function resizeContainer(_podName: string, _w: number, _h: number): Promise<void> {
+  // No-op.
+}
+
+/** Host devices to pass through, including the VAAPI render node when selected. */
+function gpuDevices(cmd: ProvisionCommand): string[] {
+  const devices = [...(cmd.runConfig.devices ?? [])];
+  if (cmd.runConfig.gpu?.encoder === 'vaapi') {
+    devices.push(cmd.runConfig.gpu.renderDevice ?? '/dev/dri/renderD128');
+  }
+  return devices;
+}
+
+/** Env hints the streaming image reads to pick its hardware encoder. */
+function gpuEnv(cmd: ProvisionCommand): Record<string, string> {
+  const gpu = cmd.runConfig.gpu;
+  if (!gpu || gpu.encoder === 'none' || !gpu.encoder) return {};
+  if (gpu.encoder === 'nvenc') {
+    return {
+      NVIDIA_VISIBLE_DEVICES: 'all',
+      NVIDIA_DRIVER_CAPABILITIES: 'all',
+      CHISTA_HW_ENCODER: 'nvenc',
+    };
+  }
+  return { CHISTA_HW_ENCODER: 'vaapi', LIBVA_DRIVER_NAME: 'iHD' };
 }
 
 function randomSuffix(): string {

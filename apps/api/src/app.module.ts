@@ -8,6 +8,7 @@ import { JwtAuthGuard } from './common/jwt-auth.guard';
 import { PermissionsGuard } from './common/permissions.guard';
 import { TenantInterceptor } from './common/tenant.interceptor';
 import { AgentsModule } from './modules/agents/agents.module';
+import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthProvidersModule } from './modules/auth-providers/auth-providers.module';
 import { BackupsModule } from './modules/backups/backups.module';
@@ -15,7 +16,11 @@ import { CastingModule } from './modules/casting/casting.module';
 import { ConnectivityModule } from './modules/connectivity/connectivity.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
+import { LicensingModule } from './modules/licensing/licensing.module';
 import { LogForwardingModule } from './modules/log-forwarding/log-forwarding.module';
+import { RegistryModule } from './modules/registry/registry.module';
+import { ScimModule } from './modules/scim/scim.module';
+import { SettingsModule } from './modules/settings/settings.module';
 import { PoolsModule } from './modules/pools/pools.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { RecordingsModule } from './modules/recordings/recordings.module';
@@ -66,6 +71,11 @@ import { ZonesModule } from './modules/zones/zones.module';
     WatermarksModule,
     LogForwardingModule,
     BackupsModule,
+    LicensingModule,
+    RegistryModule,
+    ScimModule,
+    ApiKeysModule,
+    SettingsModule,
   ],
   providers: [
     // ThrottlerGuard runs first so rate-limit rejections short-circuit auth

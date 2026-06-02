@@ -6,6 +6,7 @@ const { prismaMock } = vi.hoisted(() => ({
     volumeMapping: { findMany: vi.fn(), create: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn(), findUnique: vi.fn() },
     fileMapping: { findMany: vi.fn(), create: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn(), findUnique: vi.fn() },
     persistentProfile: { findMany: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
+    storageMapping: { findMany: vi.fn(), create: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn(), findFirst: vi.fn() },
   },
 }));
 
@@ -13,12 +14,45 @@ vi.mock('@chista/db', () => ({ prisma: prismaMock }));
 
 import { StorageService } from './storage.service';
 
+const env = { SECRET_SEAL_KEY: '0123456789abcdef0123456789abcdef' } as never;
+
 describe('StorageService — org scoping', () => {
   let svc: StorageService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new StorageService();
+    svc = new StorageService(env);
+  });
+
+  it('seals storage-mapping secrets into secretRef and redacts the stored config', async () => {
+    prismaMock.storageMapping.create.mockResolvedValue({ id: 'sm1' });
+    await svc.createStorageMapping('org1', {
+      name: 's3',
+      kind: 'S3' as never,
+      mountPath: '/mnt/s3',
+      readOnly: false,
+      scope: 'GROUP' as never,
+      config: { bucket: 'b', accessKeyId: 'AKIA', secretAccessKey: 'super-secret' },
+      enabled: true,
+    } as never);
+    const data = prismaMock.storageMapping.create.mock.calls[0][0].data;
+    expect(JSON.stringify(data.config)).not.toContain('super-secret');
+    expect((data.config as Record<string, unknown>).secretAccessKey).toBe('••••••••');
+    expect((data.config as Record<string, unknown>).bucket).toBe('b');
+    expect(typeof data.secretRef).toBe('string');
+    expect(data.secretRef).not.toContain('super-secret');
+  });
+
+  it('resolveStorageConfig unseals the original secret', async () => {
+    prismaMock.storageMapping.create.mockResolvedValue({ id: 'sm2' });
+    await svc.createStorageMapping('org1', {
+      name: 's3b', kind: 'S3' as never, mountPath: '/mnt', readOnly: false, scope: 'GROUP' as never,
+      config: { bucket: 'b', secretAccessKey: 'unseal-me' }, enabled: true,
+    } as never);
+    const sealed = prismaMock.storageMapping.create.mock.calls[0][0].data.secretRef;
+    prismaMock.storageMapping.findFirst.mockResolvedValue({ id: 'sm2', secretRef: sealed, config: {} });
+    const resolved = await svc.resolveStorageConfig('org1', 'sm2');
+    expect(resolved?.secretAccessKey).toBe('unseal-me');
   });
 
   it('lists volumes scoped to the org', async () => {

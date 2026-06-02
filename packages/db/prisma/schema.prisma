@@ -275,6 +275,8 @@ model User {
   username      String
   displayName   String?
   avatarUrl     String?
+  /** SCIM externalId from the upstream IdP (e.g. Okta sub). */
+  externalId    String?
   status        UserStatus @default(ACTIVE)
   isSystemAdmin Boolean    @default(false)
   locale        String     @default("en")
@@ -546,8 +548,10 @@ model Workspace {
   maxDurationMinutes Int?
   idleTimeoutMinutes Int?
   // Data-loss-prevention + delivery policy:
-  // { clipboardUp, clipboardDown, uploads, downloads, pwa }
+  // { clipboardUp, clipboardDown, uploads, downloads, printing, audioIn, audioOut, pwa }
   dlp           Json          @default("{}")
+  // Hardware H.264 encoding policy: { count, encoder: none|nvenc|vaapi, renderDevice }
+  gpu           Json          @default("{}")
   launchSchema  Json? // dynamic launch-form JSON schema
   // Optional sidecar policy attachments — resolved at session provision time.
   webFilterId        String?

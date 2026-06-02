@@ -1,6 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { type CreateSessionDto, createSessionSchema } from '@chista/contracts';
+import {
+  type CreateSessionDto,
+  createSessionSchema,
+  type ResizeSessionDto,
+  resizeSessionSchema,
+} from '@chista/contracts';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { SessionsService } from './sessions.service';
@@ -33,6 +38,23 @@ export class SessionsController {
   @Delete(':id')
   terminate(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.sessions.terminate(id, user);
+  }
+
+  @RequirePermissions('SESSION_LAUNCH')
+  @Post(':id/pause')
+  pause(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.sessions.pause(id, user);
+  }
+
+  @RequirePermissions('SESSION_LAUNCH')
+  @Post(':id/resume')
+  resume(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.sessions.resume(id, user);
+  }
+
+  @Post(':id/resize')
+  resize(@Param('id') id: string, @Body(new ZodPipe(resizeSessionSchema)) dto: ResizeSessionDto) {
+    return this.sessions.resize(id, dto.width, dto.height);
   }
 
   @Post(':id/keepalive')

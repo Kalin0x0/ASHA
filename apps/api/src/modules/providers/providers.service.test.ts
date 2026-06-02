@@ -14,13 +14,14 @@ import { ProvidersService } from './providers.service';
 import { ProxmoxDriver, resolveVMDriver } from './vm-provider.interface';
 
 const audit = { record: vi.fn().mockResolvedValue(undefined) };
+const env = { SECRET_SEAL_KEY: '0123456789abcdef0123456789abcdef' } as never;
 
 describe('ProvidersService — VM', () => {
   let svc: ProvidersService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new ProvidersService(audit as never);
+    svc = new ProvidersService(audit as never, env);
   });
 
   it('rejects a Proxmox provider with incomplete config', async () => {
@@ -43,10 +44,61 @@ describe('ProvidersService — VM', () => {
     );
   });
 
-  it('accepts a provider with no concrete driver yet (e.g. AWS)', async () => {
+  it('persists a fully-configured provider that passes driver validation (NUTANIX)', async () => {
     prismaMock.vMProvider.create.mockResolvedValue({ id: 'vp2' });
-    await svc.createVM('org1', 'u1', { name: 'aws', provider: 'AWS', config: {}, enabled: true });
+    await svc.createVM('org1', 'u1', {
+      name: 'nut',
+      provider: 'NUTANIX',
+      config: {
+        prismCentralUrl: 'https://pc:9440',
+        username: 'admin',
+        password: 'pw',
+        clusterUuid: 'cl-1',
+        subnetUuid: 'sub-1',
+        imageUuid: 'img-1',
+      },
+      enabled: true,
+    });
     expect(prismaMock.vMProvider.create).toHaveBeenCalled();
+  });
+
+  it('validates config up-front for a provider with a concrete driver (AWS)', async () => {
+    prismaMock.vMProvider.create.mockResolvedValue({ id: 'vp3' });
+    await expect(
+      svc.createVM('org1', 'u1', { name: 'aws', provider: 'AWS', config: {}, enabled: true }),
+    ).rejects.toThrow(/AWS config missing/);
+  });
+
+  it('seals secrets into secretRef and redacts the stored config', async () => {
+    prismaMock.vMProvider.create.mockResolvedValue({ id: 'vp4' });
+    await svc.createVM('org1', 'u1', {
+      name: 'pmx',
+      provider: 'PROXMOX',
+      config: { apiUrl: 'https://pmx', node: 'pve', tokenId: 't', tokenSecret: 'super-secret' },
+      enabled: true,
+    });
+    const data = prismaMock.vMProvider.create.mock.calls[0][0].data;
+    // The plaintext secret is never stored in `config`…
+    expect(JSON.stringify(data.config)).not.toContain('super-secret');
+    expect((data.config as Record<string, unknown>).tokenSecret).toBe('••••••••');
+    // …but `apiUrl` (non-secret) survives, and secretRef is a sealed blob.
+    expect((data.config as Record<string, unknown>).apiUrl).toBe('https://pmx');
+    expect(typeof data.secretRef).toBe('string');
+    expect(data.secretRef).not.toContain('super-secret');
+  });
+
+  it('resolveVMConfig unseals the original secret for driver use', async () => {
+    prismaMock.vMProvider.create.mockResolvedValue({ id: 'vp5' });
+    await svc.createVM('org1', 'u1', {
+      name: 'pmx2',
+      provider: 'PROXMOX',
+      config: { apiUrl: 'https://pmx', node: 'pve', tokenId: 't', tokenSecret: 'unseal-me' },
+      enabled: true,
+    });
+    const sealed = prismaMock.vMProvider.create.mock.calls[0][0].data.secretRef;
+    prismaMock.vMProvider.findFirst.mockResolvedValue({ id: 'vp5', secretRef: sealed, config: {} });
+    const resolved = await svc.resolveVMConfig('org1', 'vp5');
+    expect(resolved?.tokenSecret).toBe('unseal-me');
   });
 
   it('throws 404 deleting a VM provider in another org', async () => {
@@ -61,8 +113,8 @@ describe('resolveVMDriver', () => {
     expect(driver).toBeInstanceOf(ProxmoxDriver);
   });
 
-  it('returns null for an unimplemented provider', () => {
-    expect(resolveVMDriver('VSPHERE', {})).toBeNull();
+  it('returns null for a completely unknown provider', () => {
+    expect(resolveVMDriver('UNKNOWN_XYZ', {})).toBeNull();
   });
 
   it('ProxmoxDriver.validateConfig flags missing keys', () => {

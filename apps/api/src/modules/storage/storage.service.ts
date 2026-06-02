@@ -1,12 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type {
   CreateFileMappingDto,
   CreatePersistentProfileDto,
+  CreateStorageMappingDto,
   CreateVolumeMappingDto,
   UpdateFileMappingDto,
+  UpdateStorageMappingDto,
   UpdateVolumeMappingDto,
 } from '@chista/contracts';
+import type { Env } from '@chista/config';
 import { prisma } from '@chista/db';
+import { mergeSealedConfig, redactConfig, sealConfig, unsealConfig } from '../../common/config-seal';
+import { ENV } from '../../common/env.module';
 
 /**
  * Storage management: volume mappings, file mappings, and persistent profiles.
@@ -17,6 +22,8 @@ import { prisma } from '@chista/db';
  */
 @Injectable()
 export class StorageService {
+  constructor(@Inject(ENV) private readonly env: Env) {}
+
   // ── Volume mappings ─────────────────────────────────────────────────────────
 
   listVolumes(orgId: string) {
@@ -129,6 +136,78 @@ export class StorageService {
   async removeProfile(orgId: string, id: string) {
     const res = await prisma.persistentProfile.deleteMany({ where: { id, orgId } });
     if (res.count === 0) throw new NotFoundException('Persistent profile not found');
+    return { ok: true };
+  }
+
+  // ── Storage mappings (network/object storage mounts) ─────────────────────────
+
+  listStorageMappings(orgId: string) {
+    return prisma.storageMapping.findMany({ where: { orgId }, orderBy: { createdAt: 'desc' } });
+  }
+
+  /** Internal: recover the unsealed config for a mapping (runtime mount use). */
+  async resolveStorageConfig(orgId: string, id: string): Promise<Record<string, unknown> | null> {
+    const row = await prisma.storageMapping.findFirst({ where: { id, orgId } });
+    if (!row) return null;
+    return row.secretRef
+      ? unsealConfig(row.secretRef, this.env.SECRET_SEAL_KEY)
+      : (row.config as Record<string, unknown>);
+  }
+
+  createStorageMapping(orgId: string, dto: CreateStorageMappingDto) {
+    // Storage configs carry cloud credentials (S3 secretAccessKey, NextCloud/
+    // Dropbox passwords, OAuth refresh tokens). Seal them into secretRef and keep
+    // only a redacted copy in `config` so list/get never leak secrets.
+    const config = (dto.config ?? {}) as Record<string, unknown>;
+    return prisma.storageMapping.create({
+      data: {
+        orgId,
+        name: dto.name,
+        kind: dto.kind,
+        mountPath: dto.mountPath,
+        readOnly: dto.readOnly,
+        scope: dto.scope,
+        config: redactConfig(config) as object,
+        secretRef: sealConfig(config, this.env.SECRET_SEAL_KEY),
+        enabled: dto.enabled,
+      },
+    });
+  }
+
+  async updateStorageMapping(orgId: string, id: string, dto: UpdateStorageMappingDto) {
+    const existing = await prisma.storageMapping.findFirst({ where: { id, orgId } });
+    if (!existing) throw new NotFoundException('Storage mapping not found');
+
+    let sealed: string | undefined;
+    let redacted: object | undefined;
+    if (dto.config) {
+      const prev = existing.secretRef
+        ? unsealConfig(existing.secretRef, this.env.SECRET_SEAL_KEY)
+        : (existing.config as Record<string, unknown>);
+      const merged = mergeSealedConfig(prev, dto.config as Record<string, unknown>);
+      sealed = sealConfig(merged, this.env.SECRET_SEAL_KEY);
+      redacted = redactConfig(merged) as object;
+    }
+
+    const res = await prisma.storageMapping.updateMany({
+      where: { id, orgId },
+      data: {
+        name: dto.name,
+        mountPath: dto.mountPath,
+        readOnly: dto.readOnly,
+        scope: dto.scope,
+        config: redacted,
+        secretRef: sealed,
+        enabled: dto.enabled,
+      },
+    });
+    if (res.count === 0) throw new NotFoundException('Storage mapping not found');
+    return prisma.storageMapping.findFirst({ where: { id, orgId } });
+  }
+
+  async removeStorageMapping(orgId: string, id: string) {
+    const res = await prisma.storageMapping.deleteMany({ where: { id, orgId } });
+    if (res.count === 0) throw new NotFoundException('Storage mapping not found');
     return { ok: true };
   }
 }

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import type { CreateShareDto, JoinShareDto, PostChatMessageDto } from '@chista/contracts';
 import { prisma } from '@chista/db';
 import type { ShareChatEvent, ShareParticipantEvent } from '@chista/events';
@@ -99,9 +99,21 @@ export class SharingService {
     return share;
   }
 
+  /**
+   * Enforce a share's `requireAuth` flag: when set, only a signed-in Chista user
+   * (not an anonymous guest holding only the key) may participate. The guest
+   * routes are public, so this is the single place that gates authentication.
+   */
+  private assertAuthAllowed(share: { requireAuth: boolean }, userId?: string) {
+    if (share.requireAuth && !userId) {
+      throw new UnauthorizedException('This share requires you to sign in');
+    }
+  }
+
   /** A guest (or authenticated user) joins a share by key. */
   async join(shareKey: string, dto: JoinShareDto, userId?: string) {
     const share = await this.resolveActiveShare(shareKey);
+    this.assertAuthAllowed(share, userId);
 
     const participant = await prisma.shareParticipant.create({
       data: {
@@ -146,6 +158,7 @@ export class SharingService {
   /** Post a chat message into a share room and fan it out over the gateway. */
   async postMessage(shareKey: string, dto: PostChatMessageDto, author?: { id?: string; name?: string }) {
     const share = await this.resolveActiveShare(shareKey);
+    this.assertAuthAllowed(share, author?.id);
     if (!share.enableChat) throw new BadRequestException('Chat is disabled for this share');
 
     const authorName = author?.name ?? dto.authorName ?? 'Guest';
@@ -171,8 +184,9 @@ export class SharingService {
     return message;
   }
 
-  async listMessages(shareKey: string) {
+  async listMessages(shareKey: string, userId?: string) {
     const share = await this.resolveActiveShare(shareKey);
+    this.assertAuthAllowed(share, userId);
     return prisma.shareChatMessage.findMany({
       where: { shareId: share.id },
       orderBy: { createdAt: 'asc' },

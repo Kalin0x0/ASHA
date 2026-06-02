@@ -1,22 +1,37 @@
 'use client';
 
-import { ArrowRight, Fingerprint, KeyRound, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Fingerprint, KeyRound, Network, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/lib/api/auth-context';
+import {
+  type ApiPublicAuthProvider,
+  getPublicAuthProviders,
+  ssoLoginUrl,
+} from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, loginWithPasskey } = useAuth();
   const [email, setEmail] = useState('admin@chista.local');
   const [password, setPassword] = useState('ChistaAdmin!2026');
   const [loading, setLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [ssoProviders, setSsoProviders] = useState<ApiPublicAuthProvider[]>([]);
+
+  // Discover enabled SSO providers so the buttons reflect the live config.
+  useEffect(() => {
+    if (!isLive) return;
+    getPublicAuthProviders()
+      .then(setSsoProviders)
+      .catch(() => setSsoProviders([]));
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +47,26 @@ export default function LoginPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed');
       setLoading(false);
+    }
+  };
+
+  const onPasskey = async () => {
+    if (!isLive) {
+      router.push('/dashboard');
+      return;
+    }
+    if (!email) {
+      toast.error('Enter your email first, then use your passkey');
+      return;
+    }
+    setPasskeyLoading(true);
+    try {
+      await loginWithPasskey(email);
+      router.push('/dashboard');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Passkey sign in failed');
+    } finally {
+      setPasskeyLoading(false);
     }
   };
 
@@ -84,13 +119,35 @@ export default function LoginPage() {
         <Separator className="flex-1" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Button variant="secondary" type="button" onClick={() => router.push('/dashboard')}>
-          <KeyRound className="size-4" /> SSO / OIDC
+      <div className="flex flex-col gap-2">
+        {/* Passkey login — always available; uses the email entered above. */}
+        <Button variant="secondary" type="button" loading={passkeyLoading} onClick={() => void onPasskey()}>
+          {!passkeyLoading && <Fingerprint className="size-4" />}
+          Sign in with a passkey
         </Button>
-        <Button variant="secondary" type="button" onClick={() => router.push('/dashboard')}>
-          <Fingerprint className="size-4" /> Passkey
-        </Button>
+
+        {/* Live SSO providers when configured; otherwise a placeholder. */}
+        {isLive && ssoProviders.filter((p) => p.type !== 'LDAP').length > 0 ? (
+          ssoProviders
+            .filter((p) => p.type !== 'LDAP')
+            .map((p) => (
+              <Button
+                key={p.id}
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  window.location.href = ssoLoginUrl(p);
+                }}
+              >
+                <Network className="size-4" /> {p.name}
+                <span className="text-xs text-muted-foreground">({p.type})</span>
+              </Button>
+            ))
+        ) : (
+          <Button variant="secondary" type="button" onClick={() => router.push('/dashboard')}>
+            <KeyRound className="size-4" /> SSO / OIDC
+          </Button>
+        )}
       </div>
 
       <div className="mt-8 rounded-lg border border-border-subtle bg-[var(--surface-1)]/60 p-3">

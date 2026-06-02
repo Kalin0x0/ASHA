@@ -5,10 +5,14 @@ import {
   createFileMappingSchema,
   type CreatePersistentProfileDto,
   createPersistentProfileSchema,
+  type CreateStorageMappingDto,
+  createStorageMappingSchema,
   type CreateVolumeMappingDto,
   createVolumeMappingSchema,
   type UpdateFileMappingDto,
   updateFileMappingSchema,
+  type UpdateStorageMappingDto,
+  updateStorageMappingSchema,
   type UpdateVolumeMappingDto,
   updateVolumeMappingSchema,
 } from '@chista/contracts';
@@ -109,5 +113,38 @@ export class StorageController {
   @Delete('profiles/:id')
   removeProfile(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.storage.removeProfile(user.orgId, id);
+  }
+
+  // ── Storage mappings ────────────────────────────────────────────────────────
+
+  @RequirePermissions('STORAGE_MANAGE')
+  @Get('mappings')
+  listStorageMappings(@CurrentUser() user: AuthUser) {
+    return this.storage.listStorageMappings(user.orgId);
+  }
+
+  @RequirePermissions('STORAGE_MANAGE')
+  @Post('mappings')
+  createStorageMapping(
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodPipe(createStorageMappingSchema)) dto: CreateStorageMappingDto,
+  ) {
+    return this.storage.createStorageMapping(user.orgId, dto);
+  }
+
+  @RequirePermissions('STORAGE_MANAGE')
+  @Patch('mappings/:id')
+  updateStorageMapping(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body(new ZodPipe(updateStorageMappingSchema)) dto: UpdateStorageMappingDto,
+  ) {
+    return this.storage.updateStorageMapping(user.orgId, id, dto);
+  }
+
+  @RequirePermissions('STORAGE_MANAGE')
+  @Delete('mappings/:id')
+  removeStorageMapping(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.storage.removeStorageMapping(user.orgId, id);
   }
 }
