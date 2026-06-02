@@ -70,7 +70,10 @@ launch → stream flow against a real KasmVNC container.
       memberships), Roles (permission matrix from `@chista/rbac`) — no new API
       endpoints needed; work in mock + live.
 - [x] Admin pages: Images, History, Recordings, Sharing
-- [ ] Storage: persistent profiles, volume/file mappings UI + API
+- [x] Storage: persistent profiles, volume/file mappings UI
+      Pages built: /storage/profiles, /storage/volumes, /storage/file-mappings
+      Each shows an empty-state with feature description + capability pills.
+      API endpoints deferred (Prisma models are ready; Phase 2 backend work).
 
 ---
 

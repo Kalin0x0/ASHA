@@ -106,9 +106,9 @@ export const navGroups: NavGroup[] = [
     label: 'Storage',
     items: [
       { label: 'Storage Mappings', href: '/storage/mappings', icon: FolderTree, phase: 4 },
-      { label: 'Persistent Profiles', href: '/storage/profiles', icon: FolderCog, phase: 2 },
-      { label: 'Volume Mappings', href: '/storage/volumes', icon: Database, phase: 2 },
-      { label: 'File Mappings', href: '/storage/file-mappings', icon: FileCog, phase: 2 },
+      { label: 'Persistent Profiles', href: '/storage/profiles', icon: FolderCog, built: true },
+      { label: 'Volume Mappings', href: '/storage/volumes', icon: Database, built: true },
+      { label: 'File Mappings', href: '/storage/file-mappings', icon: FileCog, built: true },
     ],
   },
   {
