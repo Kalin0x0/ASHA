@@ -1,18 +1,20 @@
 'use client';
 
-import { Search, Sparkles } from 'lucide-react';
+import { Search, Sparkles, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AuroraBackground } from '@/components/decor/aurora-background';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
 import { Input } from '@/components/ui/input';
+import { useFavorites } from '@/lib/favorites-store';
 import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
 
 export default function PortalHome() {
   const router = useRouter();
   const workspaces = useWorkspaces();
   const launch = useLaunchSession();
+  const favorites = useFavorites();
   const [query, setQuery] = useState('');
   const [launchingId, setLaunchingId] = useState<string | null>(null);
 
@@ -33,6 +35,16 @@ export default function PortalHome() {
     [workspaces, query],
   );
 
+  // Split favorites out so a user's starred desktops sit at the top.
+  const favoriteList = useMemo(
+    () => enabled.filter((w) => favorites.ids.includes(w.id)),
+    [enabled, favorites.ids],
+  );
+  const others = useMemo(
+    () => enabled.filter((w) => !favorites.ids.includes(w.id)),
+    [enabled, favorites.ids],
+  );
+
   const onLaunch = async (id: string) => {
     setLaunchingId(id);
     const session = await launch(id);
@@ -43,6 +55,29 @@ export default function PortalHome() {
     }
     router.push(`/session/${session.id}`);
   };
+
+  const onToggleFavorite = (id: string) => {
+    const wasFav = favorites.isFavorite(id);
+    favorites.toggle(id);
+    const ws = workspaces.find((w) => w.id === id);
+    toast.success(
+      wasFav
+        ? `Removed ${ws?.friendlyName ?? 'workspace'} from favorites`
+        : `Added ${ws?.friendlyName ?? 'workspace'} to favorites`,
+    );
+  };
+
+  const renderCard = (ws: (typeof enabled)[number], i: number) => (
+    <div key={ws.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(i * 50, 300)}ms` }}>
+      <WorkspaceCard
+        workspace={ws}
+        onLaunch={onLaunch}
+        launching={launchingId === ws.id}
+        favorite={favorites.ids.includes(ws.id)}
+        onToggleFavorite={onToggleFavorite}
+      />
+    </div>
+  );
 
   return (
     <div>
@@ -121,20 +156,30 @@ export default function PortalHome() {
             <p className="text-muted-foreground">No workspaces match your search.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {enabled.map((ws, i) => (
-              <div
-                key={ws.id}
-                className="animate-fade-up"
-                style={{ animationDelay: `${Math.min(i * 50, 300)}ms` }}
-              >
-                <WorkspaceCard
-                  workspace={ws}
-                  onLaunch={onLaunch}
-                  launching={launchingId === ws.id}
-                />
+          <div className="space-y-10">
+            {/* Favorites section — only when present and not actively searching */}
+            {favoriteList.length > 0 && (
+              <section>
+                <div className="mb-4 flex items-center gap-2">
+                  <Star className="size-4 fill-gold-400 text-gold-300" />
+                  <h2 className="font-display text-lg font-semibold">Favorites</h2>
+                  <span className="text-xs text-muted-foreground">({favoriteList.length})</span>
+                </div>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {favoriteList.map(renderCard)}
+                </div>
+              </section>
+            )}
+
+            {/* All / remaining workspaces */}
+            <section>
+              {favoriteList.length > 0 && others.length > 0 && (
+                <h2 className="mb-4 font-display text-lg font-semibold">All workspaces</h2>
+              )}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {others.map(renderCard)}
               </div>
-            ))}
+            </section>
           </div>
         )}
       </div>
