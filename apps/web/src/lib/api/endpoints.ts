@@ -697,3 +697,77 @@ export interface ApiBackup {
 }
 export const getBackups = () => apiFetch<ApiBackup[]>('/backups');
 export const runBackup = () => apiFetch<{ ok: boolean; id?: string }>('/backups/run', { method: 'POST' });
+
+// ── Connectivity: connection proxies ──────────────────────────────────────────
+
+export interface ApiConnectionProxy {
+  id: string;
+  name: string;
+  type: 'GUACAMOLE';
+  host: string | null;
+  port: number | null;
+  enabled: boolean;
+  config: Record<string, unknown>;
+}
+export const getConnectionProxies = () => apiFetch<ApiConnectionProxy[]>('/connectivity/proxies');
+export const createConnectionProxy = (body: { name: string; host?: string; port?: number; enabled?: boolean }) =>
+  apiFetch<ApiConnectionProxy>('/connectivity/proxies', { method: 'POST', body });
+export const updateConnectionProxy = (id: string, body: Partial<{ host: string; port: number; enabled: boolean }>) =>
+  apiFetch<ApiConnectionProxy>(`/connectivity/proxies/${id}`, { method: 'PATCH', body });
+export const deleteConnectionProxy = (id: string) =>
+  apiFetch<{ ok: true }>(`/connectivity/proxies/${id}`, { method: 'DELETE' });
+
+// ── Connectivity: web filters ─────────────────────────────────────────────────
+
+export interface ApiWebFilter {
+  id: string;
+  name: string;
+  categories: Record<string, unknown>;
+  cacheTtl: number;
+  enabled: boolean;
+}
+export const getWebFilters = () => apiFetch<ApiWebFilter[]>('/connectivity/filters');
+export const createWebFilter = (body: { name: string; categories?: Record<string, unknown>; cacheTtl?: number; enabled?: boolean }) =>
+  apiFetch<ApiWebFilter>('/connectivity/filters', { method: 'POST', body });
+export const updateWebFilter = (id: string, body: Partial<{ categories: Record<string, unknown>; cacheTtl: number; enabled: boolean }>) =>
+  apiFetch<ApiWebFilter>(`/connectivity/filters/${id}`, { method: 'PATCH', body });
+export const deleteWebFilter = (id: string) =>
+  apiFetch<{ ok: true }>(`/connectivity/filters/${id}`, { method: 'DELETE' });
+export const getSquidConfig = (id: string) =>
+  apiFetch<{ config: string }>(`/connectivity/filters/${id}/squid-config`);
+
+// ── Connectivity: browser isolation ───────────────────────────────────────────
+
+export interface ApiBrowserIsolation {
+  id: string;
+  name: string;
+  forwardProxy: string | null;
+  enabled: boolean;
+  config: Record<string, unknown>;
+}
+export const getBrowserIsolation = () => apiFetch<ApiBrowserIsolation[]>('/connectivity/isolation');
+export const createBrowserIsolation = (body: { name: string; forwardProxy?: string; config?: Record<string, unknown>; enabled?: boolean }) =>
+  apiFetch<ApiBrowserIsolation>('/connectivity/isolation', { method: 'POST', body });
+export const updateBrowserIsolation = (id: string, body: Partial<{ forwardProxy: string; config: Record<string, unknown>; enabled: boolean }>) =>
+  apiFetch<ApiBrowserIsolation>(`/connectivity/isolation/${id}`, { method: 'PATCH', body });
+export const deleteBrowserIsolation = (id: string) =>
+  apiFetch<{ ok: true }>(`/connectivity/isolation/${id}`, { method: 'DELETE' });
+
+// ── Connectivity: egress gateways ─────────────────────────────────────────────
+
+export interface ApiEgressGateway {
+  id: string;
+  name: string;
+  provider: string;
+  enabled: boolean;
+  config: Record<string, unknown>;
+}
+export const getEgressGateways = () => apiFetch<ApiEgressGateway[]>('/connectivity/egress');
+export const createEgressGateway = (body: { name: string; provider: string; config?: Record<string, unknown>; enabled?: boolean }) =>
+  apiFetch<ApiEgressGateway>('/connectivity/egress', { method: 'POST', body });
+export const updateEgressGateway = (id: string, body: Partial<{ config: Record<string, unknown>; enabled: boolean }>) =>
+  apiFetch<ApiEgressGateway>(`/connectivity/egress/${id}`, { method: 'PATCH', body });
+export const deleteEgressGateway = (id: string) =>
+  apiFetch<{ ok: true }>(`/connectivity/egress/${id}`, { method: 'DELETE' });
+export const getWireguardConfig = (id: string) =>
+  apiFetch<{ config: string }>(`/connectivity/egress/${id}/wireguard-config`);

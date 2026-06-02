@@ -114,10 +114,10 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Connectivity',
     items: [
-      { label: 'Connection Proxies', href: '/connectivity/proxies', icon: Cable, phase: 2 },
-      { label: 'Web Filtering', href: '/connectivity/web-filtering', icon: Filter, phase: 4 },
-      { label: 'Browser Isolation', href: '/connectivity/browser-isolation', icon: ShieldHalf, phase: 4 },
-      { label: 'Egress', href: '/connectivity/egress', icon: DoorOpen, phase: 4 },
+      { label: 'Connection Proxies', href: '/connectivity/proxies', icon: Cable, built: true },
+      { label: 'Web Filtering', href: '/connectivity/web-filtering', icon: Filter, built: true },
+      { label: 'Browser Isolation', href: '/connectivity/browser-isolation', icon: ShieldHalf, built: true },
+      { label: 'Egress', href: '/connectivity/egress', icon: DoorOpen, built: true },
     ],
   },
   {
