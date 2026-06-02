@@ -189,9 +189,17 @@ open-source tooling — nothing derived from Kasm.
       8 tests covering whitelist/allow-all Squid, WireGuard interface+peer with
       validation, and Neko proxy/screen rendering with defaults.
 
+- [x] **Sidecar wiring in the agent** — generated Squid/WireGuard/Neko artifacts
+      are now attached as session sidecars at launch. `ProvisionCommand` carries
+      a `sidecars` map; `dispatchProvision()` resolves the workspace's
+      connectivity-policy IDs (`webFilterId`/`egressGatewayId`/`browserIsolationId`)
+      into `SessionSidecar` descriptors via `ConnectivityRenderService`. Docker
+      driver writes config files + launches `chista-{squid,wg,neko}-<kasmId>` on
+      the session network (and tears them down on destroy); Kubernetes driver
+      injects sidecar containers + a per-Pod ConfigMap for config mounts. Squid's
+      proxy URL is auto-wired into Neko when both are active.
+
 ### Still open (need deep client/host integration)
-- [ ] Wire the generated Squid/WireGuard/Neko artifacts into the agent's
-      provisioning loop (attach as session sidecars at launch)
 - [ ] WebRTC / H.264 codec path (would need Neko/Selkies; KasmVNC is Kasm's own)
 - [ ] Smartcard / USB / webcam passthrough (deep client integration)
 
