@@ -71,9 +71,6 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
                     )}
                     <item.icon className={cn('size-4 shrink-0', active && 'text-gold-300')} />
                     {!collapsed && <span className="truncate">{item.label}</span>}
-                    {!collapsed && !item.built && (
-                      <span className="ml-auto size-1.5 rounded-full bg-anthracite-500" title="Coming soon" />
-                    )}
                   </Link>
                 );
 
@@ -98,7 +95,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
               <span className="size-1.5 rounded-full bg-success animate-pulse-ring" />
               All systems operational
             </span>
-            <span className="text-muted-foreground/60">v0.1.0</span>
+            <span className="text-muted-foreground/60">Chista</span>
           </div>
         </div>
       )}

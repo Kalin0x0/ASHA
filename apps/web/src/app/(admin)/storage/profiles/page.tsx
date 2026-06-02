@@ -3,7 +3,6 @@
 import { FolderCog, HardDrive, Users } from 'lucide-react';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
-import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 
 export default function PersistentProfilesPage() {
@@ -12,7 +11,6 @@ export default function PersistentProfilesPage() {
       <PageHeader
         title="Persistent Profiles"
         description="User home directories and application data that survive across sessions. Each profile is backed by a Docker volume or S3-compatible object store."
-        actions={<Badge variant="info">Phase 2</Badge>}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
