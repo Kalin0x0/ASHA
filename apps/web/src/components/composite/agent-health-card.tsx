@@ -12,34 +12,43 @@ export function AgentHealthCard({ agent }: { agent: Agent }) {
   const memTone = memPct > 85 ? 'destructive' : memPct > 65 ? 'warning' : 'info';
 
   return (
-    <Card elevation={1} className="p-5">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-9 items-center justify-center rounded-md bg-secondary text-muted-foreground">
+    <Card
+      elevation={1}
+      className="group relative overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-[rgba(212,175,55,0.25)] hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5)]"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 items-center justify-center rounded-xl bg-secondary ring-1 ring-white/5 text-muted-foreground transition-colors group-hover:bg-[var(--surface-3)]">
             <Server className="size-4" />
           </span>
           <div>
-            <p className="text-sm font-medium leading-tight">{agent.hostname}</p>
-            <p className="text-xs text-muted-foreground">{agent.zone}</p>
+            <p className="text-sm font-semibold leading-tight">{agent.hostname}</p>
+            <p className="text-[11px] text-muted-foreground">{agent.zone}</p>
           </div>
         </div>
         <AgentStatusPill status={agent.status} />
       </div>
 
-      <div className="mt-4 flex items-center justify-around">
-        <RingGauge value={agent.cpuPct} label="CPU" size={84} tone={cpuTone} />
-        <RingGauge value={memPct} label="MEM" size={84} tone={memTone} />
-        {agent.gpuPct !== null && <RingGauge value={agent.gpuPct} label="GPU" size={84} tone="success" />}
+      {/* Gauges */}
+      <div className="mt-5 flex items-center justify-around">
+        <RingGauge value={agent.cpuPct} label="CPU" size={80} tone={cpuTone} />
+        <RingGauge value={memPct} label="MEM" size={80} tone={memTone} />
+        {agent.gpuPct !== null && (
+          <RingGauge value={agent.gpuPct} label="GPU" size={80} tone="success" />
+        )}
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t border-border-subtle pt-3 text-xs text-muted-foreground">
-        <span>
-          {agent.cpuCores} cores · {(agent.memTotalMb / 1024).toFixed(0)} GB
-        </span>
-        <span className="tnum">
-          {agent.sessions}/{agent.maxSessions} sessions
+      {/* Footer */}
+      <div className="mt-4 flex items-center justify-between border-t border-border-subtle pt-3 text-[11px] text-muted-foreground">
+        <span>{agent.cpuCores} cores · {(agent.memTotalMb / 1024).toFixed(0)} GB</span>
+        <span className="tnum font-medium">
+          <span className="text-foreground">{agent.sessions}</span>/{agent.maxSessions} sessions
         </span>
       </div>
+
+      {/* Hover shimmer */}
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold-500/0 to-transparent transition-all duration-500 group-hover:via-gold-500/50" />
     </Card>
   );
 }

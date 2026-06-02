@@ -17,8 +17,14 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
 
   return (
     <div className="flex h-full flex-col bg-[var(--surface-1)]">
-      <div className={cn('flex h-[var(--spacing-topbar)] items-center border-b border-border-subtle px-4', collapsed && 'justify-center px-0')}>
-        <Link href="/dashboard" onClick={onNavigate} className="flex items-center">
+      {/* Logo strip */}
+      <div
+        className={cn(
+          'flex h-[var(--spacing-topbar)] items-center border-b border-border-subtle',
+          collapsed ? 'justify-center px-0' : 'px-4',
+        )}
+      >
+        <Link href="/dashboard" onClick={onNavigate} className="flex items-center ring-gold-focus rounded-md">
           <Logo collapsed={collapsed} />
         </Link>
         {!collapsed && (
@@ -32,6 +38,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
         )}
       </div>
 
+      {/* Collapsed expand button */}
       {collapsed && (
         <button
           onClick={toggleSidebar}
@@ -42,12 +49,12 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
         </button>
       )}
 
-      <ScrollArea className="flex-1 px-3 py-3">
+      <ScrollArea className="flex-1 px-2.5 py-3">
         <nav className="flex flex-col gap-5">
           {navGroups.map((group) => (
-            <div key={group.label} className="flex flex-col gap-1">
+            <div key={group.label} className="flex flex-col gap-0.5">
               {!collapsed && (
-                <span className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                <span className="px-2.5 pb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/50">
                   {group.label}
                 </span>
               )}
@@ -59,18 +66,27 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      'group relative flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors ring-gold-focus',
-                      collapsed && 'justify-center px-0',
+                      'group relative flex items-center gap-3 rounded-md text-sm transition-all duration-150 ring-gold-focus',
+                      collapsed ? 'justify-center px-0 py-2.5' : 'px-2.5 py-2',
                       active
-                        ? 'bg-secondary text-foreground'
-                        : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                        ? 'bg-[var(--surface-2)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
+                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground',
                     )}
                   >
+                    {/* Active indicator bar */}
                     {active && (
-                      <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-gradient-to-b from-gold-400 to-gold-600" />
+                      <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-gradient-to-b from-gold-300 to-gold-600" />
                     )}
-                    <item.icon className={cn('size-4 shrink-0', active && 'text-gold-300')} />
-                    {!collapsed && <span className="truncate">{item.label}</span>}
+                    {/* Icon */}
+                    <item.icon
+                      className={cn(
+                        'size-4 shrink-0 transition-colors',
+                        active ? 'text-gold-300' : 'text-muted-foreground/70 group-hover:text-muted-foreground',
+                      )}
+                    />
+                    {!collapsed && (
+                      <span className={cn('truncate text-[13px]', active && 'font-medium')}>{item.label}</span>
+                    )}
                   </Link>
                 );
 
@@ -88,6 +104,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
         </nav>
       </ScrollArea>
 
+      {/* Status footer */}
       {!collapsed && (
         <div className="border-t border-border-subtle px-4 py-3">
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
@@ -95,7 +112,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
               <span className="size-1.5 rounded-full bg-success animate-pulse-ring" />
               All systems operational
             </span>
-            <span className="text-muted-foreground/60">Chista</span>
+            <span className="text-muted-foreground/50 font-medium">Chista</span>
           </div>
         </div>
       )}
