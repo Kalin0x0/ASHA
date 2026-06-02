@@ -18,10 +18,11 @@ import { isLive } from '@/lib/api/mode';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, loginWithPasskey } = useAuth();
   const [email, setEmail] = useState('admin@chista.local');
   const [password, setPassword] = useState('ChistaAdmin!2026');
   const [loading, setLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [ssoProviders, setSsoProviders] = useState<ApiPublicAuthProvider[]>([]);
 
   // Discover enabled SSO providers so the buttons reflect the live config.
@@ -46,6 +47,26 @@ export default function LoginPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed');
       setLoading(false);
+    }
+  };
+
+  const onPasskey = async () => {
+    if (!isLive) {
+      router.push('/dashboard');
+      return;
+    }
+    if (!email) {
+      toast.error('Enter your email first, then use your passkey');
+      return;
+    }
+    setPasskeyLoading(true);
+    try {
+      await loginWithPasskey(email);
+      router.push('/dashboard');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Passkey sign in failed');
+    } finally {
+      setPasskeyLoading(false);
     }
   };
 
@@ -98,10 +119,16 @@ export default function LoginPage() {
         <Separator className="flex-1" />
       </div>
 
-      {/* Live SSO providers, when configured; otherwise the default placeholders. */}
-      {isLive && ssoProviders.filter((p) => p.type !== 'LDAP').length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {ssoProviders
+      <div className="flex flex-col gap-2">
+        {/* Passkey login — always available; uses the email entered above. */}
+        <Button variant="secondary" type="button" loading={passkeyLoading} onClick={() => void onPasskey()}>
+          {!passkeyLoading && <Fingerprint className="size-4" />}
+          Sign in with a passkey
+        </Button>
+
+        {/* Live SSO providers when configured; otherwise a placeholder. */}
+        {isLive && ssoProviders.filter((p) => p.type !== 'LDAP').length > 0 ? (
+          ssoProviders
             .filter((p) => p.type !== 'LDAP')
             .map((p) => (
               <Button
@@ -115,18 +142,13 @@ export default function LoginPage() {
                 <Network className="size-4" /> {p.name}
                 <span className="text-xs text-muted-foreground">({p.type})</span>
               </Button>
-            ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3">
+            ))
+        ) : (
           <Button variant="secondary" type="button" onClick={() => router.push('/dashboard')}>
             <KeyRound className="size-4" /> SSO / OIDC
           </Button>
-          <Button variant="secondary" type="button" onClick={() => router.push('/dashboard')}>
-            <Fingerprint className="size-4" /> Passkey
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="mt-8 rounded-lg border border-border-subtle bg-[var(--surface-1)]/60 p-3">
         <p className="flex items-center gap-2 text-xs text-muted-foreground">

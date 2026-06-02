@@ -27,6 +27,7 @@
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/websockets": "^10.4.15",
     "@node-saml/node-saml": "^5.1.0",
+    "@simplewebauthn/server": "^13",
     "helmet": "^8.2.0",
     "ioredis": "^5.4.2",
     "ldapts": "^8.1.8",

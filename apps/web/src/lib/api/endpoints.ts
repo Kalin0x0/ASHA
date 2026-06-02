@@ -829,3 +829,24 @@ export const upsertBanner = (body: {
 }) => apiFetch<ApiBannerConfig>('/watermarks', { method: 'PUT', body });
 export const deleteBanner = (id: string) =>
   apiFetch<{ ok: true }>(`/watermarks/${id}`, { method: 'DELETE' });
+
+// ── WebAuthn / passkeys ───────────────────────────────────────────────────────
+
+export interface ApiPasskey {
+  id: string;
+  deviceName: string;
+  createdAt: string;
+}
+// Registration (authenticated)
+export const getPasskeyRegistrationOptions = () =>
+  apiFetch<Record<string, unknown>>('/auth/webauthn/register/options', { method: 'POST' });
+export const verifyPasskeyRegistration = (response: unknown, deviceName?: string) =>
+  apiFetch<{ verified: boolean }>('/auth/webauthn/register/verify', { method: 'POST', body: { response, deviceName } });
+export const getPasskeys = () => apiFetch<ApiPasskey[]>('/auth/webauthn/credentials');
+export const deletePasskey = (id: string) =>
+  apiFetch<{ ok: true }>(`/auth/webauthn/credentials/${id}`, { method: 'DELETE' });
+// Authentication (public)
+export const getPasskeyLoginOptions = (email: string) =>
+  apiFetch<Record<string, unknown>>('/auth/webauthn/login/options', { method: 'POST', body: { email }, auth: false });
+export const verifyPasskeyLogin = (email: string, response: unknown) =>
+  apiFetch<ApiLoginResponse>('/auth/webauthn/login/verify', { method: 'POST', body: { email, response }, auth: false });

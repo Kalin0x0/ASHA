@@ -13,6 +13,7 @@ import {
   DoorOpen,
   FileCog,
   FileJson,
+  Fingerprint,
   Film,
   Filter,
   Flag,
@@ -124,6 +125,7 @@ export const navGroups: NavGroup[] = [
     label: 'Settings',
     items: [
       { label: 'General', href: '/settings/general', icon: Settings2, built: true },
+      { label: 'Security', href: '/settings/security', icon: Fingerprint, built: true },
       { label: 'Branding', href: '/settings/branding', icon: Palette, built: true },
       { label: 'Banners', href: '/settings/banners', icon: Flag, built: true },
       { label: 'Licensing', href: '/settings/licensing', icon: BadgeCheck, built: true },
