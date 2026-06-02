@@ -2,7 +2,8 @@
   "name": "chista",
   "private": true,
   "version": "0.1.0",
-  "description": "Chista — modern container-streaming / VDI / DaaS platform (anthracite + gold).",
+  "description": "Chista — modern container-streaming / VDI / DaaS platform (anthracite + gold). A Naiemi Group product.",
+  "author": "Naiemi Group",
   "packageManager": "pnpm@9.15.9",
   "engines": {
     "node": ">=20"

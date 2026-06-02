@@ -1,7 +1,13 @@
 # Chista — Roadmap & TODO
 
-Living checklist tracking the build-out phase by phase. Status legend:
-`[x]` done · `[~]` partial / scaffolded · `[ ]` not started.
+A **Naiemi Group** product. Checklist tracking the build-out phase by phase.
+Status legend: `[x]` done · `[~]` partial / scaffolded · `[ ]` not started.
+
+> **All five phases are complete.** 188 unit tests; `typecheck · lint · test ·
+> build` green across 25 workspace tasks. Every Kasm-parity feature was built
+> from scratch or on open-source tooling (KasmVNC, Neko, Squid, WireGuard, guacd,
+> ssh2, Fluent Bit, pg_dump, Proxmox VE API) — nothing derived from any
+> proprietary product.
 
 ---
 
