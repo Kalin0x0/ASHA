@@ -16,10 +16,11 @@ export const metadata: Metadata = {
   applicationName: 'Chista',
   icons: {
     icon: [
-      { url: '/logo.png', type: 'image/png' },
+      { url: '/chista-logo.svg', type: 'image/svg+xml' },
+      { url: '/chista-logo.png', type: 'image/png' },
     ],
-    apple: '/logo.png',
-    shortcut: '/logo.png',
+    apple: '/chista-logo.png',
+    shortcut: '/chista-logo.png',
   },
 };
 

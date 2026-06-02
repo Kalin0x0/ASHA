@@ -4,11 +4,12 @@ import { cn } from '@/lib/utils';
 export function ChistaMark({ className }: { className?: string }) {
   return (
     <Image
-      src="/logo.png"
+      src="/chista-logo.svg"
       alt="Chista"
       width={32}
       height={32}
       priority
+      unoptimized
       className={cn('size-7 rounded-lg', className)}
     />
   );
