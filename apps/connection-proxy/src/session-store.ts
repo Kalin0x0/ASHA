@@ -28,8 +28,19 @@ export class SessionStore {
     this.redis.on('error', (e) => log.warn({ err: e.message }, 'redis error'));
   }
 
+  private healthy = false;
+
   async connect(): Promise<void> {
-    await this.redis.connect().catch((e) => log.warn({ err: (e as Error).message }, 'redis connect failed'));
+    try {
+      await this.redis.connect();
+      this.healthy = true;
+    } catch (e) {
+      log.warn({ err: (e as Error).message }, 'redis connect failed — session lookups will return null');
+    }
+  }
+
+  isHealthy(): boolean {
+    return this.healthy;
   }
 
   async get(kasmId: string): Promise<SessionRecord | null> {

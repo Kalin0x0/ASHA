@@ -16,8 +16,9 @@ async function main(): Promise<void> {
   // HTTP server handles both health checks and WebSocket upgrades.
   const httpServer = http.createServer((req, res) => {
     if (req.url === '/health') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ status: 'ok', service: 'connection-proxy' }));
+      const redisOk = store.isHealthy();
+      res.writeHead(redisOk ? 200 : 503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: redisOk ? 'ok' : 'degraded', service: 'connection-proxy', redis: redisOk }));
       return;
     }
     if (req.url === '/') {

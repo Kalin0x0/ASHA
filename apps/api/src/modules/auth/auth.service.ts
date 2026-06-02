@@ -34,6 +34,18 @@ export class AuthService {
     const confirmedTotp = user.twoFactorMethods.find((m) => m.confirmed && m.type === 'TOTP');
     if (confirmedTotp) {
       if (!dto.totp) throw new UnauthorizedException('Two-factor code required');
+
+      // Replay protection: reject if the same 30-second window was already used.
+      // lastUsedAt represents the last successful verification; if it falls within
+      // the current TOTP period, the code has already been consumed.
+      const TOTP_PERIOD_MS = 30_000;
+      if (confirmedTotp.lastUsedAt) {
+        const windowStart = Math.floor(Date.now() / TOTP_PERIOD_MS) * TOTP_PERIOD_MS;
+        if (confirmedTotp.lastUsedAt.getTime() >= windowStart) {
+          throw new UnauthorizedException('Two-factor code already used — wait for the next code');
+        }
+      }
+
       const result = await verifyOtp({ secret: confirmedTotp.secret, token: dto.totp });
       if (!result.valid) throw new UnauthorizedException('Invalid two-factor code');
       await prisma.twoFactorMethod.update({

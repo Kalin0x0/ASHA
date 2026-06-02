@@ -33,13 +33,14 @@ function buildGuacdHandshake(session: SessionRecord): string {
   const host = session.internalHost ?? 'localhost';
   const port = session.internalPort ?? (protocol === 'rdp' ? 3389 : 5900);
 
-  // Guacamole instruction format: <length>.<value>,<length>.<value>;
+  // Guacamole instruction format: <len>.<opcode>,<len>.<arg>,...;
+  const opcode = 'select';
   const args = [
     `${protocol.length}.${protocol}`,
     `${String(host).length}.${host}`,
     `${String(port).length}.${port}`,
   ].join(',');
-  return `${args.length}.select,${args};`;
+  return `${opcode.length}.${opcode},${args};`;
 }
 
 export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: SessionRecord): void {
@@ -66,7 +67,17 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
   });
 
   ws.on('message', (data) => {
-    if (open && guacd.writable) guacd.write(data as Buffer);
+    if (!open || !guacd.writable) return;
+    // ws can deliver Buffer, string, or ArrayBuffer — normalise to Buffer.
+    if (Buffer.isBuffer(data)) {
+      guacd.write(data);
+    } else if (typeof data === 'string') {
+      guacd.write(Buffer.from(data, 'utf8'));
+    } else if (data instanceof ArrayBuffer) {
+      guacd.write(Buffer.from(data));
+    } else if (Array.isArray(data)) {
+      guacd.write(Buffer.concat(data));
+    }
   });
 
   ws.on('close', () => {
