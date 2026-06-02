@@ -100,24 +100,35 @@ async function handleProvision(
 ): Promise<void> {
   log.info({ sessionId: cmd.sessionId, image: cmd.runConfig.dockerImage }, 'provisioning session');
   await manager.reportStatus(agentId, cmd.sessionId, { status: 'PROVISIONING' }).catch(() => undefined);
+  let result;
   try {
-    const result = await provisionContainer(cmd);
-    bySession.set(cmd.sessionId, result.containerId);
-    byContainer.set(result.containerId, cmd.sessionId);
-    await manager.reportStatus(agentId, cmd.sessionId, {
+    result = await provisionContainer(cmd);
+  } catch (e) {
+    // The container itself failed to come up — report ERROR.
+    log.error(`provision failed: ${(e as Error).message}`);
+    await manager
+      .reportStatus(agentId, cmd.sessionId, { status: 'ERROR', error: (e as Error).message })
+      .catch(() => undefined);
+    return;
+  }
+
+  // The container is up and tracked. A transient failure to report RUNNING must
+  // NOT flip the session to ERROR (the container is healthy) — log and let the
+  // next heartbeat reconcile instead.
+  bySession.set(cmd.sessionId, result.containerId);
+  byContainer.set(result.containerId, cmd.sessionId);
+  log.info({ sessionId: cmd.sessionId }, 'session running');
+  await manager
+    .reportStatus(agentId, cmd.sessionId, {
       status: 'RUNNING',
       containerId: result.containerId,
       internalHost: result.internalHost,
       port: result.port,
       traefikRouterName: result.routerName,
-    });
-    log.info({ sessionId: cmd.sessionId }, 'session running');
-  } catch (e) {
-    log.error(`provision failed: ${(e as Error).message}`);
-    await manager
-      .reportStatus(agentId, cmd.sessionId, { status: 'ERROR', error: (e as Error).message })
-      .catch(() => undefined);
-  }
+    })
+    .catch((e) =>
+      log.warn(`failed to report RUNNING for ${cmd.sessionId}: ${(e as Error).message} — container is up; will reconcile on heartbeat`),
+    );
 }
 
 async function handleControl(

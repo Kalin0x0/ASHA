@@ -202,8 +202,19 @@ export class AuthProvidersService {
         throw new BadRequestException(`${type} config missing: ${missing.join(', ')}`);
       }
     };
+    /** At least one of a set of alternative keys must be present. */
+    const needOneOf = (label: string, keys: string[]) => {
+      if (!keys.some((k) => config[k])) {
+        throw new BadRequestException(`${type} config missing: ${label} (one of ${keys.join(', ')})`);
+      }
+    };
     if (type === 'OIDC') need(['issuer', 'clientId']);
-    if (type === 'SAML') need(['idpMetadataUrl', 'spEntityId']);
+    if (type === 'SAML') {
+      // Validate the fields SamlService.buildClient actually consumes, not the
+      // metadata-URL fields (which aren't read), so a saved provider can log in.
+      needOneOf('IdP SSO URL', ['entryPoint', 'ssoUrl']);
+      needOneOf('IdP certificate', ['idpCert', 'cert']);
+    }
     if (type === 'LDAP') need(['url', 'baseDN']);
   }
 }

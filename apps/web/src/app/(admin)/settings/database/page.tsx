@@ -43,8 +43,8 @@ export default function DatabasePage() {
     setRunning(true);
     try {
       const res = await runBackup();
-      if (res.ok) toast.success('Backup started');
-      else toast.error('Backup failed to start');
+      if (res.status === 'completed') toast.success('Backup completed');
+      else toast.error('Backup failed', { description: 'pg_dump did not complete — check server logs' });
       await refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not run backup');

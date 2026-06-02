@@ -92,8 +92,9 @@ export default function WebhooksPage() {
     setBusyId(id);
     try {
       const res = await testWebhook(id);
-      if (res.ok) toast.success('Test delivered', { description: res.status ? `HTTP ${res.status}` : undefined });
-      else toast.error('Test failed', { description: res.status ? `HTTP ${res.status}` : undefined });
+      const httpLabel = res.responseCode != null ? `HTTP ${res.responseCode}` : undefined;
+      if (res.status === 'SUCCESS') toast.success('Test delivered', { description: httpLabel });
+      else toast.error('Test failed', { description: httpLabel });
     } catch {
       toast.error('Test delivery failed');
     } finally {

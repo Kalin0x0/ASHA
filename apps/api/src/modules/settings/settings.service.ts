@@ -84,12 +84,15 @@ export class SettingsService {
       branding: branding
         ? {
             productName: branding.productName,
-            logoUrl: branding.logoUrl,
-            faviconUrl: branding.faviconUrl,
-            loginBackgroundUrl: branding.loginBackgroundUrl,
+            // Omit unset (null) URLs/CSS — the import schema accepts string|''|
+            // undefined but not null, so emit undefined to keep export→import
+            // round-trippable.
+            logoUrl: branding.logoUrl ?? undefined,
+            faviconUrl: branding.faviconUrl ?? undefined,
+            loginBackgroundUrl: branding.loginBackgroundUrl ?? undefined,
             primaryColor: branding.primaryColor,
             accentColor: branding.accentColor,
-            customCss: branding.customCss,
+            customCss: branding.customCss ?? undefined,
           }
         : null,
       settings: settings.map((s) => ({ key: s.key, value: s.valueJson })),

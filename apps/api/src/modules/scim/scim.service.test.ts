@@ -118,4 +118,35 @@ describe('ScimService', () => {
     await service.deleteGroup(ORG, 'g1');
     expect(prismaMock.group.delete).toHaveBeenCalledWith({ where: { id: 'g1' } });
   });
+
+  // ── `active` boolean coercion (Azure AD sends stringified booleans) ──────────
+
+  const scimUser = (id: string) => ({ id, orgId: ORG, email: 'a@x.io', username: 'a', displayName: null, externalId: null, status: 'ACTIVE', createdAt: new Date(), updatedAt: new Date() });
+
+  it('PATCH active="False" (string) disables the user, not the reverse', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(scimUser('u1'));
+    prismaMock.user.update.mockResolvedValue(scimUser('u1'));
+    await service.patchUser(ORG, 'u1', [{ op: 'replace', path: 'active', value: 'False' }] as never);
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'DISABLED' }) }),
+    );
+  });
+
+  it('PATCH active="True" (string) keeps the user active', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(scimUser('u1'));
+    prismaMock.user.update.mockResolvedValue(scimUser('u1'));
+    await service.patchUser(ORG, 'u1', [{ op: 'replace', path: 'active', value: 'True' }] as never);
+    expect(prismaMock.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'ACTIVE' }) }),
+    );
+  });
+
+  it('createUser with active="false" (string) provisions a DISABLED user', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue(scimUser('u2'));
+    await service.createUser(ORG, { userName: 'b', emails: [{ value: 'b@x.io' }], active: 'false' } as never);
+    expect(prismaMock.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'DISABLED' }) }),
+    );
+  });
 });

@@ -69,8 +69,8 @@ export class SharingController {
 
   @Public()
   @Get('share/:shareKey/messages')
-  listMessages(@Param('shareKey') shareKey: string) {
-    return this.sharing.listMessages(shareKey);
+  listMessages(@Param('shareKey') shareKey: string, @Req() req: { user?: AuthUser }) {
+    return this.sharing.listMessages(shareKey, req.user?.sub);
   }
 
   @Public()

@@ -293,11 +293,14 @@ export class AwsEc2Driver implements VMProviderDriver {
         Action: 'DescribeInstances',
         'InstanceId.1': id,
       });
-      const state = xmlValue(res, 'name') ?? 'unknown';
-      const name = xmlValue(res, 'value') ?? id;
+      // Scope extraction to the <instanceState> block — a bare xmlValue(res,'name')
+      // greedily matches the first <name> anywhere in the reservation/tag XML and
+      // can pick up an unrelated value, misreporting status.
+      const stateBlock = typeof res === 'string' ? /<instanceState>([\s\S]*?)<\/instanceState>/.exec(res)?.[1] : undefined;
+      const state = xmlValue(stateBlock ?? '', 'name') ?? 'unknown';
       const status: VMInstance['status'] =
         state === 'running' ? 'running' : state === 'stopped' ? 'stopped' : 'provisioning';
-      return { id, name, status };
+      return { id, name: id, status };
     } catch {
       return null;
     }
@@ -411,12 +414,32 @@ export class AzureVmDriver implements VMProviderDriver {
 
   async getInstance(id: string): Promise<VMInstance | null> {
     try {
-      const vm = await this.arm<{ name?: string; properties?: { provisioningState?: string } }>(
-        'GET', `${id}?$expand=instanceView`,
-      );
-      const state = (vm.properties?.provisioningState ?? '').toLowerCase();
-      const status: VMInstance['status'] =
-        state === 'succeeded' ? 'running' : state === 'deleting' ? 'stopped' : 'provisioning';
+      const vm = await this.arm<{
+        name?: string;
+        properties?: {
+          provisioningState?: string;
+          instanceView?: { statuses?: Array<{ code?: string }> };
+        };
+      }>('GET', `${id}?$expand=instanceView`);
+
+      // The real run state lives in instanceView PowerState/* — provisioningState
+      // stays "Succeeded" even for a stopped/deallocated VM, so reading it alone
+      // reports dead VMs as running (autoscale would never replace them).
+      const power = (vm.properties?.instanceView?.statuses ?? [])
+        .map((s) => s.code ?? '')
+        .find((c) => c.startsWith('PowerState/'));
+      const provisioning = (vm.properties?.provisioningState ?? '').toLowerCase();
+
+      let status: VMInstance['status'];
+      if (power) {
+        status = power === 'PowerState/running' ? 'running' : 'stopped';
+      } else if (provisioning === 'deleting' || provisioning === 'failed') {
+        status = 'stopped';
+      } else if (provisioning === 'succeeded') {
+        status = 'running';
+      } else {
+        status = 'provisioning';
+      }
       return { id, name: vm.name ?? id, status };
     } catch {
       return null;
@@ -507,8 +530,11 @@ export class GcpDriver implements VMProviderDriver {
       disks: [{ boot: true, autoDelete: true, initializeParams: { sourceImage: c.sourceImage } }],
       networkInterfaces: [{ accessConfigs: [{ type: 'ONE_TO_ONE_NAT' }] }],
     };
-    const op = await this.gce<{ name: string }>('POST', '/instances', body);
-    return { id: `${spec.name}`, name: spec.name, status: 'provisioning', address: op.name };
+    // The POST returns a zonal Operation, not the instance — its `name` is the
+    // operation id, NOT an IP, so don't surface it as `address`. getInstance
+    // populates the real NAT IP once the VM is up.
+    await this.gce<{ name: string }>('POST', '/instances', body);
+    return { id: `${spec.name}`, name: spec.name, status: 'provisioning' };
   }
 
   async destroyInstance(id: string): Promise<void> {

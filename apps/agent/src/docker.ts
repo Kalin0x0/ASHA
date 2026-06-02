@@ -131,18 +131,27 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     },
   });
 
-  await container.start();
-  const info = await container.inspect();
-  const ip = info.NetworkSettings?.Networks?.[agentEnv.sessionNetwork]?.IPAddress ?? '';
+  try {
+    await container.start();
+    const info = await container.inspect();
+    const ip = info.NetworkSettings?.Networks?.[agentEnv.sessionNetwork]?.IPAddress ?? '';
 
-  // Launch optional open-source sidecars on the same session network.
-  if (cmd.sidecars && Object.keys(cmd.sidecars).length > 0) {
-    await launchSidecars(cmd.kasmId, cmd.sidecars);
+    // Launch optional open-source sidecars on the same session network.
+    if (cmd.sidecars && Object.keys(cmd.sidecars).length > 0) {
+      await launchSidecars(cmd.kasmId, cmd.sidecars);
+    }
+
+    await waitForPort(ip, port, 30_000).catch(() => undefined);
+
+    return { containerId: container.id, internalHost: ip, port, routerName: router };
+  } catch (e) {
+    // Provisioning failed after the container was created. The manager never
+    // learns the container id (provisionContainer rejects), so it can't call
+    // destroyContainer later — tear the container + any sidecars down here to
+    // avoid leaking a running container.
+    await destroyContainer(`chista-sess-${cmd.kasmId}`).catch(() => undefined);
+    throw e;
   }
-
-  await waitForPort(ip, port, 30_000).catch(() => undefined);
-
-  return { containerId: container.id, internalHost: ip, port, routerName: router };
 }
 
 async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCommand['sidecars']>): Promise<void> {

@@ -30,6 +30,10 @@ export const envSchema = z.object({
   CHISTA_PUBLIC_URL: z.string().default('https://chista.local'),
   CHISTA_SESSION_NETWORK: z.string().default('chista-sessions'),
 
+  // Shared secret the agent presents (x-agent-token header) to the internal
+  // agent endpoints. Must match the agent's CHISTA_AGENT_ENROLLMENT_TOKEN.
+  CHISTA_AGENT_ENROLLMENT_TOKEN: z.string().min(8).default('dev-enrollment-token-change-me'),
+
   // S3-compatible object storage for session recordings. Left blank in dev,
   // which puts recordings into "unconfigured" mode (metadata only, no upload).
   S3_ENDPOINT: z.string().default(''),

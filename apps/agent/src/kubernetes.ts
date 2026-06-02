@@ -69,6 +69,11 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
   const { sidecarContainers, sidecarVolumes, configMap } = buildSidecars(cmd, name);
   const cmName = `${name}-cfg`;
 
+  // Everything from the first resource creation through readiness is wrapped so
+  // a failure (notably a waitForPodRunning timeout) tears down the Pod, Service,
+  // Ingress and ConfigMap instead of orphaning them — the manager never learns
+  // the name to call destroyContainer otherwise.
+  try {
   if (configMap && Object.keys(configMap).length > 0) {
     const cm: V1ConfigMap = {
       apiVersion: 'v1',
@@ -199,6 +204,10 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
 
   const internalHost = `${name}.${SESSION_NS}.svc.cluster.local`;
   return { containerId: name, internalHost, port, routerName: router };
+  } catch (e) {
+    await destroyContainer(name).catch(() => undefined);
+    throw e;
+  }
 }
 
 export async function destroyContainer(podName: string): Promise<void> {

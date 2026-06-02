@@ -129,8 +129,10 @@ describe('OidcService', () => {
   });
 
   it('verifies a signed ID token via JWKS and extracts claims', async () => {
-    const { state } = await service.authorizationUrl('cfg1');
-    const idToken = signIdToken(standardClaims({ email: 'from@idtoken.com', name: 'ID User' }));
+    const { url, state } = await service.authorizationUrl('cfg1');
+    // A compliant IdP echoes the nonce we sent; include it so the binding check passes.
+    const nonce = new URL(url).searchParams.get('nonce')!;
+    const idToken = signIdToken(standardClaims({ email: 'from@idtoken.com', name: 'ID User', nonce }));
 
     fetchMock
       .mockResolvedValueOnce({

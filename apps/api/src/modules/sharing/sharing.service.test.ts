@@ -145,4 +145,31 @@ describe('SharingService.join + chat', () => {
     });
     await expect(svc.postMessage('key1', { body: 'hi' })).rejects.toThrow('disabled');
   });
+
+  // ── requireAuth enforcement ─────────────────────────────────────────────────
+
+  it('rejects an anonymous guest joining a requireAuth share', async () => {
+    prismaMock.sessionShare.findUnique.mockResolvedValue({
+      id: 'share1', sessionId: 'sess1', allowControl: false, enableChat: true, requireAuth: true, expiresAt: null,
+    });
+    await expect(svc.join('key1', { guestName: 'Bob' })).rejects.toThrow(/sign in/i);
+    expect(prismaMock.shareParticipant.create).not.toHaveBeenCalled();
+  });
+
+  it('lets a signed-in user join a requireAuth share', async () => {
+    prismaMock.sessionShare.findUnique.mockResolvedValue({
+      id: 'share1', sessionId: 'sess1', allowControl: false, enableChat: true, requireAuth: true, expiresAt: null,
+    });
+    prismaMock.shareParticipant.create.mockResolvedValue({ id: 'p1' });
+    const res = await svc.join('key1', { guestName: 'Bob' }, 'user1');
+    expect(res.participantId).toBe('p1');
+  });
+
+  it('rejects an anonymous chat post on a requireAuth share', async () => {
+    prismaMock.sessionShare.findUnique.mockResolvedValue({
+      id: 'share1', sessionId: 'sess1', enableChat: true, requireAuth: true, expiresAt: null,
+    });
+    await expect(svc.postMessage('key1', { body: 'hi' })).rejects.toThrow(/sign in/i);
+    expect(prismaMock.shareChatMessage.create).not.toHaveBeenCalled();
+  });
 });

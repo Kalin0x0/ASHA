@@ -49,7 +49,10 @@ export function mergeSealedConfig(
 ): Record<string, unknown> {
   const merged = { ...previous };
   for (const [k, v] of Object.entries(incoming)) {
-    if (v === MASK) continue; // unchanged masked secret
+    // A masked value means "unchanged" only for secret keys (the mask is what
+    // redactConfig emits for those). For any other key the literal mask string
+    // is a real value and must be written through, not dropped.
+    if (v === MASK && isSecretKey(k)) continue;
     merged[k] = v;
   }
   return merged;

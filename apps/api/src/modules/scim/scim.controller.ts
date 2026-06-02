@@ -20,6 +20,13 @@ interface ScimRequest {
   headers: { authorization?: string };
 }
 
+/** Parse a SCIM pagination query param, falling back to a default on garbage. */
+function scimInt(raw: string | undefined, fallback: number, min: number, max: number): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(n)));
+}
+
 /**
  * SCIM 2.0 provisioning endpoints (RFC 7644).
  * All /scim/v2 routes are public (bypass JWT guard) and authenticated via
@@ -98,7 +105,7 @@ export class ScimController {
     @Req() req: ScimRequest,
   ) {
     await this.auth(orgId, req);
-    return this.scim.listUsers(orgId, Number(startIndex ?? 1), Number(count ?? 100), filter);
+    return this.scim.listUsers(orgId, scimInt(startIndex, 1, 1, 1e9), scimInt(count, 100, 0, 200), filter);
   }
 
   @Public()
@@ -168,7 +175,7 @@ export class ScimController {
     @Req() req: ScimRequest,
   ) {
     await this.auth(orgId, req);
-    return this.scim.listGroups(orgId, Number(startIndex ?? 1), Number(count ?? 100), filter);
+    return this.scim.listGroups(orgId, scimInt(startIndex, 1, 1, 1e9), scimInt(count, 100, 0, 200), filter);
   }
 
   @Public()

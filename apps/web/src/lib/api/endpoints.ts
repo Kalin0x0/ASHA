@@ -558,7 +558,7 @@ export const updateLogForwarder = (id: string, body: Partial<{ name: string; end
 export const deleteLogForwarder = (id: string) =>
   apiFetch<{ ok: true }>(`/log-forwarders/${id}`, { method: 'DELETE' });
 export const getFluentBitConfig = (id: string) =>
-  apiFetch<{ config: string }>(`/log-forwarders/${id}/fluent-bit-config`);
+  apiFetch<{ filename: string; content: string }>(`/log-forwarders/${id}/fluent-bit-config`);
 
 // ── Webhooks ──────────────────────────────────────────────────────────────────
 
@@ -573,8 +573,9 @@ export interface ApiWebhook {
 export interface ApiWebhookDelivery {
   id: string;
   event: string;
-  status: number | null;
-  success: boolean;
+  status: 'PENDING' | 'SUCCESS' | 'FAILED';
+  responseCode: number | null;
+  attempts: number;
   createdAt: string;
 }
 export const getWebhooks = () => apiFetch<ApiWebhook[]>('/webhooks');
@@ -592,7 +593,7 @@ export const deleteWebhook = (id: string) =>
 export const getWebhookDeliveries = (id: string) =>
   apiFetch<ApiWebhookDelivery[]>(`/webhooks/${id}/deliveries`);
 export const testWebhook = (id: string) =>
-  apiFetch<{ ok: boolean; status?: number }>(`/webhooks/${id}/test`, { method: 'POST' });
+  apiFetch<{ status: 'SUCCESS' | 'FAILED'; responseCode: number | null }>(`/webhooks/${id}/test`, { method: 'POST' });
 
 // ── API keys ──────────────────────────────────────────────────────────────────
 
@@ -696,7 +697,7 @@ export interface ApiBackup {
   createdAt: string;
 }
 export const getBackups = () => apiFetch<ApiBackup[]>('/backups');
-export const runBackup = () => apiFetch<{ ok: boolean; id?: string }>('/backups/run', { method: 'POST' });
+export const runBackup = () => apiFetch<ApiBackup>('/backups/run', { method: 'POST' });
 
 // ── Connectivity: connection proxies ──────────────────────────────────────────
 
@@ -734,7 +735,7 @@ export const updateWebFilter = (id: string, body: Partial<{ categories: Record<s
 export const deleteWebFilter = (id: string) =>
   apiFetch<{ ok: true }>(`/connectivity/filters/${id}`, { method: 'DELETE' });
 export const getSquidConfig = (id: string) =>
-  apiFetch<{ config: string }>(`/connectivity/filters/${id}/squid-config`);
+  apiFetch<{ filename: string; content: string }>(`/connectivity/filters/${id}/squid-config`);
 
 // ── Connectivity: browser isolation ───────────────────────────────────────────
 
@@ -770,7 +771,7 @@ export const updateEgressGateway = (id: string, body: Partial<{ config: Record<s
 export const deleteEgressGateway = (id: string) =>
   apiFetch<{ ok: true }>(`/connectivity/egress/${id}`, { method: 'DELETE' });
 export const getWireguardConfig = (id: string) =>
-  apiFetch<{ config: string }>(`/connectivity/egress/${id}/wireguard-config`);
+  apiFetch<{ filename: string; content: string }>(`/connectivity/egress/${id}/wireguard-config`);
 
 // ── Settings: branding, general, config import/export ─────────────────────────
 

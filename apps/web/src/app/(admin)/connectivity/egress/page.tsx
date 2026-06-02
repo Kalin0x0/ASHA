@@ -82,8 +82,8 @@ export default function EgressPage() {
   const onCopyConfig = async (id: string) => {
     setBusyId(id);
     try {
-      const { config } = await getWireguardConfig(id);
-      await navigator.clipboard.writeText(config);
+      const { content } = await getWireguardConfig(id);
+      await navigator.clipboard.writeText(content);
       toast.success('WireGuard config copied');
     } catch {
       toast.error('Could not fetch WireGuard config');

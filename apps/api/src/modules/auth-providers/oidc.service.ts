@@ -287,9 +287,11 @@ export class OidcService {
         claims = await this.verifyIdToken(tokens.id_token, cfg, doc);
       }
 
-      // Nonce binding: when the IdP echoes a nonce it MUST match the one we
-      // issued for this authorization request (skipped only when unverified).
-      if (!cfg.skipIdTokenVerification && claims['nonce'] !== undefined && claims['nonce'] !== pending.nonce) {
+      // Nonce binding: we always send a nonce in the authorization request, so a
+      // compliant IdP MUST echo it in the ID token (OIDC Core §3.1.3.7). Require
+      // an exact match — a missing nonce is rejected too, closing token-injection
+      // where an attacker supplies a validly-signed token that lacks our nonce.
+      if (!cfg.skipIdTokenVerification && claims['nonce'] !== pending.nonce) {
         throw new UnauthorizedException('OIDC ID token nonce mismatch');
       }
     }

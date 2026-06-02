@@ -187,9 +187,12 @@ export class AuthService {
     const result = await verifyOtp({ secret: method.secret, token: dto.code });
     if (!result.valid) throw new BadRequestException('Invalid TOTP code');
 
+    // Mark confirmed but do NOT stamp lastUsedAt here: that field tracks login
+    // replay, and setting it at enrollment would make the very first login in the
+    // same 30s window fail the "code already used" replay check.
     await prisma.twoFactorMethod.update({
       where: { id: method.id },
-      data: { confirmed: true, lastUsedAt: new Date() },
+      data: { confirmed: true },
     });
     return { ok: true };
   }

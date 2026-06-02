@@ -8,6 +8,19 @@ import { hashToken, randomToken } from '@chista/crypto';
 import { prisma } from '@chista/db';
 
 /**
+ * Coerce a SCIM `active` value to a boolean. SCIM clients are inconsistent:
+ * Azure AD sends the JSON string "True"/"False" in PATCH bodies, while Okta
+ * sends a real boolean. Treat anything that isn't an explicit false/"false"/0
+ * as active so a stringified "True" never disables a live user.
+ */
+function scimActive(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value.toLowerCase() !== 'false';
+  if (typeof value === 'number') return value !== 0;
+  return true;
+}
+
+/**
  * SCIM 2.0 provisioning service (RFC 7643 / RFC 7644).
  * Supports automated user and group lifecycle from enterprise IAM systems
  * (Okta, Azure AD, OneLogin, …).
@@ -97,7 +110,7 @@ export class ScimService {
         username: body.userName ?? email.toLowerCase(),
         displayName: body.displayName ?? body.name?.formatted ?? null,
         externalId: body.externalId ?? null,
-        status: body.active === false ? 'DISABLED' : 'ACTIVE',
+        status: scimActive(body.active) ? 'ACTIVE' : 'DISABLED',
       },
     });
     return userToScim(u);
@@ -112,7 +125,7 @@ export class ScimService {
         username: body.userName ?? u.username,
         displayName: body.displayName ?? body.name?.formatted ?? u.displayName,
         externalId: body.externalId ?? u.externalId,
-        status: body.active === false ? 'DISABLED' : 'ACTIVE',
+        status: scimActive(body.active) ? 'ACTIVE' : 'DISABLED',
       },
     });
     return userToScim(updated);
@@ -125,13 +138,13 @@ export class ScimService {
     for (const op of operations) {
       const lop = op.op.toLowerCase();
       if (lop === 'replace' || lop === 'add') {
-        if (op.path === 'active') data['status'] = op.value === true ? 'ACTIVE' : 'DISABLED';
+        if (op.path === 'active') data['status'] = scimActive(op.value) ? 'ACTIVE' : 'DISABLED';
         if (op.path === 'userName') data['username'] = op.value;
         if (op.path === 'displayName') data['displayName'] = op.value;
         if (op.path === 'externalId') data['externalId'] = op.value;
         if (!op.path && typeof op.value === 'object' && op.value !== null) {
           const v = op.value as Record<string, unknown>;
-          if ('active' in v) data['status'] = v['active'] === true ? 'ACTIVE' : 'DISABLED';
+          if ('active' in v) data['status'] = scimActive(v['active']) ? 'ACTIVE' : 'DISABLED';
           if ('userName' in v) data['username'] = v['userName'];
           if ('displayName' in v) data['displayName'] = v['displayName'];
           if ('externalId' in v) data['externalId'] = v['externalId'];
