@@ -207,6 +207,7 @@
 
   html {
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
 
@@ -214,21 +215,37 @@
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
-    font-feature-settings: 'cv11', 'ss01';
+    /* cv11 = single-storey a · ss01 = stylistic alternates · refined kerning */
+    font-feature-settings: 'cv11', 'ss01', 'calt', 'kern';
+    letter-spacing: -0.006em;
+    line-height: 1.55;
   }
 
+  /* Display serif — elegant high-contrast optical size with softened
+     terminals. Fraunces axes: opsz 9-144 · SOFT 0-100 · WONK 0-1. */
   h1,
   h2,
   h3,
+  h4,
   .font-display {
     font-family: var(--font-display);
     font-optical-sizing: auto;
-    letter-spacing: -0.01em;
+    font-variation-settings: 'opsz' 110, 'SOFT' 28, 'WONK' 0;
+    letter-spacing: -0.018em;
+    line-height: 1.12;
+  }
+
+  /* Large display headings get the full optical flair */
+  h1,
+  .font-display-xl {
+    font-variation-settings: 'opsz' 144, 'SOFT' 24, 'WONK' 0;
+    letter-spacing: -0.028em;
   }
 
   /* tabular figures for all numeric data */
   .tnum {
     font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum', 'cv11';
   }
 
   ::selection {
