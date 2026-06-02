@@ -53,7 +53,10 @@ launch → stream flow against a real KasmVNC container.
 
 ## Phase 2 — Connectivity, sharing, persistence
 
-- [ ] `@chista/connection-proxy` app — guacamole-lite bridge for RDP/VNC/SSH
+- [~] `@chista/connection-proxy` app — guacamole-lite bridge for RDP/VNC/SSH
+      Scaffold complete: HTTP+WS server, JWT auth, Redis session store, protocol
+      router. Guacamole TCP bridge wired (needs guacd sidecar); SSH stub with
+      placeholder terminal message. docker-compose service + Traefik labels added.
 - [ ] Session sharing + chat (share rooms over the existing events channels)
 - [ ] Session recording to S3-compatible storage
 - [ ] Persistent profiles, volume + file mappings
