@@ -1,4 +1,5 @@
 import { buildInitialData, type MockData } from '@/lib/mock/data';
+import { resolveStreamUrl } from '@/lib/stream';
 import type { DashboardSnapshot, SessionRow, SessionStatus } from '@/lib/types';
 import { clamp } from '@/lib/utils';
 
@@ -17,6 +18,16 @@ class MockStore {
   private listeners = new Set<() => void>();
   private version = 0;
   private timer: ReturnType<typeof setInterval> | null = null;
+
+  constructor() {
+    // Seeded sessions that are already live get a connection URL so opening one
+    // straight from the sessions table embeds the stream just like a fresh launch.
+    for (const s of this.data.sessions) {
+      if ((s.status === 'RUNNING' || s.status === 'DEGRADED') && !s.connectionUrl) {
+        s.connectionUrl = resolveStreamUrl(s.kasmId);
+      }
+    }
+  }
 
   private series = {
     activeSessions: seedSeries(22, 6),
@@ -78,6 +89,7 @@ class MockStore {
           s.status = 'RUNNING';
           s.cpuPct = 18;
           s.memMb = s.memLimitMb * 0.3;
+          s.connectionUrl = resolveStreamUrl(s.kasmId);
         }
       } else if (s.status === 'SCHEDULED') {
         if (Math.random() > 0.7) s.status = 'PROVISIONING';

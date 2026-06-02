@@ -42,6 +42,12 @@ export interface SessionRow {
   uptimeSec: number;
   createdAt: string;
   connectionType: string;
+  /**
+   * Public URL of the session's KasmVNC web client, embedded by the streaming
+   * viewer. Populated once the session reaches RUNNING. Undefined while
+   * provisioning, or in mock mode when no demo stream URL is configured.
+   */
+  connectionUrl?: string;
 }
 
 export interface Agent {
