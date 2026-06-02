@@ -53,10 +53,17 @@ launch → stream flow against a real KasmVNC container.
 
 ## Phase 2 — Connectivity, sharing, persistence
 
-- [~] `@chista/connection-proxy` app — guacamole-lite bridge for RDP/VNC/SSH
-      Scaffold complete: HTTP+WS server, JWT auth, Redis session store, protocol
-      router. Guacamole TCP bridge wired (needs guacd sidecar); SSH stub with
-      placeholder terminal message. docker-compose service + Traefik labels added.
+- [x] `@chista/connection-proxy` app — RDP/VNC/SSH bridge.
+      HTTP+WS server, JWT auth, Redis session store, protocol router.
+      **Guacamole**: full server-side guacd handshake (select → parse args →
+      size/audio/video/image → connect with session params), then raw bridging;
+      `guac-protocol.ts` codec (encode + incremental parser, 7 tests). `guacd`
+      service added to docker-compose (guacamole/guacd:1.5.5).
+      **SSH**: real ssh2 client — PTY shell, stdout/stderr → browser, resize
+      control frames (`{type:'resize',cols,rows}`), key- or password-based auth.
+      **Wiring**: on session RUNNING the API writes the proxy session record
+      (host/port/protocol + SSH/RDP credentials) to Redis; deletes it on
+      DESTROYED. `SessionStatusDto` carries the credentials the agent injects.
 - [x] Session sharing + chat — `SharingModule`: owner creates/revokes a share
       (`POST/DELETE /sessions/:id/share`), guests join via public share key
       (`/share/:key/join|leave|messages`), chat fans out over the WS gateway
@@ -104,8 +111,11 @@ launch → stream flow against a real KasmVNC container.
       `PoolsModule` (`/pools`): pool CRUD + `PUT /pools/:id/autoscale` upserts an
       AutoscaleConfig and replaces the weekly schedule grid wholesale.
       `ProvidersModule` (`/providers/{vm,dns}`): VM/DNS provider registry with a
-      `ProxmoxDriver` (config validation real, API calls stubbed for deploy).
-      14 tests.
+      `ProxmoxDriver` — real Proxmox VE REST calls (API-token auth): createInstance
+      reserves a VMID via `/cluster/nextid`, clones the template, applies
+      cores/memory overrides, and starts the VM; destroyInstance stops + deletes;
+      getInstance maps live status. Optional `insecureTls` for self-signed labs.
+      18 tests (4 new covering the API call sequence).
 - [x] Security hardening (Postgres RLS backstop, CSP, rate limiting)
       Rate limiting: `@nestjs/throttler` — 200 req/min global, 10 req/min on
       `AuthController` (login, refresh, TOTP). Health routes skip throttle.

@@ -71,3 +71,66 @@ describe('resolveVMDriver', () => {
     expect(res.ok).toBe(false);
   });
 });
+
+describe('ProxmoxDriver — API call sequence', () => {
+  const CONFIG = {
+    apiUrl: 'https://pve.example.com:8006',
+    node: 'pve',
+    tokenId: 'root@pam!chista',
+    tokenSecret: 'secret',
+    template: 9000,
+  };
+
+  // A driver subclass that records request() calls instead of hitting the network.
+  class FakeProxmox extends ProxmoxDriver {
+    calls: Array<{ method: string; path: string; body?: unknown }> = [];
+    responses: Record<string, unknown> = {};
+    protected override async request<T>(
+      method: string,
+      path: string,
+      body?: Record<string, string | number>,
+    ): Promise<T> {
+      this.calls.push({ method, path, body });
+      return (this.responses[path] ?? undefined) as T;
+    }
+  }
+
+  it('clones nextid → applies resources → starts on createInstance', async () => {
+    const d = new FakeProxmox(CONFIG);
+    d.responses['/cluster/nextid'] = 131;
+
+    const inst = await d.createInstance({ template: '9000', name: 'sess-vm', resources: { cores: 4, memoryMb: 8192 } });
+
+    expect(d.calls.map((c) => `${c.method} ${c.path}`)).toEqual([
+      'GET /cluster/nextid',
+      'POST /nodes/pve/qemu/9000/clone',
+      'POST /nodes/pve/qemu/131/config',
+      'POST /nodes/pve/qemu/131/status/start',
+    ]);
+    expect(d.calls[1].body).toMatchObject({ newid: 131, name: 'sess-vm' });
+    expect(d.calls[2].body).toMatchObject({ cores: 4, memory: 8192 });
+    expect(inst).toEqual({ id: '131', name: 'sess-vm', status: 'provisioning' });
+  });
+
+  it('skips the config step when no resource overrides are given', async () => {
+    const d = new FakeProxmox(CONFIG);
+    d.responses['/cluster/nextid'] = 140;
+    await d.createInstance({ template: '9000', name: 'plain' });
+    expect(d.calls.some((c) => c.path.endsWith('/config'))).toBe(false);
+  });
+
+  it('stops then deletes on destroyInstance', async () => {
+    const d = new FakeProxmox(CONFIG);
+    await d.destroyInstance('131');
+    expect(d.calls.map((c) => `${c.method} ${c.path}`)).toEqual([
+      'POST /nodes/pve/qemu/131/status/stop',
+      'DELETE /nodes/pve/qemu/131',
+    ]);
+  });
+
+  it('maps Proxmox status to the VMInstance status on getInstance', async () => {
+    const d = new FakeProxmox(CONFIG);
+    d.responses['/nodes/pve/qemu/131/status/current'] = { status: 'running', name: 'sess-vm' };
+    expect(await d.getInstance('131')).toEqual({ id: '131', name: 'sess-vm', status: 'running' });
+  });
+});

@@ -166,5 +166,14 @@ services:
       - traefik.http.middlewares.proxy-strip.stripprefix.prefixes=/proxy
       - traefik.http.routers.proxy.middlewares=proxy-strip
       - traefik.http.services.proxy.loadbalancer.server.port=4100
-    depends_on: [api, redis]
+    depends_on: [api, redis, guacd]
     networks: [chista-core, chista-edge]
+
+  # Guacamole daemon — performs the actual RDP/VNC negotiation. The
+  # connection-proxy bridges browser WebSockets to this over the Guacamole
+  # protocol (GUACD_HOST/GUACD_PORT). Only needed for RDP/VNC workspaces;
+  # KasmVNC sessions don't use it.
+  guacd:
+    image: guacamole/guacd:1.5.5
+    restart: unless-stopped
+    networks: [chista-core]

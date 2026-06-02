@@ -15,11 +15,13 @@
     "@chista/proxy-labels": "workspace:*",
     "ioredis": "^5.4.2",
     "jsonwebtoken": "^9.0.2",
+    "ssh2": "^1.17.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.10.2",
+    "@types/ssh2": "^1.15.5",
     "@types/ws": "^8.5.14",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",

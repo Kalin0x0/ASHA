@@ -183,6 +183,13 @@ export const sessionStatusSchema = z.object({
   port: z.number().optional(),
   traefikRouterName: z.string().optional(),
   error: z.string().optional(),
+  // Protocol credentials the agent injects into the container at launch, passed
+  // through to the connection-proxy session record (RDP/VNC/SSH bridging).
+  sshUser: z.string().optional(),
+  sshPassword: z.string().optional(),
+  sshPrivateKey: z.string().optional(),
+  rdpUser: z.string().optional(),
+  rdpPassword: z.string().optional(),
 });
 export type SessionStatusDto = z.infer<typeof sessionStatusSchema>;
 

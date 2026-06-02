@@ -29,16 +29,34 @@ export interface VMProviderDriver {
   getInstance(id: string): Promise<VMInstance | null>;
 }
 
+interface ProxmoxConfig {
+  apiUrl: string; // e.g. https://pve.example.com:8006
+  node: string; // e.g. pve
+  tokenId: string; // e.g. root@pam!chista
+  tokenSecret: string;
+  template?: string | number; // default template VMID to clone
+  /** Proxmox storage for full clones (optional). */
+  storage?: string;
+  /** Allow self-signed Proxmox certs (lab deployments). Default false. */
+  insecureTls?: boolean;
+}
+
 /**
- * Proxmox VE driver skeleton. Real calls go through the Proxmox API
- * (`/api2/json/nodes/{node}/qemu/...`). Network calls are stubbed until a live
- * Proxmox endpoint is wired in deployment; config validation is real so a
- * misconfigured provider is caught early.
+ * Proxmox VE driver. Real calls go through the Proxmox REST API
+ * (`/api2/json/...`) using an API token. Config validation is performed up-front
+ * so a misconfigured provider is caught before any network call.
+ *
+ * Clone is asynchronous on Proxmox (returns a task UPID); we kick off the clone
+ * + start and report `provisioning`, then `getInstance` reflects live status.
  */
 export class ProxmoxDriver implements VMProviderDriver {
   readonly kind = 'PROXMOX';
 
   constructor(private readonly config: Record<string, unknown>) {}
+
+  private cfg(): ProxmoxConfig {
+    return this.config as unknown as ProxmoxConfig;
+  }
 
   validateConfig(): { ok: true } | { ok: false; reason: string } {
     const required = ['apiUrl', 'node', 'tokenId', 'tokenSecret'];
@@ -47,24 +65,107 @@ export class ProxmoxDriver implements VMProviderDriver {
     return { ok: true };
   }
 
-  createInstance(spec: VMInstanceSpec): Promise<VMInstance> {
-    // TODO(deploy): POST /api2/json/nodes/{node}/qemu/{vmid}/clone then start.
-    return Promise.resolve({
-      id: `proxmox-${spec.name}`,
+  /** Authenticated Proxmox API request. Returns the parsed `data` payload. */
+  protected async request<T = unknown>(
+    method: string,
+    path: string,
+    body?: Record<string, string | number>,
+  ): Promise<T> {
+    const c = this.cfg();
+    const url = `${c.apiUrl.replace(/\/$/, '')}/api2/json${path}`;
+    const headers: Record<string, string> = {
+      Authorization: `PVEAPIToken=${c.tokenId}=${c.tokenSecret}`,
+    };
+    let payload: string | undefined;
+    if (body) {
+      headers['Content-Type'] = 'application/x-www-form-urlencoded';
+      payload = new URLSearchParams(
+        Object.entries(body).reduce<Record<string, string>>((acc, [k, v]) => {
+          acc[k] = String(v);
+          return acc;
+        }, {}),
+      ).toString();
+    }
+
+    // Self-signed Proxmox certs are common in labs; opt-in via insecureTls.
+    const dispatcher = c.insecureTls ? insecureDispatcher() : undefined;
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: payload,
+      ...(dispatcher ? { dispatcher } : {}),
+    } as RequestInit);
+
+    if (!res.ok) {
+      throw new Error(`Proxmox ${method} ${path} → ${res.status} ${await res.text()}`);
+    }
+    const json = (await res.json()) as { data: T };
+    return json.data;
+  }
+
+  async createInstance(spec: VMInstanceSpec): Promise<VMInstance> {
+    const c = this.cfg();
+    const template = spec.template || c.template;
+    if (!template) throw new Error('Proxmox createInstance: no template VMID provided');
+
+    // 1. Reserve a fresh VMID from the cluster.
+    const newid = await this.request<number>('GET', '/cluster/nextid');
+
+    // 2. Clone the template into the new VMID.
+    await this.request('POST', `/nodes/${c.node}/qemu/${template}/clone`, {
+      newid,
       name: spec.name,
-      status: 'provisioning',
+      ...(c.storage ? { storage: c.storage, full: 1 } : {}),
     });
+
+    // 3. Apply optional resource overrides (cores, memory).
+    const cfgUpdate: Record<string, string | number> = {};
+    if (spec.resources?.cores) cfgUpdate.cores = spec.resources.cores;
+    if (spec.resources?.memoryMb) cfgUpdate.memory = spec.resources.memoryMb;
+    if (Object.keys(cfgUpdate).length) {
+      await this.request('POST', `/nodes/${c.node}/qemu/${newid}/config`, cfgUpdate);
+    }
+
+    // 4. Boot it.
+    await this.request('POST', `/nodes/${c.node}/qemu/${newid}/status/start`);
+
+    return { id: String(newid), name: spec.name, status: 'provisioning' };
   }
 
-  destroyInstance(_id: string): Promise<void> {
-    // TODO(deploy): POST /api2/json/nodes/{node}/qemu/{vmid}/status/stop then delete.
-    return Promise.resolve();
+  async destroyInstance(id: string): Promise<void> {
+    const c = this.cfg();
+    // Stop (ignore "already stopped"), then delete the VM.
+    await this.request('POST', `/nodes/${c.node}/qemu/${id}/status/stop`).catch(() => undefined);
+    await this.request('DELETE', `/nodes/${c.node}/qemu/${id}`);
   }
 
-  getInstance(id: string): Promise<VMInstance | null> {
-    // TODO(deploy): GET /api2/json/nodes/{node}/qemu/{vmid}/status/current.
-    return Promise.resolve({ id, name: id, status: 'running' });
+  async getInstance(id: string): Promise<VMInstance | null> {
+    const c = this.cfg();
+    try {
+      const data = await this.request<{ status: string; name?: string }>(
+        'GET',
+        `/nodes/${c.node}/qemu/${id}/status/current`,
+      );
+      const status: VMInstance['status'] =
+        data.status === 'running' ? 'running' : data.status === 'stopped' ? 'stopped' : 'provisioning';
+      return { id, name: data.name ?? id, status };
+    } catch {
+      return null;
+    }
   }
+}
+
+/**
+ * Build an undici dispatcher that skips TLS verification, for self-signed
+ * Proxmox endpoints. Imported lazily so environments that never enable
+ * insecureTls don't pay for it and tests don't need undici.
+ */
+function insecureDispatcher(): unknown {
+  // undici ships with Node; require it dynamically so the type system and
+  // bundlers don't need a module declaration and unused paths pay nothing.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const undici = require('undici') as { Agent: new (opts: unknown) => unknown };
+  return new undici.Agent({ connect: { rejectUnauthorized: false } });
 }
 
 /** Factory: resolve a driver for a stored VMProvider row. */

@@ -14,6 +14,17 @@ export interface SessionRecord {
   internalHost?: string;
   internalPort?: number;
   status: string;
+  /**
+   * Protocol credentials, set by the agent when the container is ready.
+   * SSH: the agent generates an ephemeral keypair per session (or a password)
+   * and injects the public key / password into the container at launch.
+   * RDP/VNC: forwarded to guacd as connection parameters.
+   */
+  sshUser?: string;
+  sshPassword?: string;
+  sshPrivateKey?: string;
+  rdpUser?: string;
+  rdpPassword?: string;
 }
 
 const REDIS_KEY = (kasmId: string) => `chista:proxy:session:${kasmId}`;
