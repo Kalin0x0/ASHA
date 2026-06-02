@@ -180,10 +180,18 @@ open-source tooling — nothing derived from Kasm.
 - [x] **DLP policy fields** — Workspace `dlp` JSON (clipboard up/down, uploads,
       downloads, pwa) carried through to the viewer.
 
-### Still open (need runtime tooling — generate open-source config/manifests)
-- [ ] Web filtering enforcement (Squid / e2guardian sidecar)
-- [ ] Browser isolation runtime (Neko / containerized Chromium)
-- [ ] Managed egress runtime (WireGuard sidecar)
+- [x] **Connectivity runtime config generators** — `ConnectivityRenderService`
+      turns stored configs into deployable artifacts for open-source sidecars,
+      nothing proprietary:
+        • Web filter → Squid ACL config (`GET /connectivity/filters/:id/squid-config`)
+        • Egress → WireGuard tunnel config (`GET /connectivity/egress/:id/wireguard-config`)
+        • Browser isolation → Neko (Apache-2.0) compose service (`GET /connectivity/isolation/:id/compose`)
+      8 tests covering whitelist/allow-all Squid, WireGuard interface+peer with
+      validation, and Neko proxy/screen rendering with defaults.
+
+### Still open (need deep client/host integration)
+- [ ] Wire the generated Squid/WireGuard/Neko artifacts into the agent's
+      provisioning loop (attach as session sidecars at launch)
 - [ ] WebRTC / H.264 codec path (would need Neko/Selkies; KasmVNC is Kasm's own)
 - [ ] Smartcard / USB / webcam passthrough (deep client integration)
 

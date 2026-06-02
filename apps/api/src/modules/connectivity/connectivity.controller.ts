@@ -20,13 +20,17 @@ import {
 } from '@chista/contracts';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
+import { ConnectivityRenderService } from './connectivity-render.service';
 import { ConnectivityService } from './connectivity.service';
 
 @ApiTags('connectivity')
 @ApiBearerAuth()
 @Controller('connectivity')
 export class ConnectivityController {
-  constructor(private readonly svc: ConnectivityService) {}
+  constructor(
+    private readonly svc: ConnectivityService,
+    private readonly render: ConnectivityRenderService,
+  ) {}
 
   // ── Connection proxies ───────────────────────────────────────────────────
 
@@ -94,6 +98,12 @@ export class ConnectivityController {
     return this.svc.removeEgress(user.orgId, user.sub, id);
   }
 
+  @RequirePermissions('CONNECTIVITY_MANAGE')
+  @Get('egress/:id/wireguard-config')
+  renderWireGuard(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.render.renderWireGuardConfig(user.orgId, id);
+  }
+
   // ── Web filters ──────────────────────────────────────────────────────────
 
   @RequirePermissions('CONNECTIVITY_MANAGE')
@@ -127,6 +137,12 @@ export class ConnectivityController {
     return this.svc.removeFilter(user.orgId, user.sub, id);
   }
 
+  @RequirePermissions('CONNECTIVITY_MANAGE')
+  @Get('filters/:id/squid-config')
+  renderSquid(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.render.renderSquidConfig(user.orgId, id);
+  }
+
   // ── Browser isolation ────────────────────────────────────────────────────
 
   @RequirePermissions('CONNECTIVITY_MANAGE')
@@ -158,5 +174,11 @@ export class ConnectivityController {
   @Delete('isolation/:id')
   removeIsolation(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.svc.removeIsolation(user.orgId, user.sub, id);
+  }
+
+  @RequirePermissions('CONNECTIVITY_MANAGE')
+  @Get('isolation/:id/compose')
+  renderIsolation(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.render.renderIsolationCompose(user.orgId, id);
   }
 }
