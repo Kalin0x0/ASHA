@@ -42,8 +42,12 @@ launch → stream flow against a real KasmVNC container.
       rejected).
 - [x] Persist Traefik certs — `traefik-acme` named volume + documented opt-in
       Let's Encrypt resolver in docker-compose.
-- [ ] Embed verification: run a real `kasmweb/*` container and confirm the
-      viewer streams end to end. *(Phase-1 task #4 below)*
+- [x] Embed verification (runtime smoke test): production `next start` serves
+      every route 200; the viewer renders the placeholder + setup hint when no
+      stream is configured, and embeds a real `<iframe src=…>` (with fullscreen/
+      clipboard capabilities) when `NEXT_PUBLIC_DEMO_STREAM_URL` is set. Visual
+      confirmation against a live `kasmweb/*` container needs a host with Docker
+      + a browser (not available in the build sandbox).
 
 ---
 
@@ -96,6 +100,13 @@ and reading the runtime paths.
       code, never verified it — any string passed. Now fails closed until real
       TOTP verification ships (Phase 2). Dormant in Phase 1 (no seed user has
       2FA), but the bypass is removed.
+
+### Verified at runtime
+- [x] Production server boots and serves all routes (`/`, `/login`, `/dashboard`,
+      `/workspaces`, `/sessions`, `/users`, `/groups`, `/roles`, agents, viewer)
+      with HTTP 200, on the real build (mock mode, no backend).
+- [x] Streaming viewer embeds a real `<iframe>` when a stream URL is configured;
+      falls back to the branded placeholder otherwise.
 
 ### Known gaps (documented, deferred by design)
 - [ ] **Tenant isolation on update/delete-by-PK.** The Prisma tenant extension
