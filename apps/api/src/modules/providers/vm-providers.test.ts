@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   AwsEc2Driver,
   AzureVmDriver,
+  DigitalOceanDriver,
   GcpDriver,
+  OpenStackDriver,
+  OracleOciDriver,
   VSphereDriver,
   resolveVMDriver,
 } from './vm-provider.interface';
@@ -33,8 +36,96 @@ describe('resolveVMDriver', () => {
     expect(d?.kind).toBe('VSPHERE');
   });
 
+  it('returns DigitalOceanDriver for DIGITALOCEAN', () => {
+    expect(resolveVMDriver('DIGITALOCEAN', {})?.kind).toBe('DIGITALOCEAN');
+  });
+
+  it('returns OracleOciDriver for ORACLE', () => {
+    expect(resolveVMDriver('ORACLE', {})?.kind).toBe('ORACLE');
+  });
+
+  it('returns OpenStackDriver for OPENSTACK', () => {
+    expect(resolveVMDriver('OPENSTACK', {})?.kind).toBe('OPENSTACK');
+  });
+
+  it('accepts contract enum aliases AWS/AZURE/GCP', () => {
+    expect(resolveVMDriver('AWS', {})?.kind).toBe('AWS_EC2');
+    expect(resolveVMDriver('AZURE', {})?.kind).toBe('AZURE_VM');
+    expect(resolveVMDriver('GCP', {})?.kind).toBe('GCP_CE');
+  });
+
   it('returns null for unknown provider', () => {
     expect(resolveVMDriver('UNKNOWN', {})).toBeNull();
+  });
+});
+
+describe('DigitalOceanDriver', () => {
+  it('fails validation without required fields', () => {
+    const r = new DigitalOceanDriver({ apiToken: 't' }).validateConfig();
+    expect(r.ok).toBe(false);
+    expect((r as { ok: false; reason: string }).reason).toContain('region');
+  });
+
+  it('creates a droplet and reports provisioning', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ droplet: { id: 12345, name: 'do-vm' } }),
+      text: async () => '',
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const d = new DigitalOceanDriver({ apiToken: 'tok', region: 'nyc3', size: 's-2vcpu-4gb', image: 'ubuntu-22-04-x64' });
+    const inst = await d.createInstance({ template: '', name: 'do-vm' });
+    expect(inst.id).toBe('12345');
+    expect(inst.status).toBe('provisioning');
+    const [url, opts] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('api.digitalocean.com/v2/droplets');
+    expect((opts.headers as Record<string, string>)['Authorization']).toBe('Bearer tok');
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('OracleOciDriver', () => {
+  it('fails validation without required fields', () => {
+    const r = new OracleOciDriver({ endpoint: 'iaas.example.com' }).validateConfig();
+    expect(r.ok).toBe(false);
+  });
+});
+
+describe('OpenStackDriver', () => {
+  it('passes validation with required fields', () => {
+    const d = new OpenStackDriver({
+      authUrl: 'https://keystone:5000/v3', username: 'u', password: 'p',
+      projectName: 'proj', novaUrl: 'https://nova/v2.1', flavorRef: '2', imageRef: 'img-1',
+    });
+    expect(d.validateConfig().ok).toBe(true);
+  });
+
+  it('authenticates via Keystone then creates a server', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        headers: { get: (h: string) => (h.toLowerCase() === 'x-subject-token' ? 'keystone-token' : null) },
+        json: async () => ({}),
+        text: async () => '',
+      }) // keystone auth
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 202,
+        json: async () => ({ server: { id: 'srv-1' } }),
+        text: async () => '',
+      }); // nova create
+    vi.stubGlobal('fetch', fetchMock);
+    const d = new OpenStackDriver({
+      authUrl: 'https://keystone:5000/v3', username: 'u', password: 'p',
+      projectName: 'proj', novaUrl: 'https://nova/v2.1', flavorRef: '2', imageRef: 'img-1',
+    });
+    const inst = await d.createInstance({ template: '', name: 'os-vm' });
+    expect(inst.id).toBe('srv-1');
+    const [, novaOpts] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect((novaOpts.headers as Record<string, string>)['X-Auth-Token']).toBe('keystone-token');
+    vi.unstubAllGlobals();
   });
 });
 

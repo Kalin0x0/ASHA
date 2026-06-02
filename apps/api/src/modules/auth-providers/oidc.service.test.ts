@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { createSign, generateKeyPairSync, type KeyObject } from 'crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { prismaMock } = vi.hoisted(() => ({
@@ -11,13 +12,32 @@ const { prismaMock } = vi.hoisted(() => ({
 
 vi.mock('@chista/db', () => ({ prisma: prismaMock }));
 
-// Mock global fetch for discovery + token exchange
+// Mock global fetch for discovery + token exchange + JWKS + userinfo
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
 import { OidcService } from './oidc.service';
 
+// ── Real RSA keypair so we exercise the JWKS signature-verification path ──────
+const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const KID = 'test-key-1';
+
+function publicJwk(key: KeyObject) {
+  const jwk = key.export({ format: 'jwk' }) as Record<string, unknown>;
+  return { ...jwk, kid: KID, alg: 'RS256', use: 'sig' };
+}
+
+/** Sign a real RS256 ID token for the given claims. */
+function signIdToken(claims: Record<string, unknown>): string {
+  const header = { alg: 'RS256', typ: 'JWT', kid: KID };
+  const seg = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const signingInput = `${seg(header)}.${seg(claims)}`;
+  const sig = createSign('RSA-SHA256').update(signingInput).sign(privateKey).toString('base64url');
+  return `${signingInput}.${sig}`;
+}
+
 const discoveryDoc = {
+  issuer: 'https://idp.example.com',
   authorization_endpoint: 'https://idp.example.com/auth',
   token_endpoint: 'https://idp.example.com/token',
   userinfo_endpoint: 'https://idp.example.com/userinfo',
@@ -36,6 +56,13 @@ const authConfig = {
     scopes: ['openid', 'email', 'profile'],
   },
 };
+
+const jwksResponse = { ok: true, json: async () => ({ keys: [publicJwk(publicKey)] }), text: async () => '' };
+
+function standardClaims(extra: Record<string, unknown> = {}) {
+  const now = Math.floor(Date.now() / 1000);
+  return { iss: 'https://idp.example.com', aud: 'client-id', exp: now + 3600, iat: now, sub: 'sub1', ...extra };
+}
 
 describe('OidcService', () => {
   let service: OidcService;
@@ -85,7 +112,7 @@ describe('OidcService', () => {
         ok: true,
         json: async () => ({ access_token: 'tok' }),
         text: async () => '',
-      }) // token exchange
+      }) // token exchange (no id_token → straight to UserInfo)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ email: 'user@example.com', name: 'Test User', sub: 'sub1' }),
@@ -99,12 +126,9 @@ describe('OidcService', () => {
     expect(returnTo).toBe('/app');
   });
 
-  it('extracts email from ID token payload when UserInfo unavailable', async () => {
+  it('verifies a signed ID token via JWKS and extracts claims', async () => {
     const { state } = await service.authorizationUrl('cfg1');
-
-    const claims = { email: 'from@idtoken.com', sub: 'sub2', name: 'ID User' };
-    const payload = Buffer.from(JSON.stringify(claims)).toString('base64url');
-    const idToken = `header.${payload}.sig`;
+    const idToken = signIdToken(standardClaims({ email: 'from@idtoken.com', name: 'ID User' }));
 
     fetchMock
       .mockResolvedValueOnce({
@@ -112,9 +136,68 @@ describe('OidcService', () => {
         json: async () => ({ access_token: 'tok', id_token: idToken }),
         text: async () => '',
       }) // token exchange
-      .mockResolvedValueOnce({ ok: false, text: async () => 'error' }); // userinfo fails → fall back to ID token
+      .mockResolvedValueOnce(jwksResponse) // JWKS fetch for verification
+      .mockResolvedValueOnce({ ok: false, text: async () => 'error' }); // userinfo unavailable
 
     const { profile } = await service.handleCallback('cfg1', 'code2', state);
     expect(profile.email).toBe('from@idtoken.com');
+    expect(profile.displayName).toBe('ID User');
+  });
+
+  it('rejects an ID token with a tampered signature', async () => {
+    const { state } = await service.authorizationUrl('cfg1');
+    const good = signIdToken(standardClaims({ email: 'x@y.com' }));
+    // Flip the payload but keep the original signature → verification must fail.
+    const [h, , s] = good.split('.');
+    const forgedPayload = Buffer.from(JSON.stringify(standardClaims({ email: 'attacker@evil.com' }))).toString('base64url');
+    const tampered = `${h}.${forgedPayload}.${s}`;
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: 'tok', id_token: tampered }),
+        text: async () => '',
+      })
+      .mockResolvedValueOnce(jwksResponse);
+
+    await expect(service.handleCallback('cfg1', 'code3', state)).rejects.toThrow(/signature verification failed/);
+  });
+
+  it('rejects an ID token with the wrong audience', async () => {
+    const { state } = await service.authorizationUrl('cfg1');
+    const idToken = signIdToken(standardClaims({ aud: 'someone-else', email: 'a@b.com' }));
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: 'tok', id_token: idToken }),
+        text: async () => '',
+      })
+      .mockResolvedValueOnce(jwksResponse);
+
+    await expect(service.handleCallback('cfg1', 'code4', state)).rejects.toThrow(/audience mismatch/);
+  });
+
+  it('skips verification when skipIdTokenVerification is set', async () => {
+    prismaMock.authConfig.findFirst.mockResolvedValue({
+      ...authConfig,
+      config: { ...authConfig.config, skipIdTokenVerification: true },
+    });
+    const { state } = await service.authorizationUrl('cfg1');
+
+    // Unsigned token; no JWKS fetch should occur.
+    const claims = { email: 'unverified@idtoken.com', sub: 's' };
+    const idToken = `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.sig`;
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: 'tok', id_token: idToken }),
+        text: async () => '',
+      })
+      .mockResolvedValueOnce({ ok: false, text: async () => 'error' }); // userinfo fails
+
+    const { profile } = await service.handleCallback('cfg1', 'code5', state);
+    expect(profile.email).toBe('unverified@idtoken.com');
   });
 });

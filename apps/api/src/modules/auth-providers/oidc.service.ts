@@ -1,5 +1,6 @@
 import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, createPublicKey, randomBytes, verify as cryptoVerify } from 'crypto';
+import type { JsonWebKey, KeyObject } from 'crypto';
 import { prisma } from '@chista/db';
 import type { FederatedProfile } from './federation.service';
 
@@ -10,14 +11,24 @@ interface OidcConfig {
   scopes?: string[];
   redirectUri?: string;
   tokenEndpointAuthMethod?: 'client_secret_basic' | 'client_secret_post' | 'none';
+  /** Escape hatch: skip ID-token signature verification (NOT recommended). */
+  skipIdTokenVerification?: boolean;
 }
 
 interface DiscoveryDoc {
+  issuer?: string;
   authorization_endpoint: string;
   token_endpoint: string;
   userinfo_endpoint?: string;
   end_session_endpoint?: string;
   jwks_uri: string;
+}
+
+/** A JWK as published in a JWKS document, plus the fields we key on. */
+interface Jwk extends JsonWebKey {
+  kid?: string;
+  alg?: string;
+  use?: string;
 }
 
 interface PendingState {
@@ -38,6 +49,8 @@ export class OidcService {
   private readonly logger = new Logger('OIDC');
   /** Short-lived discovery doc cache: issuer → { doc, expiresAt }. */
   private readonly discoveryCache = new Map<string, { doc: DiscoveryDoc; expiresAt: number }>();
+  /** Short-lived JWKS cache: jwks_uri → { keys, expiresAt }. */
+  private readonly jwksCache = new Map<string, { keys: Jwk[]; expiresAt: number }>();
   /** In-flight PKCE states: state token → PendingState. */
   private readonly pendingStates = new Map<string, PendingState>();
 
@@ -57,6 +70,84 @@ export class OidcService {
     const doc = (await res.json()) as DiscoveryDoc;
     this.discoveryCache.set(issuer, { doc, expiresAt: Date.now() + 5 * 60_000 });
     return doc;
+  }
+
+  /** Fetch + cache the IdP's signing keys. */
+  private async jwks(jwksUri: string): Promise<Jwk[]> {
+    const cached = this.jwksCache.get(jwksUri);
+    if (cached && cached.expiresAt > Date.now()) return cached.keys;
+
+    const res = await fetch(jwksUri);
+    if (!res.ok) throw new Error(`OIDC JWKS fetch failed: ${res.status} ${jwksUri}`);
+    const body = (await res.json()) as { keys?: Jwk[] };
+    const keys = body.keys ?? [];
+    this.jwksCache.set(jwksUri, { keys, expiresAt: Date.now() + 10 * 60_000 });
+    return keys;
+  }
+
+  /**
+   * Verify an ID token's signature against the IdP JWKS and validate the core
+   * claims (iss/aud/exp). Returns the decoded payload on success. Supports the
+   * standard OIDC algorithms RS256/RS384/RS512 and ES256/ES384/ES512.
+   */
+  private async verifyIdToken(
+    idToken: string,
+    cfg: OidcConfig,
+    doc: DiscoveryDoc,
+  ): Promise<Record<string, unknown>> {
+    const parts = idToken.split('.');
+    if (parts.length !== 3) throw new UnauthorizedException('Malformed ID token');
+    const [headerB64, payloadB64, sigB64] = parts;
+
+    const header = JSON.parse(Buffer.from(headerB64, 'base64url').toString()) as {
+      alg: string;
+      kid?: string;
+    };
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString()) as Record<
+      string,
+      unknown
+    >;
+
+    // Locate the signing key: match on kid when present, else first usable key.
+    const keys = await this.jwks(doc.jwks_uri);
+    let jwk = header.kid ? keys.find((k) => k.kid === header.kid) : undefined;
+    jwk ??= keys.find((k) => (k.use ?? 'sig') === 'sig') ?? keys[0];
+    if (!jwk) throw new UnauthorizedException('No matching JWKS key for ID token');
+
+    // Re-fetch once if the kid wasn't found (key rotation): bust the cache.
+    if (header.kid && jwk.kid !== header.kid) {
+      this.jwksCache.delete(doc.jwks_uri);
+      const fresh = await this.jwks(doc.jwks_uri);
+      jwk = fresh.find((k) => k.kid === header.kid) ?? jwk;
+    }
+
+    const publicKey = createPublicKey({ key: jwk as JsonWebKey, format: 'jwk' });
+    const signingInput = Buffer.from(`${headerB64}.${payloadB64}`);
+    const signature = Buffer.from(sigB64, 'base64url');
+
+    if (!verifyJwtSignature(header.alg, signingInput, publicKey, signature)) {
+      throw new UnauthorizedException('ID token signature verification failed');
+    }
+
+    // ── Claim validation ──────────────────────────────────────────────────────
+    const expectedIssuer = doc.issuer ?? cfg.issuer;
+    if (payload['iss'] && expectedIssuer && normalizeIssuer(String(payload['iss'])) !== normalizeIssuer(expectedIssuer)) {
+      throw new UnauthorizedException('ID token issuer mismatch');
+    }
+    const aud = payload['aud'];
+    const audValid = Array.isArray(aud) ? aud.includes(cfg.clientId) : aud === cfg.clientId;
+    if (!audValid) throw new UnauthorizedException('ID token audience mismatch');
+
+    const now = Math.floor(Date.now() / 1000);
+    const skew = 120; // 2-minute clock-skew tolerance
+    if (typeof payload['exp'] === 'number' && payload['exp'] + skew < now) {
+      throw new UnauthorizedException('ID token has expired');
+    }
+    if (typeof payload['nbf'] === 'number' && payload['nbf'] - skew > now) {
+      throw new UnauthorizedException('ID token not yet valid');
+    }
+
+    return payload;
   }
 
   /** Generate PKCE code_verifier (43–128 chars, base64url). */
@@ -164,17 +255,22 @@ export class OidcService {
     }
     const tokens = (await tokenRes.json()) as { access_token: string; id_token?: string };
 
-    // ── UserInfo ────────────────────────────────────────────────────────────
+    // ── ID token (signature-verified) ────────────────────────────────────────
     let claims: Record<string, unknown> = {};
 
     if (tokens.id_token) {
-      // Decode the ID token payload (without signature verification here —
-      // production deployments should verify via JWKS; that's a future hardening).
-      try {
-        const payload = tokens.id_token.split('.')[1];
-        if (payload) claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as Record<string, unknown>;
-      } catch {
-        // fallback to UserInfo
+      if (cfg.skipIdTokenVerification) {
+        // Opt-out path: decode without verifying (discouraged; for IdPs that
+        // don't publish a JWKS). UserInfo is still fetched below as the source.
+        try {
+          const payload = tokens.id_token.split('.')[1];
+          if (payload) claims = JSON.parse(Buffer.from(payload, 'base64url').toString()) as Record<string, unknown>;
+        } catch {
+          /* fall through to UserInfo */
+        }
+      } else {
+        // Verify the signature against the IdP JWKS and validate iss/aud/exp.
+        claims = await this.verifyIdToken(tokens.id_token, cfg, doc);
       }
     }
 
@@ -211,5 +307,49 @@ export class OidcService {
     };
 
     return { orgId: pending.orgId, profile, returnTo: pending.returnTo };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JWT signature verification helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Issuers are compared ignoring a single trailing slash. */
+function normalizeIssuer(iss: string): string {
+  return iss.replace(/\/$/, '');
+}
+
+/**
+ * Verify a JWS signature for the standard OIDC algorithms. RSA (RS*) and RSA-PSS
+ * (PS*) use the named hash; EC (ES*) requires the IEEE-P1363 signature encoding.
+ */
+function verifyJwtSignature(
+  alg: string,
+  data: Buffer,
+  key: KeyObject,
+  signature: Buffer,
+): boolean {
+  switch (alg) {
+    case 'RS256':
+      return cryptoVerify('RSA-SHA256', data, key, signature);
+    case 'RS384':
+      return cryptoVerify('RSA-SHA384', data, key, signature);
+    case 'RS512':
+      return cryptoVerify('RSA-SHA512', data, key, signature);
+    case 'PS256':
+      return cryptoVerify('sha256', data, { key, padding: 6 /* RSA_PKCS1_PSS_PADDING */ }, signature);
+    case 'PS384':
+      return cryptoVerify('sha384', data, { key, padding: 6 }, signature);
+    case 'PS512':
+      return cryptoVerify('sha512', data, { key, padding: 6 }, signature);
+    case 'ES256':
+      return cryptoVerify('sha256', data, { key, dsaEncoding: 'ieee-p1363' }, signature);
+    case 'ES384':
+      return cryptoVerify('sha384', data, { key, dsaEncoding: 'ieee-p1363' }, signature);
+    case 'ES512':
+      return cryptoVerify('sha512', data, { key, dsaEncoding: 'ieee-p1363' }, signature);
+    default:
+      // Reject unknown / 'none' algorithms outright.
+      return false;
   }
 }

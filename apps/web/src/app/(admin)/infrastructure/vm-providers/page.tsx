@@ -60,9 +60,39 @@ const CONFIG_FIELDS: Partial<Record<VMProviderKind, ConfigField[]>> = {
     { key: 'password', label: 'Password', secret: true },
     { key: 'template', label: 'Template VM', placeholder: 'ubuntu-22-template' },
   ],
+  DIGITALOCEAN: [
+    { key: 'apiToken', label: 'API Token', secret: true },
+    { key: 'region', label: 'Region', placeholder: 'nyc3' },
+    { key: 'size', label: 'Droplet Size', placeholder: 's-2vcpu-4gb' },
+    { key: 'image', label: 'Image Slug', placeholder: 'ubuntu-22-04-x64' },
+  ],
+  ORACLE: [
+    { key: 'endpoint', label: 'API Endpoint', placeholder: 'iaas.us-ashburn-1.oraclecloud.com' },
+    { key: 'tenancyOcid', label: 'Tenancy OCID' },
+    { key: 'userOcid', label: 'User OCID' },
+    { key: 'fingerprint', label: 'Key Fingerprint' },
+    { key: 'privateKeyPem', label: 'API Private Key (PEM)', secret: true },
+    { key: 'compartmentOcid', label: 'Compartment OCID' },
+    { key: 'availabilityDomain', label: 'Availability Domain' },
+    { key: 'shape', label: 'Shape', placeholder: 'VM.Standard.E4.Flex' },
+    { key: 'subnetOcid', label: 'Subnet OCID' },
+    { key: 'imageOcid', label: 'Image OCID' },
+  ],
+  OPENSTACK: [
+    { key: 'authUrl', label: 'Keystone Auth URL', placeholder: 'https://keystone:5000/v3' },
+    { key: 'username', label: 'Username' },
+    { key: 'password', label: 'Password', secret: true },
+    { key: 'projectName', label: 'Project Name' },
+    { key: 'novaUrl', label: 'Nova Compute URL', placeholder: 'https://nova:8774/v2.1' },
+    { key: 'flavorRef', label: 'Flavor ID' },
+    { key: 'imageRef', label: 'Image ID' },
+    { key: 'networkId', label: 'Network ID (optional)' },
+  ],
 };
 
-const IMPLEMENTED: VMProviderKind[] = ['PROXMOX', 'AWS', 'AZURE', 'GCP', 'VSPHERE'];
+const IMPLEMENTED: VMProviderKind[] = [
+  'PROXMOX', 'AWS', 'AZURE', 'GCP', 'VSPHERE', 'DIGITALOCEAN', 'ORACLE', 'OPENSTACK',
+];
 
 export default function VMProvidersPage() {
   const [providers, setProviders] = useState<ApiVMProvider[]>([]);

@@ -11,6 +11,7 @@ import {
   TestTube2,
   Trash2,
   UserCog,
+  Users2,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -22,10 +23,16 @@ import { Card } from '@/components/ui/card';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiAuthProvider,
+  type ApiGroup,
+  type ApiSsoMapping,
   type AuthProviderType,
   createAuthProvider,
+  createSsoMapping,
   deleteAuthProvider,
+  deleteSsoMapping,
   getAuthProviders,
+  getGroups,
+  getSsoMappings,
   issueScimToken,
   testLdapProvider,
   updateAuthProvider,
@@ -65,8 +72,10 @@ const TYPE_LABEL: Record<AuthProviderType, string> = {
 
 export default function AuthenticationPage() {
   const [providers, setProviders] = useState<ApiAuthProvider[]>([]);
+  const [groups, setGroups] = useState<ApiGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [mappingsFor, setMappingsFor] = useState<string | null>(null);
 
   // New-provider form state
   const [newType, setNewType] = useState<Exclude<AuthProviderType, 'LOCAL'>>('OIDC');
@@ -82,7 +91,9 @@ export default function AuthenticationPage() {
     if (!isLive) return;
     setLoading(true);
     try {
-      setProviders(await getAuthProviders());
+      const [ps, gs] = await Promise.all([getAuthProviders(), getGroups()]);
+      setProviders(ps);
+      setGroups(gs);
     } catch {
       toast.error('Failed to load auth providers');
     } finally {
@@ -194,27 +205,42 @@ export default function AuthenticationPage() {
             <p className="p-5 text-sm text-muted-foreground">No external providers configured yet.</p>
           ) : (
             providers.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 px-5 py-3 text-sm">
-                <Network className="size-4 text-gold-300" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{p.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {String((p.config as Record<string, unknown>).issuer ?? (p.config as Record<string, unknown>).url ?? (p.config as Record<string, unknown>).entryPoint ?? '—')}
-                  </p>
-                </div>
-                <Badge variant={p.type === 'OIDC' ? 'gold' : 'outline'}>{TYPE_LABEL[p.type]}</Badge>
-                <Badge variant={p.enabled ? 'success' : 'outline'}>{p.enabled ? 'Enabled' : 'Disabled'}</Badge>
-                {p.type === 'LDAP' && (
-                  <Button variant="ghost" size="icon-sm" disabled={busyId === p.id} onClick={() => void onTestLdap(p.id)} title="Test LDAP bind">
-                    {busyId === p.id ? <Loader2 className="size-4 animate-spin" /> : <TestTube2 className="size-4" />}
+              <div key={p.id}>
+                <div className="flex items-center gap-3 px-5 py-3 text-sm">
+                  <Network className="size-4 text-gold-300" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{p.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {String((p.config as Record<string, unknown>).issuer ?? (p.config as Record<string, unknown>).url ?? (p.config as Record<string, unknown>).entryPoint ?? '—')}
+                    </p>
+                  </div>
+                  <Badge variant={p.type === 'OIDC' ? 'gold' : 'outline'}>{TYPE_LABEL[p.type]}</Badge>
+                  <Badge variant={p.enabled ? 'success' : 'outline'}>{p.enabled ? 'Enabled' : 'Disabled'}</Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    title="Group mappings"
+                    onClick={() => setMappingsFor(mappingsFor === p.id ? null : p.id)}
+                  >
+                    <Users2 className={`size-4 ${mappingsFor === p.id ? 'text-gold-300' : ''}`} />
                   </Button>
+                  {p.type === 'LDAP' && (
+                    <Button variant="ghost" size="icon-sm" disabled={busyId === p.id} onClick={() => void onTestLdap(p.id)} title="Test LDAP bind">
+                      {busyId === p.id ? <Loader2 className="size-4 animate-spin" /> : <TestTube2 className="size-4" />}
+                    </Button>
+                  )}
+                  <Button variant="secondary" size="sm" disabled={busyId === p.id} onClick={() => void onToggle(p)}>
+                    {p.enabled ? 'Disable' : 'Enable'}
+                  </Button>
+                  <Button variant="ghost" size="icon-sm" disabled={busyId === p.id} onClick={() => void onDelete(p.id)}>
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                </div>
+                {mappingsFor === p.id && (
+                  <div className="border-t border-border-subtle/60 bg-anthracite-950/30 px-5 py-4">
+                    <MappingPanel providerId={p.id} groups={groups} />
+                  </div>
                 )}
-                <Button variant="secondary" size="sm" disabled={busyId === p.id} onClick={() => void onToggle(p)}>
-                  {p.enabled ? 'Disable' : 'Enable'}
-                </Button>
-                <Button variant="ghost" size="icon-sm" disabled={busyId === p.id} onClick={() => void onDelete(p.id)}>
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
               </div>
             ))
           )}
@@ -306,6 +332,120 @@ export default function AuthenticationPage() {
           </Button>
         )}
       </Card>
+    </div>
+  );
+}
+
+/**
+ * Per-provider SSO group-mapping editor: maps an IdP assertion attribute/value
+ * (e.g. groups = "admins") onto a Chista group. Memberships in mapped groups
+ * are reconciled on every federated login.
+ */
+function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiGroup[] }) {
+  const [mappings, setMappings] = useState<ApiSsoMapping[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [groupId, setGroupId] = useState('');
+  const [attribute, setAttribute] = useState('groups');
+  const [value, setValue] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      setMappings(await getSsoMappings(providerId));
+    } catch {
+      toast.error('Failed to load mappings');
+    } finally {
+      setLoading(false);
+    }
+  }, [providerId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const groupName = (id: string) => groups.find((g) => g.id === id)?.name ?? id;
+
+  const onAdd = async () => {
+    if (!groupId || !attribute || !value) return;
+    setAdding(true);
+    try {
+      await createSsoMapping({ authConfigId: providerId, groupId, attribute, value });
+      setValue('');
+      toast.success('Mapping added');
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not add mapping');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const onRemove = async (id: string) => {
+    try {
+      await deleteSsoMapping(id);
+      await load();
+    } catch {
+      toast.error('Could not remove mapping');
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Users2 className="size-4 text-gold-300" /> Group mappings
+        {loading && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+      </div>
+
+      {mappings.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No mappings yet — users authenticate but join no groups automatically.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {mappings.map((m) => (
+            <div key={m.id} className="flex items-center gap-2 rounded-md border border-border-subtle/60 px-3 py-2 text-xs">
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5">{m.attribute}</code>
+              <span className="text-muted-foreground">=</span>
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5">{m.value}</code>
+              <span className="text-muted-foreground">→</span>
+              <Badge variant="gold">{groupName(m.groupId)}</Badge>
+              <div className="flex-1" />
+              <Button variant="ghost" size="icon-sm" onClick={() => void onRemove(m.id)}>
+                <Trash2 className="size-3.5 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="min-w-[8rem]">
+          <Label className="text-xs">Attribute</Label>
+          <Input value={attribute} onChange={(e) => setAttribute(e.target.value)} placeholder="groups" />
+        </div>
+        <div className="min-w-[8rem]">
+          <Label className="text-xs">Value</Label>
+          <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="admins" />
+        </div>
+        <div className="min-w-[10rem]">
+          <Label className="text-xs">Chista group</Label>
+          <select
+            value={groupId}
+            onChange={(e) => setGroupId(e.target.value)}
+            className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+          >
+            <option value="">Select group…</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Button size="sm" onClick={() => void onAdd()} disabled={!groupId || !value || adding}>
+          {adding ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+          Add
+        </Button>
+      </div>
     </div>
   );
 }

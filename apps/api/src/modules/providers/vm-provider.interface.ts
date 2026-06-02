@@ -625,6 +625,314 @@ export class VSphereDriver implements VMProviderDriver {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DigitalOcean Droplets driver
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DigitalOceanConfig {
+  /** Personal access token. */
+  apiToken: string;
+  region: string;       // e.g. nyc3
+  size: string;         // e.g. s-2vcpu-4gb
+  /** Image slug or ID, e.g. ubuntu-22-04-x64 */
+  image: string;
+  /** Optional SSH key fingerprints/IDs. */
+  sshKeys?: Array<string | number>;
+}
+
+export class DigitalOceanDriver implements VMProviderDriver {
+  readonly kind = 'DIGITALOCEAN';
+
+  constructor(private readonly config: Record<string, unknown>) {}
+
+  private cfg(): DigitalOceanConfig {
+    return this.config as unknown as DigitalOceanConfig;
+  }
+
+  validateConfig(): { ok: true } | { ok: false; reason: string } {
+    const required = ['apiToken', 'region', 'size', 'image'];
+    const missing = required.filter((k) => !this.config[k]);
+    if (missing.length) return { ok: false, reason: `DigitalOcean config missing: ${missing.join(', ')}` };
+    return { ok: true };
+  }
+
+  private async api<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+    const c = this.cfg();
+    const res = await fetch(`https://api.digitalocean.com/v2${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${c.apiToken}`, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error(`DigitalOcean ${method} ${path}: ${res.status} ${await res.text()}`);
+    if (res.status === 204) return {} as T;
+    return res.json() as Promise<T>;
+  }
+
+  async createInstance(spec: VMInstanceSpec): Promise<VMInstance> {
+    const c = this.cfg();
+    const body = {
+      name: spec.name,
+      region: c.region,
+      size: c.size,
+      image: spec.template || c.image,
+      ...(c.sshKeys ? { ssh_keys: c.sshKeys } : {}),
+    };
+    const res = await this.api<{ droplet: { id: number; name: string } }>('POST', '/droplets', body);
+    return { id: String(res.droplet.id), name: res.droplet.name, status: 'provisioning' };
+  }
+
+  async destroyInstance(id: string): Promise<void> {
+    await this.api('DELETE', `/droplets/${id}`).catch(() => undefined);
+  }
+
+  async getInstance(id: string): Promise<VMInstance | null> {
+    try {
+      const res = await this.api<{
+        droplet: { name: string; status: string; networks?: { v4?: Array<{ ip_address: string; type: string }> } };
+      }>('GET', `/droplets/${id}`);
+      const d = res.droplet;
+      const status: VMInstance['status'] =
+        d.status === 'active' ? 'running' : d.status === 'off' ? 'stopped' : 'provisioning';
+      const address = d.networks?.v4?.find((n) => n.type === 'public')?.ip_address;
+      return { id, name: d.name, status, address };
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Oracle Cloud Infrastructure (OCI) Compute driver
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface OciConfig {
+  /** API endpoint region host, e.g. iaas.us-ashburn-1.oraclecloud.com */
+  endpoint: string;
+  tenancyOcid: string;
+  userOcid: string;
+  /** Key fingerprint registered with the user. */
+  fingerprint: string;
+  /** PEM-encoded API signing key. */
+  privateKeyPem: string;
+  compartmentOcid: string;
+  availabilityDomain: string;
+  shape: string;          // e.g. VM.Standard.E4.Flex
+  subnetOcid: string;
+  imageOcid: string;
+}
+
+/**
+ * OCI Compute driver. OCI uses HTTP request signing (draft-cavage) with the
+ * user's API key — implemented inline with Node crypto, no OCI SDK.
+ */
+export class OracleOciDriver implements VMProviderDriver {
+  readonly kind = 'ORACLE';
+
+  constructor(private readonly config: Record<string, unknown>) {}
+
+  private cfg(): OciConfig {
+    return this.config as unknown as OciConfig;
+  }
+
+  validateConfig(): { ok: true } | { ok: false; reason: string } {
+    const required = [
+      'endpoint', 'tenancyOcid', 'userOcid', 'fingerprint', 'privateKeyPem',
+      'compartmentOcid', 'availabilityDomain', 'shape', 'subnetOcid', 'imageOcid',
+    ];
+    const missing = required.filter((k) => !this.config[k]);
+    if (missing.length) return { ok: false, reason: `OCI config missing: ${missing.join(', ')}` };
+    return { ok: true };
+  }
+
+  /** Sign + send an OCI request using the draft-cavage HTTP signature scheme. */
+  private async request<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+    const c = this.cfg();
+    const host = c.endpoint;
+    const url = `https://${host}${path}`;
+    const date = new Date().toUTCString();
+    const keyId = `${c.tenancyOcid}/${c.userOcid}/${c.fingerprint}`;
+
+    const headers: Record<string, string> = { date, host };
+    let signingString = `(request-target): ${method.toLowerCase()} ${path}\ndate: ${date}\nhost: ${host}`;
+    let signedHeaders = '(request-target) date host';
+
+    let payload: string | undefined;
+    if (body !== undefined) {
+      payload = JSON.stringify(body);
+      const sha = createHash('sha256').update(payload).digest('base64');
+      headers['content-type'] = 'application/json';
+      headers['content-length'] = String(Buffer.byteLength(payload));
+      headers['x-content-sha256'] = sha;
+      signingString += `\ncontent-length: ${headers['content-length']}\ncontent-type: application/json\nx-content-sha256: ${sha}`;
+      signedHeaders += ' content-length content-type x-content-sha256';
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createSign } = require('crypto') as typeof import('crypto');
+    const signature = createSign('RSA-SHA256').update(signingString).sign(c.privateKeyPem, 'base64');
+    headers['Authorization'] =
+      `Signature version="1",keyId="${keyId}",algorithm="rsa-sha256",headers="${signedHeaders}",signature="${signature}"`;
+
+    const res = await fetch(url, { method, headers, body: payload });
+    if (!res.ok) throw new Error(`OCI ${method} ${path}: ${res.status} ${await res.text()}`);
+    if (res.status === 204) return {} as T;
+    return res.json() as Promise<T>;
+  }
+
+  async createInstance(spec: VMInstanceSpec): Promise<VMInstance> {
+    const c = this.cfg();
+    const body = {
+      compartmentId: c.compartmentOcid,
+      availabilityDomain: c.availabilityDomain,
+      shape: c.shape,
+      displayName: spec.name,
+      sourceDetails: { sourceType: 'image', imageId: spec.template || c.imageOcid },
+      createVnicDetails: { subnetId: c.subnetOcid },
+      ...(spec.resources?.cores || spec.resources?.memoryMb
+        ? {
+            shapeConfig: {
+              ...(spec.resources?.cores ? { ocpus: spec.resources.cores } : {}),
+              ...(spec.resources?.memoryMb ? { memoryInGBs: Math.round(spec.resources.memoryMb / 1024) } : {}),
+            },
+          }
+        : {}),
+    };
+    const res = await this.request<{ id: string; displayName: string }>('POST', '/20160918/instances', body);
+    return { id: res.id, name: res.displayName ?? spec.name, status: 'provisioning' };
+  }
+
+  async destroyInstance(id: string): Promise<void> {
+    await this.request('DELETE', `/20160918/instances/${id}`).catch(() => undefined);
+  }
+
+  async getInstance(id: string): Promise<VMInstance | null> {
+    try {
+      const res = await this.request<{ displayName: string; lifecycleState: string }>(
+        'GET', `/20160918/instances/${id}`,
+      );
+      const s = res.lifecycleState;
+      const status: VMInstance['status'] =
+        s === 'RUNNING' ? 'running' : s === 'STOPPED' || s === 'TERMINATED' ? 'stopped' : 'provisioning';
+      return { id, name: res.displayName, status };
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OpenStack Nova driver
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface OpenStackConfig {
+  /** Keystone v3 auth URL, e.g. https://keystone.example.com:5000/v3 */
+  authUrl: string;
+  username: string;
+  password: string;
+  /** Project (tenant) name + domain. */
+  projectName: string;
+  userDomainName?: string;
+  projectDomainName?: string;
+  /** Compute (Nova) service endpoint, e.g. https://nova.example.com/v2.1 */
+  novaUrl: string;
+  flavorRef: string;    // flavor ID
+  imageRef: string;     // image ID
+  networkId?: string;
+}
+
+export class OpenStackDriver implements VMProviderDriver {
+  readonly kind = 'OPENSTACK';
+  private tokenCache: { token: string; expiresAt: number } | null = null;
+
+  constructor(private readonly config: Record<string, unknown>) {}
+
+  private cfg(): OpenStackConfig {
+    return this.config as unknown as OpenStackConfig;
+  }
+
+  validateConfig(): { ok: true } | { ok: false; reason: string } {
+    const required = ['authUrl', 'username', 'password', 'projectName', 'novaUrl', 'flavorRef', 'imageRef'];
+    const missing = required.filter((k) => !this.config[k]);
+    if (missing.length) return { ok: false, reason: `OpenStack config missing: ${missing.join(', ')}` };
+    return { ok: true };
+  }
+
+  /** Keystone v3 password auth → returns a scoped token (X-Subject-Token). */
+  private async getToken(): Promise<string> {
+    if (this.tokenCache && this.tokenCache.expiresAt > Date.now() + 60_000) return this.tokenCache.token;
+    const c = this.cfg();
+    const body = {
+      auth: {
+        identity: {
+          methods: ['password'],
+          password: {
+            user: {
+              name: c.username,
+              domain: { name: c.userDomainName ?? 'Default' },
+              password: c.password,
+            },
+          },
+        },
+        scope: {
+          project: { name: c.projectName, domain: { name: c.projectDomainName ?? 'Default' } },
+        },
+      },
+    };
+    const res = await fetch(`${c.authUrl.replace(/\/$/, '')}/auth/tokens`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`OpenStack auth failed: ${res.status} ${await res.text()}`);
+    const token = res.headers.get('x-subject-token');
+    if (!token) throw new Error('OpenStack auth: no X-Subject-Token header');
+    // Keystone tokens default to ~1h; cache conservatively for 30 minutes.
+    this.tokenCache = { token, expiresAt: Date.now() + 30 * 60_000 };
+    return token;
+  }
+
+  private async nova<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+    const token = await this.getToken();
+    const c = this.cfg();
+    const res = await fetch(`${c.novaUrl.replace(/\/$/, '')}${path}`, {
+      method,
+      headers: { 'X-Auth-Token': token, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error(`OpenStack Nova ${method} ${path}: ${res.status} ${await res.text()}`);
+    if (res.status === 204) return {} as T;
+    return res.json() as Promise<T>;
+  }
+
+  async createInstance(spec: VMInstanceSpec): Promise<VMInstance> {
+    const c = this.cfg();
+    const server: Record<string, unknown> = {
+      name: spec.name,
+      flavorRef: c.flavorRef,
+      imageRef: spec.template || c.imageRef,
+    };
+    if (c.networkId) server.networks = [{ uuid: c.networkId }];
+    const res = await this.nova<{ server: { id: string } }>('POST', '/servers', { server });
+    return { id: res.server.id, name: spec.name, status: 'provisioning' };
+  }
+
+  async destroyInstance(id: string): Promise<void> {
+    await this.nova('DELETE', `/servers/${id}`).catch(() => undefined);
+  }
+
+  async getInstance(id: string): Promise<VMInstance | null> {
+    try {
+      const res = await this.nova<{ server: { name: string; status: string } }>('GET', `/servers/${id}`);
+      const s = res.server.status;
+      const status: VMInstance['status'] =
+        s === 'ACTIVE' ? 'running' : s === 'SHUTOFF' ? 'stopped' : s === 'ERROR' ? 'error' : 'provisioning';
+      return { id, name: res.server.name, status };
+    } catch {
+      return null;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // XML helpers (minimal — avoids xml parser dep for the EC2 Query API)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -660,6 +968,12 @@ export function resolveVMDriver(
       return new GcpDriver(config);
     case 'VSPHERE':
       return new VSphereDriver(config);
+    case 'DIGITALOCEAN':
+      return new DigitalOceanDriver(config);
+    case 'ORACLE':
+      return new OracleOciDriver(config);
+    case 'OPENSTACK':
+      return new OpenStackDriver(config);
     default:
       return null;
   }

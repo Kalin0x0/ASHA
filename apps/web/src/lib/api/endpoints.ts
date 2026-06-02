@@ -190,6 +190,16 @@ export const getAgents = () => apiFetch<ApiAgent[]>('/agents');
 export const getZones = () => apiFetch<ApiZone[]>('/zones');
 export const getUsers = () => apiFetch<ApiUser[]>('/users');
 
+export interface ApiGroup {
+  id: string;
+  name: string;
+  description: string | null;
+  priority: number;
+  isDefault: boolean;
+  _count?: { members: number };
+}
+export const getGroups = () => apiFetch<ApiGroup[]>('/groups');
+
 // ── Storage ────────────────────────────────────────────────────────────────
 
 export interface ApiVolumeMapping {
@@ -303,6 +313,27 @@ export const testLdapProvider = (id: string, sampleUsername?: string) =>
     method: 'POST',
     body: { sampleUsername },
   });
+
+// SSO group mappings — map an IdP attribute/value onto a Chista group.
+export interface ApiSsoMapping {
+  id: string;
+  authConfigId: string;
+  groupId: string;
+  attribute: string;
+  value: string;
+  createdAt: string;
+}
+
+export const getSsoMappings = (providerId: string) =>
+  apiFetch<ApiSsoMapping[]>(`/auth/providers/${providerId}/mappings`);
+export const createSsoMapping = (body: {
+  authConfigId: string;
+  groupId: string;
+  attribute: string;
+  value: string;
+}) => apiFetch<ApiSsoMapping>('/auth/providers/mappings', { method: 'POST', body });
+export const deleteSsoMapping = (mappingId: string) =>
+  apiFetch<{ ok: true }>(`/auth/providers/mappings/${mappingId}`, { method: 'DELETE' });
 
 /** Build the SP-initiated login redirect URL for an SSO provider. */
 export function ssoLoginUrl(provider: ApiPublicAuthProvider, returnTo = '/dashboard'): string {

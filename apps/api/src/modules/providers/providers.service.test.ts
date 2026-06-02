@@ -43,9 +43,9 @@ describe('ProvidersService — VM', () => {
     );
   });
 
-  it('accepts a provider with no concrete driver yet (e.g. DIGITALOCEAN)', async () => {
+  it('accepts a provider with no concrete driver yet (e.g. NUTANIX)', async () => {
     prismaMock.vMProvider.create.mockResolvedValue({ id: 'vp2' });
-    await svc.createVM('org1', 'u1', { name: 'do', provider: 'DIGITALOCEAN', config: {}, enabled: true });
+    await svc.createVM('org1', 'u1', { name: 'nut', provider: 'NUTANIX', config: {}, enabled: true });
     expect(prismaMock.vMProvider.create).toHaveBeenCalled();
   });
 

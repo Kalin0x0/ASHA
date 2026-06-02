@@ -32,6 +32,23 @@ export class CatalogController {
   }
 
   @ApiBearerAuth()
+  @Get('groups')
+  groups(@CurrentUser() user: AuthUser) {
+    return prisma.group.findMany({
+      where: { orgId: user.orgId },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        priority: true,
+        isDefault: true,
+        _count: { select: { members: true } },
+      },
+      orderBy: [{ priority: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  @ApiBearerAuth()
   @Get('settings')
   settings(@CurrentUser() user: AuthUser) {
     return prisma.setting.findMany({
