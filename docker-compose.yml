@@ -18,7 +18,10 @@ volumes:
 
 services:
   traefik:
-    image: traefik:v3.3
+    # v3.7.x ships a Docker API client that negotiates with Docker Engine 25+/29+.
+    # Older v3.3 fails against newer engines with "client version 1.24 is too old",
+    # reads no container labels, and routes nothing (every request returns 404).
+    image: traefik:v3.7.1
     restart: unless-stopped
     command:
       - --providers.docker=true
@@ -96,6 +99,11 @@ services:
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me-please-32++chars}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me-please-32++chars}
       SESSION_TOKEN_SECRET: ${SESSION_TOKEN_SECRET:-dev-session-token-secret-change-me-32++chars}
+      # Shared secret the manager validates the agent's enrollment against. Must be
+      # the SAME value the agent receives (see the agent service below); otherwise
+      # the agent gets 401 "Invalid agent token" and never registers, so sessions
+      # hang at "Allocating an agent".
+      CHISTA_AGENT_ENROLLMENT_TOKEN: ${CHISTA_AGENT_ENROLLMENT_TOKEN:-dev-enrollment-token-change-me}
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_started }
