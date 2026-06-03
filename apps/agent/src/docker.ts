@@ -99,6 +99,19 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     [`traefik.http.services.${router}.loadbalancer.serverstransport`]: 'chista-insecure@file',
   };
 
+  // KasmVNC's web server requires HTTP Basic Auth (kasm_user:VNC_PW), but the
+  // browser loads the session iframe with only `?token=`. Inject the credentials
+  // at the edge via a per-session Traefik header middleware so the desktop streams
+  // without a 401. `kasm_user` is the default basic-auth user in the kasmweb images.
+  if (cmd.protocol === 'KASMVNC') {
+    const basic = Buffer.from(`kasm_user:${vncPw}`).toString('base64');
+    labels[`traefik.http.middlewares.${router}-auth.headers.customrequestheaders.Authorization`] = `Basic ${basic}`;
+    const existing = labels[`traefik.http.routers.${router}.middlewares`];
+    labels[`traefik.http.routers.${router}.middlewares`] = existing
+      ? `${existing},${router}-auth`
+      : `${router}-auth`;
+  }
+
   const container = await docker.createContainer({
     name: `chista-sess-${cmd.kasmId}`,
     Image: cmd.runConfig.dockerImage,
