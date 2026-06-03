@@ -2,6 +2,7 @@ import { LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import { AuthGate } from '@/components/auth-gate';
 import { Logo } from '@/components/brand/logo';
+import { FavoriteQuickLaunch } from '@/components/composite/favorite-quick-launch';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             My Workspaces
           </Link>
         </nav>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-3">
+          <FavoriteQuickLaunch />
           <Button asChild variant="ghost" size="sm">
             <Link href="/dashboard">
               <LayoutDashboard className="size-4" /> Admin

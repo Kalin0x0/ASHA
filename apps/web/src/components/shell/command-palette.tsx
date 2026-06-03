@@ -2,10 +2,13 @@
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Command } from 'cmdk';
-import { CornerDownLeft, MonitorPlay, Moon, Play, Search, Sun } from 'lucide-react';
+import { CornerDownLeft, MonitorPlay, Moon, Play, Search, Star, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
+import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
+import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
 import { navGroups } from '@/lib/nav';
 import { useUIStore } from '@/lib/ui-store';
 
@@ -13,6 +16,23 @@ export function CommandPalette() {
   const router = useRouter();
   const { commandOpen, setCommandOpen } = useUIStore();
   const { setTheme, resolvedTheme } = useTheme();
+  const workspaces = useWorkspaces();
+  const favorites = useFavorites();
+  const launch = useLaunchSession();
+
+  const favWorkspaces = useMemo(
+    () => orderByFavorites(workspaces.filter((w) => w.enabled), favorites.ids),
+    [workspaces, favorites.ids],
+  );
+
+  const launchWorkspace = async (id: string) => {
+    const session = await launch(id);
+    if (!session) {
+      toast.error('Could not start the session');
+      return;
+    }
+    router.push(`/session/${session.id}`);
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -52,6 +72,20 @@ export function CommandPalette() {
               <Command.Empty className="py-8 text-center text-sm text-muted-foreground">
                 No results found.
               </Command.Empty>
+
+              {favWorkspaces.length > 0 && (
+                <Command.Group heading="Favorites">
+                  {favWorkspaces.map((ws) => (
+                    <Item
+                      key={ws.id}
+                      onSelect={() => run(() => void launchWorkspace(ws.id))}
+                      icon={<Star className="size-4 fill-gold-400 text-gold-300" />}
+                    >
+                      Launch {ws.friendlyName}
+                    </Item>
+                  ))}
+                </Command.Group>
+              )}
 
               <Command.Group heading="Quick actions">
                 <Item onSelect={() => run(() => router.push('/'))} icon={<Play className="size-4" />}>

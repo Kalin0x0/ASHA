@@ -65,7 +65,7 @@
   --radius-2xl: 28px;
 
   /* Fonts (CSS vars injected by next/font in layout) */
-  --font-display: var(--font-fraunces), Georgia, 'Times New Roman', serif;
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', monospace;
 
@@ -207,6 +207,7 @@
 
   html {
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
 
@@ -214,21 +215,35 @@
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
-    font-feature-settings: 'cv11', 'ss01';
+    /* cv11 = single-storey a · ss01 = stylistic alternates · refined kerning */
+    font-feature-settings: 'cv11', 'ss01', 'calt', 'kern';
+    letter-spacing: -0.006em;
+    line-height: 1.55;
   }
 
+  /* Display sans — Space Grotesk: modern, geometric, distinctive. */
   h1,
   h2,
   h3,
+  h4,
   .font-display {
     font-family: var(--font-display);
     font-optical-sizing: auto;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.022em;
+    line-height: 1.14;
+    font-feature-settings: 'ss01', 'calt';
+  }
+
+  h1,
+  .font-display-xl {
+    letter-spacing: -0.032em;
+    line-height: 1.08;
   }
 
   /* tabular figures for all numeric data */
   .tnum {
     font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum', 'cv11';
   }
 
   ::selection {
@@ -370,6 +385,46 @@
   .animate-rise {
     animation: rise 0.4s var(--ease-out-soft) both;
   }
+  .animate-fade-up {
+    animation: fade-up 0.5s var(--ease-out-soft) both;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.4s var(--ease-out-soft) both;
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .delay-100 { animation-delay: 100ms; }
+  .delay-150 { animation-delay: 150ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+  .delay-500 { animation-delay: 500ms; }
+  .delay-600 { animation-delay: 600ms; }
+
+  /* Gradient border — wrap element with position:relative */
+  .grad-border-gold {
+    position: relative;
+    border: none !important;
+  }
+  .grad-border-gold::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      rgba(212, 175, 55, 0.6) 0%,
+      rgba(212, 175, 55, 0.1) 40%,
+      rgba(212, 175, 55, 0.0) 60%,
+      rgba(212, 175, 55, 0.4) 100%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
 }
 
 @keyframes aurora-drift {
@@ -413,11 +468,35 @@
   }
 }
 
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bg-aurora,
   .animate-shimmer,
   .animate-pulse-ring,
-  .animate-rise {
+  .animate-rise,
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-float {
     animation: none !important;
   }
 }

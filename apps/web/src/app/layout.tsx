@@ -4,7 +4,7 @@ import { GeistSans } from 'geist/font/sans';
 import type { Metadata, Viewport } from 'next';
 import { GrainOverlay } from '@/components/decor/aurora-background';
 import { Providers } from '@/components/providers';
-import { fraunces } from '@/lib/fonts';
+import { fraunces, manrope, sora, spaceGrotesk } from '@/lib/fonts';
 
 export const metadata: Metadata = {
   title: {
@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${GeistSans.variable} ${GeistMono.variable} ${fraunces.variable}`}
+      className={`${GeistSans.variable} ${GeistMono.variable} ${fraunces.variable} ${spaceGrotesk.variable} ${sora.variable} ${manrope.variable}`}
     >
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <Providers>{children}</Providers>
