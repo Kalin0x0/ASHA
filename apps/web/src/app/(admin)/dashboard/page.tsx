@@ -79,6 +79,7 @@ export default function DashboardPage() {
             value={dash.kpis.onlineAgents.value}
             suffix={`/ ${dash.kpis.onlineAgents.total}`}
             icon={Server}
+            tone="info"
             series={dash.kpis.onlineAgents.series}
           />
         </div>
@@ -88,6 +89,7 @@ export default function DashboardPage() {
             value={dash.kpis.cpuUtilization.value}
             suffix="%"
             icon={Cpu}
+            tone="success"
             deltaPct={dash.kpis.cpuUtilization.deltaPct}
             series={dash.kpis.cpuUtilization.series}
             goodWhenUp={false}
@@ -100,6 +102,7 @@ export default function DashboardPage() {
             value={dash.kpis.memUtilization.value}
             suffix="%"
             icon={MemoryStick}
+            tone="warning"
             deltaPct={dash.kpis.memUtilization.deltaPct}
             series={dash.kpis.memUtilization.series}
             goodWhenUp={false}
