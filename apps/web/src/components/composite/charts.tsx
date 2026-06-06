@@ -6,13 +6,13 @@ import type { KpiSeriesPoint } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 /* ── Tone ramps (bright → deep) for gradient strokes & arcs ───────────────── */
-const TONE: Record<string, [string, string]> = {
+const TONE = {
   gold: ['#ecd584', '#d4af37'],
   success: ['#7fcaa6', '#4aa37c'],
   warning: ['#edbd6e', '#c9933b'],
   destructive: ['#e08980', '#bd564d'],
   info: ['#8aa8d6', '#587bb0'],
-};
+} as const;
 
 export function AreaTrend({ data, height = 260 }: { data: KpiSeriesPoint[]; height?: number }) {
   const id = useId().replace(/:/g, '');
@@ -170,7 +170,7 @@ export function BarRank({
   return (
     <div className={cn('flex flex-col gap-3.5', className)}>
       {items.map((item, i) => {
-        const [bright, deep] = ramp[i % ramp.length];
+        const [bright, deep] = ramp[i % ramp.length] ?? TONE.gold;
         return (
           <div key={item.name} className="group flex items-center gap-3">
             <span className="w-4 shrink-0 text-right text-[11px] font-semibold tnum text-muted-foreground/50">
