@@ -104,6 +104,8 @@ services:
       # the agent gets 401 "Invalid agent token" and never registers, so sessions
       # hang at "Allocating an agent".
       CHISTA_AGENT_ENROLLMENT_TOKEN: ${CHISTA_AGENT_ENROLLMENT_TOKEN:-dev-enrollment-token-change-me}
+      # Auto-terminate sessions PAUSED longer than this many minutes (0 = never).
+      CHISTA_MAX_PAUSED_MINUTES: ${CHISTA_MAX_PAUSED_MINUTES:-0}
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_started }

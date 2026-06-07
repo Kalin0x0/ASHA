@@ -26,6 +26,32 @@ export class SessionReaperService {
     }
   }
 
+  /**
+   * Terminate sessions that have been PAUSED longer than the configured cap
+   * (`CHISTA_MAX_PAUSED_MINUTES`). A paused container retains disk + RAM state
+   * but still holds host resources, so deployments can bound how long that
+   * persists. Disabled (no reaping) when the env var is unset or <= 0.
+   * Time-since-paused is read from `updatedAt`, which is stamped when the
+   * session transitions to PAUSED.
+   */
+  @Interval('session-paused-reaper', 60_000)
+  async reapPaused(): Promise<number> {
+    const max = Number(process.env.CHISTA_MAX_PAUSED_MINUTES);
+    if (!Number.isFinite(max) || max <= 0) return 0;
+    const cutoff = new Date(Date.now() - max * 60_000);
+    const due = await prisma.session.findMany({
+      where: { status: 'PAUSED', updatedAt: { lt: cutoff } },
+      select: { id: true, orgId: true, zoneId: true, containerId: true },
+    });
+    for (const s of due) {
+      await this.sessions.destroy(s, 'paused_timeout');
+    }
+    if (due.length > 0) {
+      this.logger.log(`Reaped ${due.length} session(s) paused beyond ${max}m`);
+    }
+    return due.length;
+  }
+
   /** Terminate sessions whose hard lifetime cap has passed. */
   private async reapExpired(): Promise<number> {
     const due = await prisma.session.findMany({
