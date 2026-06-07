@@ -104,6 +104,12 @@ export class ConnectivityController {
     return this.render.renderWireGuardConfig(user.orgId, id);
   }
 
+  @RequirePermissions('CONNECTIVITY_MANAGE')
+  @Get('egress/:id/openvpn-config')
+  renderOpenVpn(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.render.renderOpenVpnConfig(user.orgId, id);
+  }
+
   // ── Web filters ──────────────────────────────────────────────────────────
 
   @RequirePermissions('CONNECTIVITY_MANAGE')
