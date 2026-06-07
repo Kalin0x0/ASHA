@@ -7,7 +7,8 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     workspace: { findUnique: vi.fn() },
     deploymentZone: { findUnique: vi.fn(), findFirst: vi.fn() },
-    session: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
+    session: { create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
+    volumeMapping: { findMany: vi.fn() },
   },
 }));
 
@@ -42,7 +43,7 @@ const NEKO_WORKSPACE = {
   dockerConfig: { devices: ['/dev/video0', '/dev/snd'] },
 };
 
-const USER = { sub: 'user1', orgId: 'org1', isSystemAdmin: true } as never;
+const USER = { sub: 'user1', orgId: 'org1', email: 'user1@x.io', isSystemAdmin: true } as never;
 
 describe('SessionsService.create', () => {
   let svc: SessionsService;
@@ -62,6 +63,7 @@ describe('SessionsService.create', () => {
     prismaMock.session.create.mockResolvedValue({ id: 'sess1', kasmId: 'kid', orgId: 'org1', zoneId: 'zone1' });
     prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', kasmId: 'kid', orgId: 'org1', zoneId: 'zone1' });
     prismaMock.session.update.mockResolvedValue({});
+    prismaMock.volumeMapping.findMany.mockResolvedValue([]); // E1: no admin volume mappings
   });
 
   it('creates → schedules → dispatches provision on the zone channel when an agent is free', async () => {
@@ -141,11 +143,12 @@ describe('SessionsService.terminate', () => {
   it('marks TERMINATING and publishes a destroy command on the zone channel', async () => {
     prismaMock.session.findFirst.mockResolvedValue({ id: 'sess1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1' });
     prismaMock.deploymentZone.findUnique.mockResolvedValue({ id: 'zone1', name: 'default' });
-    prismaMock.session.update.mockResolvedValue({});
+    prismaMock.session.updateMany.mockResolvedValue({ count: 1 });
 
     const res = await svc.terminate('sess1', USER);
 
-    expect(prismaMock.session.update).toHaveBeenCalledWith(
+    // destroy() is idempotent: the TERMINATING transition is a guarded updateMany.
+    expect(prismaMock.session.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: 'TERMINATING', terminationReason: 'admin_terminate' } }),
     );
     expect(redis.publish).toHaveBeenCalledWith(
@@ -183,7 +186,7 @@ describe('SessionsService pause / resume / resize', () => {
       expect.objectContaining({ sessionId: 's1', action: 'PAUSE', containerId: 'c1' }),
     );
     expect(prismaMock.session.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: 'PAUSED' } }),
+      expect.objectContaining({ data: expect.objectContaining({ status: 'PAUSED' }) }),
     );
     expect(res).toEqual({ ok: true });
   });
