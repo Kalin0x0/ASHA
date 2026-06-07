@@ -51,8 +51,12 @@ export class GroupsController {
 
   @RequirePermissions('GROUP_MANAGE')
   @Patch(':id')
-  update(@Param('id') id: string, @Body(new ZodPipe(groupUpdateSchema)) dto: GroupUpdateDto) {
-    return this.groups.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodPipe(groupUpdateSchema)) dto: GroupUpdateDto,
+  ) {
+    return this.groups.update(user, id, dto);
   }
 
   @Audit('group.delete', { targetType: 'Group' })

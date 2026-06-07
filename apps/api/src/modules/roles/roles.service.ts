@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { prisma } from '@chista/db';
 import { PERMISSION_CATALOG, PERMISSION_KEYS } from '@chista/rbac';
 import type { AuthUser } from '../../common/decorators';
+import { RbacService } from '../../common/rbac.service';
 
 export interface RoleInput {
   name: string;
@@ -30,6 +31,8 @@ const ROLE_INCLUDE = {
  */
 @Injectable()
 export class RolesService {
+  constructor(private readonly rbac: RbacService) {}
+
   catalog() {
     return PERMISSION_CATALOG;
   }
@@ -55,6 +58,7 @@ export class RolesService {
   async create(user: AuthUser, dto: RoleInput) {
     const exists = await prisma.role.findFirst({ where: { orgId: user.orgId, name: dto.name } });
     if (exists) throw new BadRequestException('A role with this name already exists');
+    await this.assertCanGrant(user, dto.permissions);
     const permissionIds = await this.permissionIds(dto.permissions ?? []);
     const role = await prisma.role.create({
       data: {
@@ -70,6 +74,7 @@ export class RolesService {
 
   async update(user: AuthUser, id: string, dto: Partial<RoleInput>) {
     const role = await this.requireEditable(user, id);
+    await this.assertCanGrant(user, dto.permissions);
     await prisma.$transaction(async (tx) => {
       await tx.role.update({
         where: { id: role.id },
@@ -103,6 +108,20 @@ export class RolesService {
     if (!role || role.orgId !== user.orgId) throw new NotFoundException('Role not found');
     if (role.isSystem) throw new BadRequestException('Built-in roles cannot be modified');
     return role;
+  }
+
+  /**
+   * Prevent privilege escalation: a non-system-admin may only grant permissions
+   * they themselves hold (a '*' super-permission grants all).
+   */
+  private async assertCanGrant(user: AuthUser, permissions?: string[]) {
+    if (user.isSystemAdmin || !permissions?.length) return;
+    const granted = new Set(await this.rbac.effectivePermissions(user.sub));
+    if (granted.has('*')) return;
+    const over = permissions.filter((k) => !granted.has(k));
+    if (over.length) {
+      throw new ForbiddenException(`Cannot grant permissions you do not hold: ${over.join(', ')}`);
+    }
   }
 
   private async permissionIds(keys: string[]): Promise<string[]> {

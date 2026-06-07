@@ -58,6 +58,8 @@ export class GroupsService {
   async create(user: AuthUser, dto: GroupInput) {
     const exists = await prisma.group.findFirst({ where: { name: dto.name } });
     if (exists) throw new BadRequestException('A group with this name already exists');
+    await this.assertRolesInScope(user.orgId, dto.roleIds ?? []);
+    const roleIds = [...new Set(dto.roleIds ?? [])];
     const group = await prisma.group.create({
       data: {
         orgId: user.orgId,
@@ -68,15 +70,16 @@ export class GroupsService {
         idleDisconnectSec: dto.idleDisconnectSec ?? null,
         usageLimitSec: dto.usageLimitSec ?? null,
         maxConcurrentSessions: dto.maxConcurrentSessions ?? null,
-        ...(dto.roleIds?.length ? { roles: { create: dto.roleIds.map((roleId) => ({ roleId })) } } : {}),
+        ...(roleIds.length ? { roles: { create: roleIds.map((roleId) => ({ roleId })) } } : {}),
       },
     });
     return this.get(group.id);
   }
 
-  async update(id: string, dto: Partial<GroupInput>) {
+  async update(user: AuthUser, id: string, dto: Partial<GroupInput>) {
     const g = await prisma.group.findFirst({ where: { id } });
     if (!g) throw new NotFoundException('Group not found');
+    if (dto.roleIds !== undefined) await this.assertRolesInScope(user.orgId, dto.roleIds);
     await prisma.$transaction(async (tx) => {
       await tx.group.update({
         where: { id },
@@ -92,8 +95,9 @@ export class GroupsService {
       });
       if (dto.roleIds !== undefined) {
         await tx.groupRole.deleteMany({ where: { groupId: id } });
-        if (dto.roleIds.length) {
-          await tx.groupRole.createMany({ data: dto.roleIds.map((roleId) => ({ groupId: id, roleId })) });
+        const roleIds = [...new Set(dto.roleIds)];
+        if (roleIds.length) {
+          await tx.groupRole.createMany({ data: roleIds.map((roleId) => ({ groupId: id, roleId })) });
         }
       }
     });
@@ -126,6 +130,21 @@ export class GroupsService {
     if (!g) throw new NotFoundException('Group not found');
     await prisma.userGroup.deleteMany({ where: { groupId: id, userId } });
     return { ok: true };
+  }
+
+  /**
+   * Reject role ids that are neither the caller's org roles nor built-in system
+   * roles (orgId=null). GroupRole/Role are NOT tenant-auto-scoped, so without
+   * this an org admin could couple a group to another tenant's role.
+   */
+  private async assertRolesInScope(orgId: string, roleIds: string[]) {
+    const ids = [...new Set(roleIds)];
+    if (!ids.length) return;
+    const ok = await prisma.role.findMany({
+      where: { id: { in: ids }, OR: [{ orgId }, { orgId: null }] },
+      select: { id: true },
+    });
+    if (ok.length !== ids.length) throw new BadRequestException('Unknown or unauthorized role');
   }
 
   private shape(g: GroupRow) {

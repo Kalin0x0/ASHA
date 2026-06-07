@@ -152,34 +152,42 @@ export class RegistryService {
     if (!entry) throw new NotFoundException('Registry entry not found');
 
     const m = this.meta(entry);
-    const image = await prisma.image.create({
-      data: {
-        orgId,
-        name: entry.name,
-        friendlyName: dto.friendlyName ?? entry.friendlyName,
-        dockerImage: dto.imageOverride ?? entry.dockerImage,
-        channel: 'CUSTOM',
-        // Carry the registry's declared compatibility + default run config onto the image.
-        protocol: m.protocol,
-        architecture: m.architecture,
-        runConfigDefaults: m.runConfigDefaults,
-        sourceRegistryEntryId: entry.id,
-      },
-    });
+    const imageData = {
+      orgId,
+      name: entry.name,
+      friendlyName: dto.friendlyName ?? entry.friendlyName,
+      dockerImage: dto.imageOverride ?? entry.dockerImage,
+      channel: 'CUSTOM' as const,
+      // Carry the registry's declared compatibility + default run config onto the image.
+      protocol: m.protocol,
+      architecture: m.architecture,
+      runConfigDefaults: m.runConfigDefaults,
+      sourceRegistryEntryId: entry.id,
+    };
+    // Idempotent: reuse the image previously materialised from this entry instead of
+    // accumulating orphans / colliding on a re-install.
+    const existingImage = await prisma.image.findFirst({ where: { orgId, sourceRegistryEntryId: entry.id } });
+    const image = existingImage
+      ? await prisma.image.update({ where: { id: existingImage.id }, data: imageData })
+      : await prisma.image.create({ data: imageData });
 
     let workspaceId: string | undefined;
     if (dto.createWorkspace) {
-      const workspace = await prisma.workspace.create({
-        data: {
-          orgId,
-          name: entry.name,
-          friendlyName: dto.friendlyName ?? entry.friendlyName,
-          description: entry.description,
-          imageId: image.id,
-          categories: dto.categories ?? entry.categories,
-          iconUrl: entry.iconUrl,
-        },
-      });
+      // Reuse a same-named workspace instead of hitting @@unique([orgId,name]) → 500.
+      const existingWs = await prisma.workspace.findFirst({ where: { name: entry.name } });
+      const workspace =
+        existingWs ??
+        (await prisma.workspace.create({
+          data: {
+            orgId,
+            name: entry.name,
+            friendlyName: dto.friendlyName ?? entry.friendlyName,
+            description: entry.description,
+            imageId: image.id,
+            categories: dto.categories ?? entry.categories,
+            iconUrl: entry.iconUrl,
+          },
+        }));
       workspaceId = workspace.id;
     }
 

@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { createHash, createPublicKey, verify as edVerify } from 'node:crypto';
+import { z } from 'zod';
 import type { UpsertLicenseDto } from '@chista/contracts';
 import { prisma } from '@chista/db';
 import { AuditService } from '../../common/audit.service';
@@ -20,6 +21,19 @@ interface LicenseClaims {
   features?: Record<string, unknown>;
 }
 
+// Runtime shape check for the (signed) claims — a vendor payload-format mistake
+// must fail cleanly, not silently default seats or 500 on a bad Int write.
+const licenseClaimsSchema = z.object({
+  type: z.enum(['CONCURRENT', 'NAMED_USER']),
+  seats: z.number().int().positive(),
+  concurrentSessions: z.number().int().positive(),
+  issuedTo: z.string().optional(),
+  notBefore: z.string().optional(),
+  notAfter: z.string().optional(),
+  installationId: z.string().optional(),
+  features: z.record(z.unknown()).optional(),
+});
+
 /** Verify an Ed25519-signed license key `<base64url(payload)>.<base64url(sig)>`. */
 function verifyLicenseKey(licenseKey: string): LicenseClaims {
   const parts = licenseKey.trim().split('.');
@@ -39,11 +53,15 @@ function verifyLicenseKey(licenseKey: string): LicenseClaims {
   if (!edVerify(null, Buffer.from(payloadB64), pubKey, Buffer.from(sigB64, 'base64url'))) {
     throw new BadRequestException('Invalid license signature');
   }
+  let parsed: unknown;
   try {
-    return JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8')) as LicenseClaims;
+    parsed = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
   } catch {
     throw new BadRequestException('Invalid license payload');
   }
+  const result = licenseClaimsSchema.safeParse(parsed);
+  if (!result.success) throw new BadRequestException('Invalid license claims');
+  return result.data;
 }
 
 /**
