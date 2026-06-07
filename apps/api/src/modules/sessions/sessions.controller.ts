@@ -72,6 +72,21 @@ export class SessionsController {
     return this.sessions.setStreamProfile(id, dto, user);
   }
 
+  @Post(':id/recording')
+  startRecording(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.sessions.startRecording(id, user);
+  }
+
+  @Post(':id/recording/stop')
+  stopRecording(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.sessions.stopRecording(id, user);
+  }
+
+  @Get(':id/recording')
+  recording(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.sessions.getRecording(id, user);
+  }
+
   @Post(':id/keepalive')
   keepalive(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.sessions.keepalive(id, user);

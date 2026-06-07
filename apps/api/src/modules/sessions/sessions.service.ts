@@ -385,6 +385,70 @@ export class SessionsService {
     return { ok: true, streamProfile: merged };
   }
 
+  /** Begin (or restart) recording a running session. Lifecycle tracked in Recording. */
+  async startRecording(id: string, user: AuthUser) {
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
+    const existing = await prisma.recording.findUnique({ where: { sessionId: id } });
+    if (existing?.status === 'RECORDING') throw new BadRequestException('Recording already in progress');
+    const proto: Record<string, 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' | 'WEBRTC'> = {
+      KASMVNC: 'KASMVNC',
+      NEKO_WEBRTC: 'WEBRTC',
+      GUAC_RDP: 'RDP',
+      GUAC_VNC: 'VNC',
+      GUAC_SSH: 'SSH',
+    };
+    const protocol = proto[session.connectionType] ?? 'KASMVNC';
+    const recording = existing
+      ? await prisma.recording.update({
+          where: { sessionId: id },
+          data: { status: 'RECORDING', protocol, startedAt: new Date(), finalizedAt: null, durationSec: 0 },
+        })
+      : await prisma.recording.create({
+          data: { orgId: session.orgId, sessionId: id, protocol, status: 'RECORDING' },
+        });
+    await prisma.session.update({ where: { id }, data: { recordingEnabled: true } });
+    await this.sendControl(session, { action: 'RECORD_START', recordingId: recording.id });
+    await this.audit.record({
+      orgId: session.orgId,
+      actorUserId: user.sub,
+      action: 'session.record.start',
+      targetType: 'Session',
+      targetId: id,
+      metadata: { recordingId: recording.id },
+    });
+    return recording;
+  }
+
+  /** Stop recording; finalize duration + status. */
+  async stopRecording(id: string, user: AuthUser) {
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
+    const rec = await prisma.recording.findUnique({ where: { sessionId: id } });
+    if (!rec || rec.status !== 'RECORDING') throw new BadRequestException('No active recording');
+    const durationSec = Math.max(0, Math.round((Date.now() - rec.startedAt.getTime()) / 1000));
+    const updated = await prisma.recording.update({
+      where: { sessionId: id },
+      data: { status: 'AVAILABLE', finalizedAt: new Date(), durationSec },
+    });
+    await prisma.session.update({ where: { id }, data: { recordingEnabled: false } });
+    await this.sendControl(session, { action: 'RECORD_STOP', recordingId: rec.id });
+    await this.audit.record({
+      orgId: session.orgId,
+      actorUserId: user.sub,
+      action: 'session.record.stop',
+      targetType: 'Session',
+      targetId: id,
+      metadata: { recordingId: rec.id, durationSec },
+    });
+    return updated;
+  }
+
+  /** Recording metadata + artifacts for a session. */
+  async getRecording(id: string, user: AuthUser) {
+    const session = await this.findInOrg(id, user.orgId);
+    this.assertCanAccess(session, user);
+    return prisma.recording.findUnique({ where: { sessionId: id }, include: { artifacts: true } });
+  }
+
   private async requireControllable(id: string, allowed: string[], user: AuthUser) {
     const session = await this.findInOrg(id, user.orgId);
     this.assertCanAccess(session, user);

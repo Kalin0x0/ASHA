@@ -11,6 +11,7 @@ import { agentEnv } from './env.js';
 // When the agent runs inside Docker, this must be bind-mounted from the host
 // so the path is also reachable by Docker sibling containers.
 const SIDECAR_DIR = process.env.CHISTA_SIDECAR_DIR ?? '/var/lib/chista/sidecars';
+const RECORDING_DIR = process.env.CHISTA_RECORDING_DIR ?? '/var/lib/chista/recordings';
 
 const socketPath =
   process.platform === 'win32' && !process.env.DOCKER_SOCKET
@@ -320,6 +321,49 @@ export async function applyStreamProfile(idOrName: string, profile: StreamProfil
     await exec.start({ Detach: true });
   } catch {
     // Quality/fps are also negotiated client-side; ignore images without the helper.
+  }
+}
+
+/**
+ * Start a best-effort recorder sidecar that shares the session container's network
+ * namespace and writes to the recordings dir. Pluggable via CHISTA_RECORDER_IMAGE;
+ * when unset this is a no-op (the manager still tracks the Recording row, so a
+ * recorder image can be wired in later without app changes).
+ */
+export async function startRecorder(
+  sessionContainerId: string,
+  sessionId: string,
+  recordingId: string,
+): Promise<void> {
+  const image = process.env.CHISTA_RECORDER_IMAGE;
+  if (!image) return;
+  try {
+    const out = join(RECORDING_DIR, recordingId);
+    mkdirSync(out, { recursive: true });
+    const c = await docker.createContainer({
+      Image: image,
+      name: `chista-rec-${sessionId}`,
+      Env: [`RECORDING_ID=${recordingId}`, 'OUTPUT_DIR=/recordings'],
+      HostConfig: {
+        NetworkMode: `container:${sessionContainerId}`,
+        Binds: [`${out}:/recordings`],
+        RestartPolicy: { Name: 'no' },
+      },
+    });
+    await c.start();
+  } catch {
+    // Best-effort: a missing/own-failing recorder image must not break the session.
+  }
+}
+
+/** Stop + remove the recorder sidecar for a session, if present. */
+export async function stopRecorder(sessionId: string): Promise<void> {
+  try {
+    const c = docker.getContainer(`chista-rec-${sessionId}`);
+    await c.stop({ t: 5 }).catch(() => undefined);
+    await c.remove({ force: true }).catch(() => undefined);
+  } catch {
+    // No recorder running (e.g. no recorder image configured).
   }
 }
 

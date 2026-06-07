@@ -27,6 +27,8 @@ const {
   unpauseContainer,
   resizeContainer,
   applyStreamProfile,
+  startRecorder,
+  stopRecorder,
 } = driver;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -163,6 +165,12 @@ async function handleControl(
     } else if (cmd.action === 'STREAM') {
       await applyStreamProfile(containerId, cmd.streamProfile ?? {});
       log.info({ sessionId: cmd.sessionId, profile: cmd.streamProfile }, 'stream profile applied');
+    } else if (cmd.action === 'RECORD_START') {
+      await startRecorder(containerId, cmd.sessionId, cmd.recordingId ?? '');
+      log.info({ sessionId: cmd.sessionId, recordingId: cmd.recordingId }, 'recording started');
+    } else if (cmd.action === 'RECORD_STOP') {
+      await stopRecorder(cmd.sessionId);
+      log.info({ sessionId: cmd.sessionId, recordingId: cmd.recordingId }, 'recording stopped');
     }
 
   } catch (e) {

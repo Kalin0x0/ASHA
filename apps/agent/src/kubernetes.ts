@@ -327,6 +327,16 @@ export async function applyStreamProfile(_podName: string, _profile: StreamProfi
   // No-op.
 }
 
+/** Recording is handled by a manager-side pipeline for K8s sessions; no-op here. */
+export async function startRecorder(_containerId: string, _sessionId: string, _recordingId: string): Promise<void> {
+  // No-op.
+}
+
+/** Counterpart of startRecorder. */
+export async function stopRecorder(_sessionId: string): Promise<void> {
+  // No-op.
+}
+
 /** Host devices to pass through, including the VAAPI render node when selected. */
 function gpuDevices(cmd: ProvisionCommand): string[] {
   const devices = [...(cmd.runConfig.devices ?? [])];

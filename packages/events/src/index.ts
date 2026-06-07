@@ -172,12 +172,14 @@ export interface StreamProfile {
 export interface SessionControlCommand {
   sessionId: string;
   containerId?: string;
-  action: 'PAUSE' | 'RESUME' | 'RESIZE' | 'STREAM';
+  action: 'PAUSE' | 'RESUME' | 'RESIZE' | 'STREAM' | 'RECORD_START' | 'RECORD_STOP';
   /** For RESIZE. */
   width?: number;
   height?: number;
   /** For STREAM. */
   streamProfile?: StreamProfile;
+  /** For RECORD_START / RECORD_STOP. */
+  recordingId?: string;
 }
 
 export type SessionLifecycleStatus =
