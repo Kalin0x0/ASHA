@@ -25,6 +25,7 @@ import { PoolsModule } from './modules/pools/pools.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { RecordingsModule } from './modules/recordings/recordings.module';
 import { RegistrationTokensModule } from './modules/registration-tokens/registration-tokens.module';
+import { UsersModule } from './modules/users/users.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { ServersModule } from './modules/servers/servers.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
@@ -54,6 +55,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     SessionsModule,
     AgentsModule,
     RegistrationTokensModule,
+    UsersModule,
     CatalogModule,
     HealthModule,
     StorageModule,
