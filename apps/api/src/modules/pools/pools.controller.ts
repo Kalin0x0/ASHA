@@ -63,4 +63,11 @@ export class PoolsController {
   removeAutoscale(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.pools.removeAutoscale(user.orgId, user.sub, id);
   }
+
+  /** D5: the desired-capacity plan for this pool right now (schedule-evaluated). */
+  @RequirePermissions('AUTOSCALE_MANAGE')
+  @Get(':id/autoscale/plan')
+  planAutoscale(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.pools.planAutoscale(user.orgId, id);
+  }
 }

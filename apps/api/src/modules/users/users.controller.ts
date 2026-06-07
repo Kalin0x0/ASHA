@@ -26,6 +26,9 @@ const updateSchema = z.object({
 });
 type UpdateDto = z.infer<typeof updateSchema>;
 
+const importSchema = z.object({ csv: z.string().min(1).max(1_000_000) });
+type ImportDto = z.infer<typeof importSchema>;
+
 @ApiTags('users')
 @ApiBearerAuth()
 @Controller('users')
@@ -49,6 +52,14 @@ export class UsersController {
   @Post()
   create(@CurrentUser() user: AuthUser, @Body(new ZodPipe(createSchema)) dto: CreateDto) {
     return this.users.create(user, dto);
+  }
+
+  /** Bulk-import users from a CSV (header row + rows). See UsersService.bulkImport. */
+  @Audit('user.bulk_import', { targetType: 'User' })
+  @RequirePermissions('USER_CREATE')
+  @Post('import')
+  bulkImport(@CurrentUser() user: AuthUser, @Body(new ZodPipe(importSchema)) dto: ImportDto) {
+    return this.users.bulkImport(user, dto.csv);
   }
 
   @Audit('user.update', { targetType: 'User' })

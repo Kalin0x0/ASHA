@@ -33,7 +33,24 @@ PR #6 `fix/deployment-and-streaming`, live auf chista.naiemi.com; jede Stufe bui
 
 **Verifikations-Ehrlichkeit:** Bei F4/B5/E2/F5 ist die **Plattform-Schicht** (Modellierung, Persistenz, Propagation, Sidecar-Launch, Gateway-Pfad) verifiziert; die letzte Durchsetzung/Stream hängt jeweils am Deployment-Artefakt (DLP-fähiges KasmVNC-Image, Recorder-Image, echte Cloud-Creds, RDP/VNC-Server-Workspace-Image).
 
-**Nächste Stufen:** Phase 2/3 (P1/P2 — §3/§4) · die 8 „über-Kasm"-Differentiatoren (§5) · Härtung (Security-Unit-Tests für impersonate/ApiKeyGuard/Lizenz/RBAC — offener Bug-Hunt-Befund).
+**Härtung (post-Phase-1):** Security-Unit-Tests für impersonate / ApiKeyGuard / Ed25519-Lizenz / RBAC-Rollen+Gruppen + vitest-Workspace-Resolution-Fix → **334/334 Tests grün** (entsperrte die ganze, zuvor resolution-bedingt nie laufende Suite).
+
+### Phase 2 — P1-Parität (6 Epics ✅) + Phase-3-Differentiatoren (2 ✅)
+
+| Epic | Status |
+|---|---|
+| C2 — Bulk-CSV-User-Import (Parser, Skip-Dup, Gruppen-Zuweisung) | ✅ |
+| E4 — File-Mapping-Propagation (Datei-Injektion beim Launch) | ✅ |
+| G1 — Config-Import/Export (Org-Backup/Migration, idempotent) | ✅ |
+| D4 — Agent-Lifecycle / Drain (persistent über Heartbeats) | ✅ |
+| E3 — User-scoped Storage (FileMapping.userId honoriert) | ✅ |
+| D5 — AutoScale-Plan-Evaluator (Schedule → Soll-Kapazität) | ✅ |
+| ⭐ FinOps / Cost-Dashboard (Laufzeitkosten je User/Workspace) | ✅ Differentiator |
+| ⭐ Public-API + SDK-Contract (gescopetes Developer-OpenAPI) | ✅ Differentiator |
+
+**Phase-2-Rest** überwiegend infra-/viewer-/XL-gebunden: C3 AD-Sync (DC), A1 RemoteApp/RDS (Win-Host), B2 Multi-Monitor (Viewer), B6 Pre-Warm (XL).
+
+**Nächste Stufen:** weitere backend-verifizierbare Differentiatoren (Policy-as-Code, KI-Copilot) · die infra-gebundenen P1 mit echter Infra · §4/§5-Tiefe.
 
 ---
 

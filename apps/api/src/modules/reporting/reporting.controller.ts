@@ -22,6 +22,22 @@ export class ReportingController {
     return this.reporting.summary(user.orgId);
   }
 
+  /** FinOps cost report — runtime cost by user + workspace (rates overridable). */
+  @RequirePermissions('REPORTING_VIEW')
+  @Get('costs')
+  costs(
+    @CurrentUser() user: AuthUser,
+    @Query('days') days?: string,
+    @Query('coreHourCost') coreHourCost?: string,
+    @Query('gbHourCost') gbHourCost?: string,
+  ) {
+    return this.reporting.costs(user.orgId, {
+      days: intParam(days),
+      coreHourCost: intParam(coreHourCost),
+      gbHourCost: intParam(gbHourCost),
+    });
+  }
+
   @RequirePermissions('REPORTING_VIEW')
   @Get('sessions-over-time')
   sessionsOverTime(@CurrentUser() user: AuthUser, @Query('days') days?: string) {
