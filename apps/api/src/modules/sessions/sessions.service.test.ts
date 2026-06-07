@@ -215,3 +215,33 @@ describe('SessionsService pause / resume / resize', () => {
     );
   });
 });
+
+describe('SessionsService ownership (non-admin)', () => {
+  let svc: SessionsService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    svc = new SessionsService(
+      {} as never,
+      { publish: vi.fn().mockResolvedValue(undefined) } as never,
+      { record: vi.fn().mockResolvedValue(undefined) } as never,
+    );
+    prismaMock.workspace.findUnique.mockResolvedValue({ dlp: {} });
+  });
+
+  const OWNER = { sub: 'owner1', orgId: 'org1', isSystemAdmin: false } as never;
+
+  it('lets the owner read their own session connection', async () => {
+    prismaMock.session.findFirst.mockResolvedValue({
+      id: 's1', orgId: 'org1', userId: 'owner1', workspaceId: 'ws1', connectionUrl: 'https://x', status: 'RUNNING',
+    });
+    await expect(svc.connection('s1', OWNER)).resolves.toMatchObject({ status: 'RUNNING' });
+  });
+
+  it('forbids a non-owner non-admin from another user’s session', async () => {
+    prismaMock.session.findFirst.mockResolvedValue({
+      id: 's1', orgId: 'org1', userId: 'someone-else', workspaceId: 'ws1', connectionUrl: 'https://x', status: 'RUNNING',
+    });
+    await expect(svc.connection('s1', OWNER)).rejects.toThrow(/access/i);
+  });
+});

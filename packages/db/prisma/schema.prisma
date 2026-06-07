@@ -734,6 +734,9 @@ model Session {
   startedAt         DateTime?
   lastKeepaliveAt   DateTime?
   idleSince         DateTime?
+  /// Stamped when the session is PAUSED, cleared on RESUME. Drives the paused
+  /// reaper independently of updatedAt (which background stats writes churn).
+  pausedAt          DateTime?
   expiresAt         DateTime?
   destroyedAt       DateTime?
   createdAt         DateTime       @default(now())

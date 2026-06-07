@@ -123,7 +123,9 @@ function buildClient() {
             }
 
             if (operation === 'create') {
-              a.data = { orgId, ...(a.data as Record<string, unknown>) };
+              // orgId LAST so the tenant context always wins over any
+              // caller-supplied data.orgId (mirrors the read/update branches).
+              a.data = { ...(a.data as Record<string, unknown>), orgId };
               return query(a as never);
             }
           }

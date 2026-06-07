@@ -18,6 +18,10 @@ import { LicensingService } from '../licensing/licensing.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { SchedulerService } from './scheduler.service';
 
+const SESSION_STATUSES = new Set([
+  'REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED', 'TERMINATING', 'DESTROYED', 'ERROR',
+]);
+
 @Injectable()
 export class SessionsService {
   constructor(
@@ -217,9 +221,13 @@ export class SessionsService {
   }
 
   async list(filters: { status?: string; userId?: string } = {}) {
+    // Validate the caller-supplied status against the enum; an unknown value
+    // would otherwise reach Prisma as an invalid enum and 500. Fall back to the
+    // default "everything except DESTROYED" filter.
+    const statusFilter = filters.status && SESSION_STATUSES.has(filters.status) ? filters.status : undefined;
     return prisma.session.findMany({
       where: {
-        status: filters.status ? (filters.status as never) : { notIn: ['DESTROYED'] },
+        status: statusFilter ? (statusFilter as never) : { notIn: ['DESTROYED'] },
         ...(filters.userId ? { userId: filters.userId } : {}),
       },
       orderBy: { createdAt: 'desc' },
@@ -265,10 +273,13 @@ export class SessionsService {
     reason: string,
     actorUserId?: string,
   ) {
-    await prisma.session.update({
-      where: { id: session.id },
+    // Idempotent: only the first transition into TERMINATING proceeds, so two
+    // reaper passes (expired + paused) can't double-destroy / double-audit.
+    const { count } = await prisma.session.updateMany({
+      where: { id: session.id, status: { notIn: ['TERMINATING', 'DESTROYED'] } },
       data: { status: 'TERMINATING', terminationReason: reason },
     });
+    if (count === 0) return;
     const zone = await prisma.deploymentZone.findUnique({ where: { id: session.zoneId } });
     await this.redis.publish(RedisChannels.destroy(zone?.name ?? 'default'), {
       sessionId: session.id,
@@ -311,7 +322,7 @@ export class SessionsService {
   async pause(id: string, user: AuthUser) {
     const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
     await this.sendControl(session, { action: 'PAUSE' });
-    await prisma.session.update({ where: { id }, data: { status: 'PAUSED' } });
+    await prisma.session.update({ where: { id }, data: { status: 'PAUSED', pausedAt: new Date() } });
     await this.audit.record({
       orgId: session.orgId,
       actorUserId: user.sub,
@@ -330,7 +341,7 @@ export class SessionsService {
     await this.sendControl(session, { action: 'RESUME' });
     await prisma.session.update({
       where: { id },
-      data: { status: 'RUNNING', lastKeepaliveAt: new Date() },
+      data: { status: 'RUNNING', lastKeepaliveAt: new Date(), pausedAt: null },
     });
     await this.audit.record({
       orgId: session.orgId,

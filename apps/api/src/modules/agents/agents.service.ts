@@ -1,4 +1,5 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import type { AgentTokenScope } from '../../common/jwt-auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import type { AgentHeartbeatDto, AgentRegisterDto, SessionStatsDto, SessionStatusDto } from '@chista/contracts';
 import { prisma, runUnscoped } from '@chista/db';
@@ -33,12 +34,25 @@ export class AgentsService {
     @Inject(ENV) private readonly env: Env,
   ) {}
 
-  async register(dto: AgentRegisterDto) {
+  async register(dto: AgentRegisterDto, scope?: AgentTokenScope) {
     return runUnscoped(async () => {
-      const zone =
-        (await prisma.deploymentZone.findFirst({ where: { name: dto.zone } })) ??
-        (await prisma.deploymentZone.findFirst({ where: { isDefault: true } })) ??
-        (await prisma.deploymentZone.findFirst({}));
+      let zone: Awaited<ReturnType<typeof prisma.deploymentZone.findFirst>>;
+      if (scope?.scope === 'org') {
+        // Minted token: enrollment is hard-constrained to the token's org (and a
+        // pinned zone if set) — a token for org A can never enroll into org B.
+        zone = scope.zoneId
+          ? await prisma.deploymentZone.findFirst({ where: { id: scope.zoneId, orgId: scope.orgId } })
+          : ((await prisma.deploymentZone.findFirst({ where: { name: dto.zone, orgId: scope.orgId } })) ??
+            (await prisma.deploymentZone.findFirst({ where: { orgId: scope.orgId, isDefault: true } })) ??
+            (await prisma.deploymentZone.findFirst({ where: { orgId: scope.orgId } })));
+        if (!zone) throw new ForbiddenException('Token is not authorized for the requested zone');
+      } else {
+        // Shared env token (global super-admin enrollment) — resolve any zone by name.
+        zone =
+          (await prisma.deploymentZone.findFirst({ where: { name: dto.zone } })) ??
+          (await prisma.deploymentZone.findFirst({ where: { isDefault: true } })) ??
+          (await prisma.deploymentZone.findFirst({}));
+      }
       if (!zone) throw new NotFoundException('No deployment zone to enroll into');
 
       const agent = await prisma.agent.upsert({

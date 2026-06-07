@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -70,6 +71,10 @@ export class UsersService {
   }
 
   async create(user: AuthUser, dto: CreateUserInput) {
+    // Only a system admin may mint another system admin (isSystemAdmin bypasses RBAC).
+    if (dto.isSystemAdmin && !user.isSystemAdmin) {
+      throw new ForbiddenException('Only a system admin can grant system-admin');
+    }
     const email = dto.email.toLowerCase();
     const username = (dto.username ?? email).toLowerCase();
     const existing = await prisma.user.findFirst({
@@ -95,12 +100,26 @@ export class UsersService {
   }
 
   async update(user: AuthUser, id: string, dto: UpdateUserInput) {
+    // Granting/revoking system-admin is itself a system-admin-only action.
+    if (dto.isSystemAdmin !== undefined && !user.isSystemAdmin) {
+      throw new ForbiddenException('Only a system admin can change system-admin status');
+    }
     const target = await prisma.user.findFirst({ where: { id, orgId: user.orgId } });
     if (!target) throw new NotFoundException('User not found');
 
-    // Never let the last active system admin be demoted or disabled — locks-out guard.
-    if ((dto.isSystemAdmin === false || dto.status === 'DISABLED') && target.isSystemAdmin) {
+    // Never let the LAST active system admin lose admin OR leave ACTIVE
+    // (covers DISABLED / LOCKED / INVITED) — lockout guard.
+    const losingAdmin = dto.isSystemAdmin === false;
+    const leavingActive = dto.status !== undefined && dto.status !== 'ACTIVE';
+    if (target.isSystemAdmin && target.status === 'ACTIVE' && (losingAdmin || leavingActive)) {
       await this.assertNotLastAdmin(user.orgId);
+    }
+
+    if (dto.username !== undefined) {
+      const clash = await prisma.user.findFirst({
+        where: { orgId: user.orgId, username: dto.username.toLowerCase(), NOT: { id } },
+      });
+      if (clash) throw new ConflictException('Username is already in use');
     }
 
     const updated = await prisma.user.update({

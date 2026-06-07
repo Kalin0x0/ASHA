@@ -84,9 +84,13 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
   const router = routerName(cmd.kasmId);
   const vncPw = randomBytes(9).toString('base64url');
 
+  // Custom labels must NOT register their own Traefik routers (cross-tenant
+  // route-hijack guard); strip any traefik.* keys before merging.
+  const customLabels = Object.fromEntries(
+    Object.entries(cmd.runConfig.labels ?? {}).filter(([k]) => !/^traefik\./i.test(k)),
+  );
   const labels: Record<string, string> = {
-    // Admin-defined custom labels first; system/Traefik labels below win.
-    ...(cmd.runConfig.labels ?? {}),
+    ...customLabels,
     ...sessionTraefikLabels({
       kasmId: cmd.kasmId,
       internalPort: port,
@@ -114,25 +118,50 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
       : `${router}-auth`;
   }
 
+  // ── Container-security sanitization (shared multi-tenant hosts) ─────────────
+  // Privileged mode, dangerous Linux capabilities, and seccomp/apparmor-
+  // disabling securityOpts are gated behind a deployment-level env so org admins
+  // (who author dockerConfig) cannot grant themselves host-escape on a host that
+  // also runs other tenants' sessions.
+  const allowPrivileged = process.env.CHISTA_ALLOW_PRIVILEGED === 'true';
+  const CAP_DENYLIST = new Set([
+    'SYS_ADMIN', 'SYS_PTRACE', 'SYS_MODULE', 'SYS_RAWIO', 'SYS_BOOT', 'SYS_TIME',
+    'DAC_READ_SEARCH', 'DAC_OVERRIDE', 'NET_ADMIN', 'NET_RAW', 'MKNOD', 'AUDIT_CONTROL',
+    'MAC_ADMIN', 'MAC_OVERRIDE', 'SETUID', 'SETGID', 'ALL',
+  ]);
+  const normCap = (c: string) => c.toUpperCase().replace(/^CAP_/, '');
+  const safeCapAdd = allowPrivileged
+    ? cmd.runConfig.capAdd ?? []
+    : (cmd.runConfig.capAdd ?? []).filter((c) => !CAP_DENYLIST.has(normCap(c)));
+  const safeSecurityOpt = allowPrivileged
+    ? cmd.runConfig.securityOpt ?? []
+    : (cmd.runConfig.securityOpt ?? []).filter((o) => !/unconfined/i.test(o));
+  const privileged = Boolean(cmd.runConfig.privileged) && allowPrivileged;
+  // Ephemeral session containers must never auto-restart forever; clamp policy.
+  const restartPolicy: { Name: NonNullable<typeof cmd.runConfig.restartPolicy>; MaximumRetryCount?: number } =
+    cmd.runConfig.restartPolicy === 'on-failure'
+      ? { Name: 'on-failure', MaximumRetryCount: 3 }
+      : { Name: 'no' };
+
   const container = await docker.createContainer({
     name: `chista-sess-${cmd.kasmId}`,
     Image: cmd.runConfig.dockerImage,
-    Env: [
-      `VNC_PW=${vncPw}`,
-      ...Object.entries({ ...gpuEnv(cmd), ...cmd.runConfig.env }).map(([k, v]) => `${k}=${v}`),
-    ],
+    // System env (VNC_PW + GPU hints) spread LAST so admin dockerConfig.env
+    // cannot override the per-session password or encoder selection.
+    Env: Object.entries({ ...cmd.runConfig.env, ...gpuEnv(cmd), VNC_PW: vncPw }).map(([k, v]) => `${k}=${v}`),
     Labels: labels,
     HostConfig: {
       NetworkMode: agentEnv.sessionNetwork,
       ShmSize: parseShm(cmd.runConfig.shmSize),
       Memory: cmd.runConfig.memLimitMb ? cmd.runConfig.memLimitMb * 2 ** 20 : undefined,
       NanoCpus: cmd.runConfig.cores ? Math.round(cmd.runConfig.cores * 1e9) : undefined,
-      RestartPolicy: { Name: cmd.runConfig.restartPolicy ?? 'no' },
-      // Workspace-defined hardening / capability knobs (admin-gated via dockerConfig).
-      ...(cmd.runConfig.capAdd?.length ? { CapAdd: cmd.runConfig.capAdd } : {}),
+      RestartPolicy: restartPolicy,
+      // Workspace hardening knobs — sanitized above (denylisted caps / privileged
+      // / seccomp-apparmor-disabling dropped unless CHISTA_ALLOW_PRIVILEGED).
+      ...(safeCapAdd.length ? { CapAdd: safeCapAdd } : {}),
       ...(cmd.runConfig.capDrop?.length ? { CapDrop: cmd.runConfig.capDrop } : {}),
-      ...(cmd.runConfig.securityOpt?.length ? { SecurityOpt: cmd.runConfig.securityOpt } : {}),
-      ...(cmd.runConfig.privileged ? { Privileged: true } : {}),
+      ...(safeSecurityOpt.length ? { SecurityOpt: safeSecurityOpt } : {}),
+      ...(privileged ? { Privileged: true } : {}),
       // Device passthrough: webcam (/dev/video0), USB (/dev/bus/usb), smartcard (/dev/pcsc), etc.
       // VAAPI adds the DRI render node for hardware H.264 encoding.
       Devices: gpuDevices(cmd).map((p) => ({

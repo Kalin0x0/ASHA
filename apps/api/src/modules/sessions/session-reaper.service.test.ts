@@ -93,7 +93,7 @@ describe('SessionReaperService', () => {
     expect(sessions.destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1' }), 'paused_timeout');
     expect(prismaMock.session.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ status: 'PAUSED', updatedAt: { lt: expect.any(Date) } }),
+        where: expect.objectContaining({ status: 'PAUSED', pausedAt: { not: null, lt: expect.any(Date) } }),
       }),
     );
     delete process.env.CHISTA_MAX_PAUSED_MINUTES;

@@ -71,6 +71,8 @@ describe('JwtAuthGuard — agent-only routes', () => {
     const { prisma } = await import('@chista/db');
     (prisma.registrationToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 't1',
+      orgId: 'o1',
+      zoneId: null,
       revokedAt: null,
       expiresAt: null,
     });

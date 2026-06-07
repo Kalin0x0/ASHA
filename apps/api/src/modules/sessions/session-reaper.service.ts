@@ -40,7 +40,9 @@ export class SessionReaperService {
     if (!Number.isFinite(max) || max <= 0) return 0;
     const cutoff = new Date(Date.now() - max * 60_000);
     const due = await prisma.session.findMany({
-      where: { status: 'PAUSED', updatedAt: { lt: cutoff } },
+      // pausedAt (set on PAUSE, cleared on RESUME) — NOT updatedAt, which
+      // background stats writes churn every few seconds.
+      where: { status: 'PAUSED', pausedAt: { not: null, lt: cutoff } },
       select: { id: true, orgId: true, zoneId: true, containerId: true },
     });
     for (const s of due) {

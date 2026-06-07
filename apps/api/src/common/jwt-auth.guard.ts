@@ -14,6 +14,11 @@ import { safeEqual } from '@chista/crypto';
 import { AGENT_ONLY, IS_PUBLIC } from './decorators';
 import { ENV } from './env.module';
 
+/** What an x-agent-token authorizes: the shared env token (global) or a minted, org-scoped token. */
+export type AgentTokenScope =
+  | { scope: 'global' }
+  | { scope: 'org'; orgId: string; zoneId: string | null };
+
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
@@ -36,10 +41,17 @@ export class JwtAuthGuard implements CanActivate {
     if (this.reflector.getAllAndOverride<boolean>(AGENT_ONLY, meta)) {
       const presented = req.headers['x-agent-token'] as string | undefined;
       if (!presented) throw new UnauthorizedException('Invalid agent token');
-      // 1) Shared env enrollment token (timing-safe) — the default single-token path.
-      if (safeEqual(presented, this.env.CHISTA_AGENT_ENROLLMENT_TOKEN)) return true;
-      // 2) A minted, unexpired, non-revoked RegistrationToken (multi-token enrollment).
-      if (await this.isValidRegistrationToken(presented)) return true;
+      // 1) Shared env enrollment token (timing-safe) — global enrollment.
+      if (safeEqual(presented, this.env.CHISTA_AGENT_ENROLLMENT_TOKEN)) {
+        req.agentToken = { scope: 'global' } satisfies AgentTokenScope;
+        return true;
+      }
+      // 2) A minted RegistrationToken — enrollment is constrained to its org/zone.
+      const scope = await this.resolveRegistrationToken(presented);
+      if (scope) {
+        req.agentToken = scope;
+        return true;
+      }
       throw new UnauthorizedException('Invalid agent token');
     }
 
@@ -61,17 +73,17 @@ export class JwtAuthGuard implements CanActivate {
    * rejects revoked/expired, and records usage. Only reached when the shared env
    * token did NOT match, so the default single-token path stays untouched.
    */
-  private async isValidRegistrationToken(presented: string): Promise<boolean> {
+  private async resolveRegistrationToken(presented: string): Promise<AgentTokenScope | null> {
     const tokenHash = createHash('sha256').update(presented).digest('hex');
     return runUnscoped(async () => {
       const rec = await prisma.registrationToken.findUnique({ where: { tokenHash } });
       if (!rec || rec.revokedAt || (rec.expiresAt && rec.expiresAt.getTime() < Date.now())) {
-        return false;
+        return null;
       }
       await prisma.registrationToken
         .update({ where: { id: rec.id }, data: { lastUsedAt: new Date(), useCount: { increment: 1 } } })
         .catch(() => undefined);
-      return true;
+      return { scope: 'org', orgId: rec.orgId, zoneId: rec.zoneId };
     });
   }
 }

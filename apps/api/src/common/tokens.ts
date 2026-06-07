@@ -40,7 +40,11 @@ function lookup(key: string, ctx: TokenContext): unknown {
   if (key === 'username') return ctx.username;
   if (key === 'email') return ctx.email;
   const attrs = ctx.customAttributes ?? {};
-  if (key.startsWith('custom_attribute_')) return attrs[key.slice('custom_attribute_'.length)];
-  if (key in attrs) return attrs[key];
+  // own-property only — never resolve inherited keys like {toString}/{constructor}.
+  if (key.startsWith('custom_attribute_')) {
+    const k = key.slice('custom_attribute_'.length);
+    return Object.hasOwn(attrs, k) ? attrs[k] : undefined;
+  }
+  if (Object.hasOwn(attrs, key)) return attrs[key];
   return undefined;
 }

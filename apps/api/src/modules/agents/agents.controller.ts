@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { AgentTokenScope } from '../../common/jwt-auth.guard';
 import {
   type AgentHeartbeatDto,
   agentHeartbeatSchema,
@@ -22,8 +23,11 @@ export class AgentsController {
   // ── Internal: agent → manager (shared-token / mTLS network) ────────────────
   @AgentOnly()
   @Post('internal/agents/register')
-  register(@Body(new ZodPipe(agentRegisterSchema)) dto: AgentRegisterDto) {
-    return this.agents.register(dto);
+  register(
+    @Req() req: { agentToken?: AgentTokenScope },
+    @Body(new ZodPipe(agentRegisterSchema)) dto: AgentRegisterDto,
+  ) {
+    return this.agents.register(dto, req.agentToken);
   }
 
   @AgentOnly()
