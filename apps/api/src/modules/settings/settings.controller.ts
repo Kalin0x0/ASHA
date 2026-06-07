@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   type ImportConfigDto,
@@ -46,6 +46,35 @@ export class SettingsController {
     @Body(new ZodPipe(upsertBrandingSchema)) dto: UpsertBrandingDto,
   ) {
     return this.settings.upsertBranding(user.orgId, user.sub, dto);
+  }
+
+  // ── Group-scoped branding + resolution (G3) ──────────────────────────────
+  @RequirePermissions('BRANDING_MANAGE')
+  @Get('branding/resolve')
+  resolveBranding(@CurrentUser() user: AuthUser, @Query('groupId') groupId?: string) {
+    return this.settings.resolveBranding(user.orgId, groupId);
+  }
+
+  @RequirePermissions('BRANDING_MANAGE')
+  @Get('branding/group/:groupId')
+  getGroupBranding(@CurrentUser() user: AuthUser, @Param('groupId') groupId: string) {
+    return this.settings.getGroupBranding(user.orgId, groupId);
+  }
+
+  @RequirePermissions('BRANDING_MANAGE')
+  @Put('branding/group/:groupId')
+  upsertGroupBranding(
+    @CurrentUser() user: AuthUser,
+    @Param('groupId') groupId: string,
+    @Body(new ZodPipe(upsertBrandingSchema)) dto: UpsertBrandingDto,
+  ) {
+    return this.settings.upsertGroupBranding(user.orgId, user.sub, groupId, dto);
+  }
+
+  @RequirePermissions('BRANDING_MANAGE')
+  @Delete('branding/group/:groupId')
+  removeGroupBranding(@CurrentUser() user: AuthUser, @Param('groupId') groupId: string) {
+    return this.settings.removeGroupBranding(user.orgId, user.sub, groupId);
   }
 
   @RequirePermissions('SETTINGS_MANAGE')
