@@ -55,11 +55,12 @@ export class GroupsService {
     return { ...this.shape(g), members: g.members.map((m) => m.user) };
   }
 
-  async create(dto: GroupInput) {
+  async create(user: AuthUser, dto: GroupInput) {
     const exists = await prisma.group.findFirst({ where: { name: dto.name } });
     if (exists) throw new BadRequestException('A group with this name already exists');
     const group = await prisma.group.create({
       data: {
+        orgId: user.orgId,
         name: dto.name,
         description: dto.description ?? null,
         priority: dto.priority ?? 100,

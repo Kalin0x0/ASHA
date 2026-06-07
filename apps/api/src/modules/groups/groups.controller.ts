@@ -43,8 +43,8 @@ export class GroupsController {
 
   @RequirePermissions('GROUP_MANAGE')
   @Post()
-  create(@Body(new ZodPipe(groupSchema)) dto: GroupDto) {
-    return this.groups.create(dto);
+  create(@CurrentUser() user: AuthUser, @Body(new ZodPipe(groupSchema)) dto: GroupDto) {
+    return this.groups.create(user, dto);
   }
 
   @RequirePermissions('GROUP_MANAGE')
