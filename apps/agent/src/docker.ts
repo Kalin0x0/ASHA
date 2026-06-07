@@ -268,14 +268,17 @@ async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCom
 
 export async function destroyContainer(idOrName: string): Promise<void> {
   const container = docker.getContainer(idOrName);
+  // Resolve kasmId from the container NAME before removal — destroy is usually
+  // called with the opaque container id, from which kasmId can't be derived.
+  let kasmId = idOrName.startsWith('chista-sess-') ? idOrName.slice('chista-sess-'.length) : idOrName;
+  try {
+    const nm = ((await container.inspect()).Name ?? '').replace(/^\//, '');
+    if (nm.startsWith('chista-sess-')) kasmId = nm.slice('chista-sess-'.length);
+  } catch {
+    // Container already gone; fall back to the derived id.
+  }
   await container.stop({ t: 5 }).catch(() => undefined);
   await container.remove({ force: true }).catch(() => undefined);
-
-  // Derive kasmId from session container name (chista-sess-<kasmId>) or
-  // from the raw kasmId passed directly, then clean up sidecars.
-  const kasmId = idOrName.startsWith('chista-sess-')
-    ? idOrName.slice('chista-sess-'.length)
-    : idOrName;
   await destroySidecars(kasmId);
 }
 
@@ -283,7 +286,7 @@ async function destroySidecars(kasmId: string): Promise<void> {
   // Label sweep catches every sidecar for this session, including the
   // index-named storage (rclone) sidecars.
   const containers = await docker
-    .listContainers({ all: true, filters: { label: [`chista.sidecar.kasmId=${kasmId}`] } })
+    .listContainers({ all: true, filters: JSON.stringify({ label: [`chista.sidecar.kasmId=${kasmId}`] }) })
     .catch(() => []);
   await Promise.allSettled(
     containers.map(async (info) => {
