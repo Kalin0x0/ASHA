@@ -152,13 +152,32 @@ export interface DestroyCommand {
  * Manager → agent control message for an already-running session. `resize`
  * carries new screen geometry; pause/resume freeze/thaw the container.
  */
+/** Live stream-control profile applied to a running session. */
+export interface StreamProfile {
+  resolution?: { width: number; height: number };
+  /** Target max frames/sec. */
+  maxFps?: number;
+  /** Encoder quality preset. */
+  quality?: 'low' | 'medium' | 'high' | 'lossless';
+  /** JPEG quality 0–100 (lossy tiles). */
+  jpegQuality?: number;
+  /** WebP quality 0–100 (lossy tiles). */
+  webpQuality?: number;
+  /** Soft cap on stream bitrate. */
+  maxBitrateKbps?: number;
+  /** Two-way clipboard sync. */
+  clipboardSync?: boolean;
+}
+
 export interface SessionControlCommand {
   sessionId: string;
   containerId?: string;
-  action: 'PAUSE' | 'RESUME' | 'RESIZE';
+  action: 'PAUSE' | 'RESUME' | 'RESIZE' | 'STREAM';
   /** For RESIZE. */
   width?: number;
   height?: number;
+  /** For STREAM. */
+  streamProfile?: StreamProfile;
 }
 
 export type SessionLifecycleStatus =

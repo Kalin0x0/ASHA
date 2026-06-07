@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import net from 'node:net';
 import Docker from 'dockerode';
-import type { ProvisionCommand, SessionSidecar, SessionStatSample } from '@chista/events';
+import type { ProvisionCommand, SessionSidecar, SessionStatSample, StreamProfile } from '@chista/events';
 import { routerName, sessionTraefikLabels } from '@chista/proxy-labels';
 import { agentEnv } from './env.js';
 
@@ -301,6 +301,25 @@ export async function resizeContainer(idOrName: string, width: number, height: n
     await exec.start({ Detach: true });
   } catch {
     // Geometry is also negotiated client-side; ignore images without the helper.
+  }
+}
+
+/**
+ * Push a live stream-control profile into the running session. DLP-capable
+ * KasmVNC builds read it via a `chista-stream` helper; otherwise this is a
+ * best-effort no-op (the browser-side client also applies quality/fps/clipboard).
+ */
+export async function applyStreamProfile(idOrName: string, profile: StreamProfile): Promise<void> {
+  try {
+    const json = JSON.stringify(profile).replace(/'/g, '');
+    const exec = await docker.getContainer(idOrName).exec({
+      Cmd: ['/bin/sh', '-c', `command -v chista-stream >/dev/null 2>&1 && chista-stream '${json}' || true`],
+      AttachStdout: false,
+      AttachStderr: false,
+    });
+    await exec.start({ Detach: true });
+  } catch {
+    // Quality/fps are also negotiated client-side; ignore images without the helper.
   }
 }
 

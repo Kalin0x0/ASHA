@@ -19,8 +19,15 @@ const log = createLogger('agent');
 const driver = process.env.CHISTA_DRIVER === 'kubernetes'
   ? await import('./kubernetes.js')
   : await import('./docker.js');
-const { provisionContainer, destroyContainer, collectStats, pauseContainer, unpauseContainer, resizeContainer } =
-  driver;
+const {
+  provisionContainer,
+  destroyContainer,
+  collectStats,
+  pauseContainer,
+  unpauseContainer,
+  resizeContainer,
+  applyStreamProfile,
+} = driver;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -153,7 +160,11 @@ async function handleControl(
     } else if (cmd.action === 'RESIZE') {
       await resizeContainer(containerId, cmd.width ?? 1280, cmd.height ?? 720);
       log.info({ sessionId: cmd.sessionId, w: cmd.width, h: cmd.height }, 'session resized');
+    } else if (cmd.action === 'STREAM') {
+      await applyStreamProfile(containerId, cmd.streamProfile ?? {});
+      log.info({ sessionId: cmd.sessionId, profile: cmd.streamProfile }, 'stream profile applied');
     }
+
   } catch (e) {
     log.error(`control ${cmd.action} failed: ${(e as Error).message}`);
   }

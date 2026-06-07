@@ -8,6 +8,7 @@ import {
   RedisChannels,
   type RunConfig,
   type SessionControlCommand,
+  type StreamProfile,
 } from '@chista/events';
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
@@ -315,6 +316,8 @@ export class SessionsService {
       status: session.status,
       // The viewer reads the DLP policy back to grey out disallowed controls.
       dlp: (workspace?.dlp ?? {}) as DlpPolicy,
+      // The viewer applies the stream profile client-side (KasmVNC quality/fps/clipboard).
+      streamProfile: (session.streamProfile ?? {}) as unknown as StreamProfile,
     };
   }
 
@@ -360,6 +363,26 @@ export class SessionsService {
     const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
     await this.sendControl(session, { action: 'RESIZE', width, height });
     return { ok: true };
+  }
+
+  /** Apply a live stream-control profile (fps/quality/bitrate/clipboard) — merged, persisted, pushed. */
+  async setStreamProfile(id: string, profile: StreamProfile, user: AuthUser) {
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
+    const merged: StreamProfile = {
+      ...((session.streamProfile ?? {}) as unknown as StreamProfile),
+      ...profile,
+    };
+    await prisma.session.update({ where: { id }, data: { streamProfile: merged as object } });
+    await this.sendControl(session, { action: 'STREAM', streamProfile: merged });
+    await this.audit.record({
+      orgId: session.orgId,
+      actorUserId: user.sub,
+      action: 'session.stream',
+      targetType: 'Session',
+      targetId: id,
+      metadata: merged as unknown as Record<string, unknown>,
+    });
+    return { ok: true, streamProfile: merged };
   }
 
   private async requireControllable(id: string, allowed: string[], user: AuthUser) {

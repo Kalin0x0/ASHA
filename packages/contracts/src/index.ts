@@ -57,6 +57,20 @@ export const dlpPolicySchema = z.object({
 });
 export type DlpPolicyDto = z.infer<typeof dlpPolicySchema>;
 
+// Live in-session stream control (resolution / fps / quality / bitrate / clipboard).
+export const streamProfileSchema = z.object({
+  resolution: z
+    .object({ width: z.number().int().min(320).max(7680), height: z.number().int().min(240).max(4320) })
+    .optional(),
+  maxFps: z.number().int().min(1).max(120).optional(),
+  quality: z.enum(['low', 'medium', 'high', 'lossless']).optional(),
+  jpegQuality: z.number().int().min(0).max(100).optional(),
+  webpQuality: z.number().int().min(0).max(100).optional(),
+  maxBitrateKbps: z.number().int().min(0).max(1_000_000).optional(),
+  clipboardSync: z.boolean().optional(),
+});
+export type StreamProfileDto = z.infer<typeof streamProfileSchema>;
+
 // Hardware H.264 encoding (NVENC/VAAPI). Open-source encoders only.
 export const gpuConfigSchema = z.object({
   count: z.number().int().min(0).optional(),

@@ -5,6 +5,8 @@ import {
   createSessionSchema,
   type ResizeSessionDto,
   resizeSessionSchema,
+  type StreamProfileDto,
+  streamProfileSchema,
 } from '@chista/contracts';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
@@ -59,6 +61,15 @@ export class SessionsController {
     @Body(new ZodPipe(resizeSessionSchema)) dto: ResizeSessionDto,
   ) {
     return this.sessions.resize(id, dto.width, dto.height, user);
+  }
+
+  @Post(':id/stream')
+  stream(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodPipe(streamProfileSchema)) dto: StreamProfileDto,
+  ) {
+    return this.sessions.setStreamProfile(id, dto, user);
   }
 
   @Post(':id/keepalive')

@@ -726,6 +726,7 @@ model Session {
   connectionUrl     String?
   launchValues      Json           @default("{}")
   resources         Json           @default("{}") // live { cpuPct, memMb, ... }
+  streamProfile     Json           @default("{}") // live stream-control (fps/quality/bitrate/clipboard)
   recordingEnabled  Boolean        @default(false)
   persistentProfileId String?
   shareEnabled      Boolean        @default(false)
