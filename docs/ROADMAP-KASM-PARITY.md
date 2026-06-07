@@ -5,6 +5,28 @@
 
 ---
 
+## 0. Umsetzungsstatus (Stand 2026-06-07)
+
+**Phase 1 — 10 / 16 P0 geshippt & verifiziert** (PR #6 `fix/deployment-and-streaming`, live auf chista.naiemi.com, jede Stufe deployt + verifiziert):
+
+| Epic | Status |
+|---|---|
+| D2-MVP — Session-Ownership/Org-Scope (Security-Leck) | ✅ |
+| A5 — Docker-Run-Override + Launch-Token-Resolver | ✅ |
+| B7 — Pause-Reaper | ✅ |
+| D1-Core — Agent-RegistrationTokens | ✅ |
+| C1 — Users + Roles + Groups CRUD | ✅ |
+| G4 — Audit-Backbone (@Audit-Interceptor + Facetten-Filter) | ✅ |
+| C2 — User-Impersonation (RFC-8693 act-claim, auditiert) | ✅ |
+| H1 — Developer-API (ApiKeyGuard + Scopes) | ✅ |
+| A2 — Registry-Reifegrad (Preview + edit-before-install) | ✅ (build-verifiziert) |
+| G2 — Ed25519-Offline-Lizenz | ✅ |
+| 🐞 2× adversariale Bug-Hunts | ✅ 18+ Bugs gefixt (4 CRIT/HIGH-Security, 2 runtime-bewiesen) |
+
+**Offen — 6 P0 (schwere Greenfield, brauchen DLP-Image / RDP-Host / Web-Viewer / OAuth-Provider → auf einem Single-VM nur teil-verifizierbar):** F6→F4 (KasmVNC-DLP geometrisch), F5 (RDP-HTTPS-Gateway), B1 (In-Session Stream-Control), B5 (Recording-Pipeline-Tiefe), E1/E2 (Storage-OAuth + SSE-C). Danach Phase 2/3 (P1/P2) + die „über Kasm hinaus"-Differentiatoren (§5).
+
+---
+
 ## 1. Executive Summary
 
 Chista soll **alles können, was Kasm Workspaces bietet — und mehr**. Dieses Dokument konsolidiert 8 Bereichs-Backlogs zu **47 Parität-Epics** (davon **16 P0 = echte Lücken zuerst**) plus **8 neuen Differentiatoren** in einer einzigen, ausführungsreifen Roadmap. Strategie: zuerst die harten Kasm-Lücken schließen (Windows RemoteApp/RDS + RDP-HTTPS-Gateway, AD-Sync & Computer-Join, Image-Lifecycle & Commit-to-Image, Direct-to-Agent + Offline-Install, Multi-Monitor, Server-DLP-Tiefe), parallel die vorhandenen Chista-Vorteile (Neko-WebRTC, SCIM+JIT, Passkey, HMAC-Webhooks, Postgres-RLS-Multi-Tenancy, 11 VM-Provider) festigen — und Chista in Phase 3+ mit 8 Differentiatoren (KI-Copilot, Aurora-Glass-UX, Public-API+SDK, Realtime-Collaboration, FinOps, Policy-as-Code, Terraform-Provider, mobile PWA) klar über Kasm heben. **3 Hauptphasen** + Querschnitts-Enabler; Aufwand grob ~14× XL, ~16× L, ~9× M (≈ 18–24 Monate bei 2–3 Squads).
