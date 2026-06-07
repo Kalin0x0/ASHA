@@ -96,7 +96,7 @@ export class SessionsService {
         email: user.email,
         customAttributes: (dto.launchValues ?? {}) as Record<string, unknown>,
       };
-      await this.dispatchProvision(session.id, zone.name, workspace, protocol, tokenCtx);
+      await this.dispatchProvision(session.id, zone.name, workspace, protocol, tokenCtx, user.sub);
     }
 
     await this.audit.record({
@@ -172,6 +172,7 @@ export class SessionsService {
     },
     protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' | 'WEBRTC',
     tokenCtx: TokenContext,
+    userId: string,
   ) {
     const session = await prisma.session.findUnique({ where: { id: sessionId } });
     if (!session) return;
@@ -203,7 +204,10 @@ export class SessionsService {
     // hostPath/sourcePath/destPath support {username}/{email}/{custom_attribute_*} tokens.
     const [volumeMappings, fileMappings] = await Promise.all([
       prisma.volumeMapping.findMany({ where: { orgId: workspace.orgId } }),
-      prisma.fileMapping.findMany({ where: { orgId: workspace.orgId, target: 'CONTAINER', userId: null } }),
+      // E3: org-wide (userId null) + user-scoped file mappings for the launching user.
+      prisma.fileMapping.findMany({
+        where: { orgId: workspace.orgId, target: 'CONTAINER', OR: [{ userId: null }, { userId }] },
+      }),
     ]);
     const storageVolumes = [
       ...volumeMappings.map((m) => {
