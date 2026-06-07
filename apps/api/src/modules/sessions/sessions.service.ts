@@ -159,6 +159,13 @@ export class SessionsService {
     // launching user ({username}, {email}, {custom_attribute_*}).
     const customEnv = resolveTokens(dockerCfg.env ?? {}, tokenCtx);
     const customLabels = resolveTokens(dockerCfg.labels ?? {}, tokenCtx);
+    // E1: propagate admin-defined host volume mappings into the session container.
+    // hostPath/destPath support {username}/{email}/{custom_attribute_*} tokens.
+    const volumeMappings = await prisma.volumeMapping.findMany({ where: { orgId: workspace.orgId } });
+    const storageVolumes = volumeMappings.map((m) => {
+      const i = resolveTokens({ s: m.hostPath, t: m.destPath }, tokenCtx);
+      return { source: i.s, target: i.t, readOnly: m.readOnly };
+    });
     const runConfig: RunConfig = {
       dockerImage: workspace.image?.dockerImage ?? 'kasmweb/firefox:1.16.0',
       // DLP flags are surfaced to KasmVNC/Neko as env vars the image honours;
@@ -177,6 +184,7 @@ export class SessionsService {
       ...(dockerCfg.securityOpt?.length ? { securityOpt: dockerCfg.securityOpt } : {}),
       ...(dockerCfg.privileged ? { privileged: true } : {}),
       ...(dockerCfg.restartPolicy ? { restartPolicy: dockerCfg.restartPolicy } : {}),
+      ...(storageVolumes.length ? { volumes: storageVolumes } : {}),
     };
 
     // Resolve open-source sidecar descriptors from workspace connectivity policy.

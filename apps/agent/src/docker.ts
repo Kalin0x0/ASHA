@@ -157,6 +157,10 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
       Memory: cmd.runConfig.memLimitMb ? cmd.runConfig.memLimitMb * 2 ** 20 : undefined,
       NanoCpus: cmd.runConfig.cores ? Math.round(cmd.runConfig.cores * 1e9) : undefined,
       RestartPolicy: restartPolicy,
+      // E1: admin-defined volume mappings (host path → container path, ro/rw).
+      ...(cmd.runConfig.volumes?.length
+        ? { Binds: cmd.runConfig.volumes.map((v) => `${v.source}:${v.target}${v.readOnly ? ':ro' : ''}`) }
+        : {}),
       // Workspace hardening knobs — sanitized above (denylisted caps / privileged
       // / seccomp-apparmor-disabling dropped unless CHISTA_ALLOW_PRIVILEGED).
       ...(safeCapAdd.length ? { CapAdd: safeCapAdd } : {}),
