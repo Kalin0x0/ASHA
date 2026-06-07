@@ -647,6 +647,12 @@ export const upsertLicenseSchema = z.object({
 });
 export type UpsertLicenseDto = z.infer<typeof upsertLicenseSchema>;
 
+// Activate an Ed25519-signed offline license key.
+export const activateLicenseSchema = z.object({
+  licenseKey: z.string().min(1).max(8000),
+});
+export type ActivateLicenseDto = z.infer<typeof activateLicenseSchema>;
+
 // ── Settings: branding + general + config import/export ───────────────────────
 export const upsertBrandingSchema = z.object({
   productName: z.string().min(1).max(120).optional(),

@@ -1,7 +1,50 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { createHash, createPublicKey, verify as edVerify } from 'node:crypto';
 import type { UpsertLicenseDto } from '@chista/contracts';
 import { prisma } from '@chista/db';
 import { AuditService } from '../../common/audit.service';
+
+// Chista license-signing public key (Ed25519, SPKI DER base64). Licenses are
+// signed offline by the vendor's private key and verified here — no phone-home.
+// Override with CHISTA_LICENSE_PUBKEY to use a custom signing key.
+const DEFAULT_LICENSE_PUBKEY = 'MCowBQYDK2VwAyEArZLVMVmDutZKSJg3dFTBCuE5NbRMnYi3W+7lUkqUAPc=';
+
+interface LicenseClaims {
+  type: 'CONCURRENT' | 'NAMED_USER';
+  seats: number;
+  concurrentSessions: number;
+  issuedTo?: string;
+  notBefore?: string;
+  notAfter?: string;
+  installationId?: string;
+  features?: Record<string, unknown>;
+}
+
+/** Verify an Ed25519-signed license key `<base64url(payload)>.<base64url(sig)>`. */
+function verifyLicenseKey(licenseKey: string): LicenseClaims {
+  const parts = licenseKey.trim().split('.');
+  const payloadB64 = parts[0];
+  const sigB64 = parts[1];
+  if (parts.length !== 2 || !payloadB64 || !sigB64) throw new BadRequestException('Malformed license key');
+  let pubKey;
+  try {
+    pubKey = createPublicKey({
+      key: Buffer.from(process.env.CHISTA_LICENSE_PUBKEY ?? DEFAULT_LICENSE_PUBKEY, 'base64'),
+      format: 'der',
+      type: 'spki',
+    });
+  } catch {
+    throw new BadRequestException('License public key is misconfigured');
+  }
+  if (!edVerify(null, Buffer.from(payloadB64), pubKey, Buffer.from(sigB64, 'base64url'))) {
+    throw new BadRequestException('Invalid license signature');
+  }
+  try {
+    return JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8')) as LicenseClaims;
+  } catch {
+    throw new BadRequestException('Invalid license payload');
+  }
+}
 
 /**
  * License enforcement. Two modes:
@@ -43,6 +86,52 @@ export class LicensingService {
       targetType: 'License',
       targetId: license.id,
       metadata: { type: dto.type, seats: dto.seats, concurrentSessions: dto.concurrentSessions },
+    });
+    return license;
+  }
+
+  /** Stable per-deployment installation id — a license can be bound to it. */
+  installationId(orgId: string): string {
+    return createHash('sha256').update(`chista:${orgId}`).digest('hex').slice(0, 24);
+  }
+
+  /**
+   * Activate an Ed25519-signed (air-gapped) license. The signature is verified
+   * against the baked public key; tampered, expired, or wrong-installation
+   * licenses are rejected. No network call is made.
+   */
+  async activate(orgId: string, actorUserId: string, licenseKey: string) {
+    const claims = verifyLicenseKey(licenseKey);
+    if (claims.type !== 'CONCURRENT' && claims.type !== 'NAMED_USER') {
+      throw new BadRequestException('Unknown license type');
+    }
+    if (claims.notAfter && new Date() > new Date(claims.notAfter)) {
+      throw new BadRequestException('License has expired');
+    }
+    if (claims.installationId && claims.installationId !== this.installationId(orgId)) {
+      throw new BadRequestException('License is bound to a different installation');
+    }
+    const data = {
+      orgId,
+      type: claims.type,
+      seats: claims.seats,
+      concurrentSessions: claims.concurrentSessions,
+      issuedTo: claims.issuedTo ?? null,
+      notBefore: claims.notBefore ? new Date(claims.notBefore) : null,
+      notAfter: claims.notAfter ? new Date(claims.notAfter) : null,
+      features: (claims.features ?? {}) as object,
+    };
+    const existing = await prisma.license.findFirst({ where: { orgId }, orderBy: { createdAt: 'desc' } });
+    const license = existing
+      ? await prisma.license.update({ where: { id: existing.id }, data })
+      : await prisma.license.create({ data });
+    await this.audit.record({
+      orgId,
+      actorUserId,
+      action: 'license.activate',
+      targetType: 'License',
+      targetId: license.id,
+      metadata: { type: claims.type, issuedTo: claims.issuedTo ?? null, offline: true },
     });
     return license;
   }
