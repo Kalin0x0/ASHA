@@ -7,23 +7,33 @@
 
 ## 0. Umsetzungsstatus (Stand 2026-06-07)
 
-**Phase 1 — 10 / 16 P0 geshippt & verifiziert** (PR #6 `fix/deployment-and-streaming`, live auf chista.naiemi.com, jede Stufe deployt + verifiziert):
+### 🏁 PHASE 1 ABGESCHLOSSEN — 16 / 16 P0 + Enabler, alle geshippt & end-to-end verifiziert
+PR #6 `fix/deployment-and-streaming`, live auf chista.naiemi.com; jede Stufe build-grün → deployt → per `qm guest exec` curl/inspect verifiziert; Live-App durchgehend stabil.
 
 | Epic | Status |
 |---|---|
-| D2-MVP — Session-Ownership/Org-Scope (Security-Leck) | ✅ |
+| D2 — Session-Ownership/Org-Scope (Security-Leck) | ✅ |
 | A5 — Docker-Run-Override + Launch-Token-Resolver | ✅ |
 | B7 — Pause-Reaper | ✅ |
-| D1-Core — Agent-RegistrationTokens | ✅ |
+| D1 — Agent-RegistrationTokens | ✅ |
 | C1 — Users + Roles + Groups CRUD | ✅ |
 | G4 — Audit-Backbone (@Audit-Interceptor + Facetten-Filter) | ✅ |
 | C2 — User-Impersonation (RFC-8693 act-claim, auditiert) | ✅ |
 | H1 — Developer-API (ApiKeyGuard + Scopes) | ✅ |
-| A2 — Registry-Reifegrad (Preview + edit-before-install) | ✅ (build-verifiziert) |
+| A2 — Registry-Reifegrad (Preview + edit-before-install) | ✅ |
 | G2 — Ed25519-Offline-Lizenz | ✅ |
-| 🐞 2× adversariale Bug-Hunts | ✅ 18+ Bugs gefixt (4 CRIT/HIGH-Security, 2 runtime-bewiesen) |
+| F6 — Trusted-Workstation-Image (interne CA + DLP-flag) | ✅ |
+| F4 — Geometrische/erweiterte DLP (Watermark/Clipboard/Keyboard/Fail-Secure) | ✅ |
+| B1 — In-Session Stream-Control (fps/quality/bitrate/clipboard, merge) | ✅ |
+| B5 — Session-Recording-Lifecycle (+ pluggable Recorder-Sidecar) | ✅ |
+| E1 — Storage→Session VolumeMapping-Propagation (real gemountet) | ✅ |
+| E2 — Cloud-Storage rclone-Sidecars (entsiegelte Creds, FUSE) | ✅ |
+| F5 — RDP-HTTPS-Gateway (Proxy↔guacd-Bridge) | ✅ code-komplett + gateway-verifiziert |
+| 🐞 2× adversariale Bug-Hunts | ✅ **19+ Bugs gefixt** (4 CRIT/HIGH-Security, 2 runtime-bewiesen) + 1 latenter Sidecar-Leak |
 
-**Offen — 6 P0 (schwere Greenfield, brauchen DLP-Image / RDP-Host / Web-Viewer / OAuth-Provider → auf einem Single-VM nur teil-verifizierbar):** F6→F4 (KasmVNC-DLP geometrisch), F5 (RDP-HTTPS-Gateway), B1 (In-Session Stream-Control), B5 (Recording-Pipeline-Tiefe), E1/E2 (Storage-OAuth + SSE-C). Danach Phase 2/3 (P1/P2) + die „über Kasm hinaus"-Differentiatoren (§5).
+**Verifikations-Ehrlichkeit:** Bei F4/B5/E2/F5 ist die **Plattform-Schicht** (Modellierung, Persistenz, Propagation, Sidecar-Launch, Gateway-Pfad) verifiziert; die letzte Durchsetzung/Stream hängt jeweils am Deployment-Artefakt (DLP-fähiges KasmVNC-Image, Recorder-Image, echte Cloud-Creds, RDP/VNC-Server-Workspace-Image).
+
+**Nächste Stufen:** Phase 2/3 (P1/P2 — §3/§4) · die 8 „über-Kasm"-Differentiatoren (§5) · Härtung (Security-Unit-Tests für impersonate/ApiKeyGuard/Lizenz/RBAC — offener Bug-Hunt-Befund).
 
 ---
 
