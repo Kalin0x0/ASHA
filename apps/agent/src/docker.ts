@@ -85,6 +85,8 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
   const vncPw = randomBytes(9).toString('base64url');
 
   const labels: Record<string, string> = {
+    // Admin-defined custom labels first; system/Traefik labels below win.
+    ...(cmd.runConfig.labels ?? {}),
     ...sessionTraefikLabels({
       kasmId: cmd.kasmId,
       internalPort: port,
@@ -125,7 +127,12 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
       ShmSize: parseShm(cmd.runConfig.shmSize),
       Memory: cmd.runConfig.memLimitMb ? cmd.runConfig.memLimitMb * 2 ** 20 : undefined,
       NanoCpus: cmd.runConfig.cores ? Math.round(cmd.runConfig.cores * 1e9) : undefined,
-      RestartPolicy: { Name: 'no' },
+      RestartPolicy: { Name: cmd.runConfig.restartPolicy ?? 'no' },
+      // Workspace-defined hardening / capability knobs (admin-gated via dockerConfig).
+      ...(cmd.runConfig.capAdd?.length ? { CapAdd: cmd.runConfig.capAdd } : {}),
+      ...(cmd.runConfig.capDrop?.length ? { CapDrop: cmd.runConfig.capDrop } : {}),
+      ...(cmd.runConfig.securityOpt?.length ? { SecurityOpt: cmd.runConfig.securityOpt } : {}),
+      ...(cmd.runConfig.privileged ? { Privileged: true } : {}),
       // Device passthrough: webcam (/dev/video0), USB (/dev/bus/usb), smartcard (/dev/pcsc), etc.
       // VAAPI adds the DRI render node for hardware H.264 encoding.
       Devices: gpuDevices(cmd).map((p) => ({

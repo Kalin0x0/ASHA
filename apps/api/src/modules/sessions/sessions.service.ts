@@ -12,6 +12,7 @@ import {
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
 import { RedisService } from '../../common/redis.service';
+import { resolveTokens, type TokenContext } from '../../common/tokens';
 import { ConnectivityRenderService } from '../connectivity/connectivity-render.service';
 import { LicensingService } from '../licensing/licensing.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
@@ -81,7 +82,12 @@ export class SessionsService {
         where: { id: session.id },
         data: { status: 'SCHEDULED', agentId: agent.id },
       });
-      await this.dispatchProvision(session.id, zone.name, workspace, protocol);
+      const tokenCtx: TokenContext = {
+        username: user.email.split('@')[0],
+        email: user.email,
+        customAttributes: (dto.launchValues ?? {}) as Record<string, unknown>,
+      };
+      await this.dispatchProvision(session.id, zone.name, workspace, protocol, tokenCtx);
     }
 
     await this.audit.record({
@@ -120,6 +126,7 @@ export class SessionsService {
       browserIsolationId?: string | null;
     },
     protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' | 'WEBRTC',
+    tokenCtx: TokenContext,
   ) {
     const session = await prisma.session.findUnique({ where: { id: sessionId } });
     if (!session) return;
@@ -131,15 +138,27 @@ export class SessionsService {
       devices?: string[];
       audioImage?: string;
       printerImage?: string;
+      env?: Record<string, string>;
+      labels?: Record<string, string>;
+      capAdd?: string[];
+      capDrop?: string[];
+      securityOpt?: string[];
+      privileged?: boolean;
+      restartPolicy?: 'no' | 'always' | 'unless-stopped' | 'on-failure';
     };
     const gpu = (workspace.gpu ?? {}) as GpuConfig;
     const dlp = (workspace.dlp ?? {}) as DlpPolicy;
     // Neko (WEBRTC) listens on 8080; all other images use the image's default (6901).
     const defaultPort = protocol === 'WEBRTC' ? 8080 : 6901;
+    // Admin-defined container env + labels are token-interpolated against the
+    // launching user ({username}, {email}, {custom_attribute_*}).
+    const customEnv = resolveTokens(dockerCfg.env ?? {}, tokenCtx);
+    const customLabels = resolveTokens(dockerCfg.labels ?? {}, tokenCtx);
     const runConfig: RunConfig = {
       dockerImage: workspace.image?.dockerImage ?? 'kasmweb/firefox:1.16.0',
-      // DLP flags are surfaced to KasmVNC/Neko as env vars the image honours.
-      env: dlpEnv(dlp),
+      // DLP flags are surfaced to KasmVNC/Neko as env vars the image honours;
+      // admin env layers on top (DLP wins on key collisions for safety).
+      env: { ...customEnv, ...dlpEnv(dlp) },
       ports: defaults.ports ?? [defaultPort],
       shmSize: dockerCfg.shmSize ?? (protocol === 'WEBRTC' ? '2g' : '1g'),
       cores: workspace.coresLimit ?? undefined,
@@ -147,6 +166,12 @@ export class SessionsService {
       gpuCount: gpu.count ?? workspace.gpuCount,
       ...(gpu.encoder && gpu.encoder !== 'none' ? { gpu } : {}),
       ...(dockerCfg.devices?.length ? { devices: dockerCfg.devices } : {}),
+      ...(Object.keys(customLabels).length ? { labels: customLabels } : {}),
+      ...(dockerCfg.capAdd?.length ? { capAdd: dockerCfg.capAdd } : {}),
+      ...(dockerCfg.capDrop?.length ? { capDrop: dockerCfg.capDrop } : {}),
+      ...(dockerCfg.securityOpt?.length ? { securityOpt: dockerCfg.securityOpt } : {}),
+      ...(dockerCfg.privileged ? { privileged: true } : {}),
+      ...(dockerCfg.restartPolicy ? { restartPolicy: dockerCfg.restartPolicy } : {}),
     };
 
     // Resolve open-source sidecar descriptors from workspace connectivity policy.

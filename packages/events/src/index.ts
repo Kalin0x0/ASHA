@@ -51,6 +51,17 @@ export interface RunConfig {
    * Docker maps these 1:1; Kubernetes mounts them as CharDevice hostPath volumes.
    */
   devices?: string[];
+  /** Extra Linux capabilities to add / drop on the session container. */
+  capAdd?: string[];
+  capDrop?: string[];
+  /** Security options, e.g. "seccomp=unconfined" or "apparmor=<profile>". */
+  securityOpt?: string[];
+  /** Run privileged (admin-gated; avoid unless a workspace truly needs it). */
+  privileged?: boolean;
+  /** Extra container labels (token-interpolated). System/Traefik labels win. */
+  labels?: Record<string, string>;
+  /** Container restart policy. Defaults to "no". */
+  restartPolicy?: 'no' | 'always' | 'unless-stopped' | 'on-failure';
 }
 
 /**
