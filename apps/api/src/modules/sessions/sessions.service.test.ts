@@ -7,7 +7,7 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     workspace: { findUnique: vi.fn() },
     deploymentZone: { findUnique: vi.fn(), findFirst: vi.fn() },
-    session: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findMany: vi.fn() },
+    session: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
   },
 }));
 
@@ -42,7 +42,7 @@ const NEKO_WORKSPACE = {
   dockerConfig: { devices: ['/dev/video0', '/dev/snd'] },
 };
 
-const USER = { sub: 'user1', orgId: 'org1' } as never;
+const USER = { sub: 'user1', orgId: 'org1', isSystemAdmin: true } as never;
 
 describe('SessionsService.create', () => {
   let svc: SessionsService;
@@ -139,7 +139,7 @@ describe('SessionsService.terminate', () => {
   });
 
   it('marks TERMINATING and publishes a destroy command on the zone channel', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', zoneId: 'zone1', containerId: 'c1' });
+    prismaMock.session.findFirst.mockResolvedValue({ id: 'sess1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1' });
     prismaMock.deploymentZone.findUnique.mockResolvedValue({ id: 'zone1', name: 'default' });
     prismaMock.session.update.mockResolvedValue({});
 
@@ -156,7 +156,7 @@ describe('SessionsService.terminate', () => {
   });
 
   it('throws when the session does not exist', async () => {
-    prismaMock.session.findUnique.mockResolvedValue(null);
+    prismaMock.session.findFirst.mockResolvedValue(null);
     await expect(svc.terminate('ghost', USER)).rejects.toThrow();
   });
 });
@@ -176,7 +176,7 @@ describe('SessionsService pause / resume / resize', () => {
   });
 
   it('pauses a RUNNING session: emits PAUSE control + sets PAUSED', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
+    prismaMock.session.findFirst.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
     const res = await svc.pause('s1', USER);
     expect(redis.publish).toHaveBeenCalledWith(
       'chista:zone:default:control',
@@ -189,13 +189,13 @@ describe('SessionsService pause / resume / resize', () => {
   });
 
   it('refuses to pause a session that is not RUNNING/DEGRADED', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'PROVISIONING' });
+    prismaMock.session.findFirst.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'PROVISIONING' });
     await expect(svc.pause('s1', USER)).rejects.toThrow(/expected one of/);
     expect(redis.publish).not.toHaveBeenCalled();
   });
 
   it('resumes only a PAUSED session', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'PAUSED' });
+    prismaMock.session.findFirst.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'PAUSED' });
     await svc.resume('s1', USER);
     expect(redis.publish).toHaveBeenCalledWith(
       'chista:zone:default:control',
@@ -207,8 +207,8 @@ describe('SessionsService pause / resume / resize', () => {
   });
 
   it('emits a RESIZE control frame with geometry', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
-    await svc.resize('s1', 1920, 1080);
+    prismaMock.session.findFirst.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
+    await svc.resize('s1', 1920, 1080, USER);
     expect(redis.publish).toHaveBeenCalledWith(
       'chista:zone:default:control',
       expect.objectContaining({ action: 'RESIZE', width: 1920, height: 1080 }),
