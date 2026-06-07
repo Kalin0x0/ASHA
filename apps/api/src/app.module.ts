@@ -39,6 +39,8 @@ import { StorageModule } from './modules/storage/storage.module';
 import { OrgConfigModule } from './modules/config/config.module';
 import { PolicyModule } from './modules/policy/policy.module';
 import { CopilotModule } from './modules/copilot/copilot.module';
+import { ExperimentalFeaturesModule } from './modules/experimental-features/experimental-features.module';
+import { ImageBuildsModule } from './modules/image-builds/image-builds.module';
 import { WatermarksModule } from './modules/watermarks/watermarks.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { WindowsModule } from './modules/windows/windows.module';
@@ -68,6 +70,8 @@ import { ZonesModule } from './modules/zones/zones.module';
     OrgConfigModule,
     PolicyModule,
     CopilotModule,
+    ExperimentalFeaturesModule,
+    ImageBuildsModule,
     DevApiModule,
     CatalogModule,
     HealthModule,

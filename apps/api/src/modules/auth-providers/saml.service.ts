@@ -49,8 +49,17 @@ export class SamlService {
       idpCert,
       issuer: (config.spEntityId as string) ?? this.callbackUrl(id),
       wantAssertionsSigned: config.wantAssertionsSigned !== false,
-      wantAuthnResponseSigned: false,
+      // Configurable (was hard-coded false): some IdPs sign the whole response.
+      wantAuthnResponseSigned: config.wantAuthnResponseSigned === true,
+      // Force re-authentication at the IdP (no SSO session reuse) when requested.
+      forceAuthn: config.forceAuthn === true,
       audience: (config.audience as string) ?? false,
+      ...(config.signatureAlgorithm
+        ? { signatureAlgorithm: config.signatureAlgorithm as 'sha1' | 'sha256' | 'sha512' }
+        : {}),
+      ...(config.digestAlgorithm
+        ? { digestAlgorithm: config.digestAlgorithm as 'sha1' | 'sha256' | 'sha512' }
+        : {}),
     };
     return new SAML(opts);
   }

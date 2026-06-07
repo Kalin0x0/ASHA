@@ -26,6 +26,8 @@ export class ConnectivityRenderService {
       blockedDomains?: string[];
       allowedDomains?: string[];
       safeSearch?: boolean;
+      /** Block everything not explicitly allowed (lockdown). */
+      denyByDefault?: boolean;
     };
 
     const lines = [
@@ -44,12 +46,17 @@ export class ConnectivityRenderService {
       lines.push('http_access deny blocked_domains');
     }
     if (cat.safeSearch) {
-      lines.push('# Force Google/Bing/YouTube SafeSearch via DNS rewrite');
-      lines.push('acl safe_search_hosts dstdomain .google.com .bing.com .youtube.com');
+      lines.push('# Forced SafeSearch — pin search engines to their safe variants');
+      lines.push('acl safe_search_hosts dstdomain .google.com .bing.com .youtube.com .duckduckgo.com');
+      lines.push('# Resolver/rewriter maps these to forcesafesearch.google.com / strict.bing.com / restrict.youtube.com');
+      lines.push('request_header_add X-Chista-SafeSearch "1" safe_search_hosts');
     }
     if (cat.allowedDomains?.length) {
-      // Whitelist mode: allow listed domains, deny the rest.
       lines.push('http_access allow allowed_domains');
+    }
+    // Deny-by-default: an allowlist OR the explicit lockdown flag denies everything else.
+    if (cat.allowedDomains?.length || cat.denyByDefault) {
+      lines.push('# Deny-by-default: anything not explicitly allowed above is blocked.');
       lines.push('http_access deny all');
     } else {
       lines.push('http_access allow all');
@@ -93,6 +100,50 @@ export class ConnectivityRenderService {
     ].join('\n');
 
     return { filename: `wg-${egress.name}.conf`, content };
+  }
+
+  /** Render an OpenVPN client config (.ovpn) for an egress tunnel. */
+  async renderOpenVpnConfig(orgId: string, id: string): Promise<RenderedArtifact> {
+    const egress = await prisma.egressGateway.findFirst({ where: { id, orgId } });
+    if (!egress) throw new NotFoundException('Egress gateway not found');
+    if (egress.provider.toLowerCase() !== 'openvpn') {
+      throw new BadRequestException(`Egress "${egress.name}" is not an OpenVPN provider`);
+    }
+    const c = (egress.config ?? {}) as {
+      remoteHost?: string;
+      remotePort?: number;
+      proto?: string;
+      ca?: string;
+      cert?: string;
+      key?: string;
+      authUser?: string;
+    };
+    for (const key of ['remoteHost', 'ca'] as const) {
+      if (!c[key]) throw new BadRequestException(`OpenVPN config missing "${key}"`);
+    }
+    const proto = (c.proto ?? 'udp').toLowerCase();
+    const content = [
+      `# OpenVPN egress for Chista gateway "${egress.name}"`,
+      'client',
+      'dev tun',
+      `proto ${proto}`,
+      `remote ${c.remoteHost} ${c.remotePort ?? 1194}`,
+      'resolv-retry infinite',
+      'nobind',
+      'persist-key',
+      'persist-tun',
+      'remote-cert-tls server',
+      'cipher AES-256-GCM',
+      'verb 3',
+      ...(c.authUser ? ['auth-user-pass /etc/openvpn/auth.txt'] : []),
+      '<ca>',
+      String(c.ca).trim(),
+      '</ca>',
+      ...(c.cert ? ['<cert>', String(c.cert).trim(), '</cert>'] : []),
+      ...(c.key ? ['<key>', String(c.key).trim(), '</key>'] : []),
+      '',
+    ].join('\n');
+    return { filename: `openvpn-${egress.name}.conf`, content };
   }
 
   /** Render a Neko (Apache-2.0) docker-compose service for a disposable isolated browser. */
