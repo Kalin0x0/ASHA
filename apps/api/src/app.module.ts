@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { CommonModule } from './common/common.module';
 import { EnvModule } from './common/env.module';
+import { AuditInterceptor } from './common/audit.interceptor';
 import { JwtAuthGuard } from './common/jwt-auth.guard';
 import { PermissionsGuard } from './common/permissions.guard';
 import { TenantInterceptor } from './common/tenant.interceptor';
@@ -91,6 +92,8 @@ import { ZonesModule } from './modules/zones/zones.module';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_INTERCEPTOR, useClass: TenantInterceptor },
+    // Declarative auditing — records entries for handlers decorated with @Audit().
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
 })
 export class AppModule {}

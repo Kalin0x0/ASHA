@@ -110,11 +110,36 @@ export class ReportingService {
     };
   }
 
-  /** Recent audit-log entries (most recent first), optionally filtered by action. */
-  async auditLog(orgId: string, limit = 100, action?: string) {
-    const take = Math.min(Math.max(limit, 1), 500);
+  /** Recent audit-log entries (most recent first) with faceted filters. */
+  async auditLog(
+    orgId: string,
+    opts: {
+      limit?: number;
+      action?: string;
+      actorUserId?: string;
+      targetType?: string;
+      since?: string;
+      until?: string;
+    } = {},
+  ) {
+    const take = Math.min(Math.max(opts.limit ?? 100, 1), 500);
+    const since = opts.since ? new Date(opts.since) : undefined;
+    const until = opts.until ? new Date(opts.until) : undefined;
+    const createdAt =
+      (since && !Number.isNaN(since.getTime())) || (until && !Number.isNaN(until.getTime()))
+        ? {
+            ...(since && !Number.isNaN(since.getTime()) ? { gte: since } : {}),
+            ...(until && !Number.isNaN(until.getTime()) ? { lte: until } : {}),
+          }
+        : undefined;
     return prisma.auditLog.findMany({
-      where: { orgId, ...(action ? { action: { contains: action, mode: 'insensitive' } } : {}) },
+      where: {
+        orgId,
+        ...(opts.action ? { action: { contains: opts.action, mode: 'insensitive' } } : {}),
+        ...(opts.actorUserId ? { actorUserId: opts.actorUserId } : {}),
+        ...(opts.targetType ? { targetType: opts.targetType } : {}),
+        ...(createdAt ? { createdAt } : {}),
+      },
       orderBy: { createdAt: 'desc' },
       take,
     });

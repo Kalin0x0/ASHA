@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
+import { Audit } from '../../common/audit.interceptor';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { UsersService } from './users.service';
@@ -43,12 +44,14 @@ export class UsersController {
     return this.users.get(user, id);
   }
 
+  @Audit('user.create', { targetType: 'User' })
   @RequirePermissions('USER_CREATE')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body(new ZodPipe(createSchema)) dto: CreateDto) {
     return this.users.create(user, dto);
   }
 
+  @Audit('user.update', { targetType: 'User' })
   @RequirePermissions('USER_EDIT')
   @Patch(':id')
   update(
@@ -59,6 +62,7 @@ export class UsersController {
     return this.users.update(user, id, dto);
   }
 
+  @Audit('user.delete', { targetType: 'User' })
   @RequirePermissions('USER_DELETE')
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {

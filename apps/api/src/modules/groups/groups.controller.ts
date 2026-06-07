@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
+import { Audit } from '../../common/audit.interceptor';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { GroupsService } from './groups.service';
@@ -41,6 +42,7 @@ export class GroupsController {
     return this.groups.get(id);
   }
 
+  @Audit('group.create', { targetType: 'Group' })
   @RequirePermissions('GROUP_MANAGE')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body(new ZodPipe(groupSchema)) dto: GroupDto) {
@@ -53,6 +55,7 @@ export class GroupsController {
     return this.groups.update(id, dto);
   }
 
+  @Audit('group.delete', { targetType: 'Group' })
   @RequirePermissions('GROUP_MANAGE')
   @Delete(':id')
   remove(@Param('id') id: string) {

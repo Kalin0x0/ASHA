@@ -51,7 +51,18 @@ export class ReportingController {
     @CurrentUser() user: AuthUser,
     @Query('limit') limit?: string,
     @Query('action') action?: string,
+    @Query('actor') actor?: string,
+    @Query('targetType') targetType?: string,
+    @Query('since') since?: string,
+    @Query('until') until?: string,
   ) {
-    return this.reporting.auditLog(user.orgId, limit ? Number(limit) : undefined, action);
+    return this.reporting.auditLog(user.orgId, {
+      limit: limit ? Number(limit) : undefined,
+      action,
+      actorUserId: actor,
+      targetType,
+      since,
+      until,
+    });
   }
 }

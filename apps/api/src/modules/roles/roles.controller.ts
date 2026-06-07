@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
+import { Audit } from '../../common/audit.interceptor';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { RolesService } from './roles.service';
@@ -40,6 +41,7 @@ export class RolesController {
     return this.roles.get(user, id);
   }
 
+  @Audit('role.create', { targetType: 'Role' })
   @RequirePermissions('ROLE_MANAGE')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body(new ZodPipe(roleSchema)) dto: RoleDto) {
@@ -56,6 +58,7 @@ export class RolesController {
     return this.roles.update(user, id, dto);
   }
 
+  @Audit('role.delete', { targetType: 'Role' })
   @RequirePermissions('ROLE_MANAGE')
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
