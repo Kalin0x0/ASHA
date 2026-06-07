@@ -1,4 +1,11 @@
-import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { ConfirmTotpDto, LoginDto } from '@chista/contracts';
 import { hashToken, randomToken, verifyPassword } from '@chista/crypto';
@@ -7,6 +14,7 @@ import type { Env } from '@chista/config';
 import { generateSecret, generateURI, verify as verifyOtp } from 'otplib';
 import qrcode from 'qrcode';
 import { AuditService } from '../../common/audit.service';
+import type { AuthUser } from '../../common/decorators';
 import { ENV } from '../../common/env.module';
 import { RbacService } from '../../common/rbac.service';
 
@@ -201,6 +209,40 @@ export class AuthService {
   async disableTotp(userId: string) {
     await prisma.twoFactorMethod.deleteMany({ where: { userId, type: 'TOTP' } });
     return { ok: true };
+  }
+
+  /**
+   * Issue a short-lived access token that acts AS the target user (system-admin
+   * only, same org). The token carries an RFC-8693 `act` claim naming the real
+   * admin for the audit trail, is capped at 30 min, and gets NO refresh token —
+   * so impersonation cannot be silently extended; it simply expires.
+   */
+  async impersonate(actor: AuthUser, targetUserId: string) {
+    if (!actor.isSystemAdmin) throw new ForbiddenException('Only a system admin can impersonate users');
+    if (targetUserId === actor.sub) throw new BadRequestException('You cannot impersonate yourself');
+    const target = await prisma.user.findFirst({ where: { id: targetUserId, orgId: actor.orgId } });
+    if (!target) throw new NotFoundException('User not found');
+
+    const ttl = Math.min(this.env.JWT_ACCESS_TTL, 1800);
+    const accessToken = await this.jwt.signAsync(
+      {
+        sub: target.id,
+        orgId: target.orgId,
+        email: target.email,
+        isSystemAdmin: target.isSystemAdmin,
+        act: { sub: actor.sub, email: actor.email },
+      },
+      { secret: this.env.JWT_ACCESS_SECRET, expiresIn: ttl },
+    );
+    await this.audit.record({
+      orgId: actor.orgId,
+      actorUserId: actor.sub,
+      action: 'user.impersonate',
+      targetType: 'User',
+      targetId: target.id,
+      metadata: { targetEmail: target.email },
+    });
+    return { accessToken, expiresIn: ttl, tokenType: 'Bearer', user: this.publicUser(target) };
   }
 
   /**

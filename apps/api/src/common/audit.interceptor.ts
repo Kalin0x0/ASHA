@@ -60,7 +60,10 @@ export class AuditInterceptor implements NestInterceptor {
           targetId,
           ip,
           userAgent: req.headers?.['user-agent'] as string | undefined,
-          metadata: {},
+          // Preserve the real admin when the action happens under impersonation.
+          metadata: (user as { act?: { sub?: string } } | undefined)?.act?.sub
+            ? { impersonatedBy: (user as { act: { sub: string } }).act.sub }
+            : {},
         });
       }),
     );
