@@ -151,13 +151,18 @@ export class RegistryService {
     });
     if (!entry) throw new NotFoundException('Registry entry not found');
 
+    const m = this.meta(entry);
     const image = await prisma.image.create({
       data: {
         orgId,
         name: entry.name,
-        friendlyName: entry.friendlyName,
-        dockerImage: entry.dockerImage,
+        friendlyName: dto.friendlyName ?? entry.friendlyName,
+        dockerImage: dto.imageOverride ?? entry.dockerImage,
         channel: 'CUSTOM',
+        // Carry the registry's declared compatibility + default run config onto the image.
+        protocol: m.protocol,
+        architecture: m.architecture,
+        runConfigDefaults: m.runConfigDefaults,
         sourceRegistryEntryId: entry.id,
       },
     });
@@ -168,10 +173,10 @@ export class RegistryService {
         data: {
           orgId,
           name: entry.name,
-          friendlyName: entry.friendlyName,
+          friendlyName: dto.friendlyName ?? entry.friendlyName,
           description: entry.description,
           imageId: image.id,
-          categories: entry.categories,
+          categories: dto.categories ?? entry.categories,
           iconUrl: entry.iconUrl,
         },
       });
@@ -189,6 +194,75 @@ export class RegistryService {
     });
     return { ok: true, imageId: image.id, workspaceId };
   }
+
+  /** Parse rich install metadata (compat / security / resources / channels) from an entry's raw index item. */
+  private meta(entry: { dockerImage: string; raw: unknown }) {
+    const raw = (entry.raw ?? {}) as Record<string, any>;
+    const rc = (raw.run_config ?? raw.docker_run_config ?? raw.runConfig ?? {}) as Record<string, any>;
+    const protocol = normalizeProtocol(raw.protocol ?? rc.protocol);
+    const architecture = String(raw.architecture ?? raw.arch ?? 'amd64');
+    const num = (v: unknown) =>
+      typeof v === 'number' ? v : typeof v === 'string' && /^\d+$/.test(v) ? Number(v) : undefined;
+    const memBytes = num(raw.memory);
+    return {
+      protocol,
+      architecture,
+      runConfigDefaults: rc as object,
+      compatibility: {
+        protocol,
+        architectures: Array.isArray(raw.architectures) ? raw.architectures : [architecture],
+        gpuRequired: Boolean(raw.gpu ?? raw.require_gpu ?? rc.gpus),
+      },
+      security: {
+        runAsRoot: rc.user === 'root' || rc.user === '0' || Boolean(raw.run_as_root),
+        privileged: Boolean(rc.privileged),
+        capAdd: Array.isArray(rc.cap_add) ? rc.cap_add : [],
+      },
+      resources: {
+        cores: num(raw.cores ?? raw.cpu_cores ?? rc.cores),
+        memoryMb: memBytes ? Math.round(memBytes / 1_048_576) : num(raw.memory_mb),
+      },
+      channels: Array.isArray(raw.channels)
+        ? raw.channels
+        : Array.isArray(raw.tags)
+          ? raw.tags
+          : entry.dockerImage.includes(':')
+            ? [entry.dockerImage.split(':').pop()]
+            : ['latest'],
+      estimatedSizeMb: num(raw.size_mb ?? raw.estimated_size_mb ?? raw.uncompressed_size_mb),
+    };
+  }
+
+  /** Install preview — surfaces compatibility, security flags, resources, channels & size for edit-before-install. */
+  async preview(orgId: string, entryId: string) {
+    const entry = await prisma.registryEntry.findFirst({
+      where: { id: entryId, registry: { OR: [{ orgId }, { orgId: null }] } },
+    });
+    if (!entry) throw new NotFoundException('Registry entry not found');
+    const m = this.meta(entry);
+    return {
+      id: entry.id,
+      name: entry.name,
+      friendlyName: entry.friendlyName,
+      description: entry.description,
+      dockerImage: entry.dockerImage,
+      iconUrl: entry.iconUrl,
+      categories: entry.categories,
+      installed: entry.installed,
+      compatibility: m.compatibility,
+      security: m.security,
+      resources: m.resources,
+      channels: m.channels,
+      estimatedSizeMb: m.estimatedSizeMb,
+    };
+  }
+}
+
+function normalizeProtocol(p: unknown): 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' | 'WEBRTC' {
+  const s = String(p ?? '').toUpperCase();
+  return (['KASMVNC', 'RDP', 'VNC', 'SSH', 'WEBRTC'] as readonly string[]).includes(s)
+    ? (s as 'KASMVNC')
+    : 'KASMVNC';
 }
 
 interface RegistryIndexItem {

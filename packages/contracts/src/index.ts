@@ -627,6 +627,11 @@ export type UpdateRegistryDto = z.infer<typeof updateRegistrySchema>;
 // Install a registry entry → creates an Image (and optionally a Workspace).
 export const installRegistryEntrySchema = z.object({
   createWorkspace: z.boolean().default(false),
+  // edit-before-install overrides
+  friendlyName: z.string().min(1).max(120).optional(),
+  categories: z.array(z.string()).optional(),
+  /** Override the docker image (e.g. pick a specific channel/tag). */
+  imageOverride: z.string().min(1).max(300).optional(),
 });
 export type InstallRegistryEntryDto = z.infer<typeof installRegistryEntrySchema>;
 

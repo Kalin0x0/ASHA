@@ -60,6 +60,12 @@ export class RegistryController {
     return this.svc.marketplace(user.orgId, q);
   }
 
+  @RequirePermissions('WORKSPACE_VIEW')
+  @Get('marketplace/:entryId/preview')
+  preview(@CurrentUser() user: AuthUser, @Param('entryId') entryId: string) {
+    return this.svc.preview(user.orgId, entryId);
+  }
+
   @RequirePermissions('IMAGE_MANAGE')
   @Post('marketplace/:entryId/install')
   install(
