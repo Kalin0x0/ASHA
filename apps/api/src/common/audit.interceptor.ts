@@ -42,6 +42,8 @@ export class AuditInterceptor implements NestInterceptor {
 
     const req = ctx.switchToHttp().getRequest();
     const user = req.user as AuthUser | undefined;
+    // Present only when acting under impersonation (RFC-8693 `act` claim).
+    const impersonatedBy = (user as unknown as { act?: { sub?: string } } | undefined)?.act?.sub;
     const xff = req.headers?.['x-forwarded-for'];
     const ip = ((Array.isArray(xff) ? xff[0] : xff) as string | undefined)?.split(',')[0]?.trim() ?? req.ip;
 
@@ -61,9 +63,7 @@ export class AuditInterceptor implements NestInterceptor {
           ip,
           userAgent: req.headers?.['user-agent'] as string | undefined,
           // Preserve the real admin when the action happens under impersonation.
-          metadata: (user as { act?: { sub?: string } } | undefined)?.act?.sub
-            ? { impersonatedBy: (user as { act: { sub: string } }).act.sub }
-            : {},
+          metadata: impersonatedBy ? { impersonatedBy } : {},
         });
       }),
     );
