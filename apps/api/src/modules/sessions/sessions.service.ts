@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { CreateSessionDto } from '@chista/contracts';
 import { prisma } from '@chista/db';
 import {
@@ -202,15 +202,30 @@ export class SessionsService {
     });
   }
 
-  async get(id: string) {
-    const session = await prisma.session.findUnique({ where: { id } });
+  async get(id: string, user: AuthUser) {
+    return this.findInOrg(id, user.orgId);
+  }
+
+  /** Load a session scoped to the caller's org — enforces tenant isolation. */
+  private async findInOrg(id: string, orgId: string) {
+    const session = await prisma.session.findFirst({ where: { id, orgId } });
     if (!session) throw new NotFoundException('Session not found');
     return session;
   }
 
+  /**
+   * Gate per-session access: the owning user or a system admin may proceed;
+   * anyone else is forbidden. Closes the leak where any authenticated user
+   * could read another user's connection URL / control their session by id.
+   */
+  private assertCanAccess(session: { userId: string | null }, user: AuthUser) {
+    if (user.isSystemAdmin) return;
+    if (session.userId && session.userId === user.sub) return;
+    throw new ForbiddenException('You do not have access to this session');
+  }
+
   async terminate(id: string, user: AuthUser) {
-    const session = await prisma.session.findUnique({ where: { id } });
-    if (!session) throw new NotFoundException('Session not found');
+    const session = await this.findInOrg(id, user.orgId);
     await this.destroy(session, 'admin_terminate', user.sub);
     return { ok: true };
   }
@@ -246,14 +261,16 @@ export class SessionsService {
     await this.webhooks?.dispatch(session.orgId, 'session.terminated', { sessionId: session.id, reason });
   }
 
-  async keepalive(id: string) {
-    await prisma.session.update({ where: { id }, data: { lastKeepaliveAt: new Date() } });
+  async keepalive(id: string, user: AuthUser) {
+    const session = await this.findInOrg(id, user.orgId);
+    this.assertCanAccess(session, user);
+    await prisma.session.update({ where: { id: session.id }, data: { lastKeepaliveAt: new Date() } });
     return { ok: true };
   }
 
-  async connection(id: string) {
-    const session = await prisma.session.findUnique({ where: { id } });
-    if (!session) throw new NotFoundException('Session not found');
+  async connection(id: string, user: AuthUser) {
+    const session = await this.findInOrg(id, user.orgId);
+    this.assertCanAccess(session, user);
     const workspace = session.workspaceId
       ? await prisma.workspace.findUnique({ where: { id: session.workspaceId } })
       : null;
@@ -267,7 +284,7 @@ export class SessionsService {
 
   /** Freeze a running session's container (no compute, state retained). */
   async pause(id: string, user: AuthUser) {
-    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED']);
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
     await this.sendControl(session, { action: 'PAUSE' });
     await prisma.session.update({ where: { id }, data: { status: 'PAUSED' } });
     await this.audit.record({
@@ -284,7 +301,7 @@ export class SessionsService {
 
   /** Thaw a paused session's container. */
   async resume(id: string, user: AuthUser) {
-    const session = await this.requireControllable(id, ['PAUSED']);
+    const session = await this.requireControllable(id, ['PAUSED'], user);
     await this.sendControl(session, { action: 'RESUME' });
     await prisma.session.update({
       where: { id },
@@ -303,15 +320,15 @@ export class SessionsService {
   }
 
   /** Request a screen-geometry change for multi-monitor / responsive layouts. */
-  async resize(id: string, width: number, height: number) {
-    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED']);
+  async resize(id: string, width: number, height: number, user: AuthUser) {
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
     await this.sendControl(session, { action: 'RESIZE', width, height });
     return { ok: true };
   }
 
-  private async requireControllable(id: string, allowed: string[]) {
-    const session = await prisma.session.findUnique({ where: { id } });
-    if (!session) throw new NotFoundException('Session not found');
+  private async requireControllable(id: string, allowed: string[], user: AuthUser) {
+    const session = await this.findInOrg(id, user.orgId);
+    this.assertCanAccess(session, user);
     if (!allowed.includes(session.status)) {
       throw new BadRequestException(`Session is ${session.status}; expected one of ${allowed.join(', ')}`);
     }

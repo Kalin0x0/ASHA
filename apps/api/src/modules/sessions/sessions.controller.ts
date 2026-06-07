@@ -30,8 +30,8 @@ export class SessionsController {
 
   @RequirePermissions('SESSION_VIEW_ANY')
   @Get(':id')
-  get(@Param('id') id: string) {
-    return this.sessions.get(id);
+  get(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.sessions.get(id, user);
   }
 
   @RequirePermissions('SESSION_TERMINATE_ANY')
@@ -53,17 +53,21 @@ export class SessionsController {
   }
 
   @Post(':id/resize')
-  resize(@Param('id') id: string, @Body(new ZodPipe(resizeSessionSchema)) dto: ResizeSessionDto) {
-    return this.sessions.resize(id, dto.width, dto.height);
+  resize(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodPipe(resizeSessionSchema)) dto: ResizeSessionDto,
+  ) {
+    return this.sessions.resize(id, dto.width, dto.height, user);
   }
 
   @Post(':id/keepalive')
-  keepalive(@Param('id') id: string) {
-    return this.sessions.keepalive(id);
+  keepalive(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.sessions.keepalive(id, user);
   }
 
   @Get(':id/connection')
-  connection(@Param('id') id: string) {
-    return this.sessions.connection(id);
+  connection(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.sessions.connection(id, user);
   }
 }
