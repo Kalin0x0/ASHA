@@ -922,6 +922,9 @@ model Agent {
   address          String?
   kind             AgentKind   @default(DOCKER)
   status           AgentStatus @default(OFFLINE)
+  /// Admin-requested drain — persists across heartbeats so a drained agent
+  /// stays DRAINING (the scheduler only picks ONLINE agents) until un-drained.
+  drainRequested   Boolean     @default(false)
   version          String?
   apiKeyId         String?
   cpuCores         Int         @default(0)

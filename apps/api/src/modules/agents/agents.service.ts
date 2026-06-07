@@ -93,19 +93,25 @@ export class AgentsService {
   }
 
   async heartbeat(agentId: string, dto: AgentHeartbeatDto) {
-    await runUnscoped(() =>
-      prisma.agent.update({
+    await runUnscoped(async () => {
+      // A heartbeat reports the agent as live, but a pending admin drain wins:
+      // keep DRAINING so the scheduler won't place new sessions on it.
+      const agent = await prisma.agent.findUnique({
+        where: { id: agentId },
+        select: { drainRequested: true },
+      });
+      await prisma.agent.update({
         where: { id: agentId },
         data: {
-          status: 'ONLINE',
+          status: agent?.drainRequested ? 'DRAINING' : 'ONLINE',
           memFreeMb: dto.memFreeMb,
           loadPercent: dto.loadPercent,
           currentSessions: dto.currentSessions,
           version: dto.version,
           lastHeartbeatAt: new Date(),
         },
-      }),
-    );
+      });
+    });
     return { ok: true };
   }
 
@@ -209,7 +215,11 @@ export class AgentsService {
   }
 
   async setAgentState(id: string, status: 'ONLINE' | 'DRAINING' | 'OFFLINE') {
-    return prisma.agent.update({ where: { id }, data: { status } });
+    // Persist the drain intent so heartbeats don't flip a drained agent back online.
+    return prisma.agent.update({
+      where: { id },
+      data: { status, drainRequested: status === 'DRAINING' },
+    });
   }
 
   async remove(id: string) {
