@@ -7,7 +7,7 @@ export interface PolicyDoc {
   /** Every group must have an idle-disconnect timeout set. */
   groupIdleTimeoutRequired?: boolean;
   /** Every workspace's DLP must set `field` to `value` (e.g. downloads=false). */
-  workspaceDlpRequired?: { field: string; value: unknown };
+  workspaceDlpRequired?: { field: string; value?: unknown };
 }
 
 interface Violation {
