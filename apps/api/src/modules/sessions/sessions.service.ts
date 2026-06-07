@@ -8,6 +8,7 @@ import {
   RedisChannels,
   type RunConfig,
   type SessionControlCommand,
+  type SessionSidecar,
   type StreamProfile,
 } from '@chista/events';
 import { AuditService } from '../../common/audit.service';
@@ -16,6 +17,7 @@ import { RedisService } from '../../common/redis.service';
 import { resolveTokens, type TokenContext } from '../../common/tokens';
 import { ConnectivityRenderService } from '../connectivity/connectivity-render.service';
 import { LicensingService } from '../licensing/licensing.service';
+import { StorageService } from '../storage/storage.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { SchedulerService } from './scheduler.service';
 
@@ -36,6 +38,8 @@ export class SessionsService {
     // Optional so unit tests can construct the service without licensing;
     // when present, the per-org session cap is enforced before launch.
     @Optional() private readonly licensing?: LicensingService,
+    // Optional: when present, enabled cloud StorageMappings mount via rclone sidecars.
+    @Optional() private readonly storage?: StorageService,
   ) {}
 
   async create(user: AuthUser, dto: CreateSessionDto) {
@@ -111,6 +115,42 @@ export class SessionsService {
     });
 
     return prisma.session.findUnique({ where: { id: session.id } });
+  }
+
+  /** Build rclone mount sidecars from the org's enabled cloud StorageMappings (E2). */
+  private async resolveStorageSidecars(orgId: string, tokenCtx: TokenContext): Promise<SessionSidecar[]> {
+    if (!this.storage) return [];
+    const typeByKind: Record<string, string> = {
+      S3: 's3',
+      DROPBOX: 'dropbox',
+      GDRIVE: 'drive',
+      NEXTCLOUD: 'webdav',
+      ONEDRIVE: 'onedrive',
+    };
+    const mappings = await prisma.storageMapping.findMany({ where: { orgId, enabled: true } });
+    const sidecars: SessionSidecar[] = [];
+    for (const m of mappings) {
+      const cfg = ((await this.storage.resolveStorageConfig(orgId, m.id)) ?? {}) as Record<string, unknown>;
+      const type = typeByKind[m.kind] ?? String(cfg.type ?? '');
+      if (!type) continue;
+      // rclone reads RCLONE_CONFIG_<REMOTE>_<KEY> env to define remote "REMOTE".
+      const env: Record<string, string> = { RCLONE_CONFIG_REMOTE_TYPE: type };
+      for (const [k, v] of Object.entries(cfg)) {
+        if (v == null || typeof v === 'object') continue;
+        if (['bucket', 'path', 'remotePath', 'type'].includes(k)) continue;
+        env[`RCLONE_CONFIG_REMOTE_${k.toUpperCase()}`] = String(v);
+      }
+      const sub = String(cfg.bucket ?? cfg.path ?? cfg.remotePath ?? '');
+      const mountPath = resolveTokens({ p: m.mountPath }, tokenCtx).p;
+      sidecars.push({
+        image: process.env.CHISTA_RCLONE_IMAGE ?? 'rclone/rclone:latest',
+        env,
+        cmd: ['mount', `REMOTE:${sub}`, mountPath, '--allow-other', '--vfs-cache-mode', 'writes', '--no-modtime'],
+        capAdd: ['SYS_ADMIN'],
+        devices: ['/dev/fuse'],
+      });
+    }
+    return sidecars;
   }
 
   private async dispatchProvision(
@@ -213,6 +253,9 @@ export class SessionsService {
       if (dlp.audioOut) sidecars.audio = this.render.resolveAudioSidecar(dockerCfg.audioImage);
       if (dlp.printing) sidecars.printing = this.render.resolvePrintingSidecar(dockerCfg.printerImage);
     }
+    // E2: mount the org's enabled cloud StorageMappings via rclone sidecars.
+    const storageSidecars = await this.resolveStorageSidecars(workspace.orgId, tokenCtx);
+    if (storageSidecars.length) sidecars.storage = storageSidecars;
 
     const command: ProvisionCommand = {
       sessionId,

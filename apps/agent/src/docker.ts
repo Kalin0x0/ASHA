@@ -218,6 +218,7 @@ async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCom
     ...(sidecars.neko ? [{ name: `chista-neko-${kasmId}`, spec: sidecars.neko }] : []),
     ...(sidecars.audio ? [{ name: `chista-audio-${kasmId}`, spec: sidecars.audio }] : []),
     ...(sidecars.printing ? [{ name: `chista-print-${kasmId}`, spec: sidecars.printing }] : []),
+    ...(sidecars.storage ?? []).map((spec, i) => ({ name: `chista-storage-${kasmId}-${i}`, spec })),
   ];
 
   for (const { name, spec } of entries) {
@@ -237,11 +238,21 @@ async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCom
       name,
       Image: spec.image,
       Env: Object.entries(spec.env ?? {}).map(([k, v]) => `${k}=${v}`),
+      ...(spec.cmd?.length ? { Cmd: spec.cmd } : {}),
       HostConfig: {
         NetworkMode: agentEnv.sessionNetwork,
         RestartPolicy: { Name: 'no' },
         Binds: binds.length ? binds : undefined,
         CapAdd: spec.capAdd,
+        ...(spec.devices?.length
+          ? {
+              Devices: spec.devices.map((p) => ({
+                PathOnHost: p,
+                PathInContainer: p,
+                CgroupPermissions: 'rwm',
+              })),
+            }
+          : {}),
       },
       Labels: { 'chista.sidecar.kasmId': kasmId },
     });
@@ -263,16 +274,14 @@ export async function destroyContainer(idOrName: string): Promise<void> {
 }
 
 async function destroySidecars(kasmId: string): Promise<void> {
-  const names = [
-    `chista-squid-${kasmId}`,
-    `chista-wg-${kasmId}`,
-    `chista-neko-${kasmId}`,
-    `chista-audio-${kasmId}`,
-    `chista-print-${kasmId}`,
-  ];
+  // Label sweep catches every sidecar for this session, including the
+  // index-named storage (rclone) sidecars.
+  const containers = await docker
+    .listContainers({ all: true, filters: { label: [`chista.sidecar.kasmId=${kasmId}`] } })
+    .catch(() => []);
   await Promise.allSettled(
-    names.map(async (name) => {
-      const c = docker.getContainer(name);
+    containers.map(async (info) => {
+      const c = docker.getContainer(info.Id);
       await c.stop({ t: 5 }).catch(() => undefined);
       await c.remove({ force: true }).catch(() => undefined);
     }),

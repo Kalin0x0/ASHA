@@ -114,6 +114,10 @@ export interface SessionSidecar {
   capAdd?: string[];
   /** Container ports (informational; used for K8s containerPort spec). */
   ports?: number[];
+  /** Override the image's default command (e.g. rclone mount args). */
+  cmd?: string[];
+  /** Host devices to pass through (e.g. /dev/fuse for rclone FUSE mounts). */
+  devices?: string[];
 }
 
 export interface ProvisionCommand {
@@ -138,6 +142,8 @@ export interface ProvisionCommand {
     audio?: SessionSidecar;
     /** CUPS virtual-printer → PDF sidecar. */
     printing?: SessionSidecar;
+    /** Cloud-storage (rclone) mount sidecars — one per enabled cloud StorageMapping. */
+    storage?: SessionSidecar[];
   };
 }
 
