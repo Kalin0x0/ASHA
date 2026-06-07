@@ -1284,6 +1284,21 @@ model OrgFeatureFlag {
   @@index([orgId])
 }
 
+model ImageBuildJob {
+  id           String    @id @default(cuid())
+  orgId        String
+  sessionId    String
+  requestedTag String
+  status       String    @default("PENDING") // PENDING | RUNNING | SUCCEEDED | FAILED
+  outputImage  String?
+  error        String?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+
+  @@index([orgId])
+  @@index([sessionId])
+}
+
 model BannerWatermarkConfig {
   id          String   @id @default(cuid())
   orgId       String
