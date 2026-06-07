@@ -36,6 +36,7 @@ import { SessionsModule } from './modules/sessions/sessions.module';
 import { SharingModule } from './modules/sharing/sharing.module';
 import { StagingModule } from './modules/staging/staging.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { OrgConfigModule } from './modules/config/config.module';
 import { WatermarksModule } from './modules/watermarks/watermarks.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { WindowsModule } from './modules/windows/windows.module';
@@ -62,6 +63,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     UsersModule,
     RolesModule,
     GroupsModule,
+    OrgConfigModule,
     DevApiModule,
     CatalogModule,
     HealthModule,
