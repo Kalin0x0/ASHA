@@ -41,6 +41,19 @@ export const dlpPolicySchema = z.object({
   audioIn: z.boolean().optional(),
   audioOut: z.boolean().optional(),
   pwa: z.boolean().optional(),
+  // Geometric / advanced DLP — honoured by DLP-capable KasmVNC images
+  // (CHISTA_DLP_ENABLED, see infra/workstation). Propagated as KASM_DLP_* env.
+  watermark: z
+    .object({
+      text: z.string().max(120).optional(),
+      opacity: z.number().min(0).max(1).optional(),
+      tile: z.boolean().optional(),
+    })
+    .optional(),
+  clipboardMaxBytes: z.number().int().min(0).optional(),
+  clipboardAllowMimeTypes: z.array(z.string().max(120)).max(20).optional(),
+  keyboardRateLimit: z.number().int().min(0).optional(),
+  failSecure: z.boolean().optional(),
 });
 export type DlpPolicyDto = z.infer<typeof dlpPolicySchema>;
 

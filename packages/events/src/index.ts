@@ -87,6 +87,16 @@ export interface DlpPolicy {
   audioOut?: boolean;
   /** Install-as-PWA / open-in-new-tab. */
   pwa?: boolean;
+  /** Forensic watermark overlaid on the stream (exfil deterrence). */
+  watermark?: { text?: string; opacity?: number; tile?: boolean };
+  /** Max bytes per clipboard transfer (0 disables clipboard). */
+  clipboardMaxBytes?: number;
+  /** Allowed clipboard MIME types (empty ⇒ text/plain only). */
+  clipboardAllowMimeTypes?: string[];
+  /** Max keyboard events per second (anti-automation / scripted exfil). */
+  keyboardRateLimit?: number;
+  /** Purge in-session memory if the DLP enforcement process dies (fail-secure). */
+  failSecure?: boolean;
 }
 
 /**

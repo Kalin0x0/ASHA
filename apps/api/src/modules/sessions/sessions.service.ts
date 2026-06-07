@@ -403,5 +403,17 @@ function dlpEnv(dlp: DlpPolicy): Record<string, string> {
   if (deny(dlp.audioIn)) env.KASM_AUDIO_INPUT = '0';
   if (deny(dlp.audioOut)) env.KASM_AUDIO = '0';
   if (deny(dlp.pwa)) env.KASM_PWA = '0';
+
+  // Geometric / advanced DLP — honoured by DLP-capable KasmVNC builds
+  // (CHISTA_DLP_ENABLED images, see infra/workstation).
+  if (dlp.watermark?.text) {
+    env.KASM_DLP_WATERMARK_TEXT = dlp.watermark.text;
+    if (dlp.watermark.opacity !== undefined) env.KASM_DLP_WATERMARK_OPACITY = String(dlp.watermark.opacity);
+    env.KASM_DLP_WATERMARK_TILE = dlp.watermark.tile ? '1' : '0';
+  }
+  if (dlp.clipboardMaxBytes !== undefined) env.KASM_DLP_CLIPBOARD_MAX_BYTES = String(dlp.clipboardMaxBytes);
+  if (dlp.clipboardAllowMimeTypes?.length) env.KASM_DLP_CLIPBOARD_MIME = dlp.clipboardAllowMimeTypes.join(',');
+  if (dlp.keyboardRateLimit !== undefined) env.KASM_DLP_KEYBOARD_RATE = String(dlp.keyboardRateLimit);
+  if (dlp.failSecure) env.KASM_DLP_FAIL_SECURE = '1';
   return env;
 }
