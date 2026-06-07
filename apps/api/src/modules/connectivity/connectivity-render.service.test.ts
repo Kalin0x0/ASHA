@@ -111,4 +111,48 @@ describe('ConnectivityRenderService', () => {
     expect(content).toContain('NEKO_DESKTOP_SCREEN: 1280x720@30');
     expect(content).not.toContain('http_proxy');
   });
+
+  // ── F1 deny-by-default + safe-search ───────────────────────────────────
+
+  it('F1: explicit denyByDefault with no allowlist denies all (lockdown)', async () => {
+    prismaMock.webFilterConfig.findFirst.mockResolvedValue({ name: 'lock', cacheTtl: 60, categories: { denyByDefault: true } });
+    const { content } = await svc.renderSquidConfig('org1', 'f1');
+    expect(content).toContain('http_access deny all');
+    expect(content).not.toContain('http_access allow all');
+  });
+
+  it('F1: safeSearch injects the X-Chista-SafeSearch enforcement header', async () => {
+    prismaMock.webFilterConfig.findFirst.mockResolvedValue({ name: 's', cacheTtl: 60, categories: { safeSearch: true } });
+    const { content } = await svc.renderSquidConfig('org1', 'f1');
+    expect(content).toContain('X-Chista-SafeSearch');
+    expect(content).toContain('.duckduckgo.com');
+  });
+
+  // ── F3 OpenVPN ─────────────────────────────────────────────────────────
+
+  it('F3: renders a valid .ovpn from an openvpn egress', async () => {
+    prismaMock.egressGateway.findFirst.mockResolvedValue({
+      name: 'vpn',
+      provider: 'openvpn',
+      config: { remoteHost: 'vpn.example.com', remotePort: 1194, proto: 'udp', ca: 'CA-PEM', authUser: 'u' },
+    });
+    const { filename, content } = await svc.renderOpenVpnConfig('org1', 'e1');
+    expect(filename).toBe('openvpn-vpn.conf');
+    expect(content).toContain('client');
+    expect(content).toContain('remote vpn.example.com 1194');
+    expect(content).toContain('proto udp');
+    expect(content).toContain('<ca>');
+    expect(content).toContain('CA-PEM');
+    expect(content).toContain('auth-user-pass');
+  });
+
+  it('F3: rejects a non-openvpn provider', async () => {
+    prismaMock.egressGateway.findFirst.mockResolvedValue({ name: 'wg', provider: 'wireguard', config: {} });
+    await expect(svc.renderOpenVpnConfig('org1', 'e1')).rejects.toThrow(BadRequestException);
+  });
+
+  it('F3: rejects missing required openvpn fields', async () => {
+    prismaMock.egressGateway.findFirst.mockResolvedValue({ name: 'bad', provider: 'openvpn', config: { remoteHost: 'h' } });
+    await expect(svc.renderOpenVpnConfig('org1', 'e1')).rejects.toThrow(/missing "ca"/);
+  });
 });
