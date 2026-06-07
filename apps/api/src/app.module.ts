@@ -38,6 +38,7 @@ import { StagingModule } from './modules/staging/staging.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { OrgConfigModule } from './modules/config/config.module';
 import { PolicyModule } from './modules/policy/policy.module';
+import { CopilotModule } from './modules/copilot/copilot.module';
 import { WatermarksModule } from './modules/watermarks/watermarks.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { WindowsModule } from './modules/windows/windows.module';
@@ -66,6 +67,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     GroupsModule,
     OrgConfigModule,
     PolicyModule,
+    CopilotModule,
     DevApiModule,
     CatalogModule,
     HealthModule,
