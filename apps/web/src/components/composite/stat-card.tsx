@@ -45,7 +45,7 @@ export function StatCard({
 
   return (
     <Card
-      elevation={primary ? 'gold' : 1}
+      elevation={primary ? 'gold' : 'glass'}
       interactive
       className="animate-rise group relative overflow-hidden"
     >

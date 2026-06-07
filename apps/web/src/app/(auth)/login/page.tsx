@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/lib/api/auth-context';
+import { getAuth } from '@/lib/api/auth-store';
 import {
   type ApiPublicAuthProvider,
   getPublicAuthProviders,
@@ -41,7 +42,7 @@ export default function LoginPage() {
     }
     try {
       await login(email, password);
-      router.push('/dashboard');
+      router.push(getAuth().user?.isSystemAdmin ? '/dashboard' : '/');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed');
       setLoading(false);
@@ -60,7 +61,7 @@ export default function LoginPage() {
     setPasskeyLoading(true);
     try {
       await loginWithPasskey(email);
-      router.push('/dashboard');
+      router.push(getAuth().user?.isSystemAdmin ? '/dashboard' : '/');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Passkey sign in failed');
     } finally {

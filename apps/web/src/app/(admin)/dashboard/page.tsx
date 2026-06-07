@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
       {/* Trend + utilization */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Card elevation={1} className="xl:col-span-2 animate-fade-up delay-200">
+        <Card elevation="glass" className="xl:col-span-2 animate-fade-up delay-200">
           <CardHeader className="flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="font-display text-base font-semibold">Sessions over time</CardTitle>
@@ -126,7 +126,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card elevation={1} className="animate-fade-up delay-300">
+        <Card elevation="glass" className="animate-fade-up delay-300">
           <CardHeader className="pb-2">
             <CardTitle className="font-display text-base font-semibold">Resource utilization</CardTitle>
             <p className="text-[12px] text-muted-foreground">Cluster-wide average</p>
@@ -162,7 +162,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="space-y-4 animate-fade-up delay-400">
-          <Card elevation={1}>
+          <Card elevation="glass">
             <CardHeader className="pb-2">
               <CardTitle className="font-display text-base font-semibold">Top workspaces</CardTitle>
             </CardHeader>
@@ -171,7 +171,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card elevation={1}>
+          <Card elevation="glass">
             <CardHeader className="pb-2">
               <CardTitle className="font-display text-base font-semibold">Recent activity</CardTitle>
             </CardHeader>
