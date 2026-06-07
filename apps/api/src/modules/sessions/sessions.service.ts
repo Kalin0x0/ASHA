@@ -199,13 +199,24 @@ export class SessionsService {
     // launching user ({username}, {email}, {custom_attribute_*}).
     const customEnv = resolveTokens(dockerCfg.env ?? {}, tokenCtx);
     const customLabels = resolveTokens(dockerCfg.labels ?? {}, tokenCtx);
-    // E1: propagate admin-defined host volume mappings into the session container.
-    // hostPath/destPath support {username}/{email}/{custom_attribute_*} tokens.
-    const volumeMappings = await prisma.volumeMapping.findMany({ where: { orgId: workspace.orgId } });
-    const storageVolumes = volumeMappings.map((m) => {
-      const i = resolveTokens({ s: m.hostPath, t: m.destPath }, tokenCtx);
-      return { source: i.s, target: i.t, readOnly: m.readOnly };
-    });
+    // E1/E4: propagate admin-defined host volume + file mappings into the session.
+    // hostPath/sourcePath/destPath support {username}/{email}/{custom_attribute_*} tokens.
+    const [volumeMappings, fileMappings] = await Promise.all([
+      prisma.volumeMapping.findMany({ where: { orgId: workspace.orgId } }),
+      prisma.fileMapping.findMany({ where: { orgId: workspace.orgId, target: 'CONTAINER', userId: null } }),
+    ]);
+    const storageVolumes = [
+      ...volumeMappings.map((m) => {
+        const i = resolveTokens({ s: m.hostPath, t: m.destPath }, tokenCtx);
+        return { source: i.s, target: i.t, readOnly: m.readOnly };
+      }),
+      // E4: a file mapping binds one host file → container path; home-profile files
+      // are writable, everything else is mounted read-only.
+      ...fileMappings.map((m) => {
+        const i = resolveTokens({ s: m.sourcePath, t: m.destPath }, tokenCtx);
+        return { source: i.s, target: i.t, readOnly: !m.isHomeProfile };
+      }),
+    ];
     const runConfig: RunConfig = {
       dockerImage: workspace.image?.dockerImage ?? 'kasmweb/firefox:1.16.0',
       // DLP flags are surfaced to KasmVNC/Neko as env vars the image honours;
