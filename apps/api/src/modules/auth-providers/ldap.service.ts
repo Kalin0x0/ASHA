@@ -32,11 +32,15 @@ export class LdapService {
   }
 
   private newClient(c: LdapConfig): Client {
+    // Only attach TLS options for ldaps:// — passing them for a plain ldap:// URL
+    // makes ldapts attempt a TLS handshake the server rejects ("socket
+    // disconnected before secure TLS connection was established").
+    const secure = c.url.trim().toLowerCase().startsWith('ldaps://');
     return new Client({
       url: c.url,
       timeout: 8000,
       connectTimeout: 8000,
-      tlsOptions: { rejectUnauthorized: c.tlsRejectUnauthorized !== false },
+      ...(secure ? { tlsOptions: { rejectUnauthorized: c.tlsRejectUnauthorized !== false } } : {}),
     });
   }
 
