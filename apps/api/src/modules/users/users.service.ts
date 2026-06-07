@@ -42,6 +42,44 @@ export interface UpdateUserInput {
   password?: string;
 }
 
+/** Minimal RFC-4180-ish CSV line parser (handles "quoted, fields" + "" escapes). */
+function parseCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const c = line[i];
+    if (inQ) {
+      if (c === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i += 1;
+      } else if (c === '"') inQ = false;
+      else cur += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') {
+      out.push(cur);
+      cur = '';
+    } else cur += c;
+  }
+  out.push(cur);
+  return out.map((s) => s.trim());
+}
+
+/** Parse a CSV (header row + data rows) into lowercased-keyed records. */
+function parseCsv(csv: string): Array<Record<string, string>> {
+  const lines = csv.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length < 2) return [];
+  const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
+  return lines.slice(1).map((line) => {
+    const cells = parseCsvLine(line);
+    const row: Record<string, string> = {};
+    headers.forEach((h, i) => {
+      row[h] = cells[i] ?? '';
+    });
+    return row;
+  });
+}
+
 @Injectable()
 export class UsersService {
   async list(user: AuthUser, q?: string) {
@@ -97,6 +135,77 @@ export class UsersService {
       },
       select: SAFE_SELECT,
     });
+  }
+
+  /**
+   * Bulk-create users from a CSV (header row). Recognised columns:
+   * `email` (required), `username`, `displayName`, `password`, `isSystemAdmin`
+   * (1/true/yes), `locale`, `groups` (semicolon-separated group names).
+   * Existing users are skipped (not overwritten); per-row errors are collected
+   * so one bad row never aborts the batch.
+   */
+  async bulkImport(user: AuthUser, csv: string) {
+    const rows = parseCsv(csv);
+    const result = {
+      total: rows.length,
+      created: 0,
+      skipped: 0,
+      errors: [] as Array<{ row: number; email: string; error: string }>,
+    };
+    const groupCache = new Map<string, string | null>();
+
+    for (let i = 0; i < rows.length; i += 1) {
+      const r = rows[i];
+      const rowNo = i + 2; // 1-based + header row
+      const email = (r.email ?? '').trim();
+      if (!email) {
+        result.errors.push({ row: rowNo, email: '', error: 'missing email' });
+        continue;
+      }
+      try {
+        const isAdmin = ['1', 'true', 'yes'].includes((r.issystemadmin ?? '').toLowerCase());
+        const created = await this.create(user, {
+          email,
+          username: r.username || undefined,
+          displayName: r.displayname || undefined,
+          password: r.password || undefined,
+          isSystemAdmin: isAdmin,
+          locale: r.locale || undefined,
+        });
+        const groupNames = (r.groups ?? '')
+          .split(';')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        for (const name of groupNames) {
+          const key = name.toLowerCase();
+          let gid = groupCache.get(key);
+          if (gid === undefined) {
+            const g = await prisma.group.findFirst({ where: { name } });
+            gid = g?.id ?? null;
+            groupCache.set(key, gid);
+          }
+          if (!gid) {
+            result.errors.push({ row: rowNo, email, error: `unknown group "${name}"` });
+            continue;
+          }
+          const existing = await prisma.userGroup.findFirst({ where: { userId: created.id, groupId: gid } });
+          if (!existing) {
+            await prisma.userGroup.create({ data: { orgId: user.orgId, userId: created.id, groupId: gid } });
+          }
+        }
+        result.created += 1;
+      } catch (e) {
+        if (e instanceof ConflictException) {
+          result.skipped += 1;
+          result.errors.push({ row: rowNo, email, error: 'already exists' });
+        } else if (e instanceof ForbiddenException) {
+          result.errors.push({ row: rowNo, email, error: 'system-admin column requires a system-admin importer' });
+        } else {
+          result.errors.push({ row: rowNo, email, error: (e as Error).message });
+        }
+      }
+    }
+    return result;
   }
 
   async update(user: AuthUser, id: string, dto: UpdateUserInput) {
