@@ -25,6 +25,13 @@ export interface SessionRecord {
   sshPrivateKey?: string;
   rdpUser?: string;
   rdpPassword?: string;
+  /**
+   * RemoteApp (RDS published application) to launch instead of a full desktop.
+   * When set, guacd starts the app via the RDP `remote-app` parameters.
+   */
+  remoteApp?: string;
+  remoteAppDir?: string;
+  remoteAppArgs?: string;
 }
 
 const REDIS_KEY = (kasmId: string) => `chista:proxy:session:${kasmId}`;

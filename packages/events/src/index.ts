@@ -173,6 +173,8 @@ export interface StreamProfile {
   maxBitrateKbps?: number;
   /** Two-way clipboard sync. */
   clipboardSync?: boolean;
+  /** B2: max monitors the viewer may open for this session (multi-monitor). */
+  maxDisplays?: number;
 }
 
 export interface SessionControlCommand {
