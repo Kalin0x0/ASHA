@@ -246,6 +246,25 @@ export class AuthService {
   }
 
   /**
+   * Step-up authentication (C4): re-verify a fresh TOTP code and mint a
+   * short-lived elevated token (`acr: 'step-up'`) for sensitive operations.
+   */
+  async stepUp(user: AuthUser, totp: string) {
+    const method = await prisma.twoFactorMethod.findFirst({
+      where: { userId: user.sub, type: 'TOTP', confirmed: true },
+    });
+    if (!method) throw new BadRequestException('No confirmed TOTP method enrolled');
+    const result = await verifyOtp({ secret: method.secret, token: totp });
+    if (!result.valid) throw new UnauthorizedException('Invalid two-factor code');
+    const ttl = Math.min(this.env.JWT_ACCESS_TTL, 300);
+    const accessToken = await this.jwt.signAsync(
+      { sub: user.sub, orgId: user.orgId, email: user.email, isSystemAdmin: user.isSystemAdmin, acr: 'step-up' },
+      { secret: this.env.JWT_ACCESS_SECRET, expiresIn: ttl },
+    );
+    return { accessToken, expiresIn: ttl, tokenType: 'Bearer', acr: 'step-up' };
+  }
+
+  /**
    * Mint an access/refresh pair. On a fresh login `family` is omitted and a new
    * rotation family is created; on refresh the caller passes the existing family
    * so the chain stays linked and replay detection can burn it as a unit.
