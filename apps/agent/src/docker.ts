@@ -222,6 +222,9 @@ async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCom
   ];
 
   for (const { name, spec } of entries) {
+    // A failing sidecar (image pull / missing /dev/fuse / bad config) must not
+    // break the session — best-effort per sidecar.
+    try {
     await ensureImage(spec.image);
 
     // Write config files and build bind-mounts.
@@ -257,6 +260,9 @@ async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCom
       Labels: { 'chista.sidecar.kasmId': kasmId },
     });
     await sc.start();
+    } catch {
+      // Swallow — keep the session up even if one sidecar can't start.
+    }
   }
 }
 
