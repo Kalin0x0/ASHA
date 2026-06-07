@@ -68,6 +68,8 @@ export const streamProfileSchema = z.object({
   webpQuality: z.number().int().min(0).max(100).optional(),
   maxBitrateKbps: z.number().int().min(0).max(1_000_000).optional(),
   clipboardSync: z.boolean().optional(),
+  // B2: max monitors the viewer may open for this session (multi-monitor).
+  maxDisplays: z.number().int().min(1).max(8).optional(),
 });
 export type StreamProfileDto = z.infer<typeof streamProfileSchema>;
 

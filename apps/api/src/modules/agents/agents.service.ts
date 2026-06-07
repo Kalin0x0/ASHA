@@ -142,6 +142,12 @@ export class AgentsService {
         data.connectionUrl = connectionUrl;
         data.startedAt = session.startedAt ?? new Date();
 
+        // A1: if the workspace publishes a RemoteApp, the proxy launches it via
+        // guacd's remote-app params instead of a full desktop.
+        const remoteApp = session.workspaceId
+          ? await prisma.remoteApp.findFirst({ where: { workspaceId: session.workspaceId } })
+          : null;
+
         // Publish the connection record the connection-proxy reads to bridge
         // RDP/VNC/SSH sessions (keyed by kasmId). KasmVNC goes straight through
         // Traefik and doesn't need this, but writing it is harmless.
@@ -161,6 +167,8 @@ export class AgentsService {
             sshPrivateKey: dto.sshPrivateKey,
             rdpUser: dto.rdpUser,
             rdpPassword: dto.rdpPassword,
+            remoteApp: remoteApp?.path,
+            remoteAppArgs: remoteApp?.args ?? undefined,
           },
           3600,
         );

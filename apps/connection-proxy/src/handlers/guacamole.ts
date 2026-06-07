@@ -61,6 +61,13 @@ function resolveParam(name: string, session: SessionRecord): string {
       return String(DEFAULT_HEIGHT);
     case 'dpi':
       return String(DEFAULT_DPI);
+    // RemoteApp / RDS published-application launch (RDP only).
+    case 'remote-app':
+      return session.remoteApp ?? '';
+    case 'remote-app-dir':
+      return session.remoteAppDir ?? '';
+    case 'remote-app-args':
+      return session.remoteAppArgs ?? '';
     default:
       return '';
   }
