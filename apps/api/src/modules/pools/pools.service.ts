@@ -148,4 +148,52 @@ export class PoolsService {
     });
     return { ok: true };
   }
+
+  /**
+   * Evaluate the desired capacity for a pool *right now* (D5). In SCHEDULE mode
+   * the matching weekly slot (dayOfWeek + hour, UTC) wins, otherwise the base
+   * config. The result is the plan a scaler acts on — actually provisioning
+   * servers via a VM provider is a separate, pluggable step.
+   */
+  async planAutoscale(orgId: string, poolId: string) {
+    const pool = await prisma.serverPool.findFirst({
+      where: { id: poolId, orgId },
+      include: {
+        autoscaleConfig: { include: { schedules: true } },
+        _count: { select: { members: true } },
+      },
+    });
+    if (!pool) throw new NotFoundException('Pool not found');
+    const cfg = pool.autoscaleConfig;
+    if (!cfg) return { configured: false as const, poolId };
+
+    const now = new Date();
+    const dayOfWeek = now.getUTCDay();
+    const hour = now.getUTCHours();
+    const slot =
+      cfg.mode === 'SCHEDULE'
+        ? (cfg.schedules.find((sc) => sc.dayOfWeek === dayOfWeek && sc.hour === hour) ?? null)
+        : null;
+
+    const effectiveMinStandby = slot?.minStandby ?? cfg.minStandby;
+    const effectiveMaxInstances = slot?.maxInstances ?? cfg.maxInstances;
+    const currentInstances = pool._count.members;
+    const desired = Math.max(0, Math.min(effectiveMinStandby, effectiveMaxInstances));
+    const delta = desired - currentInstances;
+    const action = delta > 0 ? 'scale_up' : delta < 0 ? 'scale_down' : 'none';
+
+    return {
+      configured: true as const,
+      poolId,
+      mode: cfg.mode,
+      at: { dayOfWeek, hour, utc: now.toISOString() },
+      slotMatched: Boolean(slot),
+      effectiveMinStandby,
+      effectiveMaxInstances,
+      currentInstances,
+      desired,
+      delta,
+      action,
+    };
+  }
 }
