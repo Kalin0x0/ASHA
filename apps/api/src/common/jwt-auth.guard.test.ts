@@ -4,6 +4,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { AGENT_ONLY, IS_PUBLIC } from './decorators';
 
+// The guard falls back to a DB lookup for minted RegistrationTokens when the
+// shared env token doesn't match; mock it so unit tests stay hermetic.
+vi.mock('@chista/db', () => ({
+  prisma: {
+    registrationToken: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      update: vi.fn().mockResolvedValue(undefined),
+    },
+  },
+  runUnscoped: (fn: () => unknown) => fn(),
+}));
+
 const AGENT_TOKEN = 'agent-shared-secret-123';
 const env = { JWT_ACCESS_SECRET: 'access-secret', CHISTA_AGENT_ENROLLMENT_TOKEN: AGENT_TOKEN } as never;
 
@@ -53,6 +65,18 @@ describe('JwtAuthGuard — agent-only routes', () => {
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
     // An agent-only route must never fall through to JWT verification.
     expect(jwt.verifyAsync).not.toHaveBeenCalled();
+  });
+
+  it('accepts an agent-only route with a valid minted RegistrationToken', async () => {
+    const { prisma } = await import('@chista/db');
+    (prisma.registrationToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: 't1',
+      revokedAt: null,
+      expiresAt: null,
+    });
+    const guard = new JwtAuthGuard(reflectorFor({ agentOnly: true }), jwt as never, env);
+    const { ctx } = contextWith({ 'x-agent-token': 'cra_minted_token' });
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
   });
 
   it('still lets @Public() routes through without any token', async () => {

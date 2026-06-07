@@ -18,6 +18,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Agent enrollment tokens — admins mint named, revocable, optionally-expiring
+// tokens so multiple agents/zones can enroll without sharing one static env
+// secret. Only the sha256 hash is stored; the plaintext is shown once at mint.
+model RegistrationToken {
+  id          String    @id @default(cuid())
+  orgId       String
+  name        String
+  /// sha256 hex of the plaintext token.
+  tokenHash   String    @unique
+  zoneId      String?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  lastUsedAt  DateTime?
+  useCount    Int       @default(0)
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([orgId])
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Enums
 // ─────────────────────────────────────────────────────────────────────────────
