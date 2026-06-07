@@ -41,8 +41,35 @@ export const dlpPolicySchema = z.object({
   audioIn: z.boolean().optional(),
   audioOut: z.boolean().optional(),
   pwa: z.boolean().optional(),
+  // Geometric / advanced DLP — honoured by DLP-capable KasmVNC images
+  // (CHISTA_DLP_ENABLED, see infra/workstation). Propagated as KASM_DLP_* env.
+  watermark: z
+    .object({
+      text: z.string().max(120).optional(),
+      opacity: z.number().min(0).max(1).optional(),
+      tile: z.boolean().optional(),
+    })
+    .optional(),
+  clipboardMaxBytes: z.number().int().min(0).optional(),
+  clipboardAllowMimeTypes: z.array(z.string().max(120)).max(20).optional(),
+  keyboardRateLimit: z.number().int().min(0).optional(),
+  failSecure: z.boolean().optional(),
 });
 export type DlpPolicyDto = z.infer<typeof dlpPolicySchema>;
+
+// Live in-session stream control (resolution / fps / quality / bitrate / clipboard).
+export const streamProfileSchema = z.object({
+  resolution: z
+    .object({ width: z.number().int().min(320).max(7680), height: z.number().int().min(240).max(4320) })
+    .optional(),
+  maxFps: z.number().int().min(1).max(120).optional(),
+  quality: z.enum(['low', 'medium', 'high', 'lossless']).optional(),
+  jpegQuality: z.number().int().min(0).max(100).optional(),
+  webpQuality: z.number().int().min(0).max(100).optional(),
+  maxBitrateKbps: z.number().int().min(0).max(1_000_000).optional(),
+  clipboardSync: z.boolean().optional(),
+});
+export type StreamProfileDto = z.infer<typeof streamProfileSchema>;
 
 // Hardware H.264 encoding (NVENC/VAAPI). Open-source encoders only.
 export const gpuConfigSchema = z.object({
@@ -627,6 +654,11 @@ export type UpdateRegistryDto = z.infer<typeof updateRegistrySchema>;
 // Install a registry entry → creates an Image (and optionally a Workspace).
 export const installRegistryEntrySchema = z.object({
   createWorkspace: z.boolean().default(false),
+  // edit-before-install overrides
+  friendlyName: z.string().min(1).max(120).optional(),
+  categories: z.array(z.string()).optional(),
+  /** Override the docker image (e.g. pick a specific channel/tag). */
+  imageOverride: z.string().min(1).max(300).optional(),
 });
 export type InstallRegistryEntryDto = z.infer<typeof installRegistryEntrySchema>;
 
@@ -641,6 +673,12 @@ export const upsertLicenseSchema = z.object({
   features: z.record(z.unknown()).default({}),
 });
 export type UpsertLicenseDto = z.infer<typeof upsertLicenseSchema>;
+
+// Activate an Ed25519-signed offline license key.
+export const activateLicenseSchema = z.object({
+  licenseKey: z.string().min(1).max(8000),
+});
+export type ActivateLicenseDto = z.infer<typeof activateLicenseSchema>;
 
 // ── Settings: branding + general + config import/export ───────────────────────
 export const upsertBrandingSchema = z.object({

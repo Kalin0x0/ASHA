@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { CommonModule } from './common/common.module';
 import { EnvModule } from './common/env.module';
+import { AuditInterceptor } from './common/audit.interceptor';
 import { JwtAuthGuard } from './common/jwt-auth.guard';
 import { PermissionsGuard } from './common/permissions.guard';
 import { TenantInterceptor } from './common/tenant.interceptor';
@@ -24,6 +25,11 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { PoolsModule } from './modules/pools/pools.module';
 import { ProvidersModule } from './modules/providers/providers.module';
 import { RecordingsModule } from './modules/recordings/recordings.module';
+import { RegistrationTokensModule } from './modules/registration-tokens/registration-tokens.module';
+import { UsersModule } from './modules/users/users.module';
+import { RolesModule } from './modules/roles/roles.module';
+import { GroupsModule } from './modules/groups/groups.module';
+import { DevApiModule } from './modules/dev-api/dev-api.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { ServersModule } from './modules/servers/servers.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
@@ -52,6 +58,11 @@ import { ZonesModule } from './modules/zones/zones.module';
     WorkspacesModule,
     SessionsModule,
     AgentsModule,
+    RegistrationTokensModule,
+    UsersModule,
+    RolesModule,
+    GroupsModule,
+    DevApiModule,
     CatalogModule,
     HealthModule,
     StorageModule,
@@ -83,6 +94,8 @@ import { ZonesModule } from './modules/zones/zones.module';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_INTERCEPTOR, useClass: TenantInterceptor },
+    // Declarative auditing — records entries for handlers decorated with @Audit().
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
 })
 export class AppModule {}

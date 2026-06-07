@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { CreateSessionDto } from '@chista/contracts';
 import { prisma } from '@chista/db';
 import {
@@ -8,14 +8,22 @@ import {
   RedisChannels,
   type RunConfig,
   type SessionControlCommand,
+  type SessionSidecar,
+  type StreamProfile,
 } from '@chista/events';
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
 import { RedisService } from '../../common/redis.service';
+import { resolveTokens, type TokenContext } from '../../common/tokens';
 import { ConnectivityRenderService } from '../connectivity/connectivity-render.service';
 import { LicensingService } from '../licensing/licensing.service';
+import { StorageService } from '../storage/storage.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { SchedulerService } from './scheduler.service';
+
+const SESSION_STATUSES = new Set([
+  'REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED', 'TERMINATING', 'DESTROYED', 'ERROR',
+]);
 
 @Injectable()
 export class SessionsService {
@@ -30,6 +38,8 @@ export class SessionsService {
     // Optional so unit tests can construct the service without licensing;
     // when present, the per-org session cap is enforced before launch.
     @Optional() private readonly licensing?: LicensingService,
+    // Optional: when present, enabled cloud StorageMappings mount via rclone sidecars.
+    @Optional() private readonly storage?: StorageService,
   ) {}
 
   async create(user: AuthUser, dto: CreateSessionDto) {
@@ -81,7 +91,12 @@ export class SessionsService {
         where: { id: session.id },
         data: { status: 'SCHEDULED', agentId: agent.id },
       });
-      await this.dispatchProvision(session.id, zone.name, workspace, protocol);
+      const tokenCtx: TokenContext = {
+        username: user.email.split('@')[0],
+        email: user.email,
+        customAttributes: (dto.launchValues ?? {}) as Record<string, unknown>,
+      };
+      await this.dispatchProvision(session.id, zone.name, workspace, protocol, tokenCtx);
     }
 
     await this.audit.record({
@@ -102,6 +117,42 @@ export class SessionsService {
     return prisma.session.findUnique({ where: { id: session.id } });
   }
 
+  /** Build rclone mount sidecars from the org's enabled cloud StorageMappings (E2). */
+  private async resolveStorageSidecars(orgId: string, tokenCtx: TokenContext): Promise<SessionSidecar[]> {
+    if (!this.storage) return [];
+    const typeByKind: Record<string, string> = {
+      S3: 's3',
+      DROPBOX: 'dropbox',
+      GDRIVE: 'drive',
+      NEXTCLOUD: 'webdav',
+      ONEDRIVE: 'onedrive',
+    };
+    const mappings = await prisma.storageMapping.findMany({ where: { orgId, enabled: true } });
+    const sidecars: SessionSidecar[] = [];
+    for (const m of mappings) {
+      const cfg = ((await this.storage.resolveStorageConfig(orgId, m.id)) ?? {}) as Record<string, unknown>;
+      const type = typeByKind[m.kind] ?? String(cfg.type ?? '');
+      if (!type) continue;
+      // rclone reads RCLONE_CONFIG_<REMOTE>_<KEY> env to define remote "REMOTE".
+      const env: Record<string, string> = { RCLONE_CONFIG_REMOTE_TYPE: type };
+      for (const [k, v] of Object.entries(cfg)) {
+        if (v == null || typeof v === 'object') continue;
+        if (['bucket', 'path', 'remotePath', 'type'].includes(k)) continue;
+        env[`RCLONE_CONFIG_REMOTE_${k.toUpperCase()}`] = String(v);
+      }
+      const sub = String(cfg.bucket ?? cfg.path ?? cfg.remotePath ?? '');
+      const mountPath = resolveTokens({ p: m.mountPath }, tokenCtx).p;
+      sidecars.push({
+        image: process.env.CHISTA_RCLONE_IMAGE ?? 'rclone/rclone:latest',
+        env,
+        cmd: ['mount', `REMOTE:${sub}`, mountPath, '--allow-other', '--vfs-cache-mode', 'writes', '--no-modtime'],
+        capAdd: ['SYS_ADMIN'],
+        devices: ['/dev/fuse'],
+      });
+    }
+    return sidecars;
+  }
+
   private async dispatchProvision(
     sessionId: string,
     zoneName: string,
@@ -120,6 +171,7 @@ export class SessionsService {
       browserIsolationId?: string | null;
     },
     protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' | 'WEBRTC',
+    tokenCtx: TokenContext,
   ) {
     const session = await prisma.session.findUnique({ where: { id: sessionId } });
     if (!session) return;
@@ -131,15 +183,34 @@ export class SessionsService {
       devices?: string[];
       audioImage?: string;
       printerImage?: string;
+      env?: Record<string, string>;
+      labels?: Record<string, string>;
+      capAdd?: string[];
+      capDrop?: string[];
+      securityOpt?: string[];
+      privileged?: boolean;
+      restartPolicy?: 'no' | 'always' | 'unless-stopped' | 'on-failure';
     };
     const gpu = (workspace.gpu ?? {}) as GpuConfig;
     const dlp = (workspace.dlp ?? {}) as DlpPolicy;
     // Neko (WEBRTC) listens on 8080; all other images use the image's default (6901).
     const defaultPort = protocol === 'WEBRTC' ? 8080 : 6901;
+    // Admin-defined container env + labels are token-interpolated against the
+    // launching user ({username}, {email}, {custom_attribute_*}).
+    const customEnv = resolveTokens(dockerCfg.env ?? {}, tokenCtx);
+    const customLabels = resolveTokens(dockerCfg.labels ?? {}, tokenCtx);
+    // E1: propagate admin-defined host volume mappings into the session container.
+    // hostPath/destPath support {username}/{email}/{custom_attribute_*} tokens.
+    const volumeMappings = await prisma.volumeMapping.findMany({ where: { orgId: workspace.orgId } });
+    const storageVolumes = volumeMappings.map((m) => {
+      const i = resolveTokens({ s: m.hostPath, t: m.destPath }, tokenCtx);
+      return { source: i.s, target: i.t, readOnly: m.readOnly };
+    });
     const runConfig: RunConfig = {
       dockerImage: workspace.image?.dockerImage ?? 'kasmweb/firefox:1.16.0',
-      // DLP flags are surfaced to KasmVNC/Neko as env vars the image honours.
-      env: dlpEnv(dlp),
+      // DLP flags are surfaced to KasmVNC/Neko as env vars the image honours;
+      // admin env layers on top (DLP wins on key collisions for safety).
+      env: { ...customEnv, ...dlpEnv(dlp) },
       ports: defaults.ports ?? [defaultPort],
       shmSize: dockerCfg.shmSize ?? (protocol === 'WEBRTC' ? '2g' : '1g'),
       cores: workspace.coresLimit ?? undefined,
@@ -147,6 +218,13 @@ export class SessionsService {
       gpuCount: gpu.count ?? workspace.gpuCount,
       ...(gpu.encoder && gpu.encoder !== 'none' ? { gpu } : {}),
       ...(dockerCfg.devices?.length ? { devices: dockerCfg.devices } : {}),
+      ...(Object.keys(customLabels).length ? { labels: customLabels } : {}),
+      ...(dockerCfg.capAdd?.length ? { capAdd: dockerCfg.capAdd } : {}),
+      ...(dockerCfg.capDrop?.length ? { capDrop: dockerCfg.capDrop } : {}),
+      ...(dockerCfg.securityOpt?.length ? { securityOpt: dockerCfg.securityOpt } : {}),
+      ...(dockerCfg.privileged ? { privileged: true } : {}),
+      ...(dockerCfg.restartPolicy ? { restartPolicy: dockerCfg.restartPolicy } : {}),
+      ...(storageVolumes.length ? { volumes: storageVolumes } : {}),
     };
 
     // Resolve open-source sidecar descriptors from workspace connectivity policy.
@@ -175,6 +253,9 @@ export class SessionsService {
       if (dlp.audioOut) sidecars.audio = this.render.resolveAudioSidecar(dockerCfg.audioImage);
       if (dlp.printing) sidecars.printing = this.render.resolvePrintingSidecar(dockerCfg.printerImage);
     }
+    // E2: mount the org's enabled cloud StorageMappings via rclone sidecars.
+    const storageSidecars = await this.resolveStorageSidecars(workspace.orgId, tokenCtx);
+    if (storageSidecars.length) sidecars.storage = storageSidecars;
 
     const command: ProvisionCommand = {
       sessionId,
@@ -192,9 +273,13 @@ export class SessionsService {
   }
 
   async list(filters: { status?: string; userId?: string } = {}) {
+    // Validate the caller-supplied status against the enum; an unknown value
+    // would otherwise reach Prisma as an invalid enum and 500. Fall back to the
+    // default "everything except DESTROYED" filter.
+    const statusFilter = filters.status && SESSION_STATUSES.has(filters.status) ? filters.status : undefined;
     return prisma.session.findMany({
       where: {
-        status: filters.status ? (filters.status as never) : { notIn: ['DESTROYED'] },
+        status: statusFilter ? (statusFilter as never) : { notIn: ['DESTROYED'] },
         ...(filters.userId ? { userId: filters.userId } : {}),
       },
       orderBy: { createdAt: 'desc' },
@@ -202,15 +287,30 @@ export class SessionsService {
     });
   }
 
-  async get(id: string) {
-    const session = await prisma.session.findUnique({ where: { id } });
+  async get(id: string, user: AuthUser) {
+    return this.findInOrg(id, user.orgId);
+  }
+
+  /** Load a session scoped to the caller's org — enforces tenant isolation. */
+  private async findInOrg(id: string, orgId: string) {
+    const session = await prisma.session.findFirst({ where: { id, orgId } });
     if (!session) throw new NotFoundException('Session not found');
     return session;
   }
 
+  /**
+   * Gate per-session access: the owning user or a system admin may proceed;
+   * anyone else is forbidden. Closes the leak where any authenticated user
+   * could read another user's connection URL / control their session by id.
+   */
+  private assertCanAccess(session: { userId: string | null }, user: AuthUser) {
+    if (user.isSystemAdmin) return;
+    if (session.userId && session.userId === user.sub) return;
+    throw new ForbiddenException('You do not have access to this session');
+  }
+
   async terminate(id: string, user: AuthUser) {
-    const session = await prisma.session.findUnique({ where: { id } });
-    if (!session) throw new NotFoundException('Session not found');
+    const session = await this.findInOrg(id, user.orgId);
     await this.destroy(session, 'admin_terminate', user.sub);
     return { ok: true };
   }
@@ -225,10 +325,13 @@ export class SessionsService {
     reason: string,
     actorUserId?: string,
   ) {
-    await prisma.session.update({
-      where: { id: session.id },
+    // Idempotent: only the first transition into TERMINATING proceeds, so two
+    // reaper passes (expired + paused) can't double-destroy / double-audit.
+    const { count } = await prisma.session.updateMany({
+      where: { id: session.id, status: { notIn: ['TERMINATING', 'DESTROYED'] } },
       data: { status: 'TERMINATING', terminationReason: reason },
     });
+    if (count === 0) return;
     const zone = await prisma.deploymentZone.findUnique({ where: { id: session.zoneId } });
     await this.redis.publish(RedisChannels.destroy(zone?.name ?? 'default'), {
       sessionId: session.id,
@@ -246,14 +349,16 @@ export class SessionsService {
     await this.webhooks?.dispatch(session.orgId, 'session.terminated', { sessionId: session.id, reason });
   }
 
-  async keepalive(id: string) {
-    await prisma.session.update({ where: { id }, data: { lastKeepaliveAt: new Date() } });
+  async keepalive(id: string, user: AuthUser) {
+    const session = await this.findInOrg(id, user.orgId);
+    this.assertCanAccess(session, user);
+    await prisma.session.update({ where: { id: session.id }, data: { lastKeepaliveAt: new Date() } });
     return { ok: true };
   }
 
-  async connection(id: string) {
-    const session = await prisma.session.findUnique({ where: { id } });
-    if (!session) throw new NotFoundException('Session not found');
+  async connection(id: string, user: AuthUser) {
+    const session = await this.findInOrg(id, user.orgId);
+    this.assertCanAccess(session, user);
     const workspace = session.workspaceId
       ? await prisma.workspace.findUnique({ where: { id: session.workspaceId } })
       : null;
@@ -262,14 +367,16 @@ export class SessionsService {
       status: session.status,
       // The viewer reads the DLP policy back to grey out disallowed controls.
       dlp: (workspace?.dlp ?? {}) as DlpPolicy,
+      // The viewer applies the stream profile client-side (KasmVNC quality/fps/clipboard).
+      streamProfile: (session.streamProfile ?? {}) as unknown as StreamProfile,
     };
   }
 
   /** Freeze a running session's container (no compute, state retained). */
   async pause(id: string, user: AuthUser) {
-    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED']);
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
     await this.sendControl(session, { action: 'PAUSE' });
-    await prisma.session.update({ where: { id }, data: { status: 'PAUSED' } });
+    await prisma.session.update({ where: { id }, data: { status: 'PAUSED', pausedAt: new Date() } });
     await this.audit.record({
       orgId: session.orgId,
       actorUserId: user.sub,
@@ -284,11 +391,11 @@ export class SessionsService {
 
   /** Thaw a paused session's container. */
   async resume(id: string, user: AuthUser) {
-    const session = await this.requireControllable(id, ['PAUSED']);
+    const session = await this.requireControllable(id, ['PAUSED'], user);
     await this.sendControl(session, { action: 'RESUME' });
     await prisma.session.update({
       where: { id },
-      data: { status: 'RUNNING', lastKeepaliveAt: new Date() },
+      data: { status: 'RUNNING', lastKeepaliveAt: new Date(), pausedAt: null },
     });
     await this.audit.record({
       orgId: session.orgId,
@@ -303,15 +410,99 @@ export class SessionsService {
   }
 
   /** Request a screen-geometry change for multi-monitor / responsive layouts. */
-  async resize(id: string, width: number, height: number) {
-    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED']);
+  async resize(id: string, width: number, height: number, user: AuthUser) {
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
     await this.sendControl(session, { action: 'RESIZE', width, height });
     return { ok: true };
   }
 
-  private async requireControllable(id: string, allowed: string[]) {
-    const session = await prisma.session.findUnique({ where: { id } });
-    if (!session) throw new NotFoundException('Session not found');
+  /** Apply a live stream-control profile (fps/quality/bitrate/clipboard) — merged, persisted, pushed. */
+  async setStreamProfile(id: string, profile: StreamProfile, user: AuthUser) {
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
+    const merged: StreamProfile = {
+      ...((session.streamProfile ?? {}) as unknown as StreamProfile),
+      ...profile,
+    };
+    await prisma.session.update({ where: { id }, data: { streamProfile: merged as object } });
+    await this.sendControl(session, { action: 'STREAM', streamProfile: merged });
+    await this.audit.record({
+      orgId: session.orgId,
+      actorUserId: user.sub,
+      action: 'session.stream',
+      targetType: 'Session',
+      targetId: id,
+      metadata: merged as unknown as Record<string, unknown>,
+    });
+    return { ok: true, streamProfile: merged };
+  }
+
+  /** Begin (or restart) recording a running session. Lifecycle tracked in Recording. */
+  async startRecording(id: string, user: AuthUser) {
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
+    const existing = await prisma.recording.findUnique({ where: { sessionId: id } });
+    if (existing?.status === 'RECORDING') throw new BadRequestException('Recording already in progress');
+    const proto: Record<string, 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' | 'WEBRTC'> = {
+      KASMVNC: 'KASMVNC',
+      NEKO_WEBRTC: 'WEBRTC',
+      GUAC_RDP: 'RDP',
+      GUAC_VNC: 'VNC',
+      GUAC_SSH: 'SSH',
+    };
+    const protocol = proto[session.connectionType] ?? 'KASMVNC';
+    const recording = existing
+      ? await prisma.recording.update({
+          where: { sessionId: id },
+          data: { status: 'RECORDING', protocol, startedAt: new Date(), finalizedAt: null, durationSec: 0 },
+        })
+      : await prisma.recording.create({
+          data: { orgId: session.orgId, sessionId: id, protocol, status: 'RECORDING' },
+        });
+    await prisma.session.update({ where: { id }, data: { recordingEnabled: true } });
+    await this.sendControl(session, { action: 'RECORD_START', recordingId: recording.id });
+    await this.audit.record({
+      orgId: session.orgId,
+      actorUserId: user.sub,
+      action: 'session.record.start',
+      targetType: 'Session',
+      targetId: id,
+      metadata: { recordingId: recording.id },
+    });
+    return recording;
+  }
+
+  /** Stop recording; finalize duration + status. */
+  async stopRecording(id: string, user: AuthUser) {
+    const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
+    const rec = await prisma.recording.findUnique({ where: { sessionId: id } });
+    if (!rec || rec.status !== 'RECORDING') throw new BadRequestException('No active recording');
+    const durationSec = Math.max(0, Math.round((Date.now() - rec.startedAt.getTime()) / 1000));
+    const updated = await prisma.recording.update({
+      where: { sessionId: id },
+      data: { status: 'AVAILABLE', finalizedAt: new Date(), durationSec },
+    });
+    await prisma.session.update({ where: { id }, data: { recordingEnabled: false } });
+    await this.sendControl(session, { action: 'RECORD_STOP', recordingId: rec.id });
+    await this.audit.record({
+      orgId: session.orgId,
+      actorUserId: user.sub,
+      action: 'session.record.stop',
+      targetType: 'Session',
+      targetId: id,
+      metadata: { recordingId: rec.id, durationSec },
+    });
+    return updated;
+  }
+
+  /** Recording metadata + artifacts for a session. */
+  async getRecording(id: string, user: AuthUser) {
+    const session = await this.findInOrg(id, user.orgId);
+    this.assertCanAccess(session, user);
+    return prisma.recording.findUnique({ where: { sessionId: id }, include: { artifacts: true } });
+  }
+
+  private async requireControllable(id: string, allowed: string[], user: AuthUser) {
+    const session = await this.findInOrg(id, user.orgId);
+    this.assertCanAccess(session, user);
     if (!allowed.includes(session.status)) {
       throw new BadRequestException(`Session is ${session.status}; expected one of ${allowed.join(', ')}`);
     }
@@ -350,5 +541,17 @@ function dlpEnv(dlp: DlpPolicy): Record<string, string> {
   if (deny(dlp.audioIn)) env.KASM_AUDIO_INPUT = '0';
   if (deny(dlp.audioOut)) env.KASM_AUDIO = '0';
   if (deny(dlp.pwa)) env.KASM_PWA = '0';
+
+  // Geometric / advanced DLP — honoured by DLP-capable KasmVNC builds
+  // (CHISTA_DLP_ENABLED images, see infra/workstation).
+  if (dlp.watermark?.text) {
+    env.KASM_DLP_WATERMARK_TEXT = dlp.watermark.text;
+    if (dlp.watermark.opacity !== undefined) env.KASM_DLP_WATERMARK_OPACITY = String(dlp.watermark.opacity);
+    env.KASM_DLP_WATERMARK_TILE = dlp.watermark.tile ? '1' : '0';
+  }
+  if (dlp.clipboardMaxBytes !== undefined) env.KASM_DLP_CLIPBOARD_MAX_BYTES = String(dlp.clipboardMaxBytes);
+  if (dlp.clipboardAllowMimeTypes?.length) env.KASM_DLP_CLIPBOARD_MIME = dlp.clipboardAllowMimeTypes.join(',');
+  if (dlp.keyboardRateLimit !== undefined) env.KASM_DLP_KEYBOARD_RATE = String(dlp.keyboardRateLimit);
+  if (dlp.failSecure) env.KASM_DLP_FAIL_SECURE = '1';
   return env;
 }

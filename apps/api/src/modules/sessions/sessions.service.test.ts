@@ -7,7 +7,8 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     workspace: { findUnique: vi.fn() },
     deploymentZone: { findUnique: vi.fn(), findFirst: vi.fn() },
-    session: { create: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findMany: vi.fn() },
+    session: { create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
+    volumeMapping: { findMany: vi.fn() },
   },
 }));
 
@@ -42,7 +43,7 @@ const NEKO_WORKSPACE = {
   dockerConfig: { devices: ['/dev/video0', '/dev/snd'] },
 };
 
-const USER = { sub: 'user1', orgId: 'org1' } as never;
+const USER = { sub: 'user1', orgId: 'org1', email: 'user1@x.io', isSystemAdmin: true } as never;
 
 describe('SessionsService.create', () => {
   let svc: SessionsService;
@@ -62,6 +63,7 @@ describe('SessionsService.create', () => {
     prismaMock.session.create.mockResolvedValue({ id: 'sess1', kasmId: 'kid', orgId: 'org1', zoneId: 'zone1' });
     prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', kasmId: 'kid', orgId: 'org1', zoneId: 'zone1' });
     prismaMock.session.update.mockResolvedValue({});
+    prismaMock.volumeMapping.findMany.mockResolvedValue([]); // E1: no admin volume mappings
   });
 
   it('creates → schedules → dispatches provision on the zone channel when an agent is free', async () => {
@@ -139,13 +141,14 @@ describe('SessionsService.terminate', () => {
   });
 
   it('marks TERMINATING and publishes a destroy command on the zone channel', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', zoneId: 'zone1', containerId: 'c1' });
+    prismaMock.session.findFirst.mockResolvedValue({ id: 'sess1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1' });
     prismaMock.deploymentZone.findUnique.mockResolvedValue({ id: 'zone1', name: 'default' });
-    prismaMock.session.update.mockResolvedValue({});
+    prismaMock.session.updateMany.mockResolvedValue({ count: 1 });
 
     const res = await svc.terminate('sess1', USER);
 
-    expect(prismaMock.session.update).toHaveBeenCalledWith(
+    // destroy() is idempotent: the TERMINATING transition is a guarded updateMany.
+    expect(prismaMock.session.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: 'TERMINATING', terminationReason: 'admin_terminate' } }),
     );
     expect(redis.publish).toHaveBeenCalledWith(
@@ -156,7 +159,7 @@ describe('SessionsService.terminate', () => {
   });
 
   it('throws when the session does not exist', async () => {
-    prismaMock.session.findUnique.mockResolvedValue(null);
+    prismaMock.session.findFirst.mockResolvedValue(null);
     await expect(svc.terminate('ghost', USER)).rejects.toThrow();
   });
 });
@@ -176,26 +179,26 @@ describe('SessionsService pause / resume / resize', () => {
   });
 
   it('pauses a RUNNING session: emits PAUSE control + sets PAUSED', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
+    prismaMock.session.findFirst.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
     const res = await svc.pause('s1', USER);
     expect(redis.publish).toHaveBeenCalledWith(
       'chista:zone:default:control',
       expect.objectContaining({ sessionId: 's1', action: 'PAUSE', containerId: 'c1' }),
     );
     expect(prismaMock.session.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: 'PAUSED' } }),
+      expect.objectContaining({ data: expect.objectContaining({ status: 'PAUSED' }) }),
     );
     expect(res).toEqual({ ok: true });
   });
 
   it('refuses to pause a session that is not RUNNING/DEGRADED', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'PROVISIONING' });
+    prismaMock.session.findFirst.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'PROVISIONING' });
     await expect(svc.pause('s1', USER)).rejects.toThrow(/expected one of/);
     expect(redis.publish).not.toHaveBeenCalled();
   });
 
   it('resumes only a PAUSED session', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'PAUSED' });
+    prismaMock.session.findFirst.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'PAUSED' });
     await svc.resume('s1', USER);
     expect(redis.publish).toHaveBeenCalledWith(
       'chista:zone:default:control',
@@ -207,11 +210,41 @@ describe('SessionsService pause / resume / resize', () => {
   });
 
   it('emits a RESIZE control frame with geometry', async () => {
-    prismaMock.session.findUnique.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
-    await svc.resize('s1', 1920, 1080);
+    prismaMock.session.findFirst.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
+    await svc.resize('s1', 1920, 1080, USER);
     expect(redis.publish).toHaveBeenCalledWith(
       'chista:zone:default:control',
       expect.objectContaining({ action: 'RESIZE', width: 1920, height: 1080 }),
     );
+  });
+});
+
+describe('SessionsService ownership (non-admin)', () => {
+  let svc: SessionsService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    svc = new SessionsService(
+      {} as never,
+      { publish: vi.fn().mockResolvedValue(undefined) } as never,
+      { record: vi.fn().mockResolvedValue(undefined) } as never,
+    );
+    prismaMock.workspace.findUnique.mockResolvedValue({ dlp: {} });
+  });
+
+  const OWNER = { sub: 'owner1', orgId: 'org1', isSystemAdmin: false } as never;
+
+  it('lets the owner read their own session connection', async () => {
+    prismaMock.session.findFirst.mockResolvedValue({
+      id: 's1', orgId: 'org1', userId: 'owner1', workspaceId: 'ws1', connectionUrl: 'https://x', status: 'RUNNING',
+    });
+    await expect(svc.connection('s1', OWNER)).resolves.toMatchObject({ status: 'RUNNING' });
+  });
+
+  it('forbids a non-owner non-admin from another user’s session', async () => {
+    prismaMock.session.findFirst.mockResolvedValue({
+      id: 's1', orgId: 'org1', userId: 'someone-else', workspaceId: 'ws1', connectionUrl: 'https://x', status: 'RUNNING',
+    });
+    await expect(svc.connection('s1', OWNER)).rejects.toThrow(/access/i);
   });
 });

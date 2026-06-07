@@ -5,8 +5,8 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     registry: { findMany: vi.fn(), create: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
     registryEntry: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
-    image: { create: vi.fn() },
-    workspace: { create: vi.fn() },
+    image: { create: vi.fn(), findFirst: vi.fn() },
+    workspace: { create: vi.fn(), findFirst: vi.fn() },
   },
 }));
 

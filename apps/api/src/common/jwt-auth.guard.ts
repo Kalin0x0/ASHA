@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   type CanActivate,
   type ExecutionContext,
@@ -8,9 +9,15 @@ import {
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import type { Env } from '@chista/config';
+import { prisma, runUnscoped } from '@chista/db';
 import { safeEqual } from '@chista/crypto';
 import { AGENT_ONLY, IS_PUBLIC } from './decorators';
 import { ENV } from './env.module';
+
+/** What an x-agent-token authorizes: the shared env token (global) or a minted, org-scoped token. */
+export type AgentTokenScope =
+  | { scope: 'global' }
+  | { scope: 'org'; orgId: string; zoneId: string | null };
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -33,10 +40,19 @@ export class JwtAuthGuard implements CanActivate {
     // these routes previously bypassed authentication entirely.
     if (this.reflector.getAllAndOverride<boolean>(AGENT_ONLY, meta)) {
       const presented = req.headers['x-agent-token'] as string | undefined;
-      if (!presented || !safeEqual(presented, this.env.CHISTA_AGENT_ENROLLMENT_TOKEN)) {
-        throw new UnauthorizedException('Invalid agent token');
+      if (!presented) throw new UnauthorizedException('Invalid agent token');
+      // 1) Shared env enrollment token (timing-safe) — global enrollment.
+      if (safeEqual(presented, this.env.CHISTA_AGENT_ENROLLMENT_TOKEN)) {
+        req.agentToken = { scope: 'global' } satisfies AgentTokenScope;
+        return true;
       }
-      return true;
+      // 2) A minted RegistrationToken — enrollment is constrained to its org/zone.
+      const scope = await this.resolveRegistrationToken(presented);
+      if (scope) {
+        req.agentToken = scope;
+        return true;
+      }
+      throw new UnauthorizedException('Invalid agent token');
     }
 
     const header = req.headers['authorization'] as string | undefined;
@@ -49,5 +65,25 @@ export class JwtAuthGuard implements CanActivate {
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
+  }
+
+  /**
+   * Validate a presented agent token against minted RegistrationTokens. Runs
+   * unscoped (agent routes carry no user/org context); matches by sha256 hash,
+   * rejects revoked/expired, and records usage. Only reached when the shared env
+   * token did NOT match, so the default single-token path stays untouched.
+   */
+  private async resolveRegistrationToken(presented: string): Promise<AgentTokenScope | null> {
+    const tokenHash = createHash('sha256').update(presented).digest('hex');
+    return runUnscoped(async () => {
+      const rec = await prisma.registrationToken.findUnique({ where: { tokenHash } });
+      if (!rec || rec.revokedAt || (rec.expiresAt && rec.expiresAt.getTime() < Date.now())) {
+        return null;
+      }
+      await prisma.registrationToken
+        .update({ where: { id: rec.id }, data: { lastUsedAt: new Date(), useCount: { increment: 1 } } })
+        .catch(() => undefined);
+      return { scope: 'org', orgId: rec.orgId, zoneId: rec.zoneId };
+    });
   }
 }

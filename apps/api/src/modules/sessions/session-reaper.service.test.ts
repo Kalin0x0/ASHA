@@ -80,4 +80,31 @@ describe('SessionReaperService', () => {
 
     expect(sessions.destroy).not.toHaveBeenCalled();
   });
+
+  it('reaps PAUSED sessions older than CHISTA_MAX_PAUSED_MINUTES', async () => {
+    process.env.CHISTA_MAX_PAUSED_MINUTES = '60';
+    prismaMock.session.findMany.mockResolvedValueOnce([
+      { id: 'p1', orgId: 'o1', zoneId: 'z1', containerId: 'c1' },
+    ]);
+
+    const n = await svc.reapPaused();
+
+    expect(n).toBe(1);
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1' }), 'paused_timeout');
+    expect(prismaMock.session.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'PAUSED', pausedAt: { not: null, lt: expect.any(Date) } }),
+      }),
+    );
+    delete process.env.CHISTA_MAX_PAUSED_MINUTES;
+  });
+
+  it('skips paused reaping when CHISTA_MAX_PAUSED_MINUTES is unset', async () => {
+    delete process.env.CHISTA_MAX_PAUSED_MINUTES;
+
+    const n = await svc.reapPaused();
+
+    expect(n).toBe(0);
+    expect(prismaMock.session.findMany).not.toHaveBeenCalled();
+  });
 });

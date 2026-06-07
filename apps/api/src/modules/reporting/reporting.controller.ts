@@ -3,6 +3,13 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ReportingService } from './reporting.service';
 
+/** Parse an optional integer query param; non-numeric → undefined (service default applies). */
+function intParam(v?: string): number | undefined {
+  if (v === undefined) return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 @ApiTags('reporting')
 @ApiBearerAuth()
 @Controller('reporting')
@@ -18,7 +25,7 @@ export class ReportingController {
   @RequirePermissions('REPORTING_VIEW')
   @Get('sessions-over-time')
   sessionsOverTime(@CurrentUser() user: AuthUser, @Query('days') days?: string) {
-    return this.reporting.sessionsOverTime(user.orgId, days ? Number(days) : undefined);
+    return this.reporting.sessionsOverTime(user.orgId, intParam(days));
   }
 
   @RequirePermissions('REPORTING_VIEW')
@@ -30,8 +37,8 @@ export class ReportingController {
   ) {
     return this.reporting.topWorkspaces(
       user.orgId,
-      days ? Number(days) : undefined,
-      limit ? Number(limit) : undefined,
+      intParam(days),
+      intParam(limit),
     );
   }
 
@@ -42,7 +49,7 @@ export class ReportingController {
     @Query('metric') metric: string,
     @Query('hours') hours?: string,
   ) {
-    return this.reporting.metricSeries(user.orgId, metric, hours ? Number(hours) : undefined);
+    return this.reporting.metricSeries(user.orgId, metric, intParam(hours));
   }
 
   @RequirePermissions('AUDIT_VIEW')
@@ -51,7 +58,18 @@ export class ReportingController {
     @CurrentUser() user: AuthUser,
     @Query('limit') limit?: string,
     @Query('action') action?: string,
+    @Query('actor') actor?: string,
+    @Query('targetType') targetType?: string,
+    @Query('since') since?: string,
+    @Query('until') until?: string,
   ) {
-    return this.reporting.auditLog(user.orgId, limit ? Number(limit) : undefined, action);
+    return this.reporting.auditLog(user.orgId, {
+      limit: limit ? Number(limit) : undefined,
+      action,
+      actorUserId: actor,
+      targetType,
+      since,
+      until,
+    });
   }
 }

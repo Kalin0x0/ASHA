@@ -9,9 +9,13 @@ import {
   type RefreshDto,
   refreshSchema,
 } from '@chista/contracts';
+import { z } from 'zod';
 import { type AuthUser, CurrentUser, Public } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { AuthService } from './auth.service';
+
+const impersonateSchema = z.object({ userId: z.string().min(1) });
+type ImpersonateDto = z.infer<typeof impersonateSchema>;
 
 // login + refresh are the brute-force targets — cap at 10/min per IP
 @Throttle({ auth: { ttl: 60_000, limit: 10 } })
@@ -42,6 +46,12 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: AuthUser) {
     return this.auth.me(user.sub);
+  }
+
+  @ApiBearerAuth()
+  @Post('impersonate')
+  impersonate(@CurrentUser() user: AuthUser, @Body(new ZodPipe(impersonateSchema)) dto: ImpersonateDto) {
+    return this.auth.impersonate(user, dto.userId);
   }
 
   // ── TOTP / 2FA ──────────────────────────────────────────────────────────────

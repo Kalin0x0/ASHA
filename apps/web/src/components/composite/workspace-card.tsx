@@ -24,6 +24,7 @@ export function WorkspaceCard({
   return (
     <Card
       interactive
+      elevation="glass"
       className="group relative flex flex-col overflow-hidden p-0 transition-all duration-300 hover:shadow-[0_8px_40px_-8px_rgba(212,175,55,0.2)]"
     >
       {/* Favorite toggle */}

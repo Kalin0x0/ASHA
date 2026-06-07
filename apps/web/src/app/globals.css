@@ -313,6 +313,18 @@
     border: 1px solid var(--border);
   }
 
+  /* Aurora Glass — primary card & rail surfaces that float over the aurora base */
+  .glass-card {
+    background-color: color-mix(in srgb, var(--surface-1) 82%, transparent);
+    backdrop-filter: blur(18px) saturate(150%);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-ambient), inset 0 1px 0 var(--highlight-top);
+  }
+  .glass-rail {
+    background-color: color-mix(in srgb, var(--surface-1) 68%, transparent);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+
   .gold-hairline {
     position: relative;
   }
@@ -350,9 +362,10 @@
   .bg-aurora {
     background-color: var(--color-anthracite-950);
     background-image:
-      radial-gradient(60% 55% at 18% 20%, rgba(212, 175, 55, 0.16), transparent 60%),
-      radial-gradient(55% 50% at 82% 28%, rgba(106, 143, 196, 0.12), transparent 62%),
-      radial-gradient(70% 60% at 50% 100%, rgba(212, 175, 55, 0.1), transparent 70%);
+      radial-gradient(60% 55% at 18% 20%, rgba(212, 175, 55, 0.18), transparent 60%),
+      radial-gradient(55% 50% at 82% 26%, rgba(106, 143, 196, 0.14), transparent 62%),
+      radial-gradient(50% 48% at 72% 78%, rgba(176, 127, 196, 0.12), transparent 64%),
+      radial-gradient(72% 62% at 38% 108%, rgba(212, 175, 55, 0.1), transparent 72%);
     background-size: 200% 200%;
     animation: aurora-drift 32s var(--ease-in-out-soft) infinite alternate;
   }

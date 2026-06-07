@@ -18,6 +18,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Agent enrollment tokens — admins mint named, revocable, optionally-expiring
+// tokens so multiple agents/zones can enroll without sharing one static env
+// secret. Only the sha256 hash is stored; the plaintext is shown once at mint.
+model RegistrationToken {
+  id          String    @id @default(cuid())
+  orgId       String
+  name        String
+  /// sha256 hex of the plaintext token.
+  tokenHash   String    @unique
+  zoneId      String?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  lastUsedAt  DateTime?
+  useCount    Int       @default(0)
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([orgId])
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Enums
 // ─────────────────────────────────────────────────────────────────────────────
@@ -705,6 +726,7 @@ model Session {
   connectionUrl     String?
   launchValues      Json           @default("{}")
   resources         Json           @default("{}") // live { cpuPct, memMb, ... }
+  streamProfile     Json           @default("{}") // live stream-control (fps/quality/bitrate/clipboard)
   recordingEnabled  Boolean        @default(false)
   persistentProfileId String?
   shareEnabled      Boolean        @default(false)
@@ -713,6 +735,9 @@ model Session {
   startedAt         DateTime?
   lastKeepaliveAt   DateTime?
   idleSince         DateTime?
+  /// Stamped when the session is PAUSED, cleared on RESUME. Drives the paused
+  /// reaper independently of updatedAt (which background stats writes churn).
+  pausedAt          DateTime?
   expiresAt         DateTime?
   destroyedAt       DateTime?
   createdAt         DateTime       @default(now())
