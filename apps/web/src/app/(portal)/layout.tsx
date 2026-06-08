@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AuthGate } from '@/components/auth-gate';
 import { Logo } from '@/components/brand/logo';
 import { FavoriteQuickLaunch } from '@/components/composite/favorite-quick-launch';
+import { MockThumbnailSeeder } from '@/components/composite/mock-thumbnail-seeder';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             </Avatar>
           </div>
         </header>
+        <MockThumbnailSeeder />
         <main className="relative flex-1">{children}</main>
       </div>
     </AuthGate>
