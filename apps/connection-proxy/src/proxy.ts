@@ -9,10 +9,10 @@ import type { SessionStore } from './session-store.js';
 
 const log = createLogger('proxy:ws');
 
-/** Extract kasmId from request URL pattern: /session/:kasmId */
+/** Extract kasmId from request URL pattern: /session/:kasmId (kasmId is a CUID). */
 function extractKasmId(url: string | undefined): string | null {
   if (!url) return null;
-  const m = /^\/session\/([a-f0-9]+)/i.exec(url.split('?')[0] ?? '');
+  const m = /^\/session\/([a-z0-9]+)/i.exec(url.split('?')[0] ?? '');
   return m?.[1] ?? null;
 }
 
