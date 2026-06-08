@@ -444,11 +444,25 @@ export const createServer = (body: {
   authMode?: 'PASSWORD' | 'KEY' | 'VMWARE_TEMPLATE';
   continuity?: 'NONE' | 'TMUX' | 'SCREEN';
   maxSessions?: number;
+  username?: string;
+  password?: string;
 }) => apiFetch<ApiServer>('/servers', { method: 'POST', body });
-export const updateServer = (id: string, body: Partial<{ hostname: string; address: string; maxSessions: number }>) =>
-  apiFetch<ApiServer>(`/servers/${id}`, { method: 'PATCH', body });
+export const updateServer = (
+  id: string,
+  body: Partial<{ address: string; maxSessions: number; username: string; password: string }>,
+) => apiFetch<ApiServer>(`/servers/${id}`, { method: 'PATCH', body });
 export const deleteServer = (id: string) =>
   apiFetch<{ ok: true }>(`/servers/${id}`, { method: 'DELETE' });
+
+/** Open a browser session against a fixed server (RDP/VNC/SSH via the proxy). */
+export interface ApiServerConnect {
+  sessionId: string;
+  kasmId: string;
+  connectionUrl: string;
+  connectionType: 'GUAC_RDP' | 'GUAC_VNC' | 'GUAC_SSH';
+}
+export const connectServer = (id: string) =>
+  apiFetch<ApiServerConnect>(`/servers/${id}/connect`, { method: 'POST' });
 
 // ── Server pools + autoscale ──────────────────────────────────────────────────
 
