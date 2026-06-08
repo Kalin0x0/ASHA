@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { KpiSeriesPoint } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -96,6 +96,14 @@ export function RingGauge({
   const c = 2 * Math.PI * r;
   const pct = Math.min(100, Math.max(0, value));
   const offset = c - (pct / 100) * c;
+  // Sweep the arc from empty → value on mount (the dashoffset transition does the
+  // animation). Falls back to the final value instantly under reduced-motion.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(t);
+  }, []);
+  const drawnOffset = mounted ? offset : c;
 
   return (
     <div
@@ -129,9 +137,9 @@ export function RingGauge({
             strokeWidth={sw}
             strokeLinecap="round"
             strokeDasharray={c}
-            strokeDashoffset={offset}
+            strokeDashoffset={drawnOffset}
             filter={`url(#rglow-${id})`}
-            className="transition-[stroke-dashoffset] duration-700 ease-out motion-reduce:transition-none"
+            className="transition-[stroke-dashoffset] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
           />
         )}
       </svg>
