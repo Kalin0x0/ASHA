@@ -57,12 +57,12 @@
   --color-chart-6: #c4708f;
 
   /* Radii */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-2xl: 28px;
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-2xl: 30px;
 
   /* Fonts (CSS vars injected by next/font in layout) */
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -116,10 +116,13 @@
   --input: var(--color-anthracite-600);
   --ring: var(--color-gold-500);
 
-  --highlight-top: rgba(255, 255, 255, 0.05);
-  --gold-glow: 0 0 0 1px rgba(212, 175, 55, 0.25), 0 0 24px -6px rgba(212, 175, 55, 0.35);
-  --shadow-ambient: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
-  --shadow-lifted: 0 2px 4px rgba(0, 0, 0, 0.5), 0 16px 48px -16px rgba(0, 0, 0, 0.7);
+  --highlight-top: rgba(255, 255, 255, 0.06);
+  --gold-glow: 0 0 0 1px rgba(212, 175, 55, 0.25), 0 0 28px -6px rgba(212, 175, 55, 0.4);
+  /* Layered, soft shadows for premium depth (close + mid + far casts). */
+  --shadow-ambient: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px -6px rgba(0, 0, 0, 0.5),
+    0 16px 40px -18px rgba(0, 0, 0, 0.6);
+  --shadow-lifted: 0 2px 6px rgba(0, 0, 0, 0.45), 0 14px 32px -10px rgba(0, 0, 0, 0.6),
+    0 34px 72px -26px rgba(0, 0, 0, 0.78);
   --grain-opacity: 0.022;
 }
 
@@ -158,10 +161,13 @@
   --input: #d4d4e0;
   --ring: var(--color-gold-600);
 
-  --highlight-top: rgba(255, 255, 255, 0.8);
-  --gold-glow: 0 0 0 1px rgba(184, 146, 58, 0.3), 0 0 20px -8px rgba(184, 146, 58, 0.3);
-  --shadow-ambient: 0 1px 2px rgba(16, 16, 30, 0.06), 0 8px 24px -16px rgba(16, 16, 30, 0.12);
-  --shadow-lifted: 0 2px 6px rgba(16, 16, 30, 0.08), 0 18px 40px -18px rgba(16, 16, 30, 0.18);
+  --highlight-top: rgba(255, 255, 255, 0.9);
+  --gold-glow: 0 0 0 1px rgba(184, 146, 58, 0.3), 0 0 22px -8px rgba(184, 146, 58, 0.32);
+  /* Soft, airy shadows on light — layered but low-opacity so cards float. */
+  --shadow-ambient: 0 1px 2px rgba(16, 16, 30, 0.05), 0 6px 16px -8px rgba(16, 16, 30, 0.1),
+    0 16px 40px -20px rgba(16, 16, 30, 0.12);
+  --shadow-lifted: 0 2px 6px rgba(16, 16, 30, 0.07), 0 14px 32px -12px rgba(16, 16, 30, 0.14),
+    0 30px 64px -26px rgba(16, 16, 30, 0.2);
   --grain-opacity: 0;
 }
 
