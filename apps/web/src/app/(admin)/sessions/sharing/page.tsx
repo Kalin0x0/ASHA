@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { EmptyState } from '@/components/composite/empty-state';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
@@ -76,12 +77,12 @@ export default function SharingPage() {
         </div>
         <div className="divide-y divide-border-subtle/60">
           {shares.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">No active session shares.</p>
+            <EmptyState icon={Share2} title="No active session shares" description="Shared sessions will appear here with their expiry and access links." />
           ) : (
             shares.map((s) => {
               const exp = expiryLabel(s.expiresAt);
               return (
-                <div key={s.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
+                <div key={s.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
                   <Share2 className="size-4 text-gold-300" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">

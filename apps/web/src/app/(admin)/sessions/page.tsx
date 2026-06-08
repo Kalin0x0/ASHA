@@ -1,9 +1,10 @@
 'use client';
 
-import { Eye, MoreHorizontal, Square, XCircle } from 'lucide-react';
+import { Eye, Monitor, MoreHorizontal, Square, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { EmptyState } from '@/components/composite/empty-state';
 import { Monogram } from '@/components/composite/monogram';
 import { PageHeader } from '@/components/composite/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -183,10 +184,11 @@ export default function SessionsPage() {
           </table>
 
           {filtered.length === 0 && (
-            <div className="py-16 text-center">
-              <p className="font-display text-lg">No sessions match your filters</p>
-              <p className="mt-1 text-sm text-muted-foreground">Try clearing the search or status filter.</p>
-            </div>
+            <EmptyState
+              icon={Monitor}
+              title="No sessions match your filters"
+              description="Try clearing the search or status filter."
+            />
           )}
         </div>
       </Card>

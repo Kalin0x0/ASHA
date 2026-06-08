@@ -3,6 +3,7 @@
 import { Database, HardDrive, Loader2, Lock, Package, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { EmptyState } from '@/components/composite/empty-state';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
@@ -72,10 +73,10 @@ export default function VolumeMappingsPage() {
         </div>
         <div className="divide-y divide-border-subtle/60">
           {volumes.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">No volume mappings configured yet.</p>
+            <EmptyState icon={Database} title="No volumes configured" description="Add a volume mapping to persist data across sessions." />
           ) : (
             volumes.map((v) => (
-              <div key={v.id} className="flex items-center gap-3 px-5 py-3 text-sm">
+              <div key={v.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
                 <Database className="size-4 text-gold-300" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{v.name}</p>

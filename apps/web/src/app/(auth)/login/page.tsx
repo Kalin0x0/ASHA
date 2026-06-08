@@ -80,7 +80,9 @@ export default function LoginPage() {
           </div>
         </div>
         <div className="space-y-1">
-          <h1 className="font-display text-3xl font-medium tracking-tight">Welcome back</h1>
+          <h1 className="font-display text-3xl font-medium tracking-tight">
+            Welcome <span className="text-gradient-gold">back</span>
+          </h1>
           <p className="text-sm text-muted-foreground">Sign in to your Chista workspace</p>
         </div>
       </div>
@@ -126,9 +128,9 @@ export default function LoginPage() {
           </form>
 
           <div className="my-5 flex items-center gap-3">
-            <Separator className="flex-1" />
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">or</span>
-            <Separator className="flex-1" />
+            <Separator className="flex-1 opacity-50" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50">or continue with</span>
+            <Separator className="flex-1 opacity-50" />
           </div>
 
           <div className="flex flex-col gap-2.5">

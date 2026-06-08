@@ -46,7 +46,7 @@ export default function RolesPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <tr className="border-b border-border bg-[color-mix(in_srgb,var(--surface-2)_45%,transparent)] text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                 <th className="px-5 py-3 font-medium">Permission</th>
                 {ROLES.map((r) => (
                   <th key={r.name} className="px-4 py-3 text-center font-medium">
@@ -67,7 +67,7 @@ export default function RolesPage() {
                     </td>
                   </tr>
                   {PERMISSION_CATALOG.filter((p) => p.category === cat).map((p) => (
-                    <tr key={p.key} className="border-b border-border-subtle/50 last:border-0">
+                    <tr key={p.key} className="border-b border-border-subtle/50 transition-all duration-150 last:border-0 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
                       <td className="px-5 py-2.5">
                         <p className="font-medium">{p.description}</p>
                         <p className="font-mono text-[11px] text-muted-foreground">{p.key}</p>
