@@ -51,8 +51,12 @@ function resolveParam(name: string, session: SessionRecord): string {
     case 'password':
       return session.rdpPassword ?? '';
     case 'ignore-cert':
+      return 'true'; // accept Windows' self-signed RDP cert
     case 'disable-auth':
-      return 'true';
+      // MUST be false: NLA/credentialled RDP needs guacd to actually send the
+      // username/password. 'true' makes guacd skip auth → the server refuses
+      // ("wrong security type"), which looks like a security-mode problem.
+      return 'false';
     case 'security':
       return session.security ?? (protocol === 'rdp' ? 'any' : '');
     case 'width':
