@@ -45,6 +45,9 @@ export class SessionsService {
   async create(user: AuthUser, dto: CreateSessionDto) {
     // License gate first — refuse before we allocate any resources.
     await this.licensing?.assertCanLaunch(user.orgId, user.sub);
+    // Per-group concurrency gate — refuse if the user's most restrictive group
+    // cap would be exceeded, before we allocate any resources.
+    await this.assertWithinGroupConcurrencyLimit(user.sub, user.orgId);
 
     const workspace = await prisma.workspace.findUnique({
       where: { id: dto.workspaceId },
@@ -115,6 +118,38 @@ export class SessionsService {
     });
 
     return prisma.session.findUnique({ where: { id: session.id } });
+  }
+
+  /**
+   * Enforce the launching user's GROUP-level `maxConcurrentSessions` cap. A user
+   * may belong to several groups; the effective limit is the MOST RESTRICTIVE
+   * (minimum) positive `maxConcurrentSessions` across their memberships. If no
+   * group sets a positive limit, there is no group cap and the check is skipped
+   * (the API only accepts positive/null, so a stray 0 from a direct DB write is
+   * treated as "no cap" rather than a permanent lockout). The per-org license
+   * cap is enforced separately in `create()`.
+   */
+  private async assertWithinGroupConcurrencyLimit(userId: string, orgId: string) {
+    const memberships = await prisma.userGroup.findMany({
+      where: { userId, orgId },
+      select: { group: { select: { maxConcurrentSessions: true } } },
+    });
+    const limits = memberships
+      .map((m) => m.group?.maxConcurrentSessions)
+      .filter((v): v is number => typeof v === 'number' && v > 0);
+    if (limits.length === 0) return; // no group sets a cap → no group-level limit
+
+    const effectiveLimit = Math.min(...limits);
+    // Scope the count by orgId too — matches the licensing service convention and
+    // is correct even if a user identity ever spans tenants.
+    const activeCount = await prisma.session.count({
+      where: { orgId, userId, status: { notIn: ['DESTROYED', 'TERMINATING', 'ERROR'] } },
+    });
+    if (activeCount >= effectiveLimit) {
+      throw new ForbiddenException(
+        `Concurrent session limit reached: your group allows at most ${effectiveLimit} active session${effectiveLimit === 1 ? '' : 's'}.`,
+      );
+    }
   }
 
   /** Build rclone mount sidecars from the org's enabled cloud StorageMappings (E2). */

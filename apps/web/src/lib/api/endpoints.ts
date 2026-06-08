@@ -232,8 +232,42 @@ export interface ApiPersistentProfile {
 }
 
 export const getVolumeMappings = () => apiFetch<ApiVolumeMapping[]>('/storage/volumes');
+export const createVolumeMapping = (body: {
+  name: string;
+  hostPath: string;
+  destPath: string;
+  readOnly?: boolean;
+  raw?: Record<string, unknown>;
+}) => apiFetch<ApiVolumeMapping>('/storage/volumes', { method: 'POST', body });
+export const deleteVolumeMapping = (id: string) =>
+  apiFetch<{ ok: true }>(`/storage/volumes/${id}`, { method: 'DELETE' });
+
 export const getFileMappings = () => apiFetch<ApiFileMapping[]>('/storage/files');
+export const createFileMapping = (body: {
+  name: string;
+  target?: 'CONTAINER' | 'WINDOWS';
+  sourcePath: string;
+  destPath: string;
+  owner?: string;
+  group?: string;
+  mode?: string;
+  isHomeProfile?: boolean;
+  scope?: 'USER' | 'GROUP' | 'WORKSPACE';
+  userId?: string;
+}) => apiFetch<ApiFileMapping>('/storage/files', { method: 'POST', body });
+export const deleteFileMapping = (id: string) =>
+  apiFetch<{ ok: true }>(`/storage/files/${id}`, { method: 'DELETE' });
+
 export const getPersistentProfiles = () => apiFetch<ApiPersistentProfile[]>('/storage/profiles');
+export const createPersistentProfile = (body: {
+  userId?: string;
+  workspaceId?: string;
+  volumeName: string;
+  backend?: 'DOCKER_VOLUME' | 'S3';
+  sizeLimitMb?: number;
+}) => apiFetch<ApiPersistentProfile>('/storage/profiles', { method: 'POST', body });
+export const deletePersistentProfile = (id: string) =>
+  apiFetch<{ ok: true }>(`/storage/profiles/${id}`, { method: 'DELETE' });
 
 // ── Recordings ───────────────────────────────────────────────────────────────
 
@@ -262,6 +296,11 @@ export interface ApiSessionShare {
   enableChat: boolean;
   enableAv: boolean;
   expiresAt: string | null;
+  /** Optional joins surfaced by the admin listing (display-only). */
+  createdAt?: string;
+  ownerName?: string | null;
+  workspaceName?: string | null;
+  participantCount?: number;
 }
 
 export const createShare = (
