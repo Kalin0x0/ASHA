@@ -22,6 +22,7 @@
 
 import type { IncomingMessage } from 'node:http';
 import net from 'node:net';
+import { StringDecoder } from 'node:string_decoder';
 import { createLogger } from '@chista/logger';
 import type WebSocket from 'ws';
 import type { SessionRecord } from '../session-store.js';
@@ -81,9 +82,13 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
   const protocol = session.protocol === 'RDP' ? 'rdp' : 'vnc';
   const guacd = net.createConnection(GUACD_PORT, GUACD_HOST);
   const parser = new GuacamoleParser();
+  // guacd → browser must be TEXT frames: guacamole-common-js's WebSocketTunnel
+  // calls .indexOf on every message, so binary frames throw "i.indexOf is not a
+  // function". StringDecoder reassembles UTF-8 split across TCP chunks.
+  const toBrowser = new StringDecoder('utf8');
 
   // Handshake state: until `connected`, the proxy interprets guacd's
-  // instructions; afterwards it bridges raw bytes to the browser.
+  // instructions; afterwards it bridges the stream to the browser.
   let connected = false;
 
   guacd.once('connect', () => {
@@ -93,8 +98,8 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
 
   guacd.on('data', (chunk: Buffer) => {
     if (connected) {
-      // Past the handshake — forward verbatim to the browser.
-      if (ws.readyState === ws.OPEN) ws.send(chunk);
+      // Past the handshake — forward to the browser as a text frame.
+      if (ws.readyState === ws.OPEN) ws.send(toBrowser.write(chunk));
       return;
     }
 
