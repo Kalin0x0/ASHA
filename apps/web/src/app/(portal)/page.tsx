@@ -4,12 +4,15 @@ import { Search, Sparkles, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { AuroraBackground } from '@/components/decor/aurora-background';
+import { CategoryRail } from '@/components/composite/category-rail';
 import { FavoritesRail } from '@/components/composite/favorites-rail';
+import { MySessionsStrip } from '@/components/composite/my-sessions-strip';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
+import { AuroraBackground } from '@/components/decor/aurora-background';
 import { Input } from '@/components/ui/input';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
+import { cn } from '@/lib/utils';
 
 export default function PortalHome() {
   const router = useRouter();
@@ -17,34 +20,42 @@ export default function PortalHome() {
   const launch = useLaunchSession();
   const favorites = useFavorites();
   const [query, setQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [launchingId, setLaunchingId] = useState<string | null>(null);
 
-  const categories = useMemo(
-    () => [...new Set(workspaces.filter((w) => w.enabled).map((w) => w.category))],
-    [workspaces],
-  );
+  const enabledAll = useMemo(() => workspaces.filter((w) => w.enabled), [workspaces]);
 
-  const enabled = useMemo(
+  // Category list + live counts for the rail and the mobile pills.
+  const categories = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const w of enabledAll) counts.set(w.category, (counts.get(w.category) ?? 0) + 1);
+    return [...counts.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [enabledAll]);
+
+  // Apply the active category + free-text search.
+  const filtered = useMemo(
     () =>
-      workspaces.filter(
+      enabledAll.filter(
         (w) =>
-          w.enabled &&
+          (!activeCategory || w.category === activeCategory) &&
           (!query ||
             w.friendlyName.toLowerCase().includes(query.toLowerCase()) ||
-            w.category.toLowerCase().includes(query.toLowerCase())),
+            w.category.toLowerCase().includes(query.toLowerCase()) ||
+            w.description.toLowerCase().includes(query.toLowerCase())),
       ),
-    [workspaces, query],
+    [enabledAll, activeCategory, query],
   );
 
-  // Split favorites out so a user's starred desktops sit at the top,
-  // in their chosen (drag-sorted) order.
+  // Starred desktops float to the top in the user's chosen (drag-sorted) order.
   const favoriteList = useMemo(
-    () => orderByFavorites(enabled, favorites.ids),
-    [enabled, favorites.ids],
+    () => orderByFavorites(filtered, favorites.ids),
+    [filtered, favorites.ids],
   );
   const others = useMemo(
-    () => enabled.filter((w) => !favorites.ids.includes(w.id)),
-    [enabled, favorites.ids],
+    () => filtered.filter((w) => !favorites.ids.includes(w.id)),
+    [filtered, favorites.ids],
   );
 
   const onLaunch = async (id: string) => {
@@ -69,8 +80,8 @@ export default function PortalHome() {
     );
   };
 
-  const renderCard = (ws: (typeof enabled)[number], i: number) => (
-    <div key={ws.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(i * 50, 300)}ms` }}>
+  const renderCard = (ws: (typeof filtered)[number], i: number) => (
+    <div key={ws.id} className="animate-fade-up" style={{ animationDelay: `${Math.min(i * 40, 280)}ms` }}>
       <WorkspaceCard
         workspace={ws}
         onLaunch={onLaunch}
@@ -83,15 +94,13 @@ export default function PortalHome() {
 
   return (
     <div>
-      {/* Hero */}
+      {/* ── Hero band ──────────────────────────────────────────────── */}
       <div className="relative overflow-hidden border-b border-border-subtle">
         <AuroraBackground className="opacity-50" />
-
-        {/* Floating orbs */}
-        <div className="pointer-events-none absolute right-[10%] top-[20%] size-64 rounded-full bg-gold-500/8 blur-[80px] animate-float" aria-hidden />
+        <div className="pointer-events-none absolute right-[10%] top-[15%] size-64 rounded-full bg-gold-500/8 blur-[80px] animate-float" aria-hidden />
         <div className="pointer-events-none absolute left-[5%] bottom-0 size-48 rounded-full bg-info-500/6 blur-[60px] animate-float delay-300" aria-hidden />
 
-        <div className="relative mx-auto max-w-[1400px] px-4 py-16 lg:px-8">
+        <div className="relative mx-auto max-w-[1500px] px-4 py-12 lg:px-8">
           <div className="animate-fade-up">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-gold-500/20 bg-gold-500/8 px-3 py-1">
               <Sparkles className="size-3.5 text-gold-300" />
@@ -99,100 +108,140 @@ export default function PortalHome() {
                 Your Workspaces
               </span>
             </div>
-            <h1 className="font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              Launch a workspace
+            <h1 className="font-display text-[2.6rem] font-medium leading-[1.04] tracking-tight sm:text-6xl">
+              Launch a <span className="text-gradient-gold">workspace</span>
             </h1>
-            <p className="mt-3 max-w-lg text-[15px] text-muted-foreground leading-relaxed">
-              A secure, isolated desktop or application — streamed directly to your browser.
+            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base">
+              A secure, isolated desktop or application — streamed straight to your browser.
               Nothing to install, nothing left behind.
             </p>
           </div>
 
           {/* Search */}
-          <div className="relative mt-7 max-w-sm animate-fade-up delay-100">
-            <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative mt-8 max-w-lg animate-fade-up delay-100">
+            <Search className="absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground transition-colors" />
             <Input
               placeholder="Search workspaces…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-11 pl-10 pr-4 text-sm"
+              className="h-12 rounded-xl pl-11 pr-4 text-[15px] shadow-[var(--shadow-ambient)] transition-shadow duration-300 focus-visible:shadow-[var(--gold-glow)]"
             />
           </div>
 
-          {/* Category pills */}
-          {categories.length > 1 && (
-            <div className="mt-4 flex flex-wrap gap-2 animate-fade-up delay-200">
-              <button
-                onClick={() => setQuery('')}
-                className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
-                  !query
-                    ? 'bg-gold-500/15 text-gold-300 ring-1 ring-gold-500/30'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                All
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setQuery(cat)}
-                  className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
-                    query === cat
-                      ? 'bg-gold-500/15 text-gold-300 ring-1 ring-gold-500/30'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Category pills — mobile / tablet only (the rail handles desktop) */}
+          <div className="mt-4 flex flex-wrap gap-2 animate-fade-up delay-200 lg:hidden">
+            <CategoryPill label="All" active={activeCategory === null} onClick={() => setActiveCategory(null)} />
+            {categories.map((cat) => (
+              <CategoryPill
+                key={cat.name}
+                label={cat.name}
+                active={activeCategory === cat.name}
+                onClick={() => setActiveCategory(cat.name)}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Grid */}
-      <div className="mx-auto max-w-[1400px] px-4 py-10 lg:px-8">
-        {enabled.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 py-24 text-center animate-fade-up">
-            <div className="text-4xl">🔍</div>
-            <p className="text-muted-foreground">No workspaces match your search.</p>
-          </div>
-        ) : (
-          <div className="space-y-10">
-            {/* Favorites shelf — drag the grip to reorder; order persists */}
-            {favoriteList.length > 0 && (
-              <section>
-                <div className="mb-4 flex items-center gap-2">
-                  <Star className="size-4 fill-gold-400 text-gold-300" />
-                  <h2 className="font-display text-lg font-semibold">Favorites</h2>
-                  <span className="text-xs text-muted-foreground">({favoriteList.length})</span>
-                  {favoriteList.length > 1 && (
-                    <span className="ml-1 hidden text-[11px] text-muted-foreground/50 sm:inline">
-                      · drag to reorder
-                    </span>
-                  )}
-                </div>
-                <FavoritesRail
-                  items={favoriteList}
-                  onLaunch={onLaunch}
-                  launchingId={launchingId}
-                  onToggleFavorite={onToggleFavorite}
-                />
-              </section>
-            )}
+      {/* ── Body: category rail + content ──────────────────────────── */}
+      <div className="mx-auto max-w-[1500px] px-4 py-8 lg:px-8">
+        <div className="flex gap-8">
+          <aside className="hidden w-56 shrink-0 lg:block">
+            <div className="sticky top-[calc(var(--spacing-topbar)+1.5rem)]">
+              <CategoryRail
+                categories={categories}
+                total={enabledAll.length}
+                active={activeCategory}
+                onSelect={setActiveCategory}
+              />
+            </div>
+          </aside>
 
-            {/* All / remaining workspaces */}
-            <section>
-              {favoriteList.length > 0 && others.length > 0 && (
-                <h2 className="mb-4 font-display text-lg font-semibold">All workspaces</h2>
-              )}
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {others.map(renderCard)}
+          <div className="min-w-0 flex-1 space-y-10">
+            <MySessionsStrip />
+
+            {filtered.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 py-24 text-center animate-fade-up">
+                <div className="text-4xl">🔍</div>
+                <p className="text-muted-foreground">No workspaces match your search.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setActiveCategory(null);
+                  }}
+                  className="text-sm font-medium text-gold-300 hover:text-gold-200 ring-gold-focus rounded-md"
+                >
+                  Clear filters
+                </button>
               </div>
-            </section>
+            ) : (
+              <>
+                {/* Favorites shelf — drag the grip to reorder; order persists */}
+                {favoriteList.length > 0 && (
+                  <section>
+                    <div className="mb-4 flex items-center gap-2">
+                      <Star className="size-[18px] fill-gold-400 text-gold-300" />
+                      <h2 className="font-display text-xl font-semibold tracking-tight">Favorites</h2>
+                      <span className="text-xs text-muted-foreground">({favoriteList.length})</span>
+                      {favoriteList.length > 1 && (
+                        <span className="ml-1 hidden text-[11px] text-muted-foreground/50 sm:inline">
+                          · drag to reorder
+                        </span>
+                      )}
+                    </div>
+                    <FavoritesRail
+                      items={favoriteList}
+                      onLaunch={onLaunch}
+                      launchingId={launchingId}
+                      onToggleFavorite={onToggleFavorite}
+                    />
+                  </section>
+                )}
+
+                {/* Catalog grid */}
+                {others.length > 0 && (
+                  <section>
+                    {favoriteList.length > 0 && (
+                      <h2 className="mb-4 font-display text-xl font-semibold tracking-tight">
+                        {activeCategory ?? 'All workspaces'}
+                      </h2>
+                    )}
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                      {others.map(renderCard)}
+                    </div>
+                  </section>
+                )}
+              </>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
+  );
+}
+
+function CategoryPill({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider transition-colors ring-gold-focus',
+        active
+          ? 'bg-gold-500/15 text-gold-300 ring-1 ring-gold-500/30'
+          : 'text-muted-foreground hover:text-foreground',
+      )}
+    >
+      {label}
+    </button>
   );
 }

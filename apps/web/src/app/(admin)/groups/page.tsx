@@ -2,6 +2,7 @@
 
 import { Users as UsersIcon, UsersRound } from 'lucide-react';
 import { useMemo } from 'react';
+import { EmptyState } from '@/components/composite/empty-state';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
@@ -55,7 +56,9 @@ export default function GroupsPage() {
           </Card>
         ))}
         {groups.length === 0 && (
-          <p className="text-sm text-muted-foreground">No group assignments yet.</p>
+          <div className="col-span-full">
+            <EmptyState icon={UsersRound} title="No groups yet" description="Groups are derived from user memberships. Add users and assign them to groups." />
+          </div>
         )}
       </div>
     </div>

@@ -116,7 +116,10 @@ export function buildInitialData(): MockData {
   const sessionCount = 24;
   for (let i = 0; i < sessionCount; i++) {
     const ws = pick(WORKSPACE_DEFS.filter((w) => w.enabled));
-    const user = pick(users.filter((u) => u.status === 'ACTIVE'));
+    // The first two sessions belong to the portal's current user (users[0]) so
+    // the "My Sessions" resume strip is populated on first load — they map onto
+    // the RUNNING slots at the head of STATUS_POOL.
+    const user = i < 2 ? users[0]! : pick(users.filter((u) => u.status === 'ACTIVE'));
     const agent = pick(onlineAgents);
     const status = STATUS_POOL[i % STATUS_POOL.length]!;
     const memLimitMb = ws.memMb;

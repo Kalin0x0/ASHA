@@ -24,7 +24,7 @@ export function Topbar() {
   const match = findNavItem(pathname);
 
   return (
-    <header className="sticky top-0 z-30 flex h-[var(--spacing-topbar)] items-center gap-3 border-b border-border-subtle bg-[color-mix(in_srgb,var(--surface-1)_85%,transparent)] px-4 backdrop-blur-xl lg:px-6">
+    <header className="sticky top-0 z-30 flex h-[var(--spacing-topbar)] items-center gap-3 border-b border-border-subtle bg-[color-mix(in_srgb,var(--surface-1)_82%,transparent)] px-4 shadow-[0_1px_0_var(--highlight-top),0_10px_30px_-20px_rgba(0,0,0,0.6)] backdrop-blur-xl backdrop-saturate-150 lg:px-6">
       {/* Mobile menu trigger */}
       <button
         onClick={() => setMobileOpen(true)}

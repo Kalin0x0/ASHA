@@ -18,10 +18,10 @@ export const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'rounded-lg text-card-foreground transition-all duration-200',
+      'rounded-lg text-card-foreground transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
       elevClass[String(elevation)],
       interactive &&
-        'gold-hairline cursor-pointer hover:-translate-y-0.5 hover:border-[rgba(212,175,55,0.35)] hover:shadow-[var(--shadow-lifted)]',
+        'gold-hairline cursor-pointer hover:-translate-y-1 hover:border-[rgba(212,175,55,0.4)] hover:shadow-[var(--shadow-lifted),0_0_0_1px_rgba(212,175,55,0.1)]',
       className,
     )}
     {...props}
