@@ -605,6 +605,12 @@ model Workspace {
   @@index([imageId])
 }
 
+enum ImagePullPolicy {
+  ALWAYS
+  IF_NOT_PRESENT
+  NEVER
+}
+
 model Image {
   id                String         @id @default(cuid())
   orgId             String? // null = global registry image
@@ -615,6 +621,7 @@ model Image {
   protocol          StreamProtocol @default(KASMVNC)
   architecture      String         @default("amd64")
   digest            String?
+  pullPolicy        ImagePullPolicy @default(ALWAYS)
   available         Boolean        @default(true)
   // Default run config merged under Workspace.dockerConfig.
   runConfigDefaults Json           @default("{}")

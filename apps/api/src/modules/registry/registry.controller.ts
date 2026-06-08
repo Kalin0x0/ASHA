@@ -8,9 +8,13 @@ import {
   type UpdateRegistryDto,
   updateRegistrySchema,
 } from '@chista/contracts';
+import { z } from 'zod';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { RegistryService } from './registry.service';
+
+const pullPolicySchema = z.object({ pullPolicy: z.enum(['ALWAYS', 'IF_NOT_PRESENT', 'NEVER']) });
+type PullPolicyDto = z.infer<typeof pullPolicySchema>;
 
 @ApiTags('registry')
 @ApiBearerAuth()
@@ -74,5 +78,28 @@ export class RegistryController {
     @Body(new ZodPipe(installRegistryEntrySchema)) dto: InstallRegistryEntryDto,
   ) {
     return this.svc.install(user.orgId, user.sub, entryId, dto);
+  }
+
+  // ── Images: digest-pinning + pull-policy (A3) ─────────────────────────────
+  @RequirePermissions('IMAGE_MANAGE')
+  @Get('images')
+  listImages(@CurrentUser() user: AuthUser) {
+    return this.svc.listImages(user.orgId);
+  }
+
+  @RequirePermissions('IMAGE_MANAGE')
+  @Patch('images/:id/promote')
+  promoteImage(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.svc.promoteImage(user.orgId, user.sub, id);
+  }
+
+  @RequirePermissions('IMAGE_MANAGE')
+  @Patch('images/:id/pull-policy')
+  setPullPolicy(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body(new ZodPipe(pullPolicySchema)) dto: PullPolicyDto,
+  ) {
+    return this.svc.setPullPolicy(user.orgId, user.sub, id, dto.pullPolicy);
   }
 }
