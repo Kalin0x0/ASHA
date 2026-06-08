@@ -145,11 +145,13 @@
   --accent: #f3ead3;
   --accent-foreground: var(--color-gold-800);
 
-  --success: var(--color-success-600);
-  --warning: var(--color-warn-600);
-  --destructive: var(--color-error-600);
+  /* Saturated status hues must go deeper on white to clear AA as text
+     (the -500/-600 ramp is tuned for dark surfaces). */
+  --success: #1f7a52;
+  --warning: #936a15;
+  --destructive: #b23b30;
   --destructive-foreground: #ffffff;
-  --info: var(--color-info-600);
+  --info: #3f63a0;
 
   --border: #d9d9e3;
   --border-subtle: #e8e8ef;
@@ -512,4 +514,69 @@
   .animate-float {
     animation: none !important;
   }
+}
+
+/* ============================================================================
+   LIGHT-THEME OVERRIDES
+   Several surfaces/accents use raw dark-tuned primitives (the aurora base and
+   pale `text-gold-2/3/400`) that are illegible on a light background. These are
+   UNLAYERED so they win over the Tailwind utility classes, and scoped to
+   `.light` so dark mode is untouched. They map onto the same deep gold the light
+   theme already uses for its accent foreground (gold-800), keeping AA contrast.
+   ============================================================================ */
+.light .bg-aurora {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(60% 55% at 18% 20%, rgba(212, 175, 55, 0.1), transparent 60%),
+    radial-gradient(55% 50% at 82% 26%, rgba(106, 143, 196, 0.1), transparent 62%),
+    radial-gradient(50% 48% at 72% 78%, rgba(176, 127, 196, 0.08), transparent 64%),
+    radial-gradient(72% 62% at 38% 108%, rgba(212, 175, 55, 0.07), transparent 72%);
+}
+
+/* Pale gold as TEXT is unreadable on light surfaces → use the deep accent gold.
+   (Gold used as a background/fill keeps its own utility; this only retargets
+   the text-color utilities.) */
+.light .text-gold-200,
+.light .text-gold-300,
+.light .text-gold-400,
+.light .text-gold-500,
+.light .text-gold-600 {
+  color: var(--color-gold-800);
+}
+
+/* The gold gradient text (KPIs, hero) — its light end (gold-300) vanishes on
+   white; shift the whole ramp deeper for light mode. */
+.light .text-gradient-gold {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-gold-600),
+    var(--color-gold-700) 55%,
+    var(--color-gold-800)
+  );
+}
+
+/* Pale semantic-hue text (info/warn/success/error -300/-400) is used for small
+   emphasis/chips; deepen each to its readable hue so it clears AA on white tints
+   while staying semantically coloured. */
+.light .text-success-300,
+.light .text-success-400 { color: #1f7a52; }
+.light .text-warn-300,
+.light .text-warn-400 { color: #936a15; }
+.light .text-error-300,
+.light .text-error-400 { color: #b23b30; }
+.light .text-info-300,
+.light .text-info-400 { color: #3f63a0; }
+
+/* RingGauge centre value is inline-coloured with the pale ramp end (great on
+   dark, illegible on white) — force the neutral foreground on light. */
+.light .gauge-value {
+  color: var(--foreground) !important;
+}
+
+/* Elements that are deliberately dark in BOTH themes (the streaming cockpit,
+   dark chips over imagery) opt back in to light-on-dark gold via `.on-dark`. */
+.light .on-dark .text-gold-200,
+.light .on-dark .text-gold-300,
+.light .on-dark .text-gold-400 {
+  color: var(--color-gold-300);
 }

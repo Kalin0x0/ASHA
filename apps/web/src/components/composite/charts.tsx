@@ -136,7 +136,7 @@ export function RingGauge({
         )}
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="font-display text-2xl font-medium leading-none tnum" style={{ color: bright }}>
+        <span className="gauge-value font-display text-2xl font-medium leading-none tnum" style={{ color: bright }}>
           {Math.round(pct)}
           <span className="text-sm align-top text-muted-foreground">%</span>
         </span>

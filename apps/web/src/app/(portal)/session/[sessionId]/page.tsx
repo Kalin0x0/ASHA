@@ -211,7 +211,7 @@ export default function StreamingViewerPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-anthracite-950">
+    <div className="on-dark fixed inset-0 z-50 flex flex-col bg-anthracite-950">
       {/* Control bar */}
       <div className="glass-strong absolute inset-x-0 top-0 z-20 flex h-12 items-center gap-3 px-4">
         <div className="flex items-center gap-2">
