@@ -9,7 +9,7 @@ import { prisma } from '@chista/db';
 import { AuditService } from '../../common/audit.service';
 import { mergeSealedConfig, redactConfig, sealConfig, unsealConfig } from '../../common/config-seal';
 import { ENV } from '../../common/env.module';
-import { resolveVMDriver } from './vm-provider.interface';
+import { resolveVMDriver, type VMProviderDriver } from './vm-provider.interface';
 
 /**
  * VM and DNS provider registry. VM providers back autoscaled server pools; DNS
@@ -39,6 +39,15 @@ export class ProvidersService {
     return row.secretRef
       ? unsealConfig(row.secretRef, this.env.SECRET_SEAL_KEY)
       : (row.config as Record<string, unknown>);
+  }
+
+  /** Resolve a ready-to-use VM driver for a provider (autoscale runner; D5). */
+  async driverFor(orgId: string, id: string): Promise<VMProviderDriver | null> {
+    const row = await prisma.vMProvider.findFirst({ where: { id, orgId } });
+    if (!row) return null;
+    const config = await this.resolveVMConfig(orgId, id);
+    if (!config) return null;
+    return resolveVMDriver(row.provider, config);
   }
 
   async createVM(orgId: string, actorUserId: string, dto: CreateVMProviderDto) {
