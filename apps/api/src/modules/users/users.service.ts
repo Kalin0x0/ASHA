@@ -22,6 +22,7 @@ const SAFE_SELECT = {
   lastLoginAt: true,
   createdAt: true,
   updatedAt: true,
+  groups: { select: { group: { select: { name: true } } } },
 } as const;
 
 export interface CreateUserInput {

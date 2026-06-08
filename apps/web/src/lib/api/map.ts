@@ -33,7 +33,7 @@ export function mapWorkspace(w: ApiWorkspace, activeSessions = 0): Workspace {
     name: w.name,
     friendlyName: w.friendlyName,
     description: w.description ?? '',
-    category: w.categories[0] ?? 'Other',
+    category: w.categories?.[0] ?? 'Other',
     iconUrl: w.iconUrl ?? undefined,
     cores: w.coresLimit ?? 0,
     memMb: w.memLimitMb ?? 0,
@@ -69,7 +69,7 @@ export function mapUser(u: ApiUser): UserRow {
     email: u.email,
     username: u.username,
     status: u.status,
-    groups: u.groups.map((g) => g.group.name),
+    groups: (u.groups ?? []).map((g) => g?.group?.name).filter((n): n is string => Boolean(n)),
     twoFactor: false,
     lastLoginAt: u.lastLoginAt,
   };
