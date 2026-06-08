@@ -77,7 +77,7 @@ export interface ApiUser {
   displayName: string | null;
   status: 'ACTIVE' | 'DISABLED' | 'INVITED' | 'LOCKED';
   lastLoginAt: string | null;
-  groups: { group: { name: string } }[];
+  groups?: { group: { name: string } }[];
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
