@@ -53,16 +53,16 @@ export function CommandPalette() {
   return (
     <DialogPrimitive.Root open={commandOpen} onOpenChange={setCommandOpen}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-anthracite-950/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
-        <DialogPrimitive.Content className="glass-strong fixed left-1/2 top-[15%] z-50 w-full max-w-xl -translate-x-1/2 overflow-hidden rounded-xl shadow-[var(--shadow-lifted)] data-[state=open]:animate-rise">
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-anthracite-950/70 backdrop-blur-md data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Content className="gold-hairline glass-strong fixed left-1/2 top-[14%] z-50 w-full max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-border-subtle shadow-[var(--shadow-lifted),0_0_0_1px_rgba(212,175,55,0.07)] data-[state=open]:animate-rise">
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
           <Command className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground">
-            <div className="flex items-center gap-2.5 border-b border-border-subtle px-4">
-              <Search className="size-4 text-muted-foreground" />
+            <div className="flex items-center gap-3 border-b border-border-subtle px-4">
+              <Search className="size-[18px] text-gold-300" />
               <Command.Input
                 autoFocus
                 placeholder="Search pages and actions…"
-                className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                className="h-14 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
               />
               <kbd className="rounded border border-border-subtle bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
                 ESC
@@ -141,10 +141,13 @@ function Item({
   return (
     <Command.Item
       onSelect={onSelect}
-      className="flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground outline-none transition-colors data-[selected=true]:bg-secondary data-[selected=true]:text-foreground [&_svg]:text-muted-foreground data-[selected=true]:[&_svg]:text-gold-300"
+      className="group/item flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-muted-foreground outline-none transition-all duration-150 data-[selected=true]:bg-gold-500/[0.1] data-[selected=true]:text-foreground"
     >
-      {icon}
-      {children}
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground ring-1 ring-border-subtle transition-colors group-data-[selected=true]/item:bg-gold-500/15 group-data-[selected=true]/item:text-gold-300 group-data-[selected=true]/item:ring-gold-500/30 [&_svg]:size-4">
+        {icon}
+      </span>
+      <span className="flex-1 truncate">{children}</span>
+      <CornerDownLeft className="size-3.5 text-gold-300 opacity-0 transition-opacity group-data-[selected=true]/item:opacity-100" />
     </Command.Item>
   );
 }
