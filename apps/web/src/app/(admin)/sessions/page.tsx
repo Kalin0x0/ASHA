@@ -1,9 +1,10 @@
 'use client';
 
-import { Eye, MoreHorizontal, Square, XCircle } from 'lucide-react';
+import { Eye, Monitor, MoreHorizontal, Square, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { EmptyState } from '@/components/composite/empty-state';
 import { Monogram } from '@/components/composite/monogram';
 import { PageHeader } from '@/components/composite/page-header';
 import { Badge } from '@/components/ui/badge';
@@ -109,7 +110,7 @@ export default function SessionsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <tr className="border-b border-border bg-[color-mix(in_srgb,var(--surface-2)_45%,transparent)] text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                 <th className="px-5 py-3 font-medium">Workspace</th>
                 <th className="px-5 py-3 font-medium">User</th>
                 <th className="px-5 py-3 font-medium">Zone / Agent</th>
@@ -125,7 +126,7 @@ export default function SessionsPage() {
                 <tr
                   key={s.id}
                   onClick={() => router.push(`/sessions/${s.id}`)}
-                  className="cursor-pointer border-b border-border-subtle/60 transition-colors last:border-0 hover:bg-secondary/40"
+                  className="group cursor-pointer border-b border-border-subtle/60 transition-all duration-150 last:border-0 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]"
                 >
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
@@ -183,10 +184,11 @@ export default function SessionsPage() {
           </table>
 
           {filtered.length === 0 && (
-            <div className="py-16 text-center">
-              <p className="font-display text-lg">No sessions match your filters</p>
-              <p className="mt-1 text-sm text-muted-foreground">Try clearing the search or status filter.</p>
-            </div>
+            <EmptyState
+              icon={Monitor}
+              title="No sessions match your filters"
+              description="Try clearing the search or status filter."
+            />
           )}
         </div>
       </Card>

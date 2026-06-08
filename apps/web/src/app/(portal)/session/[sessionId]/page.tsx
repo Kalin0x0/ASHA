@@ -26,7 +26,10 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { ChistaMark } from '@/components/brand/logo';
+import { SessionWatermark } from '@/components/composite/session-watermark';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/lib/api/auth-context';
+import { CURRENT_USER } from '@/lib/current-user';
 import {
   type ApiSessionConnection,
   createShare,
@@ -76,6 +79,12 @@ export default function StreamingViewerPage() {
   const router = useRouter();
   const session = useSession(params.sessionId);
   const terminate = useTerminateSession();
+  const { user } = useAuth();
+  // Who is watching — stamped across the stream as an attribution deterrent.
+  // Falls back to the fixed mock identity when there's no live auth session.
+  const viewerIdentity = `${user?.displayName || user?.username || CURRENT_USER.name} · ${
+    user?.email || CURRENT_USER.email
+  }`;
 
   const stageRef = useRef<HTMLDivElement>(null);
   const [frameReady, setFrameReady] = useState(false);
@@ -202,7 +211,7 @@ export default function StreamingViewerPage() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-anthracite-950">
+    <div className="on-dark fixed inset-0 z-50 flex flex-col bg-anthracite-950">
       {/* Control bar */}
       <div className="glass-strong absolute inset-x-0 top-0 z-20 flex h-12 items-center gap-3 px-4">
         <div className="flex items-center gap-2">
@@ -368,6 +377,10 @@ export default function StreamingViewerPage() {
         ) : (
           <PlaceholderStream workspaceName={workspaceName} clock={clock} />
         )}
+
+        {/* Identity watermark — always on while the stream is live (screenshot /
+            photo-of-screen deterrent). pointer-events-none so input passes through. */}
+        {isRunning && <SessionWatermark identity={viewerIdentity} sessionId={session?.id} />}
 
         {/* Floating webcam capture panel — getUserMedia, stays in-frame as PiP */}
         {webcamOpen && isRunning && (

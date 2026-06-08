@@ -3,6 +3,7 @@
 import { Loader2, RefreshCw, ScrollText, Search } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { EmptyState } from '@/components/composite/empty-state';
 import { PageHeader } from '@/components/composite/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -64,12 +65,14 @@ export default function AuditLogPage() {
         </div>
         <div className="divide-y divide-border-subtle/60">
           {entries.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">
-              {isLive ? 'No audit entries match.' : 'Connect the live backend to view the audit log.'}
-            </p>
+            <EmptyState
+              icon={ScrollText}
+              title={isLive ? 'No audit entries match' : 'Backend not connected'}
+              description={isLive ? 'Try a different filter term.' : 'Run with NEXT_PUBLIC_API_MODE=live to view the audit log.'}
+            />
           ) : (
             entries.map((e) => (
-              <div key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
+              <div key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
                 <ScrollText className="size-4 shrink-0 text-gold-300" />
                 <Badge variant="outline" className="font-mono text-[11px]">{e.action}</Badge>
                 <div className="min-w-0 flex-1">

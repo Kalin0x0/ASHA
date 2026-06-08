@@ -7,12 +7,12 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 ring-gold-focus',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 ring-gold-focus',
   {
     variants: {
       variant: {
         primary:
-          'bg-primary text-primary-foreground font-semibold shadow-[0_1px_2px_rgba(0,0,0,.4)] hover:brightness-110 hover:shadow-[var(--gold-glow)] active:brightness-95',
+          'bg-primary text-primary-foreground font-semibold shadow-[0_1px_2px_rgba(0,0,0,.4),inset_0_1px_0_rgba(255,255,255,.22)] hover:brightness-[1.07] hover:-translate-y-px hover:shadow-[var(--gold-glow),0_8px_20px_-8px_rgba(212,175,55,.55)] active:translate-y-0 active:brightness-95',
         secondary:
           'bg-secondary text-secondary-foreground border border-border-subtle hover:bg-surface-3 hover:border-border',
         outline:

@@ -7,9 +7,10 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     workspace: { findUnique: vi.fn() },
     deploymentZone: { findUnique: vi.fn(), findFirst: vi.fn() },
-    session: { create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
+    session: { create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn() },
     volumeMapping: { findMany: vi.fn() },
     fileMapping: { findMany: vi.fn() },
+    userGroup: { findMany: vi.fn() },
   },
 }));
 
@@ -66,6 +67,8 @@ describe('SessionsService.create', () => {
     prismaMock.session.update.mockResolvedValue({});
     prismaMock.volumeMapping.findMany.mockResolvedValue([]); // E1: no admin volume mappings
     prismaMock.fileMapping.findMany.mockResolvedValue([]); // E4: no admin file mappings
+    prismaMock.userGroup.findMany.mockResolvedValue([]); // no group concurrency cap by default
+    prismaMock.session.count.mockResolvedValue(0);
   });
 
   it('creates → schedules → dispatches provision on the zone channel when an agent is free', async () => {

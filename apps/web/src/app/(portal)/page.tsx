@@ -108,23 +108,23 @@ export default function PortalHome() {
                 Your Workspaces
               </span>
             </div>
-            <h1 className="font-display text-4xl font-medium tracking-tight sm:text-5xl">
-              Launch a workspace
+            <h1 className="font-display text-[2.6rem] font-medium leading-[1.04] tracking-tight sm:text-6xl">
+              Launch a <span className="text-gradient-gold">workspace</span>
             </h1>
-            <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-muted-foreground">
+            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base">
               A secure, isolated desktop or application — streamed straight to your browser.
               Nothing to install, nothing left behind.
             </p>
           </div>
 
           {/* Search */}
-          <div className="relative mt-7 max-w-md animate-fade-up delay-100">
-            <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative mt-8 max-w-lg animate-fade-up delay-100">
+            <Search className="absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground transition-colors" />
             <Input
               placeholder="Search workspaces…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-11 pl-10 pr-4 text-sm"
+              className="h-12 rounded-xl pl-11 pr-4 text-[15px] shadow-[var(--shadow-ambient)] transition-shadow duration-300 focus-visible:shadow-[var(--gold-glow)]"
             />
           </div>
 
@@ -181,8 +181,8 @@ export default function PortalHome() {
                 {favoriteList.length > 0 && (
                   <section>
                     <div className="mb-4 flex items-center gap-2">
-                      <Star className="size-4 fill-gold-400 text-gold-300" />
-                      <h2 className="font-display text-lg font-semibold">Favorites</h2>
+                      <Star className="size-[18px] fill-gold-400 text-gold-300" />
+                      <h2 className="font-display text-xl font-semibold tracking-tight">Favorites</h2>
                       <span className="text-xs text-muted-foreground">({favoriteList.length})</span>
                       {favoriteList.length > 1 && (
                         <span className="ml-1 hidden text-[11px] text-muted-foreground/50 sm:inline">
@@ -203,7 +203,7 @@ export default function PortalHome() {
                 {others.length > 0 && (
                   <section>
                     {favoriteList.length > 0 && (
-                      <h2 className="mb-4 font-display text-lg font-semibold">
+                      <h2 className="mb-4 font-display text-xl font-semibold tracking-tight">
                         {activeCategory ?? 'All workspaces'}
                       </h2>
                     )}

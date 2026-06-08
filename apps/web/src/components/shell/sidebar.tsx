@@ -66,16 +66,16 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      'group relative flex items-center gap-3 rounded-md text-sm transition-all duration-150 ring-gold-focus',
+                      'group relative flex items-center gap-3 rounded-lg text-sm transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] ring-gold-focus',
                       collapsed ? 'justify-center px-0 py-2.5' : 'px-2.5 py-2',
                       active
-                        ? 'bg-[var(--surface-2)] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
-                        : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground',
+                        ? 'bg-gold-500/[0.1] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
+                        : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground hover:translate-x-0.5',
                     )}
                   >
-                    {/* Active indicator bar */}
+                    {/* Active indicator bar — glowing gold rail */}
                     {active && (
-                      <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-gradient-to-b from-gold-300 to-gold-600" />
+                      <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-gradient-to-b from-gold-300 to-gold-600 shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
                     )}
                     {/* Icon */}
                     <item.icon

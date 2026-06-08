@@ -111,7 +111,7 @@ export function WorkspaceCard({
 
         {/* "Last session" badge — shown when thumbnail exists */}
         {thumbEntry && (
-          <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-full bg-anthracite-950/70 px-2 py-0.5 backdrop-blur-sm">
+          <div className="on-dark absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-full bg-anthracite-950/70 px-2 py-0.5 backdrop-blur-sm">
             <Clock className="size-2.5 text-gold-300" />
             <span className="text-[10px] font-medium text-gold-300 tabular-nums">
               {formatRelativeTime(thumbEntry.capturedAt)}

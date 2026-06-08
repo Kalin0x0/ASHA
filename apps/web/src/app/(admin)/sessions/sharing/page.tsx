@@ -1,52 +1,138 @@
 'use client';
 
-import { Link2, MessageSquare, Share2, Users } from 'lucide-react';
+import {
+  Loader2,
+  Lock,
+  MessageSquare,
+  Mic,
+  MousePointerClick,
+  Share2,
+  Users,
+  XCircle,
+} from 'lucide-react';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { EmptyState } from '@/components/composite/empty-state';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { isLive } from '@/lib/api/mode';
+import { type ApiSessionShare, useRevokeShare, useSessionShares } from '@/lib/hooks.storage';
+
+function expiryLabel(iso: string | null): { text: string; expired: boolean } {
+  if (!iso) return { text: 'No expiry', expired: false };
+  const diff = new Date(iso).getTime() - Date.now();
+  if (diff <= 0) return { text: 'Expired', expired: true };
+  const mins = Math.round(diff / 6e4);
+  if (mins < 60) return { text: `${mins}m left`, expired: false };
+  const hrs = Math.round(mins / 60);
+  return { text: `${hrs}h left`, expired: false };
+}
 
 export default function SharingPage() {
+  const { data: shares = [], isLoading } = useSessionShares();
+  const revoke = useRevokeShare();
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const participants = shares.reduce((sum, s) => sum + (s.participantCount ?? 0), 0);
+
+  const onRevoke = async (share: ApiSessionShare) => {
+    setBusyId(share.id);
+    try {
+      await revoke.mutateAsync(share);
+      toast.success('Share revoked', { description: `Guests of ${share.workspaceName ?? share.sessionId} disconnected.` });
+    } catch {
+      toast.error('Could not revoke share');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Session Sharing"
-        description="Share live workspace sessions with collaborators using time-limited invite links. Guests can view or interact depending on the permission level you grant."
+        description="Live, time-limited shares opened from inside running sessions. Guests join the same container in view-only or interactive mode. Revoke a share at any time to disconnect every guest."
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Active shares" value={0} icon={Share2} primary />
-        <StatCard label="Collaborators" value={0} icon={Users} />
-        <StatCard label="Invite links" value={0} icon={Link2} />
+        <StatCard label="Active shares" value={shares.length} icon={Share2} primary />
+        <StatCard label="Connected guests" value={participants} icon={Users} />
+        <StatCard label="Interactive" value={shares.filter((s) => s.allowControl).length} icon={MousePointerClick} />
       </div>
 
-      <Card elevation={1} className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-aurora opacity-[0.12]" />
-        <div className="relative flex flex-col items-center gap-5 px-6 py-20 text-center">
-          <span className="flex size-16 items-center justify-center rounded-2xl border border-[rgba(212,175,55,0.3)] bg-gold-500/10 text-gold-300">
-            <Share2 className="size-7" />
-          </span>
-          <div className="space-y-2">
-            <h2 className="font-display text-2xl font-medium">No active shares</h2>
-            <p className="mx-auto max-w-md text-sm text-muted-foreground">
-              Sharing lets you open a running session to guests via a time-limited invite link.
-              Guests join the same container in read-only or interactive mode, with an in-session chat
-              channel powered by the existing WebSocket events bus.
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1.5">
-              <span className="size-1.5 rounded-full bg-gold-400" /> View-only or interactive
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1.5">
-              <span className="size-1.5 rounded-full bg-gold-400" /> Time-limited invite links
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1.5">
-              <MessageSquare className="size-3" /> In-session chat
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1.5">
-              <span className="size-1.5 rounded-full bg-gold-400" /> Revoke at any time
-            </span>
-          </div>
+      {isLive && (
+        <Card elevation={1} className="p-4 text-sm text-muted-foreground">
+          Shares are created from inside a running session. An org-wide live listing endpoint is not exposed
+          yet, so this admin view is empty in live mode — manage a share from its session detail page.
+        </Card>
+      )}
+
+      <Card elevation={1} className="overflow-hidden">
+        <div className="flex items-center justify-between border-b border-border-subtle p-4">
+          <h2 className="font-display text-lg font-medium">Active shares</h2>
+          {isLoading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+        </div>
+        <div className="divide-y divide-border-subtle/60">
+          {shares.length === 0 ? (
+            <EmptyState icon={Share2} title="No active session shares" description="Shared sessions will appear here with their expiry and access links." />
+          ) : (
+            shares.map((s) => {
+              const exp = expiryLabel(s.expiresAt);
+              return (
+                <div key={s.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
+                  <Share2 className="size-4 text-gold-300" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">
+                      {s.workspaceName ?? s.sessionId}
+                      <span className="ml-2 font-normal text-muted-foreground">· {s.ownerName ?? 'unknown owner'}</span>
+                    </p>
+                    <p className="truncate font-mono text-xs text-muted-foreground">{s.shareKey}</p>
+                  </div>
+
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Users className="size-3.5" /> {s.participantCount ?? 0}
+                  </span>
+
+                  {s.allowControl ? (
+                    <Badge variant="gold">
+                      <MousePointerClick className="size-3" /> control
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">view-only</Badge>
+                  )}
+                  {s.enableChat && (
+                    <Badge variant="outline">
+                      <MessageSquare className="size-3" /> chat
+                    </Badge>
+                  )}
+                  {s.enableAv && (
+                    <Badge variant="outline">
+                      <Mic className="size-3" /> A/V
+                    </Badge>
+                  )}
+                  {s.requireAuth && (
+                    <Badge variant="outline">
+                      <Lock className="size-3" /> auth
+                    </Badge>
+                  )}
+                  <Badge variant={exp.expired ? 'destructive' : 'success'}>{exp.text}</Badge>
+
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={busyId === s.id}
+                    onClick={() => void onRevoke(s)}
+                  >
+                    {busyId === s.id ? <Loader2 className="size-3.5 animate-spin" /> : <XCircle className="size-3.5" />}
+                    Revoke
+                  </Button>
+                </div>
+              );
+            })
+          )}
         </div>
       </Card>
     </div>
