@@ -198,6 +198,6 @@ export class ServersService {
       targetId: server.id,
       metadata: { sessionId: session.id },
     });
-    return { sessionId: session.id, connectionUrl, connectionType };
+    return { sessionId: session.id, kasmId: session.kasmId, connectionUrl, connectionType };
   }
 }
