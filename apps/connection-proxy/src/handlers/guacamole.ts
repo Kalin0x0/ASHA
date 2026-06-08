@@ -99,6 +99,7 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
       const [opcode, ...args] = inst;
       if (opcode === 'args') {
         // args = [protocolVersion, ...paramNames]
+        const version = args[0] ?? 'VERSION_1_0_0';
         const paramNames = args.slice(1);
         const values = paramNames.map((name) => resolveParam(name, session));
 
@@ -106,7 +107,10 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
         guacd.write(encodeInstruction('audio'));
         guacd.write(encodeInstruction('video'));
         guacd.write(encodeInstruction('image'));
-        guacd.write(encodeInstruction('connect', ...values));
+        // The `connect` reply must echo a value for EVERY element guacd sent in
+        // `args` — starting with the protocol version — or guacd rejects with
+        // "Client did not return the expected number of arguments."
+        guacd.write(encodeInstruction('connect', version, ...values));
 
         connected = true;
         log.info(
