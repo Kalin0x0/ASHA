@@ -1,6 +1,7 @@
 'use client';
 
-import { HardDrive, Loader2, Plus, Trash2 } from 'lucide-react';
+import { HardDrive, Loader2, MonitorPlay, Plus, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -12,6 +13,7 @@ import { Input, Label } from '@/components/ui/input';
 import {
   type ApiServer,
   type ApiZone,
+  connectServer,
   createServer,
   deleteServer,
   getServers,
@@ -31,7 +33,12 @@ export default function ServersPage() {
   const [address, setAddress] = useState('');
   const [connectionType, setConnectionType] = useState<(typeof CONNECTION_TYPES)[number]>('RDP');
   const [maxSessions, setMaxSessions] = useState(1);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [security, setSecurity] = useState('nla');
   const [creating, setCreating] = useState(false);
+  const [connectingId, setConnectingId] = useState<string | null>(null);
+  const router = useRouter();
 
   const refresh = useCallback(async () => {
     if (!isLive) return;
@@ -57,15 +64,37 @@ export default function ServersPage() {
     if (!zoneId || !hostname || !address) return;
     setCreating(true);
     try {
-      await createServer({ zoneId, hostname, address, connectionType, maxSessions });
+      await createServer({
+        zoneId,
+        hostname,
+        address,
+        connectionType,
+        maxSessions,
+        ...(username ? { username } : {}),
+        ...(password ? { password } : {}),
+        ...(connectionType === 'RDP' ? { security: security as 'any' | 'nla' | 'tls' | 'rdp' } : {}),
+      });
       toast.success('Server added');
       setHostname('');
       setAddress('');
+      setUsername('');
+      setPassword('');
       await refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not add server');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const onConnect = async (id: string) => {
+    setConnectingId(id);
+    try {
+      const res = await connectServer(id);
+      router.push(`/connect/${res.kasmId}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not open the session');
+      setConnectingId(null);
     }
   };
 
@@ -125,6 +154,16 @@ export default function ServersPage() {
                 <span className="hidden text-xs text-muted-foreground tnum sm:inline">
                   {s.currentSessions ?? 0} / {s.maxSessions}
                 </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={connectingId === s.id}
+                  disabled={!isLive || connectingId !== null}
+                  onClick={() => void onConnect(s.id)}
+                >
+                  <MonitorPlay className="size-3.5" />
+                  Connect
+                </Button>
                 <Button variant="ghost" size="icon-sm" disabled={busyId === s.id} onClick={() => void onDelete(s.id)}>
                   <Trash2 className="size-4 text-destructive" />
                 </Button>
@@ -178,6 +217,35 @@ export default function ServersPage() {
             <Label>Max sessions</Label>
             <Input type="number" min={1} value={maxSessions} onChange={(e) => setMaxSessions(Number(e.target.value))} />
           </div>
+          <div>
+            <Label>Username</Label>
+            <Input placeholder="admin" autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
+          </div>
+          <div>
+            <Label>Password</Label>
+            <Input
+              type="password"
+              placeholder="••••••••"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          {connectionType === 'RDP' && (
+            <div>
+              <Label>RDP security</Label>
+              <select
+                value={security}
+                onChange={(e) => setSecurity(e.target.value)}
+                className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+              >
+                <option value="nla">NLA (Windows default)</option>
+                <option value="any">Auto-negotiate</option>
+                <option value="tls">TLS</option>
+                <option value="rdp">Standard RDP (no NLA)</option>
+              </select>
+            </div>
+          )}
         </div>
         <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !zoneId || !hostname || !address || creating}>
           {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}

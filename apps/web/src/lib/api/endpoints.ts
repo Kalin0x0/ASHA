@@ -446,6 +446,7 @@ export const createServer = (body: {
   maxSessions?: number;
   username?: string;
   password?: string;
+  security?: 'any' | 'nla' | 'nla-ext' | 'tls' | 'rdp' | 'vmconnect';
 }) => apiFetch<ApiServer>('/servers', { method: 'POST', body });
 export const updateServer = (
   id: string,

@@ -137,10 +137,12 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
     if (ws.readyState === ws.OPEN) ws.close(1000);
   });
 
-  // Browser → guacd: once connected, the browser speaks the Guacamole protocol
-  // directly (guacamole-common-js), so its frames are written through verbatim.
+  // Browser → guacd: the PROXY drives the guacd handshake (it injects the
+  // server-side RDP params), so we swallow the browser client's own handshake
+  // (select/size/connect) until `connected`. After that the browser's frames
+  // (key/mouse/clipboard) are written through verbatim.
   ws.on('message', (data) => {
-    if (!guacd.writable) return;
+    if (!connected || !guacd.writable) return;
     if (Buffer.isBuffer(data)) {
       guacd.write(data);
     } else if (typeof data === 'string') {
