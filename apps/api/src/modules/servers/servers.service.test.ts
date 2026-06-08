@@ -13,13 +13,21 @@ vi.mock('@chista/db', () => ({ prisma: prismaMock }));
 import { ServersService } from './servers.service';
 
 const audit = { record: vi.fn().mockResolvedValue(undefined) };
+const jwt = { signAsync: vi.fn().mockResolvedValue('token') };
+const redis = { set: vi.fn().mockResolvedValue(undefined) };
+const env = {
+  SECRET_SEAL_KEY: '0123456789abcdef0123456789abcdef',
+  SESSION_TOKEN_SECRET: 'session-secret',
+  SESSION_TOKEN_TTL: 120,
+  CHISTA_PUBLIC_URL: 'https://chista.test',
+};
 
 describe('ServersService', () => {
   let svc: ServersService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new ServersService(audit as never);
+    svc = new ServersService(audit as never, jwt as never, redis as never, env as never);
   });
 
   it('refuses to create a server in a zone from another org', async () => {

@@ -206,10 +206,10 @@ export class SessionsService {
       prisma.volumeMapping.findMany({ where: { orgId: workspace.orgId } }),
       // E3: org-wide (userId null) + user-scoped file mappings for the launching user.
       prisma.fileMapping.findMany({
-        where: { orgId: workspace.orgId, target: 'CONTAINER', OR: [{ userId: null }, { userId }] },
+        where: { orgId: workspace.orgId, target: 'CONTAINER', OR: [{ userId: null }, { userId: session.userId }] },
       }),
     ]);
-    const storageVolumes = [
+    const mountVolumes = [
       ...volumeMappings.map((m) => {
         const i = resolveTokens({ s: m.hostPath, t: m.destPath }, tokenCtx);
         return { source: i.s, target: i.t, readOnly: m.readOnly };
@@ -239,7 +239,7 @@ export class SessionsService {
       ...(dockerCfg.securityOpt?.length ? { securityOpt: dockerCfg.securityOpt } : {}),
       ...(dockerCfg.privileged ? { privileged: true } : {}),
       ...(dockerCfg.restartPolicy ? { restartPolicy: dockerCfg.restartPolicy } : {}),
-      ...(storageVolumes.length ? { volumes: storageVolumes } : {}),
+      ...(mountVolumes.length ? { volumes: mountVolumes } : {}),
     };
 
     // Resolve open-source sidecar descriptors from workspace connectivity policy.

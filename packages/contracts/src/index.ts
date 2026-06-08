@@ -399,6 +399,9 @@ export const createServerSchema = z.object({
   vmTemplate: z.string().optional(),
   vmProviderId: z.string().optional(),
   maxSessions: z.number().int().min(1).max(1000).default(1),
+  // PASSWORD-auth RDP/VNC/SSH credentials — sealed into Server.credentialRef.
+  username: z.string().max(255).optional(),
+  password: z.string().max(1024).optional(),
 });
 export type CreateServerDto = z.infer<typeof createServerSchema>;
 
@@ -411,6 +414,8 @@ export const updateServerSchema = z
     vmTemplate: z.string().optional(),
     vmProviderId: z.string().optional(),
     maxSessions: z.number().int().min(1).max(1000).optional(),
+    username: z.string().max(255).optional(),
+    password: z.string().max(1024).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 export type UpdateServerDto = z.infer<typeof updateServerSchema>;
