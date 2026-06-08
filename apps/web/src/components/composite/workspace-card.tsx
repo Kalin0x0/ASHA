@@ -1,17 +1,22 @@
 'use client';
 
-import { Cpu, Lock, MemoryStick, Play, Sparkles, Star } from 'lucide-react';
+import { Clock, Cpu, Lock, MemoryStick, Play, Sparkles, Star } from 'lucide-react';
 import { Monogram } from '@/components/composite/monogram';
 import { Badge } from '@/components/ui/badge';
+import { useThumbnails } from '@/lib/thumbnail-store';
 import { categoryVisual } from '@/lib/workspace-visuals';
 import type { Workspace } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, formatRelativeTime } from '@/lib/utils';
 
 /**
  * Image-forward workspace tile — the launcher's centrepiece. Mirrors Kasm's
  * launch grid (a colour-coded app tile up top, metadata below, launch-on-hover)
  * while staying in the Chista anthracite + gold system. Click anywhere on an
  * enabled card to launch; the star and any drag handle stop propagation.
+ *
+ * When a previous-session thumbnail exists for this workspace (stored by the
+ * streaming viewer on session end), it is shown as the hero background so the
+ * user immediately sees what the workspace looked like last time they used it.
  */
 export function WorkspaceCard({
   workspace,
@@ -29,6 +34,7 @@ export function WorkspaceCard({
   const { Icon, accent } = categoryVisual(workspace.category);
   const enabled = workspace.enabled;
   const protocolLabel = workspace.protocol === 'KASMVNC' ? 'KasmVNC' : workspace.protocol;
+  const thumbEntry = useThumbnails((s) => s.thumbs[workspace.id]);
 
   const launch = () => {
     if (enabled && !launching) onLaunch?.(workspace.id);
@@ -54,29 +60,68 @@ export function WorkspaceCard({
           : 'cursor-not-allowed opacity-60',
       )}
     >
-      {/* ── App-tile hero ──────────────────────────────────────────── */}
-      <div
-        className="relative flex h-32 items-center justify-center overflow-hidden"
-        style={{
-          background: `radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, ${accent} 26%, transparent), transparent 70%), linear-gradient(160deg, color-mix(in srgb, ${accent} 14%, var(--surface-2)), var(--surface-1))`,
-        }}
-      >
-        {/* Oversized category glyph watermark */}
+      {/* ── Hero ────────────────────────────────────────────────────── */}
+      <div className="relative flex h-32 items-center justify-center overflow-hidden">
+
+        {/* Background: last-session thumbnail OR category gradient */}
+        {thumbEntry ? (
+          <>
+            {/* Screenshot of the last session, slightly blurred */}
+            <div
+              className="absolute inset-0 scale-105 bg-cover bg-center blur-[1px] brightness-50 transition-all duration-500 group-hover:brightness-[0.35] group-hover:scale-110"
+              style={{ backgroundImage: `url('${thumbEntry.dataUrl}')` }}
+              aria-hidden
+            />
+            {/* Gradient vignette so the monogram stays readable */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  'radial-gradient(ellipse 70% 80% at 50% 50%, transparent 20%, rgba(14,14,26,0.55) 100%)',
+              }}
+              aria-hidden
+            />
+          </>
+        ) : (
+          /* No thumbnail yet — category-coloured gradient (default state) */
+          <div
+            className="absolute inset-0 transition-all duration-500"
+            style={{
+              background: `radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, ${accent} 26%, transparent), transparent 70%), linear-gradient(160deg, color-mix(in srgb, ${accent} 14%, var(--surface-2)), var(--surface-1))`,
+            }}
+            aria-hidden
+          />
+        )}
+
+        {/* Oversized category glyph watermark — fades if thumbnail exists */}
         <Icon
-          className="pointer-events-none absolute -right-4 -top-3 size-28 opacity-[0.07] transition-transform duration-500 group-hover:scale-110"
+          className={cn(
+            'pointer-events-none absolute -right-4 -top-3 size-28 transition-all duration-500 group-hover:scale-110',
+            thumbEntry ? 'opacity-0' : 'opacity-[0.07]',
+          )}
           style={{ color: accent }}
           aria-hidden
         />
 
-        {/* App glyph tile */}
+        {/* App monogram (always visible, scales on hover) */}
         <Monogram
           name={workspace.friendlyName}
-          className="size-16 rounded-2xl text-lg shadow-[0_8px_24px_-8px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-105"
+          className="relative z-10 size-16 rounded-2xl text-lg shadow-[0_8px_24px_-8px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-105"
         />
+
+        {/* "Last session" badge — shown when thumbnail exists */}
+        {thumbEntry && (
+          <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-full bg-anthracite-950/70 px-2 py-0.5 backdrop-blur-sm">
+            <Clock className="size-2.5 text-gold-300" />
+            <span className="text-[10px] font-medium text-gold-300 tabular-nums">
+              {formatRelativeTime(thumbEntry.capturedAt)}
+            </span>
+          </div>
+        )}
 
         {/* GPU badge */}
         {workspace.gpu > 0 && (
-          <Badge variant="gold" className="absolute left-3 top-3 gap-1">
+          <Badge variant="gold" className="absolute left-3 top-3 gap-1 z-10">
             <Sparkles className="size-3" /> GPU
           </Badge>
         )}
@@ -109,7 +154,7 @@ export function WorkspaceCard({
 
         {/* Launch-on-hover overlay (Kasm signature) */}
         {enabled ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-anthracite-950/55 opacity-0 backdrop-blur-[2px] transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-anthracite-950/50 opacity-0 backdrop-blur-[2px] transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
             <span className="inline-flex items-center gap-2 rounded-full bg-gold-500 px-5 py-2 text-sm font-semibold text-anthracite-950 shadow-[0_8px_24px_-6px_rgba(212,175,55,0.6)] transition-transform duration-200 group-hover:scale-105">
               {launching ? (
                 <>
@@ -124,7 +169,7 @@ export function WorkspaceCard({
             </span>
           </div>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-anthracite-950/45">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-anthracite-950/45">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-anthracite-900/80 px-3 py-1 text-xs font-medium text-muted-foreground">
               <Lock className="size-3" /> Unavailable
             </span>
