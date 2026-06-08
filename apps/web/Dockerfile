@@ -11,7 +11,8 @@ ARG NEXT_PUBLIC_API_MODE=mock
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL \
     NEXT_PUBLIC_API_MODE=$NEXT_PUBLIC_API_MODE \
-    NEXT_TELEMETRY_DISABLED=1
+    NEXT_TELEMETRY_DISABLED=1 \
+    NODE_OPTIONS=--max-old-space-size=3072
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* tsconfig.base.json ./
 # The web app imports the workspace packages (@chista/rbac, @chista/contracts, …)
 # as `workspace:*` deps, so they must be present (and built) for pnpm to resolve
