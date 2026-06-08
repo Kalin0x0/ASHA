@@ -1,11 +1,12 @@
 'use client';
 
-import { BookOpen, ExternalLink, FileJson, Terminal } from 'lucide-react';
+import { BookOpen, ExternalLink, FileJson, PlugZap, Terminal } from 'lucide-react';
 import Link from 'next/link';
+import { EmptyState } from '@/components/composite/empty-state';
 import { PageHeader } from '@/components/composite/page-header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { API_BASE_URL } from '@/lib/api/mode';
+import { API_BASE_URL, isLive } from '@/lib/api/mode';
 
 // The API mounts interactive OpenAPI docs at /api/docs (sibling of the
 // versioned API base, which ends in /api/v1).
@@ -75,7 +76,22 @@ export default function ApiDocsPage() {
         <div className="border-b border-border-subtle p-4">
           <h2 className="font-display text-lg font-medium">Embedded explorer</h2>
         </div>
-        <iframe src={docsUrl} title="Chista API docs" className="h-[70vh] w-full bg-white" />
+        {isLive ? (
+          <iframe src={docsUrl} title="Chista API docs" className="h-[70vh] w-full bg-white" />
+        ) : (
+          <EmptyState
+            icon={PlugZap}
+            title="Backend not connected"
+            description="The embedded Swagger UI loads from the live API. Run with NEXT_PUBLIC_API_MODE=live to explore endpoints here."
+            action={
+              <Button asChild variant="secondary" size="sm">
+                <a href={docsUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="size-3.5" /> Open Swagger UI in a new tab
+                </a>
+              </Button>
+            }
+          />
+        )}
       </Card>
     </div>
   );
