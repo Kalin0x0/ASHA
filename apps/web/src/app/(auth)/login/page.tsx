@@ -4,11 +4,12 @@ import { ArrowRight, Fingerprint, KeyRound, Network, ShieldCheck } from 'lucide-
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Logo } from '@/components/brand/logo';
+import { ChistaMark } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/lib/api/auth-context';
+import { getAuth } from '@/lib/api/auth-store';
 import {
   type ApiPublicAuthProvider,
   getPublicAuthProviders,
@@ -41,7 +42,7 @@ export default function LoginPage() {
     }
     try {
       await login(email, password);
-      router.push('/dashboard');
+      router.push(getAuth().user?.isSystemAdmin ? '/dashboard' : '/');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Sign in failed');
       setLoading(false);
@@ -60,7 +61,7 @@ export default function LoginPage() {
     setPasskeyLoading(true);
     try {
       await loginWithPasskey(email);
-      router.push('/dashboard');
+      router.push(getAuth().user?.isSystemAdmin ? '/dashboard' : '/');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Passkey sign in failed');
     } finally {
@@ -73,9 +74,9 @@ export default function LoginPage() {
       {/* Logo + heading */}
       <div className="mb-8 flex flex-col items-center gap-3 text-center animate-fade-up">
         <div className="relative">
-          <div className="absolute -inset-4 rounded-full bg-gold-500/8 blur-2xl animate-float" />
-          <div className="relative flex size-16 items-center justify-center rounded-2xl border border-[rgba(212,175,55,0.3)] bg-[var(--surface-1)] shadow-[0_0_40px_-8px_rgba(212,175,55,0.3)]">
-            <Logo showMark={false} />
+          <div className="absolute -inset-6 rounded-full bg-gold-500/10 blur-3xl animate-float" />
+          <div className="relative flex size-24 items-center justify-center">
+            <ChistaMark className="size-24 rounded-3xl" />
           </div>
         </div>
         <div className="space-y-1">

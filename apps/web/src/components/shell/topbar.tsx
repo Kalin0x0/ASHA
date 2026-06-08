@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, ChevronRight, LogOut, Menu, Search, Settings, User } from 'lucide-react';
+import { AppWindow, Bell, ChevronRight, LogOut, Menu, Search, Settings, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -56,6 +56,16 @@ export function Topbar() {
           ⌘K
         </kbd>
       </button>
+
+      {/* Switch to the end-user Workstation */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => router.push('/')}
+        className="hidden gap-1.5 sm:inline-flex"
+      >
+        <AppWindow className="size-4" /> Workstation
+      </Button>
 
       {/* Notifications */}
       <DropdownMenu>

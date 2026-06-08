@@ -1,4 +1,5 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import type { AgentTokenScope } from '../../common/jwt-auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import type { AgentHeartbeatDto, AgentRegisterDto, SessionStatsDto, SessionStatusDto } from '@chista/contracts';
 import { prisma, runUnscoped } from '@chista/db';
@@ -33,12 +34,25 @@ export class AgentsService {
     @Inject(ENV) private readonly env: Env,
   ) {}
 
-  async register(dto: AgentRegisterDto) {
+  async register(dto: AgentRegisterDto, scope?: AgentTokenScope) {
     return runUnscoped(async () => {
-      const zone =
-        (await prisma.deploymentZone.findFirst({ where: { name: dto.zone } })) ??
-        (await prisma.deploymentZone.findFirst({ where: { isDefault: true } })) ??
-        (await prisma.deploymentZone.findFirst({}));
+      let zone: Awaited<ReturnType<typeof prisma.deploymentZone.findFirst>>;
+      if (scope?.scope === 'org') {
+        // Minted token: enrollment is hard-constrained to the token's org (and a
+        // pinned zone if set) — a token for org A can never enroll into org B.
+        zone = scope.zoneId
+          ? await prisma.deploymentZone.findFirst({ where: { id: scope.zoneId, orgId: scope.orgId } })
+          : ((await prisma.deploymentZone.findFirst({ where: { name: dto.zone, orgId: scope.orgId } })) ??
+            (await prisma.deploymentZone.findFirst({ where: { orgId: scope.orgId, isDefault: true } })) ??
+            (await prisma.deploymentZone.findFirst({ where: { orgId: scope.orgId } })));
+        if (!zone) throw new ForbiddenException('Token is not authorized for the requested zone');
+      } else {
+        // Shared env token (global super-admin enrollment) — resolve any zone by name.
+        zone =
+          (await prisma.deploymentZone.findFirst({ where: { name: dto.zone } })) ??
+          (await prisma.deploymentZone.findFirst({ where: { isDefault: true } })) ??
+          (await prisma.deploymentZone.findFirst({}));
+      }
       if (!zone) throw new NotFoundException('No deployment zone to enroll into');
 
       const agent = await prisma.agent.upsert({
@@ -79,19 +93,25 @@ export class AgentsService {
   }
 
   async heartbeat(agentId: string, dto: AgentHeartbeatDto) {
-    await runUnscoped(() =>
-      prisma.agent.update({
+    await runUnscoped(async () => {
+      // A heartbeat reports the agent as live, but a pending admin drain wins:
+      // keep DRAINING so the scheduler won't place new sessions on it.
+      const agent = await prisma.agent.findUnique({
+        where: { id: agentId },
+        select: { drainRequested: true },
+      });
+      await prisma.agent.update({
         where: { id: agentId },
         data: {
-          status: 'ONLINE',
+          status: agent?.drainRequested ? 'DRAINING' : 'ONLINE',
           memFreeMb: dto.memFreeMb,
           loadPercent: dto.loadPercent,
           currentSessions: dto.currentSessions,
           version: dto.version,
           lastHeartbeatAt: new Date(),
         },
-      }),
-    );
+      });
+    });
     return { ok: true };
   }
 
@@ -122,6 +142,12 @@ export class AgentsService {
         data.connectionUrl = connectionUrl;
         data.startedAt = session.startedAt ?? new Date();
 
+        // A1: if the workspace publishes a RemoteApp, the proxy launches it via
+        // guacd's remote-app params instead of a full desktop.
+        const remoteApp = session.workspaceId
+          ? await prisma.remoteApp.findFirst({ where: { workspaceId: session.workspaceId } })
+          : null;
+
         // Publish the connection record the connection-proxy reads to bridge
         // RDP/VNC/SSH sessions (keyed by kasmId). KasmVNC goes straight through
         // Traefik and doesn't need this, but writing it is harmless.
@@ -141,6 +167,8 @@ export class AgentsService {
             sshPrivateKey: dto.sshPrivateKey,
             rdpUser: dto.rdpUser,
             rdpPassword: dto.rdpPassword,
+            remoteApp: remoteApp?.path,
+            remoteAppArgs: remoteApp?.args ?? undefined,
           },
           3600,
         );
@@ -195,7 +223,11 @@ export class AgentsService {
   }
 
   async setAgentState(id: string, status: 'ONLINE' | 'DRAINING' | 'OFFLINE') {
-    return prisma.agent.update({ where: { id }, data: { status } });
+    // Persist the drain intent so heartbeats don't flip a drained agent back online.
+    return prisma.agent.update({
+      where: { id },
+      data: { status, drainRequested: status === 'DRAINING' },
+    });
   }
 
   async remove(id: string) {

@@ -1,13 +1,14 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-type Elevation = 0 | 1 | 2 | 'gold';
+type Elevation = 0 | 1 | 2 | 'gold' | 'glass';
 
 const elevClass: Record<string, string> = {
   '0': 'elev-0',
   '1': 'elev-1',
   '2': 'elev-2',
   gold: 'elev-1 elev-gold',
+  glass: 'glass-card',
 };
 
 export const Card = React.forwardRef<

@@ -17,6 +17,27 @@ export class SchedulerService {
    * The reservation is released when the session reaches ERROR/DESTROYED.
    */
   async pickAgent(zoneId: string) {
+    const primary = await this.pickInZone(zoneId);
+    if (primary) return primary;
+
+    // Cross-zone fallback (D7): when the requested zone has no free agent, spill
+    // over to the org's other zones (each retaining the atomic capacity reserve).
+    const zone = await prisma.deploymentZone.findUnique({ where: { id: zoneId }, select: { orgId: true } });
+    if (!zone) return null;
+    const others = await prisma.deploymentZone.findMany({
+      where: { orgId: zone.orgId, id: { not: zoneId } },
+      select: { id: true },
+      orderBy: { name: 'asc' },
+    });
+    for (const z of others) {
+      const picked = await this.pickInZone(z.id);
+      if (picked) return picked;
+    }
+    return null;
+  }
+
+  /** Least-loaded ONLINE agent in a single zone, with an atomic capacity reserve. */
+  private async pickInZone(zoneId: string) {
     const freshAfter = new Date(Date.now() - HEARTBEAT_STALE_MS);
     const agents = await prisma.agent.findMany({
       where: { zoneId, status: 'ONLINE', lastHeartbeatAt: { gte: freshAfter } },

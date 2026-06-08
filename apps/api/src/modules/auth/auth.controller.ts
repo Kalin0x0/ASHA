@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -9,9 +9,17 @@ import {
   type RefreshDto,
   refreshSchema,
 } from '@chista/contracts';
+import { z } from 'zod';
 import { type AuthUser, CurrentUser, Public } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { AuthService } from './auth.service';
+import { StepUpGuard } from './step-up.guard';
+
+const impersonateSchema = z.object({ userId: z.string().min(1) });
+type ImpersonateDto = z.infer<typeof impersonateSchema>;
+
+const stepUpSchema = z.object({ totp: z.string().min(6).max(8) });
+type StepUpDto = z.infer<typeof stepUpSchema>;
 
 // login + refresh are the brute-force targets — cap at 10/min per IP
 @Throttle({ auth: { ttl: 60_000, limit: 10 } })
@@ -42,6 +50,26 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: AuthUser) {
     return this.auth.me(user.sub);
+  }
+
+  @ApiBearerAuth()
+  @Post('impersonate')
+  impersonate(@CurrentUser() user: AuthUser, @Body(new ZodPipe(impersonateSchema)) dto: ImpersonateDto) {
+    return this.auth.impersonate(user, dto.userId);
+  }
+
+  @ApiBearerAuth()
+  @Post('step-up')
+  stepUp(@CurrentUser() user: AuthUser, @Body(new ZodPipe(stepUpSchema)) dto: StepUpDto) {
+    return this.auth.stepUp(user, dto.totp);
+  }
+
+  /** Demo route requiring step-up — proves StepUpGuard (apply to sensitive ops). */
+  @ApiBearerAuth()
+  @UseGuards(StepUpGuard)
+  @Get('step-up/protected')
+  stepUpProtected() {
+    return { ok: true, acr: 'step-up' };
   }
 
   // ── TOTP / 2FA ──────────────────────────────────────────────────────────────

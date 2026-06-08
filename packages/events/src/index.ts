@@ -51,6 +51,17 @@ export interface RunConfig {
    * Docker maps these 1:1; Kubernetes mounts them as CharDevice hostPath volumes.
    */
   devices?: string[];
+  /** Extra Linux capabilities to add / drop on the session container. */
+  capAdd?: string[];
+  capDrop?: string[];
+  /** Security options, e.g. "seccomp=unconfined" or "apparmor=<profile>". */
+  securityOpt?: string[];
+  /** Run privileged (admin-gated; avoid unless a workspace truly needs it). */
+  privileged?: boolean;
+  /** Extra container labels (token-interpolated). System/Traefik labels win. */
+  labels?: Record<string, string>;
+  /** Container restart policy. Defaults to "no". */
+  restartPolicy?: 'no' | 'always' | 'unless-stopped' | 'on-failure';
 }
 
 /**
@@ -76,6 +87,16 @@ export interface DlpPolicy {
   audioOut?: boolean;
   /** Install-as-PWA / open-in-new-tab. */
   pwa?: boolean;
+  /** Forensic watermark overlaid on the stream (exfil deterrence). */
+  watermark?: { text?: string; opacity?: number; tile?: boolean };
+  /** Max bytes per clipboard transfer (0 disables clipboard). */
+  clipboardMaxBytes?: number;
+  /** Allowed clipboard MIME types (empty ⇒ text/plain only). */
+  clipboardAllowMimeTypes?: string[];
+  /** Max keyboard events per second (anti-automation / scripted exfil). */
+  keyboardRateLimit?: number;
+  /** Purge in-session memory if the DLP enforcement process dies (fail-secure). */
+  failSecure?: boolean;
 }
 
 /**
@@ -93,6 +114,10 @@ export interface SessionSidecar {
   capAdd?: string[];
   /** Container ports (informational; used for K8s containerPort spec). */
   ports?: number[];
+  /** Override the image's default command (e.g. rclone mount args). */
+  cmd?: string[];
+  /** Host devices to pass through (e.g. /dev/fuse for rclone FUSE mounts). */
+  devices?: string[];
 }
 
 export interface ProvisionCommand {
@@ -117,6 +142,8 @@ export interface ProvisionCommand {
     audio?: SessionSidecar;
     /** CUPS virtual-printer → PDF sidecar. */
     printing?: SessionSidecar;
+    /** Cloud-storage (rclone) mount sidecars — one per enabled cloud StorageMapping. */
+    storage?: SessionSidecar[];
   };
 }
 
@@ -131,13 +158,36 @@ export interface DestroyCommand {
  * Manager → agent control message for an already-running session. `resize`
  * carries new screen geometry; pause/resume freeze/thaw the container.
  */
+/** Live stream-control profile applied to a running session. */
+export interface StreamProfile {
+  resolution?: { width: number; height: number };
+  /** Target max frames/sec. */
+  maxFps?: number;
+  /** Encoder quality preset. */
+  quality?: 'low' | 'medium' | 'high' | 'lossless';
+  /** JPEG quality 0–100 (lossy tiles). */
+  jpegQuality?: number;
+  /** WebP quality 0–100 (lossy tiles). */
+  webpQuality?: number;
+  /** Soft cap on stream bitrate. */
+  maxBitrateKbps?: number;
+  /** Two-way clipboard sync. */
+  clipboardSync?: boolean;
+  /** B2: max monitors the viewer may open for this session (multi-monitor). */
+  maxDisplays?: number;
+}
+
 export interface SessionControlCommand {
   sessionId: string;
   containerId?: string;
-  action: 'PAUSE' | 'RESUME' | 'RESIZE';
+  action: 'PAUSE' | 'RESUME' | 'RESIZE' | 'STREAM' | 'RECORD_START' | 'RECORD_STOP';
   /** For RESIZE. */
   width?: number;
   height?: number;
+  /** For STREAM. */
+  streamProfile?: StreamProfile;
+  /** For RECORD_START / RECORD_STOP. */
+  recordingId?: string;
 }
 
 export type SessionLifecycleStatus =

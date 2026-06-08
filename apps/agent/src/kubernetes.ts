@@ -13,7 +13,7 @@
  */
 import { KubeConfig, CoreV1Api, NetworkingV1Api, AppsV1Api, Metrics } from '@kubernetes/client-node';
 import type { V1ConfigMap, V1Container, V1Pod, V1Service, V1Ingress, V1Volume } from '@kubernetes/client-node';
-import type { ProvisionCommand, SessionSidecar, SessionStatSample } from '@chista/events';
+import type { ProvisionCommand, SessionSidecar, SessionStatSample, StreamProfile } from '@chista/events';
 import { routerName } from '@chista/proxy-labels';
 import { agentEnv } from './env.js';
 
@@ -319,6 +319,21 @@ export async function unpauseContainer(_podName: string): Promise<void> {
 
 /** Geometry is negotiated client-side for K8s sessions; this is a no-op. */
 export async function resizeContainer(_podName: string, _w: number, _h: number): Promise<void> {
+  // No-op.
+}
+
+/** Stream control is negotiated client-side for K8s sessions; this is a no-op. */
+export async function applyStreamProfile(_podName: string, _profile: StreamProfile): Promise<void> {
+  // No-op.
+}
+
+/** Recording is handled by a manager-side pipeline for K8s sessions; no-op here. */
+export async function startRecorder(_containerId: string, _sessionId: string, _recordingId: string): Promise<void> {
+  // No-op.
+}
+
+/** Counterpart of startRecorder. */
+export async function stopRecorder(_sessionId: string): Promise<void> {
   // No-op.
 }
 

@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import net from 'node:net';
 import Docker from 'dockerode';
-import type { ProvisionCommand, SessionSidecar, SessionStatSample } from '@chista/events';
+import type { ProvisionCommand, SessionSidecar, SessionStatSample, StreamProfile } from '@chista/events';
 import { routerName, sessionTraefikLabels } from '@chista/proxy-labels';
 import { agentEnv } from './env.js';
 
@@ -11,6 +11,7 @@ import { agentEnv } from './env.js';
 // When the agent runs inside Docker, this must be bind-mounted from the host
 // so the path is also reachable by Docker sibling containers.
 const SIDECAR_DIR = process.env.CHISTA_SIDECAR_DIR ?? '/var/lib/chista/sidecars';
+const RECORDING_DIR = process.env.CHISTA_RECORDING_DIR ?? '/var/lib/chista/recordings';
 
 const socketPath =
   process.platform === 'win32' && !process.env.DOCKER_SOCKET
@@ -84,7 +85,13 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
   const router = routerName(cmd.kasmId);
   const vncPw = randomBytes(9).toString('base64url');
 
+  // Custom labels must NOT register their own Traefik routers (cross-tenant
+  // route-hijack guard); strip any traefik.* keys before merging.
+  const customLabels = Object.fromEntries(
+    Object.entries(cmd.runConfig.labels ?? {}).filter(([k]) => !/^traefik\./i.test(k)),
+  );
   const labels: Record<string, string> = {
+    ...customLabels,
     ...sessionTraefikLabels({
       kasmId: cmd.kasmId,
       internalPort: port,
@@ -99,20 +106,67 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     [`traefik.http.services.${router}.loadbalancer.serverstransport`]: 'chista-insecure@file',
   };
 
+  // KasmVNC's web server requires HTTP Basic Auth (kasm_user:VNC_PW), but the
+  // browser loads the session iframe with only `?token=`. Inject the credentials
+  // at the edge via a per-session Traefik header middleware so the desktop streams
+  // without a 401. `kasm_user` is the default basic-auth user in the kasmweb images.
+  if (cmd.protocol === 'KASMVNC') {
+    const basic = Buffer.from(`kasm_user:${vncPw}`).toString('base64');
+    labels[`traefik.http.middlewares.${router}-auth.headers.customrequestheaders.Authorization`] = `Basic ${basic}`;
+    const existing = labels[`traefik.http.routers.${router}.middlewares`];
+    labels[`traefik.http.routers.${router}.middlewares`] = existing
+      ? `${existing},${router}-auth`
+      : `${router}-auth`;
+  }
+
+  // ── Container-security sanitization (shared multi-tenant hosts) ─────────────
+  // Privileged mode, dangerous Linux capabilities, and seccomp/apparmor-
+  // disabling securityOpts are gated behind a deployment-level env so org admins
+  // (who author dockerConfig) cannot grant themselves host-escape on a host that
+  // also runs other tenants' sessions.
+  const allowPrivileged = process.env.CHISTA_ALLOW_PRIVILEGED === 'true';
+  const CAP_DENYLIST = new Set([
+    'SYS_ADMIN', 'SYS_PTRACE', 'SYS_MODULE', 'SYS_RAWIO', 'SYS_BOOT', 'SYS_TIME',
+    'DAC_READ_SEARCH', 'DAC_OVERRIDE', 'NET_ADMIN', 'NET_RAW', 'MKNOD', 'AUDIT_CONTROL',
+    'MAC_ADMIN', 'MAC_OVERRIDE', 'SETUID', 'SETGID', 'ALL',
+  ]);
+  const normCap = (c: string) => c.toUpperCase().replace(/^CAP_/, '');
+  const safeCapAdd = allowPrivileged
+    ? cmd.runConfig.capAdd ?? []
+    : (cmd.runConfig.capAdd ?? []).filter((c) => !CAP_DENYLIST.has(normCap(c)));
+  const safeSecurityOpt = allowPrivileged
+    ? cmd.runConfig.securityOpt ?? []
+    : (cmd.runConfig.securityOpt ?? []).filter((o) => !/unconfined/i.test(o));
+  const privileged = Boolean(cmd.runConfig.privileged) && allowPrivileged;
+  // Ephemeral session containers must never auto-restart forever; clamp policy.
+  const restartPolicy: { Name: NonNullable<typeof cmd.runConfig.restartPolicy>; MaximumRetryCount?: number } =
+    cmd.runConfig.restartPolicy === 'on-failure'
+      ? { Name: 'on-failure', MaximumRetryCount: 3 }
+      : { Name: 'no' };
+
   const container = await docker.createContainer({
     name: `chista-sess-${cmd.kasmId}`,
     Image: cmd.runConfig.dockerImage,
-    Env: [
-      `VNC_PW=${vncPw}`,
-      ...Object.entries({ ...gpuEnv(cmd), ...cmd.runConfig.env }).map(([k, v]) => `${k}=${v}`),
-    ],
+    // System env (VNC_PW + GPU hints) spread LAST so admin dockerConfig.env
+    // cannot override the per-session password or encoder selection.
+    Env: Object.entries({ ...cmd.runConfig.env, ...gpuEnv(cmd), VNC_PW: vncPw }).map(([k, v]) => `${k}=${v}`),
     Labels: labels,
     HostConfig: {
       NetworkMode: agentEnv.sessionNetwork,
       ShmSize: parseShm(cmd.runConfig.shmSize),
       Memory: cmd.runConfig.memLimitMb ? cmd.runConfig.memLimitMb * 2 ** 20 : undefined,
       NanoCpus: cmd.runConfig.cores ? Math.round(cmd.runConfig.cores * 1e9) : undefined,
-      RestartPolicy: { Name: 'no' },
+      RestartPolicy: restartPolicy,
+      // E1: admin-defined volume mappings (host path → container path, ro/rw).
+      ...(cmd.runConfig.volumes?.length
+        ? { Binds: cmd.runConfig.volumes.map((v) => `${v.source}:${v.target}${v.readOnly ? ':ro' : ''}`) }
+        : {}),
+      // Workspace hardening knobs — sanitized above (denylisted caps / privileged
+      // / seccomp-apparmor-disabling dropped unless CHISTA_ALLOW_PRIVILEGED).
+      ...(safeCapAdd.length ? { CapAdd: safeCapAdd } : {}),
+      ...(cmd.runConfig.capDrop?.length ? { CapDrop: cmd.runConfig.capDrop } : {}),
+      ...(safeSecurityOpt.length ? { SecurityOpt: safeSecurityOpt } : {}),
+      ...(privileged ? { Privileged: true } : {}),
       // Device passthrough: webcam (/dev/video0), USB (/dev/bus/usb), smartcard (/dev/pcsc), etc.
       // VAAPI adds the DRI render node for hardware H.264 encoding.
       Devices: gpuDevices(cmd).map((p) => ({
@@ -164,9 +218,13 @@ async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCom
     ...(sidecars.neko ? [{ name: `chista-neko-${kasmId}`, spec: sidecars.neko }] : []),
     ...(sidecars.audio ? [{ name: `chista-audio-${kasmId}`, spec: sidecars.audio }] : []),
     ...(sidecars.printing ? [{ name: `chista-print-${kasmId}`, spec: sidecars.printing }] : []),
+    ...(sidecars.storage ?? []).map((spec, i) => ({ name: `chista-storage-${kasmId}-${i}`, spec })),
   ];
 
   for (const { name, spec } of entries) {
+    // A failing sidecar (image pull / missing /dev/fuse / bad config) must not
+    // break the session — best-effort per sidecar.
+    try {
     await ensureImage(spec.image);
 
     // Write config files and build bind-mounts.
@@ -183,42 +241,56 @@ async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCom
       name,
       Image: spec.image,
       Env: Object.entries(spec.env ?? {}).map(([k, v]) => `${k}=${v}`),
+      ...(spec.cmd?.length ? { Cmd: spec.cmd } : {}),
       HostConfig: {
         NetworkMode: agentEnv.sessionNetwork,
         RestartPolicy: { Name: 'no' },
         Binds: binds.length ? binds : undefined,
         CapAdd: spec.capAdd,
+        ...(spec.devices?.length
+          ? {
+              Devices: spec.devices.map((p) => ({
+                PathOnHost: p,
+                PathInContainer: p,
+                CgroupPermissions: 'rwm',
+              })),
+            }
+          : {}),
       },
       Labels: { 'chista.sidecar.kasmId': kasmId },
     });
     await sc.start();
+    } catch {
+      // Swallow — keep the session up even if one sidecar can't start.
+    }
   }
 }
 
 export async function destroyContainer(idOrName: string): Promise<void> {
   const container = docker.getContainer(idOrName);
+  // Resolve kasmId from the container NAME before removal — destroy is usually
+  // called with the opaque container id, from which kasmId can't be derived.
+  let kasmId = idOrName.startsWith('chista-sess-') ? idOrName.slice('chista-sess-'.length) : idOrName;
+  try {
+    const nm = ((await container.inspect()).Name ?? '').replace(/^\//, '');
+    if (nm.startsWith('chista-sess-')) kasmId = nm.slice('chista-sess-'.length);
+  } catch {
+    // Container already gone; fall back to the derived id.
+  }
   await container.stop({ t: 5 }).catch(() => undefined);
   await container.remove({ force: true }).catch(() => undefined);
-
-  // Derive kasmId from session container name (chista-sess-<kasmId>) or
-  // from the raw kasmId passed directly, then clean up sidecars.
-  const kasmId = idOrName.startsWith('chista-sess-')
-    ? idOrName.slice('chista-sess-'.length)
-    : idOrName;
   await destroySidecars(kasmId);
 }
 
 async function destroySidecars(kasmId: string): Promise<void> {
-  const names = [
-    `chista-squid-${kasmId}`,
-    `chista-wg-${kasmId}`,
-    `chista-neko-${kasmId}`,
-    `chista-audio-${kasmId}`,
-    `chista-print-${kasmId}`,
-  ];
+  // Label sweep catches every sidecar for this session, including the
+  // index-named storage (rclone) sidecars.
+  const containers = await docker
+    .listContainers({ all: true, filters: JSON.stringify({ label: [`chista.sidecar.kasmId=${kasmId}`] }) })
+    .catch(() => []);
   await Promise.allSettled(
-    names.map(async (name) => {
-      const c = docker.getContainer(name);
+    containers.map(async (info) => {
+      const c = docker.getContainer(info.Id);
       await c.stop({ t: 5 }).catch(() => undefined);
       await c.remove({ force: true }).catch(() => undefined);
     }),
@@ -252,6 +324,68 @@ export async function resizeContainer(idOrName: string, width: number, height: n
     await exec.start({ Detach: true });
   } catch {
     // Geometry is also negotiated client-side; ignore images without the helper.
+  }
+}
+
+/**
+ * Push a live stream-control profile into the running session. DLP-capable
+ * KasmVNC builds read it via a `chista-stream` helper; otherwise this is a
+ * best-effort no-op (the browser-side client also applies quality/fps/clipboard).
+ */
+export async function applyStreamProfile(idOrName: string, profile: StreamProfile): Promise<void> {
+  try {
+    const json = JSON.stringify(profile).replace(/'/g, '');
+    const exec = await docker.getContainer(idOrName).exec({
+      Cmd: ['/bin/sh', '-c', `command -v chista-stream >/dev/null 2>&1 && chista-stream '${json}' || true`],
+      AttachStdout: false,
+      AttachStderr: false,
+    });
+    await exec.start({ Detach: true });
+  } catch {
+    // Quality/fps are also negotiated client-side; ignore images without the helper.
+  }
+}
+
+/**
+ * Start a best-effort recorder sidecar that shares the session container's network
+ * namespace and writes to the recordings dir. Pluggable via CHISTA_RECORDER_IMAGE;
+ * when unset this is a no-op (the manager still tracks the Recording row, so a
+ * recorder image can be wired in later without app changes).
+ */
+export async function startRecorder(
+  sessionContainerId: string,
+  sessionId: string,
+  recordingId: string,
+): Promise<void> {
+  const image = process.env.CHISTA_RECORDER_IMAGE;
+  if (!image) return;
+  try {
+    const out = join(RECORDING_DIR, recordingId);
+    mkdirSync(out, { recursive: true });
+    const c = await docker.createContainer({
+      Image: image,
+      name: `chista-rec-${sessionId}`,
+      Env: [`RECORDING_ID=${recordingId}`, 'OUTPUT_DIR=/recordings'],
+      HostConfig: {
+        NetworkMode: `container:${sessionContainerId}`,
+        Binds: [`${out}:/recordings`],
+        RestartPolicy: { Name: 'no' },
+      },
+    });
+    await c.start();
+  } catch {
+    // Best-effort: a missing/own-failing recorder image must not break the session.
+  }
+}
+
+/** Stop + remove the recorder sidecar for a session, if present. */
+export async function stopRecorder(sessionId: string): Promise<void> {
+  try {
+    const c = docker.getContainer(`chista-rec-${sessionId}`);
+    await c.stop({ t: 5 }).catch(() => undefined);
+    await c.remove({ force: true }).catch(() => undefined);
+  } catch {
+    // No recorder running (e.g. no recorder image configured).
   }
 }
 

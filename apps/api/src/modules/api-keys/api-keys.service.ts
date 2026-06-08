@@ -35,23 +35,34 @@ export class ApiKeysService {
     actorUserId: string,
     dto: { name: string; scopes?: string[]; expiresInDays?: number },
   ) {
-    const raw = randomToken(32);
-    const prefix = raw.slice(0, 8);
     const expiresAt = dto.expiresInDays
       ? new Date(Date.now() + dto.expiresInDays * 86_400_000)
       : null;
 
-    const created = await prisma.apiKey.create({
-      data: {
-        orgId,
-        userId: actorUserId,
-        name: dto.name,
-        prefix,
-        hashedKey: hashToken(raw),
-        scopes: dto.scopes ?? [],
-        expiresAt,
-      },
-    });
+    // Retry on the (rare) prefix collision so a unique-constraint hit never 500s.
+    let created: Awaited<ReturnType<typeof prisma.apiKey.create>> | undefined;
+    let raw = '';
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      raw = randomToken(32);
+      try {
+        created = await prisma.apiKey.create({
+          data: {
+            orgId,
+            userId: actorUserId,
+            name: dto.name,
+            prefix: raw.slice(0, 8),
+            hashedKey: hashToken(raw),
+            scopes: dto.scopes ?? [],
+            expiresAt,
+          },
+        });
+        break;
+      } catch (e) {
+        if ((e as { code?: string })?.code === 'P2002' && attempt < 4) continue;
+        throw e;
+      }
+    }
+    if (!created) throw new Error('Failed to mint API key');
     await this.audit.record({
       orgId,
       actorUserId,
@@ -61,7 +72,7 @@ export class ApiKeysService {
       metadata: { scopes: dto.scopes ?? [] },
     });
     // The raw token is returned only here.
-    return { id: created.id, name: created.name, prefix, token: raw, scopes: created.scopes, expiresAt };
+    return { id: created.id, name: created.name, prefix: created.prefix, token: raw, scopes: created.scopes, expiresAt };
   }
 
   async revoke(orgId: string, actorUserId: string, id: string) {

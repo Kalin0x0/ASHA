@@ -17,6 +17,10 @@ export const RequirePermissions = (...permissions: string[]) =>
 export const RequireAnyPermission = (...permissions: string[]) =>
   SetMetadata(PERMISSIONS_KEY, { permissions, mode: 'any' } satisfies PermissionRequirement);
 
+export const FEATURE_KEY = 'requiredFeature';
+/** Gate a route behind an experimental feature flag enabled for the caller's org (H4). */
+export const RequireFeature = (feature: string) => SetMetadata(FEATURE_KEY, feature);
+
 export interface AuthUser {
   sub: string;
   orgId: string;

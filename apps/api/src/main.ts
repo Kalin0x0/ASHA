@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { corsOrigins, loadEnv } from '@chista/config';
 import { AppModule } from './app.module';
+import { DevApiModule } from './modules/dev-api/dev-api.module';
 
 // Prisma returns BigInt for some columns (e.g. Recording.bytes). JSON.stringify
 // throws on BigInt by default, which would 500 any endpoint that returns one.
@@ -54,8 +55,22 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
+  // Public, SDK-oriented contract: ONLY the API-key Developer API surface, so
+  // codegen (openapi-generator etc.) targets the stable public endpoints rather
+  // than the internal control plane. JSON served at /api/dev-docs-json.
+  const devConfig = new DocumentBuilder()
+    .setTitle('Chista Developer API')
+    .setDescription('Public, API-key-authenticated developer surface for SDKs and automation.')
+    .setVersion('1.0.0')
+    .addApiKey({ type: 'apiKey', name: 'X-Api-Key', in: 'header' }, 'ApiKey')
+    .build();
+  const devDocument = SwaggerModule.createDocument(app, devConfig, { include: [DevApiModule] });
+  SwaggerModule.setup('api/dev-docs', app, devDocument);
+
   await app.listen(env.API_PORT);
-  new Logger('Bootstrap').log(`Chista API listening on :${env.API_PORT} — docs at /api/docs`);
+  new Logger('Bootstrap').log(
+    `Chista API listening on :${env.API_PORT} — docs at /api/docs, developer SDK contract at /api/dev-docs`,
+  );
 }
 
 void bootstrap();

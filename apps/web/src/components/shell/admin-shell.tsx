@@ -16,7 +16,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const collapsed = mounted ? sidebarCollapsed : false;
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="relative flex h-screen overflow-hidden bg-aurora">
       <aside
         className={cn(
           'hidden shrink-0 border-r border-border-subtle transition-[width] duration-200 ease-out lg:block',
@@ -40,8 +40,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-[1600px] px-4 py-6 lg:px-8">{children}</div>
+        <main className="relative flex-1 overflow-y-auto">
+          <div aria-hidden className="pointer-events-none absolute inset-0 z-0 bg-grid opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_60%)]" />
+          <div className="relative z-10 mx-auto max-w-[1600px] px-4 py-6 lg:px-8">{children}</div>
         </main>
       </div>
 

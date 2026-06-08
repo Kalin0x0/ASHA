@@ -16,7 +16,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
   const { toggleSidebar } = useUIStore();
 
   return (
-    <div className="flex h-full flex-col bg-[var(--surface-1)]">
+    <div className="flex h-full flex-col glass-rail">
       {/* Logo strip */}
       <div
         className={cn(

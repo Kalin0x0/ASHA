@@ -32,11 +32,15 @@ export class LdapService {
   }
 
   private newClient(c: LdapConfig): Client {
+    // Only attach TLS options for ldaps:// — passing them for a plain ldap:// URL
+    // makes ldapts attempt a TLS handshake the server rejects ("socket
+    // disconnected before secure TLS connection was established").
+    const secure = c.url.trim().toLowerCase().startsWith('ldaps://');
     return new Client({
       url: c.url,
       timeout: 8000,
       connectTimeout: 8000,
-      tlsOptions: { rejectUnauthorized: c.tlsRejectUnauthorized !== false },
+      ...(secure ? { tlsOptions: { rejectUnauthorized: c.tlsRejectUnauthorized !== false } } : {}),
     });
   }
 
@@ -110,6 +114,78 @@ export class LdapService {
       await client.unbind().catch(() => undefined);
     }
   }
+
+  /**
+   * Bulk directory sync (C3) — service-bind, search all users matching the sync
+   * filter, and provision/update the matching Chista users. `dryRun` reports what
+   * would happen without writing. Just-in-time login is still handled by
+   * authenticate(); this is the up-front provisioning path.
+   */
+  async sync(orgId: string, id: string, opts: { dryRun?: boolean; filter?: string; limit?: number } = {}) {
+    const c = await this.loadConfig(orgId, id);
+    const client = this.newClient(c);
+    const summary = {
+      dryRun: Boolean(opts.dryRun),
+      found: 0,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [] as Array<{ entry: string; error: string }>,
+    };
+    try {
+      await client.bind(c.bindDN, c.bindPassword);
+      const filter = opts.filter ?? c.syncFilter ?? '(|(objectClass=person)(objectClass=user)(objectClass=inetOrgPerson))';
+      const emailAttr = c.emailAttr ?? 'mail';
+      const nameAttr = c.nameAttr ?? 'displayName';
+      const { searchEntries } = await client.search(c.baseDN, {
+        scope: 'sub',
+        filter,
+        sizeLimit: Math.min(opts.limit ?? 1000, 5000),
+        paged: true,
+      });
+      summary.found = searchEntries.length;
+
+      for (const entry of searchEntries) {
+        const email = first(entry[emailAttr]);
+        const username = first(entry.uid) ?? first(entry.sAMAccountName) ?? first(entry.cn) ?? email?.split('@')[0];
+        if (!email && !username) {
+          summary.skipped += 1;
+          continue;
+        }
+        const finalEmail = (email ?? `${username}@${orgId}`).toLowerCase();
+        const finalUsername = (username ?? finalEmail).toLowerCase();
+        const displayName = first(entry[nameAttr]) ?? username ?? null;
+        if (opts.dryRun) {
+          summary.created += 1; // "would create/update"
+          continue;
+        }
+        try {
+          const existing = await prisma.user.findFirst({
+            where: { orgId, OR: [{ email: finalEmail }, { username: finalUsername }] },
+          });
+          if (existing) {
+            await prisma.user.update({
+              where: { id: existing.id },
+              data: { displayName: displayName ?? existing.displayName },
+            });
+            summary.updated += 1;
+          } else {
+            await prisma.user.create({
+              data: { orgId, email: finalEmail, username: finalUsername, displayName, status: 'ACTIVE', isSystemAdmin: false },
+            });
+            summary.created += 1;
+          }
+        } catch (e) {
+          summary.errors.push({ entry: String(entry.dn), error: (e as Error).message });
+        }
+      }
+      return summary;
+    } catch (e) {
+      throw new BadRequestException(`LDAP sync failed: ${(e as Error).message}`);
+    } finally {
+      await client.unbind().catch(() => undefined);
+    }
+  }
 }
 
 interface LdapConfig {
@@ -118,6 +194,8 @@ interface LdapConfig {
   bindDN: string;
   bindPassword: string;
   userFilter?: string;
+  /** Filter for bulk directory sync (default all persons/users). */
+  syncFilter?: string;
   emailAttr?: string;
   nameAttr?: string;
   groupAttr?: string;

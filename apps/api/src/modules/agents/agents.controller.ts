@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { AgentTokenScope } from '../../common/jwt-auth.guard';
 import {
   type AgentHeartbeatDto,
   agentHeartbeatSchema,
@@ -12,7 +13,11 @@ import {
 } from '@chista/contracts';
 import { AgentOnly, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
+import { z } from 'zod';
 import { AgentsService } from './agents.service';
+
+const drainSchema = z.object({ drain: z.boolean().optional() });
+type DrainDto = z.infer<typeof drainSchema>;
 
 @ApiTags('agents')
 @Controller()
@@ -22,8 +27,11 @@ export class AgentsController {
   // ── Internal: agent → manager (shared-token / mTLS network) ────────────────
   @AgentOnly()
   @Post('internal/agents/register')
-  register(@Body(new ZodPipe(agentRegisterSchema)) dto: AgentRegisterDto) {
-    return this.agents.register(dto);
+  register(
+    @Req() req: { agentToken?: AgentTokenScope },
+    @Body(new ZodPipe(agentRegisterSchema)) dto: AgentRegisterDto,
+  ) {
+    return this.agents.register(dto, req.agentToken);
   }
 
   @AgentOnly()
@@ -55,8 +63,9 @@ export class AgentsController {
   @ApiBearerAuth()
   @RequirePermissions('AGENT_MANAGE')
   @Patch('agents/:id/drain')
-  drain(@Param('id') id: string) {
-    return this.agents.setAgentState(id, 'DRAINING');
+  drain(@Param('id') id: string, @Body(new ZodPipe(drainSchema)) dto: DrainDto) {
+    // Body { drain: false } un-drains (→ ONLINE); default / { drain: true } drains.
+    return this.agents.setAgentState(id, dto.drain === false ? 'ONLINE' : 'DRAINING');
   }
 
   @ApiBearerAuth()
