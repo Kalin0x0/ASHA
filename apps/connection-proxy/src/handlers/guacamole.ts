@@ -54,7 +54,7 @@ function resolveParam(name: string, session: SessionRecord): string {
     case 'disable-auth':
       return 'true';
     case 'security':
-      return protocol === 'rdp' ? 'any' : '';
+      return session.security ?? (protocol === 'rdp' ? 'any' : '');
     case 'width':
       return String(DEFAULT_WIDTH);
     case 'height':

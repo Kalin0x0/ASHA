@@ -402,6 +402,8 @@ export const createServerSchema = z.object({
   // PASSWORD-auth RDP/VNC/SSH credentials — sealed into Server.credentialRef.
   username: z.string().max(255).optional(),
   password: z.string().max(1024).optional(),
+  // RDP security mode passed to guacd (Windows NLA usually needs 'nla'; 'rdp' = no NLA → in-session login screen).
+  security: z.enum(['any', 'nla', 'nla-ext', 'tls', 'rdp', 'vmconnect']).optional(),
 });
 export type CreateServerDto = z.infer<typeof createServerSchema>;
 
@@ -416,6 +418,7 @@ export const updateServerSchema = z
     maxSessions: z.number().int().min(1).max(1000).optional(),
     username: z.string().max(255).optional(),
     password: z.string().max(1024).optional(),
+    security: z.enum(['any', 'nla', 'nla-ext', 'tls', 'rdp', 'vmconnect']).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 export type UpdateServerDto = z.infer<typeof updateServerSchema>;

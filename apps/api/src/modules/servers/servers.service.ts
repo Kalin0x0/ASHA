@@ -56,10 +56,10 @@ export class ServersService {
         vmTemplate: dto.vmTemplate,
         vmProviderId: dto.vmProviderId,
         maxSessions: dto.maxSessions,
-        ...(dto.username || dto.password
+        ...(dto.username || dto.password || dto.security
           ? {
               credentialRef: sealConfig(
-                { username: dto.username, password: dto.password },
+                { username: dto.username, password: dto.password, security: dto.security },
                 this.env.SECRET_SEAL_KEY,
               ),
             }
@@ -81,11 +81,12 @@ export class ServersService {
     if (!existing) throw new NotFoundException('Server not found');
 
     let credentialRef: string | undefined;
-    if (dto.username !== undefined || dto.password !== undefined) {
+    if (dto.username !== undefined || dto.password !== undefined || dto.security !== undefined) {
       const prev = existing.credentialRef ? unsealConfig(existing.credentialRef, this.env.SECRET_SEAL_KEY) : {};
       const merged = mergeSealedConfig(prev, {
         ...(dto.username !== undefined ? { username: dto.username } : {}),
         ...(dto.password !== undefined ? { password: dto.password } : {}),
+        ...(dto.security !== undefined ? { security: dto.security } : {}),
       });
       credentialRef = sealConfig(merged, this.env.SECRET_SEAL_KEY);
     }
@@ -137,7 +138,11 @@ export class ServersService {
     if (!server) throw new NotFoundException('Server not found');
 
     const creds = server.credentialRef
-      ? (unsealConfig(server.credentialRef, this.env.SECRET_SEAL_KEY) as { username?: string; password?: string })
+      ? (unsealConfig(server.credentialRef, this.env.SECRET_SEAL_KEY) as {
+          username?: string;
+          password?: string;
+          security?: string;
+        })
       : {};
     const connectionType = CONN_BY_SERVER[server.connectionType] ?? 'GUAC_RDP';
     const port = PORT_BY_SERVER[server.connectionType] ?? 3389;
@@ -186,6 +191,7 @@ export class ServersService {
         rdpPassword: creds.password,
         sshUser: creds.username,
         sshPassword: creds.password,
+        security: creds.security,
       },
       3600,
     );
