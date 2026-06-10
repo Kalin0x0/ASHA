@@ -52,7 +52,7 @@ function MiniStat({
         </div>
       </div>
       {series && series.length > 1 && (
-        <div className="ml-auto h-8 w-16 opacity-80">
+        <div className="ms-auto h-8 w-16 opacity-80">
           <Sparkline data={series} height={32} stroke={stroke} strokeWidth={2} />
         </div>
       )}
@@ -85,7 +85,7 @@ export default function DashboardPage() {
               <span className="eyebrow">{t('hero.eyebrow')}</span>
               <span className="text-muted-foreground/40">·</span>
               <span className="text-[11px] font-medium text-muted-foreground">{t(`greeting.${greeting}`)}</span>
-              <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
+              <span className="ms-auto inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
                 <span className="size-1.5 rounded-full bg-success animate-pulse-ring" /> {t('hero.live')}
               </span>
             </div>

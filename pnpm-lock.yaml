@@ -245,12 +245,18 @@ importers:
       '@fontsource-variable/space-grotesk':
         specifier: ^5.2.10
         version: 5.2.10
+      '@fontsource-variable/vazirmatn':
+        specifier: ^5.2.8
+        version: 5.2.8
       '@radix-ui/react-avatar':
         specifier: ^1.1.2
         version: 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@radix-ui/react-dialog':
         specifier: ^1.1.4
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@radix-ui/react-direction':
+        specifier: ^1.1.2
+        version: 1.1.2(@types/react@19.2.16)(react@19.2.7)
       '@radix-ui/react-dropdown-menu':
         specifier: ^2.1.4
         version: 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -1062,6 +1068,9 @@ packages:
   '@fontsource-variable/space-grotesk@5.2.10':
     resolution: {integrity: sha512-yJQO/o35/hAP3CFnpdFTwQku2yzJOae2HIpBmqkOVoxhhXJaQP3g+b6Jrz7u+eI7A5ZdCIf88uMWpBJdFiGr5w==}
 
+  '@fontsource-variable/vazirmatn@5.2.8':
+    resolution: {integrity: sha512-2YzXfH4PNOeoZsBsgJgjbnm+IC2nonGyMLX3gXLm8FQrP+wpi1uGBIWYWlEzJ0lmntgdyAc3lRViHHfZWKvbog==}
+
   '@formatjs/fast-memoize@3.1.6':
     resolution: {integrity: sha512-H5aexk1Le7T9TPmscacZ+1pR6CTa2n1wq+HDVGXhH8TzUlQQpeXzZs91dRtmFHrbeNbjPFPfQujUqm7MHgVoXQ==}
 
@@ -1830,6 +1839,15 @@ packages:
 
   '@radix-ui/react-direction@1.1.1':
     resolution: {integrity: sha512-1UEWRX6jnOA2y4H5WczZ44gOOjTEmlqv1uNW4GAJEO5+bauCBhv8snY65Iw5/VOS/ghKN9gr2KjnLKxrsvoMVw==}
+    peerDependencies:
+      '@types/react': '*'
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+
+  '@radix-ui/react-direction@1.1.2':
+    resolution: {integrity: sha512-C3vFhbyi4SW3PmbAi6Awpu4OzJtd0MxGurvSsYtr7p7nM8RNB3VAF3CUmnp2j50knpkrRcB7+ycVXzgLgF6yNA==}
     peerDependencies:
       '@types/react': '*'
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
@@ -6652,6 +6670,8 @@ snapshots:
 
   '@fontsource-variable/space-grotesk@5.2.10': {}
 
+  '@fontsource-variable/vazirmatn@5.2.8': {}
+
   '@formatjs/fast-memoize@3.1.6': {}
 
   '@formatjs/icu-messageformat-parser@3.5.11':
@@ -7467,6 +7487,12 @@ snapshots:
       '@types/react-dom': 19.2.3(@types/react@19.2.16)
 
   '@radix-ui/react-direction@1.1.1(@types/react@19.2.16)(react@19.2.7)':
+    dependencies:
+      react: 19.2.7
+    optionalDependencies:
+      '@types/react': 19.2.16
+
+  '@radix-ui/react-direction@1.1.2(@types/react@19.2.16)(react@19.2.7)':
     dependencies:
       react: 19.2.7
     optionalDependencies:

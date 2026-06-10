@@ -107,7 +107,7 @@ export default function SessionsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-[color-mix(in_srgb,var(--surface-2)_45%,transparent)] text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              <tr className="border-b border-border bg-[color-mix(in_srgb,var(--surface-2)_45%,transparent)] text-start text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                 <th className="px-5 py-3 font-medium">{t('list.columns.workspace')}</th>
                 <th className="px-5 py-3 font-medium">{t('list.columns.user')}</th>
                 <th className="px-5 py-3 font-medium">{t('list.columns.zoneAgent')}</th>
@@ -155,7 +155,7 @@ export default function SessionsPage() {
                     {(s.memMb / 1024).toFixed(1)} / {(s.memLimitMb / 1024).toFixed(0)} GB
                   </td>
                   <td className="px-5 py-3 tnum text-muted-foreground">{formatDuration(s.uptimeSec)}</td>
-                  <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-5 py-3 text-end" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon-sm" aria-label={tc('labels.actions')}>

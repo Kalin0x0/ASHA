@@ -126,7 +126,7 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" loading={loading} className="mt-2 h-11 w-full text-sm font-medium">
-              {!loading && <ArrowRight className="size-4" />}
+              {!loading && <ArrowRight className="size-4 rtl:rotate-180" />}
               {t('signIn')}
             </Button>
           </form>
@@ -162,7 +162,7 @@ export default function LoginPage() {
                   >
                     <Network className="size-4 text-info-400" />
                     <span>{p.name}</span>
-                    <span className="ml-auto text-[10px] text-muted-foreground">{p.type}</span>
+                    <span className="ms-auto text-[10px] text-muted-foreground">{p.type}</span>
                   </Button>
                 ))
             ) : (

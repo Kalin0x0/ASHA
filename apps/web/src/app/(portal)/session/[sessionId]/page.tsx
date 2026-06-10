@@ -241,7 +241,7 @@ export default function StreamingViewerPage() {
           </div>
         )}
 
-        <div className="ml-auto flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="ms-auto flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ControlButton
             label={t('toolbar.clipboard')}
             disabled={!allow('clipboardUp') && !allow('clipboardDown')}
@@ -310,7 +310,7 @@ export default function StreamingViewerPage() {
                   <button
                     key={r.key}
                     onClick={() => applyResolution(r.w, r.h, t(`toolbar.resolutions.${r.key}`))}
-                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    className="flex w-full items-center gap-2 px-3 py-1.5 text-start text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                   >
                     <Monitor className="size-3.5" /> {t(`toolbar.resolutions.${r.key}`)}
                   </button>
@@ -676,7 +676,7 @@ function PlaceholderStream({ workspaceName, clock }: { workspaceName: string; cl
             <p className="max-w-md text-sm text-muted-foreground">
               {t('status.placeholderDescription', { name: workspaceName })}
             </p>
-            <pre className="mt-1 overflow-x-auto rounded-md border border-border-subtle bg-anthracite-950/80 px-4 py-3 text-left text-[11px] leading-relaxed text-muted-foreground">
+            <pre dir="ltr" className="mt-1 overflow-x-auto rounded-md border border-border-subtle bg-anthracite-950/80 px-4 py-3 text-left text-[11px] leading-relaxed text-muted-foreground">
               {`docker run --rm -p 6901:6901 \\
   -e VNC_PW=password kasmweb/firefox:1.16.0-rolling
 
@@ -690,7 +690,7 @@ NEXT_PUBLIC_DEMO_STREAM_URL=https://localhost:6901`}
           <button className="flex items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-white/5">
             <ChistaMark className="size-4" /> {t('status.start')}
           </button>
-          <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="ms-auto flex items-center gap-3 text-xs text-muted-foreground">
             <Wifi className="size-3.5 text-success" />
             <span className="tnum">{clock}</span>
           </div>

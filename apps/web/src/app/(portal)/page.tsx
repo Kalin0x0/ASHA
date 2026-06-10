@@ -122,12 +122,12 @@ export default function PortalHome() {
 
           {/* Search */}
           <div className="relative mt-8 max-w-lg animate-fade-up delay-100">
-            <Search className="absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground transition-colors" />
+            <Search className="absolute start-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground transition-colors" />
             <Input
               placeholder={t('launcher.searchPlaceholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-12 rounded-xl pl-11 pr-4 text-[15px] shadow-[var(--shadow-ambient)] transition-shadow duration-300 focus-visible:shadow-[var(--gold-glow)]"
+              className="h-12 rounded-xl ps-11 pe-4 text-[15px] shadow-[var(--shadow-ambient)] transition-shadow duration-300 focus-visible:shadow-[var(--gold-glow)]"
             />
           </div>
 

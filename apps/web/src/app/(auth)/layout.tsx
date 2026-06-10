@@ -9,7 +9,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <GrainOverlay />
 
       {/* Language picker, available before sign-in */}
-      <div className="absolute right-4 top-4 z-20">
+      <div className="absolute end-4 top-4 z-20">
         <LanguageSwitcher />
       </div>
 

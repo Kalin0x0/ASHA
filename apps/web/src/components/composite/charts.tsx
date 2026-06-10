@@ -185,7 +185,7 @@ export function BarRank({
         const [bright, deep] = ramp[i % ramp.length] ?? TONE.gold;
         return (
           <div key={item.name} className="group flex items-center gap-3">
-            <span className="w-4 shrink-0 text-right text-[11px] font-semibold tnum text-muted-foreground/50">
+            <span className="w-4 shrink-0 text-end text-[11px] font-semibold tnum text-muted-foreground/50">
               {i + 1}
             </span>
             <span className="w-28 shrink-0 truncate text-[13px] text-foreground/90">{item.name}</span>
@@ -199,7 +199,7 @@ export function BarRank({
                 }}
               />
             </div>
-            <span className="w-8 shrink-0 text-right text-sm font-semibold tnum text-foreground">{item.sessions}</span>
+            <span className="w-8 shrink-0 text-end text-sm font-semibold tnum text-foreground">{item.sessions}</span>
           </div>
         );
       })}

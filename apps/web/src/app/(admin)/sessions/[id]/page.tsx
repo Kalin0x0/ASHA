@@ -27,7 +27,7 @@ export default function SessionDetailPage() {
         <p className="font-display text-xl">{t('detail.notFoundTitle')}</p>
         <p className="text-sm text-muted-foreground">{t('detail.notFoundDescription')}</p>
         <Button variant="secondary" onClick={() => router.push('/sessions')}>
-          <ArrowLeft className="size-4" /> {t('detail.backToSessions')}
+          <ArrowLeft className="size-4 rtl:rotate-180" /> {t('detail.backToSessions')}
         </Button>
       </div>
     );
@@ -41,7 +41,7 @@ export default function SessionDetailPage() {
         onClick={() => router.push('/sessions')}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        <ArrowLeft className="size-4" /> {t('detail.breadcrumb')}
+        <ArrowLeft className="size-4 rtl:rotate-180" /> {t('detail.breadcrumb')}
       </button>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -87,11 +87,11 @@ export default function SessionDetailPage() {
               <p className="text-xs text-muted-foreground">{t('detail.livePreview', { connection: session.connectionType })}</p>
             </div>
             {/* HUD */}
-            <div className="absolute left-3 top-3 flex items-center gap-2 rounded-md glass px-2.5 py-1 text-xs">
+            <div className="absolute start-3 top-3 flex items-center gap-2 rounded-md glass px-2.5 py-1 text-xs">
               <span className="size-1.5 rounded-full bg-success animate-pulse-ring" />
               {session.connectionType} · 1920×1080
             </div>
-            <div className="absolute right-3 top-3 rounded-md glass px-2.5 py-1 font-mono text-xs text-muted-foreground">
+            <div className="absolute end-3 top-3 rounded-md glass px-2.5 py-1 font-mono text-xs text-muted-foreground">
               {Math.round(session.cpuPct)}% CPU · {(session.memMb / 1024).toFixed(1)} GB
             </div>
           </div>

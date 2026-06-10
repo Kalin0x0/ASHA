@@ -94,7 +94,7 @@ function RailItem({
       <span className={cn('shrink-0 transition-colors', !active && 'opacity-80 group-hover:opacity-100')}>
         {icon}
       </span>
-      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+      <span className="min-w-0 flex-1 truncate text-start">{label}</span>
       <span
         className={cn(
           'shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums',

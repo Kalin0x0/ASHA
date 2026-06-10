@@ -242,6 +242,22 @@
     font-feature-settings: 'ss01', 'calt';
   }
 
+  /* Persian (RTL) — Vazirmatn covers UI and display; Latin glyph features and
+     negative tracking don't apply to Arabic-script text. */
+  html[lang='fa'] body,
+  html[lang='fa'] h1,
+  html[lang='fa'] h2,
+  html[lang='fa'] h3,
+  html[lang='fa'] h4,
+  html[lang='fa'] .font-display {
+    font-family: 'Vazirmatn Variable', var(--font-sans);
+    letter-spacing: 0;
+    font-feature-settings: 'kern';
+  }
+  html[lang='fa'] body {
+    line-height: 1.8;
+  }
+
   h1,
   .font-display-xl {
     letter-spacing: -0.032em;

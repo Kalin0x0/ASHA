@@ -77,7 +77,7 @@ export default function ImagesPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <tr className="border-b border-border-subtle text-start text-xs uppercase tracking-wider text-muted-foreground">
                 <th className="px-5 py-3 font-medium">{t('images.table.image')}</th>
                 <th className="px-5 py-3 font-medium">{t('images.table.registry')}</th>
                 <th className="px-5 py-3 font-medium">{t('images.table.tag')}</th>

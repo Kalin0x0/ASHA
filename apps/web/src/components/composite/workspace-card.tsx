@@ -61,7 +61,7 @@ export function WorkspaceCard({
         }
       }}
       className={cn(
-        'group relative flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-[var(--surface-1)] text-left transition-all duration-300 ring-gold-focus',
+        'group relative flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-[var(--surface-1)] text-start transition-all duration-300 ring-gold-focus',
         enabled
           ? 'cursor-pointer hover:-translate-y-1 hover:border-[rgba(212,175,55,0.4)] hover:shadow-[0_18px_48px_-18px_rgba(0,0,0,0.7),0_0_0_1px_rgba(212,175,55,0.12)]'
           : 'cursor-not-allowed opacity-60',
@@ -103,7 +103,7 @@ export function WorkspaceCard({
         {/* Oversized category glyph watermark — fades if thumbnail exists */}
         <Icon
           className={cn(
-            'pointer-events-none absolute -right-4 -top-3 size-28 transition-all duration-500 group-hover:scale-110',
+            'pointer-events-none absolute -end-4 -top-3 size-28 transition-all duration-500 group-hover:scale-110',
             thumbEntry ? 'opacity-0' : 'opacity-[0.07]',
           )}
           style={{ color: accent }}
@@ -118,7 +118,7 @@ export function WorkspaceCard({
 
         {/* "Last session" badge — shown when thumbnail exists */}
         {thumbEntry && (
-          <div className="on-dark absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-full bg-anthracite-950/70 px-2 py-0.5 backdrop-blur-sm">
+          <div className="on-dark absolute bottom-2 start-2 z-10 flex items-center gap-1 rounded-full bg-anthracite-950/70 px-2 py-0.5 backdrop-blur-sm">
             <Clock className="size-2.5 text-gold-300" />
             <span className="text-[10px] font-medium text-gold-300 tabular-nums">
               {format.relativeTime(new Date(thumbEntry.capturedAt))}
@@ -128,7 +128,7 @@ export function WorkspaceCard({
 
         {/* GPU badge */}
         {workspace.gpu > 0 && (
-          <Badge variant="gold" className="absolute left-3 top-3 gap-1 z-10">
+          <Badge variant="gold" className="absolute start-3 top-3 gap-1 z-10">
             <Sparkles className="size-3" /> {t('card.gpu')}
           </Badge>
         )}
@@ -144,7 +144,7 @@ export function WorkspaceCard({
             aria-label={favorite ? t('card.removeFavorite') : t('card.addFavorite')}
             aria-pressed={favorite}
             className={cn(
-              'absolute right-2.5 top-2.5 z-10 flex size-8 items-center justify-center rounded-lg backdrop-blur transition-all duration-200 ring-gold-focus',
+              'absolute end-2.5 top-2.5 z-10 flex size-8 items-center justify-center rounded-lg backdrop-blur transition-all duration-200 ring-gold-focus',
               favorite
                 ? 'bg-anthracite-950/30 text-gold-300 hover:text-gold-200'
                 : 'text-muted-foreground/60 opacity-0 hover:bg-anthracite-950/30 hover:text-gold-300 focus-visible:opacity-100 group-hover:opacity-100',
@@ -210,7 +210,7 @@ export function WorkspaceCard({
             {t('card.gb', { value: (workspace.memMb / 1024).toFixed(1) })}
           </span>
           {workspace.activeSessions > 0 && (
-            <span className="ml-auto inline-flex items-center gap-1.5 font-medium text-success">
+            <span className="ms-auto inline-flex items-center gap-1.5 font-medium text-success">
               <span className="size-1.5 rounded-full bg-success animate-pulse-ring" />
               {workspace.activeSessions}
             </span>

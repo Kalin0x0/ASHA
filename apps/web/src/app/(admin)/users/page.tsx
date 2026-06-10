@@ -60,12 +60,12 @@ export default function UsersPage() {
       </div>
 
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder={t('users.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="h-10 pl-9"
+          className="h-10 ps-9"
         />
       </div>
 
@@ -73,7 +73,7 @@ export default function UsersPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-[color-mix(in_srgb,var(--surface-2)_45%,transparent)] text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              <tr className="border-b border-border bg-[color-mix(in_srgb,var(--surface-2)_45%,transparent)] text-start text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                 <th className="px-5 py-3 font-medium">{t('users.table.user')}</th>
                 <th className="px-5 py-3 font-medium">{tc('labels.status')}</th>
                 <th className="px-5 py-3 font-medium">{t('users.table.groups')}</th>

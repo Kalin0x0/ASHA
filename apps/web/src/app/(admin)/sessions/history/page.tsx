@@ -84,7 +84,7 @@ export default function HistoryPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-[color-mix(in_srgb,var(--surface-2)_45%,transparent)] text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+              <tr className="border-b border-border bg-[color-mix(in_srgb,var(--surface-2)_45%,transparent)] text-start text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
                 <th className="px-5 py-3 font-medium">{t('history.columns.workspace')}</th>
                 <th className="px-5 py-3 font-medium">{t('history.columns.user')}</th>
                 <th className="px-5 py-3 font-medium">{t('history.columns.zone')}</th>

@@ -46,7 +46,7 @@ export default function RecordingsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <tr className="border-b border-border-subtle text-start text-xs uppercase tracking-wider text-muted-foreground">
                   <th className="px-5 py-3 font-medium">{t('recordings.columns.workspace')}</th>
                   <th className="px-5 py-3 font-medium">{t('recordings.columns.user')}</th>
                   <th className="px-5 py-3 font-medium">{t('recordings.columns.protocol')}</th>

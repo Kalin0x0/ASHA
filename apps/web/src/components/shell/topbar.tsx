@@ -45,7 +45,7 @@ export function Topbar() {
         </span>
         {match && (
           <>
-            <ChevronRight className="size-3.5 text-muted-foreground/40" />
+            <ChevronRight className="size-3.5 text-muted-foreground/40 rtl:rotate-180" />
             <span className="font-semibold text-foreground">{tNav(`items.${match.item.key}`)}</span>
           </>
         )}
@@ -54,11 +54,11 @@ export function Topbar() {
       {/* Search */}
       <button
         onClick={() => setCommandOpen(true)}
-        className="group ml-auto flex h-9 items-center gap-2.5 rounded-lg border border-border-subtle bg-[var(--surface-2)]/60 px-3 text-[13px] text-muted-foreground transition-all duration-200 hover:border-[rgba(212,175,55,0.3)] hover:bg-[var(--surface-2)] hover:text-foreground hover:shadow-[0_0_0_1px_rgba(212,175,55,0.15)] sm:w-64 ring-gold-focus"
+        className="group ms-auto flex h-9 items-center gap-2.5 rounded-lg border border-border-subtle bg-[var(--surface-2)]/60 px-3 text-[13px] text-muted-foreground transition-all duration-200 hover:border-[rgba(212,175,55,0.3)] hover:bg-[var(--surface-2)] hover:text-foreground hover:shadow-[0_0_0_1px_rgba(212,175,55,0.15)] sm:w-64 ring-gold-focus"
       >
         <Search className="size-3.5 shrink-0" />
         <span className="hidden sm:inline">{t('search')}</span>
-        <kbd className="ml-auto hidden rounded-md border border-border-subtle bg-secondary px-1.5 py-0.5 text-[10px] font-medium sm:inline-flex">
+        <kbd className="ms-auto hidden rounded-md border border-border-subtle bg-secondary px-1.5 py-0.5 text-[10px] font-medium sm:inline-flex">
           ⌘K
         </kbd>
       </button>

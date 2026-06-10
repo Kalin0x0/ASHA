@@ -83,7 +83,7 @@ export function StatCard({
           {deltaPct !== undefined && (
             <span
               className={cn(
-                'mb-1 ml-auto inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold tnum',
+                'mb-1 ms-auto inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold tnum',
                 good ? 'bg-success-500/12 text-success-400' : 'bg-error-500/12 text-error-400',
               )}
             >

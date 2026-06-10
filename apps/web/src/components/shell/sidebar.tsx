@@ -33,7 +33,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
         {!collapsed && (
           <button
             onClick={toggleSidebar}
-            className="ml-auto hidden rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:block ring-gold-focus"
+            className="ms-auto hidden rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:block ring-gold-focus"
             aria-label={tSidebar('collapse')}
           >
             <PanelLeftClose className="size-4" />
@@ -78,7 +78,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
                   >
                     {/* Active indicator bar — glowing gold rail */}
                     {active && (
-                      <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-gradient-to-b from-gold-300 to-gold-600 shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
+                      <span className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-gradient-to-b from-gold-300 to-gold-600 shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
                     )}
                     {/* Icon */}
                     <item.icon

@@ -1,4 +1,5 @@
 import './globals.css';
+import '@fontsource-variable/vazirmatn';
 import { GeistMono } from 'geist/font/mono';
 import { GeistSans } from 'geist/font/sans';
 import type { Metadata, Viewport } from 'next';
@@ -6,6 +7,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { GrainOverlay } from '@/components/decor/aurora-background';
 import { Providers } from '@/components/providers';
+import { localeDir } from '@/i18n/locales';
 import { spaceGrotesk } from '@/lib/fonts';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -39,6 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang={locale}
+      dir={localeDir(locale)}
       suppressHydrationWarning
       className={`${GeistSans.variable} ${GeistMono.variable} ${spaceGrotesk.variable}`}
     >
