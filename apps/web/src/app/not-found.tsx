@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { AuroraBackground } from '@/components/decor/aurora-background';
 import { ChistaMark } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 
 export default function NotFound() {
+  const t = useTranslations('shell.notFound');
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center gap-6 overflow-hidden px-4 text-center">
       <AuroraBackground />
@@ -11,13 +13,11 @@ export default function NotFound() {
         <ChistaMark className="size-12" />
         <p className="font-display text-6xl font-medium text-gradient-gold">404</p>
         <div>
-          <h1 className="font-display text-2xl font-medium">Page not found</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            This route doesn&apos;t exist in your Chista deployment.
-          </p>
+          <h1 className="font-display text-2xl font-medium">{t('title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('description')}</p>
         </div>
         <Button asChild>
-          <Link href="/dashboard">Back to dashboard</Link>
+          <Link href="/dashboard">{t('backToDashboard')}</Link>
         </Button>
       </div>
     </div>

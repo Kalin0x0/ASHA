@@ -98,5 +98,10 @@
   "comingSoon": {
     "module": "Module",
     "fallbackDescription": "Connect your live data source and this section will populate automatically. Everything is ready when you are."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This route doesn't exist in your Chista deployment.",
+    "backToDashboard": "Back to dashboard"
   }
 }

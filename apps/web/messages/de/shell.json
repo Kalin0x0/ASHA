@@ -98,5 +98,10 @@
   "comingSoon": {
     "module": "Modul",
     "fallbackDescription": "Verbinden Sie Ihre Live-Datenquelle und dieser Bereich füllt sich automatisch. Alles ist bereit, wenn Sie es sind."
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "description": "Diese Route existiert in Ihrer Chista-Installation nicht.",
+    "backToDashboard": "Zurück zum Dashboard"
   }
 }

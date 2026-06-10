@@ -64,6 +64,12 @@ domains have no controller yet; RDP/SSH, recording, sharing, SSO, autoscale, VM 
 - **RBAC:** permission catalog in `packages/rbac`; `@RequirePermissions(...)` + `PermissionsGuard`.
 - **Web data layer is currently DECOUPLED from the API** — it runs on a mock store
   (`apps/web/src/lib/mock`) via `NEXT_PUBLIC_API_MODE=mock`. Wiring it live is open work (see TODO 🔴1).
+- **i18n (next-intl):** ALL UI text goes through message catalogs in `apps/web/messages/<locale>/*.json`
+  (namespaces per area; `common.json` = shared vocabulary, statuses, actions). Locale = cookie
+  (`chista-locale`), switcher in topbar/login. Never hardcode user-visible strings in components —
+  use `useTranslations('<namespace>')`. **Add a language:** copy `messages/en/` → `messages/<code>/`,
+  translate the JSON (missing keys fall back to English automatically), add one line in
+  `apps/web/src/i18n/locales.ts`. Validate with `pnpm --filter @chista/web i18n:check`.
 - Admin seed login: `admin@chista.local` / `ChistaAdmin!2026`.
 
 ## ➡️ Where to start each session
