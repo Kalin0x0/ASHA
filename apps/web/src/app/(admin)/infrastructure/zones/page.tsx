@@ -1,6 +1,7 @@
 'use client';
 
 import { Globe, Loader2, Plus, Star, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/composite/empty-state';
@@ -20,6 +21,8 @@ import {
 import { isLive } from '@/lib/api/mode';
 
 export default function ZonesPage() {
+  const t = useTranslations('infrastructure');
+  const tc = useTranslations('common');
   const [zones, setZones] = useState<ApiZone[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -34,7 +37,7 @@ export default function ZonesPage() {
     try {
       setZones(await getZones());
     } catch {
-      toast.error('Failed to load zones');
+      toast.error(t('zones.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -49,13 +52,13 @@ export default function ZonesPage() {
     setCreating(true);
     try {
       await createZone({ name, region: region || undefined, proxyBaseUrl: proxyBaseUrl || undefined });
-      toast.success('Zone created');
+      toast.success(t('zones.toasts.created'));
       setName('');
       setRegion('');
       setProxyBaseUrl('');
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not create zone');
+      toast.error(e instanceof Error ? e.message : t('zones.toasts.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -67,7 +70,7 @@ export default function ZonesPage() {
       await updateZone(z.id, { isDefault: true });
       await refresh();
     } catch {
-      toast.error('Could not set default');
+      toast.error(t('zones.toasts.setDefaultFailed'));
     } finally {
       setBusyId(null);
     }
@@ -77,10 +80,10 @@ export default function ZonesPage() {
     setBusyId(id);
     try {
       await deleteZone(id);
-      toast.success('Zone removed');
+      toast.success(t('zones.toasts.removed'));
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not remove zone');
+      toast.error(e instanceof Error ? e.message : t('zones.toasts.removeFailed'));
     } finally {
       setBusyId(null);
     }
@@ -89,30 +92,33 @@ export default function ZonesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Zones"
-        description="Deployment zones group agents and servers by region for routing and capacity isolation."
+        title={t('zones.title')}
+        description={t('zones.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Zone management is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('zones.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="Zones" value={zones.length} icon={Globe} primary />
-        <StatCard label="Regions" value={new Set(zones.map((z) => z.region).filter(Boolean)).size} icon={Globe} />
+        <StatCard label={t('zones.stats.zones')} value={zones.length} icon={Globe} primary />
+        <StatCard label={t('zones.stats.regions')} value={new Set(zones.map((z) => z.region).filter(Boolean)).size} icon={Globe} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Configured zones</h2>
+          <h2 className="font-display text-lg font-medium">{t('zones.configuredZones')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {zones.length === 0 ? (
-            <EmptyState icon={Globe} title="No zones configured" description="Zones group agents by region for routing and capacity isolation." />
+            <EmptyState icon={Globe} title={t('zones.empty.title')} description={t('zones.empty.description')} />
           ) : (
             zones.map((z) => (
               <div key={z.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
@@ -123,9 +129,9 @@ export default function ZonesPage() {
                 </div>
                 {z.region && <Badge variant="outline">{z.region}</Badge>}
                 {z.isDefault ? (
-                  <Badge variant="gold">Default</Badge>
+                  <Badge variant="gold">{t('zones.default')}</Badge>
                 ) : (
-                  <Button variant="ghost" size="icon-sm" title="Set default" disabled={busyId === z.id} onClick={() => void onSetDefault(z)}>
+                  <Button variant="ghost" size="icon-sm" title={t('zones.setDefault')} disabled={busyId === z.id} onClick={() => void onSetDefault(z)}>
                     <Star className="size-4" />
                   </Button>
                 )}
@@ -139,24 +145,24 @@ export default function ZonesPage() {
       </Card>
 
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add zone</h2>
+        <h2 className="font-display text-lg font-medium">{t('zones.addZone')}</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div>
-            <Label>Name</Label>
+            <Label>{tc('labels.name')}</Label>
             <Input placeholder="eu-central" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Region (optional)</Label>
-            <Input placeholder="Frankfurt" value={region} onChange={(e) => setRegion(e.target.value)} />
+            <Label>{t('zones.form.region')}</Label>
+            <Input placeholder={t('zones.form.regionPlaceholder')} value={region} onChange={(e) => setRegion(e.target.value)} />
           </div>
           <div>
-            <Label>Proxy Base URL (optional)</Label>
+            <Label>{t('zones.form.proxyBaseUrl')}</Label>
             <Input placeholder="https://eu.chista.local" value={proxyBaseUrl} onChange={(e) => setProxyBaseUrl(e.target.value)} />
           </div>
         </div>
         <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !name || creating}>
           {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-          Add zone
+          {t('zones.addZone')}
         </Button>
       </Card>
     </div>

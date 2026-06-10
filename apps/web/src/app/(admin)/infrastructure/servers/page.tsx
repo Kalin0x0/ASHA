@@ -1,6 +1,7 @@
 'use client';
 
 import { HardDrive, Loader2, Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/composite/empty-state';
@@ -23,6 +24,7 @@ import { isLive } from '@/lib/api/mode';
 const CONNECTION_TYPES = ['RDP', 'VNC', 'SSH'] as const;
 
 export default function ServersPage() {
+  const t = useTranslations('infrastructure');
   const [servers, setServers] = useState<ApiServer[]>([]);
   const [zones, setZones] = useState<ApiZone[]>([]);
   const [loading, setLoading] = useState(false);
@@ -43,7 +45,7 @@ export default function ServersPage() {
       setZones(z);
       if (!zoneId && z.length > 0) setZoneId(z[0]!.id);
     } catch {
-      toast.error('Failed to load servers');
+      toast.error(t('servers.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -59,12 +61,12 @@ export default function ServersPage() {
     setCreating(true);
     try {
       await createServer({ zoneId, hostname, address, connectionType, maxSessions });
-      toast.success('Server added');
+      toast.success(t('servers.toasts.added'));
       setHostname('');
       setAddress('');
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not add server');
+      toast.error(e instanceof Error ? e.message : t('servers.toasts.addFailed'));
     } finally {
       setCreating(false);
     }
@@ -74,10 +76,10 @@ export default function ServersPage() {
     setBusyId(id);
     try {
       await deleteServer(id);
-      toast.success('Server removed');
+      toast.success(t('servers.toasts.removed'));
       await refresh();
     } catch {
-      toast.error('Could not remove server');
+      toast.error(t('servers.toasts.removeFailed'));
     } finally {
       setBusyId(null);
     }
@@ -88,31 +90,34 @@ export default function ServersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Servers"
-        description="Static servers (RDP/VNC/SSH hosts) that back server-type workspaces. Each server caps its concurrent sessions."
+        title={t('servers.title')}
+        description={t('servers.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Server management is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('servers.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Servers" value={servers.length} icon={HardDrive} primary />
-        <StatCard label="Capacity" value={servers.reduce((a, s) => a + s.maxSessions, 0)} icon={HardDrive} />
-        <StatCard label="In use" value={servers.reduce((a, s) => a + (s.currentSessions ?? 0), 0)} icon={HardDrive} />
+        <StatCard label={t('servers.stats.servers')} value={servers.length} icon={HardDrive} primary />
+        <StatCard label={t('servers.stats.capacity')} value={servers.reduce((a, s) => a + s.maxSessions, 0)} icon={HardDrive} />
+        <StatCard label={t('servers.stats.inUse')} value={servers.reduce((a, s) => a + (s.currentSessions ?? 0), 0)} icon={HardDrive} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Registered servers</h2>
+          <h2 className="font-display text-lg font-medium">{t('servers.registeredServers')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {servers.length === 0 ? (
-            <EmptyState icon={HardDrive} title="No servers registered" description="Add RDP, VNC, or SSH hosts to back server-type workspaces." />
+            <EmptyState icon={HardDrive} title={t('servers.empty.title')} description={t('servers.empty.description')} />
           ) : (
             servers.map((s) => (
               <div key={s.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
@@ -136,24 +141,24 @@ export default function ServersPage() {
       </Card>
 
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add server</h2>
+        <h2 className="font-display text-lg font-medium">{t('servers.addServer')}</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <Label>Hostname</Label>
+            <Label>{t('servers.form.hostname')}</Label>
             <Input placeholder="win-rdp-01" value={hostname} onChange={(e) => setHostname(e.target.value)} />
           </div>
           <div>
-            <Label>Address</Label>
+            <Label>{t('servers.form.address')}</Label>
             <Input placeholder="10.0.0.21" value={address} onChange={(e) => setAddress(e.target.value)} />
           </div>
           <div>
-            <Label>Zone</Label>
+            <Label>{t('servers.form.zone')}</Label>
             <select
               value={zoneId}
               onChange={(e) => setZoneId(e.target.value)}
               className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
             >
-              {zones.length === 0 && <option value="">No zones — create one first</option>}
+              {zones.length === 0 && <option value="">{t('servers.form.noZones')}</option>}
               {zones.map((z) => (
                 <option key={z.id} value={z.id}>
                   {z.name}
@@ -162,7 +167,7 @@ export default function ServersPage() {
             </select>
           </div>
           <div>
-            <Label>Connection type</Label>
+            <Label>{t('servers.form.connectionType')}</Label>
             <select
               value={connectionType}
               onChange={(e) => setConnectionType(e.target.value as (typeof CONNECTION_TYPES)[number])}
@@ -176,13 +181,13 @@ export default function ServersPage() {
             </select>
           </div>
           <div>
-            <Label>Max sessions</Label>
+            <Label>{t('servers.form.maxSessions')}</Label>
             <Input type="number" min={1} value={maxSessions} onChange={(e) => setMaxSessions(Number(e.target.value))} />
           </div>
         </div>
         <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !zoneId || !hostname || !address || creating}>
           {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-          Add server
+          {t('servers.addServer')}
         </Button>
       </Card>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { Gauge, Loader2, Network } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -13,6 +14,7 @@ import { type ApiServerPool, getPools } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 
 export default function AutoScalePage() {
+  const t = useTranslations('infrastructure');
   const [pools, setPools] = useState<ApiServerPool[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -22,7 +24,7 @@ export default function AutoScalePage() {
     try {
       setPools(await getPools());
     } catch {
-      toast.error('Failed to load autoscale policies');
+      toast.error(t('autoscale.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -37,41 +39,46 @@ export default function AutoScalePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="AutoScale"
-        description="Overview of autoscale policies across server pools. Capacity grows and shrinks based on load, schedule, or AD demand."
+        title={t('autoscale.title')}
+        description={t('autoscale.description')}
         actions={
           <Button asChild variant="secondary" size="sm">
-            <Link href="/infrastructure/server-pools">Manage pools</Link>
+            <Link href="/infrastructure/server-pools">{t('autoscale.managePools')}</Link>
           </Button>
         }
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          AutoScale is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('autoscale.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Autoscaled pools" value={autoscaled.length} icon={Gauge} primary />
-        <StatCard label="Max instances" value={autoscaled.reduce((a, p) => a + (p.autoscaleConfig?.maxInstances ?? 0), 0)} icon={Network} />
-        <StatCard label="Standby" value={autoscaled.reduce((a, p) => a + (p.autoscaleConfig?.minStandby ?? 0), 0)} icon={Network} />
+        <StatCard label={t('autoscale.stats.autoscaledPools')} value={autoscaled.length} icon={Gauge} primary />
+        <StatCard label={t('autoscale.stats.maxInstances')} value={autoscaled.reduce((a, p) => a + (p.autoscaleConfig?.maxInstances ?? 0), 0)} icon={Network} />
+        <StatCard label={t('autoscale.stats.standby')} value={autoscaled.reduce((a, p) => a + (p.autoscaleConfig?.minStandby ?? 0), 0)} icon={Network} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Active policies</h2>
+          <h2 className="font-display text-lg font-medium">{t('autoscale.activePolicies')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {autoscaled.length === 0 ? (
             <p className="p-5 text-sm text-muted-foreground">
-              No autoscale policies yet. Enable autoscale on a pool from{' '}
-              <Link href="/infrastructure/server-pools" className="text-gold-300 hover:underline">
-                Server Pools
-              </Link>
-              .
+              {t.rich('autoscale.empty', {
+                link: (chunks) => (
+                  <Link href="/infrastructure/server-pools" className="text-gold-300 hover:underline">
+                    {chunks}
+                  </Link>
+                ),
+              })}
             </p>
           ) : (
             autoscaled.map((p) => {
@@ -82,11 +89,16 @@ export default function AutoScalePage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{p.name}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      standby {c.minStandby} · max {c.maxInstances} · {c.perServerSessionLimit}/server · check-in {c.checkinIntervalSec}s
+                      {t('autoscale.policySummary', {
+                        standby: c.minStandby,
+                        max: c.maxInstances,
+                        perServer: c.perServerSessionLimit,
+                        interval: c.checkinIntervalSec,
+                      })}
                     </p>
                   </div>
-                  <Badge variant="gold">{c.mode}</Badge>
-                  <Badge variant="outline">{p.kind}</Badge>
+                  <Badge variant="gold">{t(`autoscale.modes.${c.mode}`)}</Badge>
+                  <Badge variant="outline">{t(`autoscale.kinds.${p.kind}`)}</Badge>
                 </div>
               );
             })

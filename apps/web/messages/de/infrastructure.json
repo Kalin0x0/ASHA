@@ -1,1 +1,335 @@
-{}
+{
+  "zones": {
+    "title": "Zonen",
+    "description": "Bereitstellungszonen gruppieren Agents und Server nach Region für Routing und Kapazitätsisolierung.",
+    "liveOnly": "Die Zonenverwaltung ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "zones": "Zonen",
+      "regions": "Regionen"
+    },
+    "configuredZones": "Konfigurierte Zonen",
+    "empty": {
+      "title": "Keine Zonen konfiguriert",
+      "description": "Zonen gruppieren Agents nach Region für Routing und Kapazitätsisolierung."
+    },
+    "default": "Standard",
+    "setDefault": "Als Standard festlegen",
+    "addZone": "Zone hinzufügen",
+    "form": {
+      "region": "Region (optional)",
+      "regionPlaceholder": "Frankfurt",
+      "proxyBaseUrl": "Proxy-Basis-URL (optional)"
+    },
+    "toasts": {
+      "loadFailed": "Zonen konnten nicht geladen werden",
+      "created": "Zone erstellt",
+      "createFailed": "Zone konnte nicht erstellt werden",
+      "setDefaultFailed": "Standard konnte nicht festgelegt werden",
+      "removed": "Zone entfernt",
+      "removeFailed": "Zone konnte nicht entfernt werden"
+    }
+  },
+  "agents": {
+    "title": "Agents",
+    "description": "Docker-Compute-Agents, die Sitzungscontainer in Ihren Zonen bereitstellen und hosten.",
+    "stats": {
+      "onlineAgents": "Agents online",
+      "hostedSessions": "Gehostete Sitzungen",
+      "avgCpu": "Ø CPU"
+    },
+    "zonesTitle": "Zonen",
+    "zoneLoad": "{agents, plural, one {# Agent} other {# Agents}} · {sessions, plural, one {# Sitzung} other {# Sitzungen}}"
+  },
+  "servers": {
+    "title": "Server",
+    "description": "Statische Server (RDP-/VNC-/SSH-Hosts) für Workspaces vom Typ „Server“. Jeder Server begrenzt die Anzahl gleichzeitiger Sitzungen.",
+    "liveOnly": "Die Serververwaltung ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "servers": "Server",
+      "capacity": "Kapazität",
+      "inUse": "Belegt"
+    },
+    "registeredServers": "Registrierte Server",
+    "empty": {
+      "title": "Keine Server registriert",
+      "description": "Fügen Sie RDP-, VNC- oder SSH-Hosts hinzu, um Workspaces vom Typ „Server“ bereitzustellen."
+    },
+    "addServer": "Server hinzufügen",
+    "form": {
+      "hostname": "Hostname",
+      "address": "Adresse",
+      "zone": "Zone",
+      "noZones": "Keine Zonen — erstellen Sie zuerst eine",
+      "connectionType": "Verbindungstyp",
+      "maxSessions": "Max. Sitzungen"
+    },
+    "toasts": {
+      "loadFailed": "Server konnten nicht geladen werden",
+      "added": "Server hinzugefügt",
+      "addFailed": "Server konnte nicht hinzugefügt werden",
+      "removed": "Server entfernt",
+      "removeFailed": "Server konnte nicht entfernt werden"
+    }
+  },
+  "serverPools": {
+    "title": "Server-Pools",
+    "description": "Fassen Sie Agents oder Server in Pools zusammen, die automatisch skaliert werden können. Jeder Pool kann eine AutoScale-Richtlinie haben, die die Kapazität erhöht oder verringert.",
+    "liveOnly": "Die Pool-Verwaltung ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "pools": "Pools",
+      "autoscaled": "Automatisch skaliert",
+      "members": "Mitglieder"
+    },
+    "poolsTitle": "Pools",
+    "empty": "Noch keine Pools konfiguriert.",
+    "memberCount": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
+    "autoscaleBadge": "AutoScale: {mode}",
+    "manual": "Manuell",
+    "editAutoscale": "AutoScale bearbeiten",
+    "enableAs": "AS aktivieren",
+    "disableAs": "AS deaktivieren",
+    "addPool": "Pool hinzufügen",
+    "form": {
+      "kind": "Art",
+      "kindAgent": "Agent (Container-Hosts)",
+      "kindServer": "Server (RDP/VNC-Hosts)"
+    },
+    "kinds": {
+      "AGENT": "Agent",
+      "SERVER": "Server"
+    },
+    "modes": {
+      "LOAD": "Auslastung",
+      "SCHEDULE": "Zeitplan",
+      "ACTIVE_DIRECTORY": "Active Directory"
+    },
+    "editor": {
+      "mode": "Modus",
+      "minStandby": "Min. Standby",
+      "maxInstances": "Max. Instanzen",
+      "perServerLimit": "Limit pro Server",
+      "savePolicy": "Richtlinie speichern"
+    },
+    "toasts": {
+      "loadFailed": "Pools konnten nicht geladen werden",
+      "created": "Pool erstellt",
+      "createFailed": "Pool konnte nicht erstellt werden",
+      "removed": "Pool entfernt",
+      "removeFailed": "Pool konnte nicht entfernt werden",
+      "autoscaleEnabled": "AutoScale aktiviert",
+      "autoscaleDisabled": "AutoScale deaktiviert",
+      "autoscaleUpdated": "AutoScale aktualisiert",
+      "autoscaleUpdateFailed": "AutoScale konnte nicht aktualisiert werden",
+      "autoscaleSaveFailed": "AutoScale konnte nicht gespeichert werden"
+    }
+  },
+  "autoscale": {
+    "title": "AutoScale",
+    "description": "Überblick über die AutoScale-Richtlinien aller Server-Pools. Die Kapazität wächst und schrumpft je nach Auslastung, Zeitplan oder AD-Bedarf.",
+    "managePools": "Pools verwalten",
+    "liveOnly": "AutoScale ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "autoscaledPools": "Automatisch skalierte Pools",
+      "maxInstances": "Max. Instanzen",
+      "standby": "Standby"
+    },
+    "activePolicies": "Aktive Richtlinien",
+    "empty": "Noch keine AutoScale-Richtlinien. Aktivieren Sie AutoScale für einen Pool unter <link>Server-Pools</link>.",
+    "policySummary": "Standby {standby} · max. {max} · {perServer}/Server · Check-in {interval}s",
+    "kinds": {
+      "AGENT": "Agent",
+      "SERVER": "Server"
+    },
+    "modes": {
+      "LOAD": "Auslastung",
+      "SCHEDULE": "Zeitplan",
+      "ACTIVE_DIRECTORY": "Active Directory"
+    },
+    "toasts": {
+      "loadFailed": "AutoScale-Richtlinien konnten nicht geladen werden"
+    }
+  },
+  "vmProviders": {
+    "title": "VM-Provider",
+    "description": "Verbinden Sie Cloud- und Hypervisor-Provider als Grundlage für automatisch skalierte Server-Pools. Treiber: Proxmox VE, AWS EC2, Azure, GCP und VMware vSphere.",
+    "liveOnly": "Die VM-Provider-Verwaltung ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "providers": "Provider",
+      "drivers": "Treiber"
+    },
+    "configuredProviders": "Konfigurierte Provider",
+    "empty": "Noch keine VM-Provider konfiguriert.",
+    "addProvider": "Provider hinzufügen",
+    "form": {
+      "displayName": "Anzeigename",
+      "namePlaceholder": "{kind}-Cluster"
+    },
+    "kinds": {
+      "PROXMOX": "Proxmox",
+      "AWS": "AWS",
+      "AZURE": "Azure",
+      "GCP": "GCP",
+      "VSPHERE": "vSphere",
+      "DIGITALOCEAN": "DigitalOcean",
+      "ORACLE": "Oracle OCI",
+      "OPENSTACK": "OpenStack",
+      "NUTANIX": "Nutanix",
+      "KUBEVIRT": "KubeVirt",
+      "HARVESTER": "Harvester"
+    },
+    "fields": {
+      "PROXMOX": {
+        "apiUrl": "API-URL",
+        "node": "Node",
+        "tokenId": "Token-ID",
+        "tokenSecret": "Token-Secret",
+        "template": "Template-VMID"
+      },
+      "AWS": {
+        "accessKeyId": "Zugriffsschlüssel-ID",
+        "secretAccessKey": "Geheimer Zugriffsschlüssel",
+        "region": "Region",
+        "imageId": "AMI-ID",
+        "instanceType": "Instance-Typ"
+      },
+      "AZURE": {
+        "tenantId": "Mandanten-ID",
+        "clientId": "Client-ID",
+        "clientSecret": "Geheimer Clientschlüssel",
+        "subscriptionId": "Abonnement-ID",
+        "resourceGroup": "Ressourcengruppe",
+        "location": "Standort",
+        "vmSize": "VM-Größe"
+      },
+      "GCP": {
+        "projectId": "Projekt-ID",
+        "zone": "Zone",
+        "serviceAccountEmail": "Dienstkonto-E-Mail",
+        "privateKeyPem": "Privater Schlüssel (PEM)",
+        "machineType": "Maschinentyp",
+        "sourceImage": "Quell-Image"
+      },
+      "VSPHERE": {
+        "vcenterUrl": "vCenter-URL",
+        "username": "Benutzername",
+        "password": "Passwort",
+        "template": "Template-VM"
+      },
+      "DIGITALOCEAN": {
+        "apiToken": "API-Token",
+        "region": "Region",
+        "size": "Droplet-Größe",
+        "image": "Image-Slug"
+      },
+      "ORACLE": {
+        "endpoint": "API-Endpunkt",
+        "tenancyOcid": "Tenancy-OCID",
+        "userOcid": "Benutzer-OCID",
+        "fingerprint": "Schlüssel-Fingerabdruck",
+        "privateKeyPem": "Privater API-Schlüssel (PEM)",
+        "compartmentOcid": "Compartment-OCID",
+        "availabilityDomain": "Availability Domain",
+        "shape": "Shape",
+        "subnetOcid": "Subnetz-OCID",
+        "imageOcid": "Image-OCID"
+      },
+      "OPENSTACK": {
+        "authUrl": "Keystone-Auth-URL",
+        "username": "Benutzername",
+        "password": "Passwort",
+        "projectName": "Projektname",
+        "novaUrl": "Nova-Compute-URL",
+        "flavorRef": "Flavor-ID",
+        "imageRef": "Image-ID",
+        "networkId": "Netzwerk-ID (optional)"
+      },
+      "NUTANIX": {
+        "prismCentralUrl": "Prism-Central-URL",
+        "username": "Benutzername",
+        "password": "Passwort",
+        "clusterUuid": "Cluster-UUID",
+        "subnetUuid": "Subnetz-UUID",
+        "imageUuid": "Image-UUID"
+      },
+      "KUBEVIRT": {
+        "apiServer": "Kubernetes-API-Server",
+        "token": "ServiceAccount-Token",
+        "namespace": "Namespace",
+        "image": "containerDisk-Image"
+      },
+      "HARVESTER": {
+        "apiServer": "Harvester-API-Server",
+        "token": "Token",
+        "namespace": "Namespace",
+        "image": "Image"
+      }
+    },
+    "toasts": {
+      "loadFailed": "VM-Provider konnten nicht geladen werden",
+      "created": "{kind}-Provider hinzugefügt",
+      "createFailed": "Provider konnte nicht erstellt werden",
+      "updateFailed": "Provider konnte nicht aktualisiert werden",
+      "removed": "Provider entfernt",
+      "removeFailed": "Provider konnte nicht entfernt werden"
+    }
+  },
+  "dnsProviders": {
+    "title": "DNS-Provider",
+    "description": "Registrieren Sie DNS-Provider, damit DNS-Einträge für automatisch skalierte Server und sitzungsbezogene Hostnamen automatisch erstellt werden.",
+    "liveOnly": "Die DNS-Provider-Verwaltung ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "providers": "Provider"
+    },
+    "configuredProviders": "Konfigurierte Provider",
+    "empty": "Noch keine DNS-Provider konfiguriert.",
+    "addProvider": "Provider hinzufügen",
+    "form": {
+      "displayName": "Anzeigename",
+      "namePlaceholder": "{kind} DNS",
+      "zoneName": "Zonenname (optional)"
+    },
+    "kinds": {
+      "AWS": "AWS",
+      "AZURE": "Azure",
+      "DIGITALOCEAN": "DigitalOcean",
+      "GCP": "GCP",
+      "ORACLE": "Oracle OCI"
+    },
+    "fields": {
+      "AWS": {
+        "accessKeyId": "Zugriffsschlüssel-ID",
+        "secretAccessKey": "Geheimer Zugriffsschlüssel",
+        "hostedZoneId": "Hosted-Zone-ID"
+      },
+      "AZURE": {
+        "tenantId": "Mandanten-ID",
+        "clientId": "Client-ID",
+        "clientSecret": "Geheimer Clientschlüssel",
+        "subscriptionId": "Abonnement-ID",
+        "resourceGroup": "Ressourcengruppe"
+      },
+      "DIGITALOCEAN": {
+        "apiToken": "API-Token"
+      },
+      "GCP": {
+        "projectId": "Projekt-ID",
+        "serviceAccountKey": "Dienstkonto-Schlüssel (JSON)"
+      },
+      "ORACLE": {
+        "tenancyOcid": "Tenancy-OCID",
+        "userOcid": "Benutzer-OCID",
+        "fingerprint": "Fingerabdruck",
+        "privateKeyPem": "Privater Schlüssel (PEM)",
+        "compartmentOcid": "Compartment-OCID"
+      }
+    },
+    "toasts": {
+      "loadFailed": "DNS-Provider konnten nicht geladen werden",
+      "created": "{kind}-DNS-Provider hinzugefügt",
+      "createFailed": "Provider konnte nicht erstellt werden",
+      "updateFailed": "Provider konnte nicht aktualisiert werden",
+      "removed": "Provider entfernt",
+      "removeFailed": "Provider konnte nicht entfernt werden"
+    }
+  }
+}
