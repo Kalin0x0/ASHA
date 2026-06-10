@@ -1,6 +1,7 @@
 'use client';
 
 import { Container, HardDrive, Package } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
@@ -9,19 +10,6 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useImages } from '@/lib/hooks';
 
-function formatSize(mb: number): string {
-  if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
-  return `${mb} MB`;
-}
-
-function formatAge(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diffMs / 86_400_000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  return `${days}d ago`;
-}
-
 const STATUS_VARIANT = {
   available: 'success',
   pulling: 'info',
@@ -29,8 +17,23 @@ const STATUS_VARIANT = {
 } as const;
 
 export default function ImagesPage() {
+  const t = useTranslations('workspaces');
+  const tc = useTranslations('common');
   const images = useImages();
   const [query, setQuery] = useState('');
+
+  const formatSize = (mb: number): string => {
+    if (mb >= 1024) return `${(mb / 1024).toFixed(1)} ${tc('units.gb')}`;
+    return `${mb} ${tc('units.mb')}`;
+  };
+
+  const formatAge = (iso: string): string => {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const days = Math.floor(diffMs / 86_400_000);
+    if (days === 0) return t('images.age.today');
+    if (days === 1) return t('images.age.yesterday');
+    return t('images.age.daysAgo', { days });
+  };
 
   const filtered = useMemo(() => {
     if (!query) return images;
@@ -48,15 +51,15 @@ export default function ImagesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Workspace Images"
-        description="Container images pulled and cached on agents. New images are pulled automatically when a workspace is first launched."
+        title={t('images.title')}
+        description={t('images.description')}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Images" value={images.length} icon={Container} primary />
-        <StatCard label="Cached size (GB)" value={Math.round(totalSizeMb / 1024)} icon={HardDrive} />
+        <StatCard label={t('images.stats.images')} value={images.length} icon={Container} primary />
+        <StatCard label={t('images.stats.cachedSize')} value={Math.round(totalSizeMb / 1024)} icon={HardDrive} />
         <StatCard
-          label="Workspaces covered"
+          label={t('images.stats.workspacesCovered')}
           value={new Set(images.flatMap((i) => i.workspaces)).size}
           icon={Package}
         />
@@ -64,7 +67,7 @@ export default function ImagesPage() {
 
       <div className="max-w-sm">
         <Input
-          placeholder="Search by name, registry or tag…"
+          placeholder={t('images.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -75,13 +78,13 @@ export default function ImagesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-wider text-muted-foreground">
-                <th className="px-5 py-3 font-medium">Image</th>
-                <th className="px-5 py-3 font-medium">Registry</th>
-                <th className="px-5 py-3 font-medium">Tag</th>
-                <th className="px-5 py-3 font-medium">Used by</th>
-                <th className="px-5 py-3 font-medium">Size</th>
-                <th className="px-5 py-3 font-medium">Pulled</th>
-                <th className="px-5 py-3 font-medium">Status</th>
+                <th className="px-5 py-3 font-medium">{t('images.table.image')}</th>
+                <th className="px-5 py-3 font-medium">{t('images.table.registry')}</th>
+                <th className="px-5 py-3 font-medium">{t('images.table.tag')}</th>
+                <th className="px-5 py-3 font-medium">{t('images.table.usedBy')}</th>
+                <th className="px-5 py-3 font-medium">{t('images.table.size')}</th>
+                <th className="px-5 py-3 font-medium">{t('images.table.pulled')}</th>
+                <th className="px-5 py-3 font-medium">{tc('labels.status')}</th>
               </tr>
             </thead>
             <tbody>
@@ -116,8 +119,8 @@ export default function ImagesPage() {
                   <td className="px-5 py-3 tnum text-muted-foreground">{formatSize(img.sizeMb)}</td>
                   <td className="px-5 py-3 text-muted-foreground">{formatAge(img.pulledAt)}</td>
                   <td className="px-5 py-3">
-                    <Badge variant={STATUS_VARIANT[img.status]} className="capitalize">
-                      {img.status}
+                    <Badge variant={STATUS_VARIANT[img.status]}>
+                      {t(`images.status.${img.status}`)}
                     </Badge>
                   </td>
                 </tr>
@@ -125,7 +128,7 @@ export default function ImagesPage() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="py-16 text-center text-sm text-muted-foreground">
-                    No images match your search.
+                    {t('images.empty')}
                   </td>
                 </tr>
               )}

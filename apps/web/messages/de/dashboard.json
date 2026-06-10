@@ -1,1 +1,54 @@
-{}
+{
+  "greeting": {
+    "morning": "Guten Morgen",
+    "afternoon": "Guten Tag",
+    "evening": "Guten Abend"
+  },
+  "hero": {
+    "eyebrow": "Übersicht",
+    "live": "Live",
+    "activeSessionsCaption": "Aktive Sitzungen über alle Zonen hinweg – in Echtzeit.",
+    "launchWorkspace": "Workspace starten",
+    "sessionsLastHour": "Sitzungen · letzte Stunde"
+  },
+  "stats": {
+    "onlineAgents": "Agents online",
+    "cpu": "CPU",
+    "memory": "RAM"
+  },
+  "gauges": {
+    "cpu": "CPU",
+    "mem": "RAM",
+    "gpu": "GPU",
+    "disk": "DISK"
+  },
+  "cards": {
+    "resourceUtilization": {
+      "title": "Ressourcenauslastung",
+      "subtitle": "Clusterweiter Durchschnitt"
+    },
+    "agentFleet": {
+      "title": "Agent-Flotte",
+      "subtitle": "Zustand pro Host in Echtzeit",
+      "viewAll": "Alle anzeigen",
+      "empty": "Keine Agents registriert"
+    },
+    "topWorkspaces": {
+      "title": "Top-Workspaces",
+      "subtitle": "Nach gleichzeitigen Sitzungen"
+    },
+    "liveActivity": {
+      "title": "Live-Aktivität",
+      "empty": "Keine aktuellen Aktivitäten"
+    }
+  },
+  "charts": {
+    "sessionsTooltip": "Sitzungen",
+    "value": "Wert",
+    "gaugeAria": "{label}: {value} Prozent",
+    "noWorkspaceActivity": "Noch keine Workspace-Aktivität"
+  },
+  "agentCard": {
+    "specs": "{cores, plural, one {# Kern} other {# Kerne}} · {gb} GB"
+  }
+}

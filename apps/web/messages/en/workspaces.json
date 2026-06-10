@@ -1,1 +1,82 @@
-{}
+{
+  "catalog": {
+    "title": "Workspaces",
+    "description": "The catalog of containerized desktops, browsers, and applications users can launch.",
+    "newWorkspace": "New workspace",
+    "searchPlaceholder": "Search workspaces…",
+    "toasts": {
+      "launchTitle": "Session launching",
+      "launchDescription": "Allocating an agent and starting the container."
+    }
+  },
+  "images": {
+    "title": "Workspace Images",
+    "description": "Container images pulled and cached on agents. New images are pulled automatically when a workspace is first launched.",
+    "stats": {
+      "images": "Images",
+      "cachedSize": "Cached size (GB)",
+      "workspacesCovered": "Workspaces covered"
+    },
+    "searchPlaceholder": "Search by name, registry or tag…",
+    "table": {
+      "image": "Image",
+      "registry": "Registry",
+      "tag": "Tag",
+      "usedBy": "Used by",
+      "size": "Size",
+      "pulled": "Pulled"
+    },
+    "status": {
+      "available": "Available",
+      "pulling": "Pulling",
+      "error": "Error"
+    },
+    "age": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "daysAgo": "{days}d ago"
+    },
+    "empty": "No images match your search."
+  },
+  "registry": {
+    "title": "Image Registry",
+    "description": "Connect open-format workspace registries, sync their catalogs, and install workspaces from the marketplace.",
+    "liveOnly": "Registry management is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code> to connect to the API.",
+    "stats": {
+      "registries": "Registries",
+      "marketplaceApps": "Marketplace apps",
+      "installed": "Installed"
+    },
+    "form": {
+      "namePlaceholder": "Chista Community",
+      "urlLabel": "Index URL (JSON)"
+    },
+    "empty": "No registries configured yet.",
+    "type": {
+      "FIRST_PARTY": "First-party",
+      "THIRD_PARTY": "Third-party"
+    },
+    "appCount": "{count, plural, one {# app} other {# apps}}",
+    "marketplace": {
+      "title": "Marketplace",
+      "searchPlaceholder": "Search apps…",
+      "noDescription": "No description.",
+      "install": "Install",
+      "installed": "Installed",
+      "emptyLive": "No marketplace apps. Add a registry and sync it.",
+      "emptyMock": "Connect the live backend to browse the marketplace."
+    },
+    "toasts": {
+      "loadFailed": "Failed to load registries",
+      "added": "Registry added — syncing…",
+      "addFailed": "Could not add registry",
+      "synced": "Synced {count, plural, one {# workspace} other {# workspaces}}",
+      "syncFailed": "Sync failed",
+      "installedTitle": "Installed {name}",
+      "installedDescription": "Image + workspace created.",
+      "installFailed": "Install failed",
+      "removed": "Registry removed",
+      "removeFailed": "Could not remove registry"
+    }
+  }
+}

@@ -1,1 +1,54 @@
-{}
+{
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening"
+  },
+  "hero": {
+    "eyebrow": "Overview",
+    "live": "Live",
+    "activeSessionsCaption": "Active sessions across every zone right now.",
+    "launchWorkspace": "Launch workspace",
+    "sessionsLastHour": "Sessions · last hour"
+  },
+  "stats": {
+    "onlineAgents": "Online agents",
+    "cpu": "CPU",
+    "memory": "Memory"
+  },
+  "gauges": {
+    "cpu": "CPU",
+    "mem": "MEM",
+    "gpu": "GPU",
+    "disk": "DISK"
+  },
+  "cards": {
+    "resourceUtilization": {
+      "title": "Resource utilization",
+      "subtitle": "Cluster-wide average"
+    },
+    "agentFleet": {
+      "title": "Agent fleet",
+      "subtitle": "Real-time health per host",
+      "viewAll": "View all",
+      "empty": "No agents enrolled"
+    },
+    "topWorkspaces": {
+      "title": "Top workspaces",
+      "subtitle": "By concurrent sessions"
+    },
+    "liveActivity": {
+      "title": "Live activity",
+      "empty": "No recent activity"
+    }
+  },
+  "charts": {
+    "sessionsTooltip": "Sessions",
+    "value": "Value",
+    "gaugeAria": "{label}: {value} percent",
+    "noWorkspaceActivity": "No workspace activity yet"
+  },
+  "agentCard": {
+    "specs": "{cores, plural, one {# core} other {# cores}} · {gb} GB"
+  }
+}
