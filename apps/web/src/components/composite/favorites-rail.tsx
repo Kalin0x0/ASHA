@@ -2,6 +2,7 @@
 
 import { Reorder, useDragControls } from 'framer-motion';
 import { GripVertical } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
 import { useFavorites } from '@/lib/favorites-store';
 import type { Workspace } from '@/lib/types';
@@ -56,6 +57,7 @@ function FavoriteRailItem({
   launching: boolean;
   onToggleFavorite: (id: string) => void;
 }) {
+  const t = useTranslations('portal');
   const controls = useDragControls();
 
   return (
@@ -70,7 +72,7 @@ function FavoriteRailItem({
       {/* Drag handle — only this starts a drag, so launch/star clicks are safe */}
       <button
         type="button"
-        aria-label="Drag to reorder"
+        aria-label={t('favorites.dragToReorder')}
         onPointerDown={(e) => controls.start(e)}
         className="absolute left-1/2 top-1.5 z-20 flex h-5 w-8 -translate-x-1/2 cursor-grab touch-none items-center justify-center rounded-full bg-[var(--surface-3)]/80 text-muted-foreground/60 opacity-0 backdrop-blur transition-opacity hover:text-gold-300 group-hover/rail:opacity-100 active:cursor-grabbing"
       >

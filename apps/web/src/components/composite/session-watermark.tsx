@@ -1,5 +1,6 @@
 'use client';
 
+import { useLocale } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
 
 /**
@@ -30,6 +31,7 @@ export function SessionWatermark({
   opacity?: number;
   className?: string;
 }) {
+  const locale = useLocale();
   // Refresh the stamped timestamp periodically so a photo of the screen carries
   // a near-current time without burning CPU on a per-second redraw.
   const [now, setNow] = useState(() => Date.now());
@@ -39,7 +41,7 @@ export function SessionWatermark({
   }, []);
 
   const label = useMemo(() => {
-    const stamp = new Date(now).toLocaleString('en-GB', {
+    const stamp = new Date(now).toLocaleString(locale, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -48,7 +50,7 @@ export function SessionWatermark({
     });
     const sid = sessionId ? ` · ${sessionId.slice(0, 8)}` : '';
     return `${identity} · ${stamp}${sid}`;
-  }, [identity, now, sessionId]);
+  }, [identity, locale, now, sessionId]);
 
   // A single repeating SVG tile draws the label rotated ~-30°; the browser
   // tiles it across the whole surface via background-repeat. encodeURIComponent

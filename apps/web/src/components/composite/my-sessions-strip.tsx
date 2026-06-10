@@ -1,6 +1,7 @@
 'use client';
 
 import { Play, Power } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
@@ -12,15 +13,15 @@ import { cn, formatDuration } from '@/lib/utils';
 
 const ACTIVE: SessionStatus[] = ['RUNNING', 'DEGRADED', 'PROVISIONING', 'SCHEDULED', 'PAUSED'];
 
-function statusLabel(status: SessionStatus): { label: string; tone: string } {
+function statusMeta(status: SessionStatus): { statusKey: 'RUNNING' | 'PAUSED' | null; tone: string } {
   switch (status) {
     case 'RUNNING':
     case 'DEGRADED':
-      return { label: 'Running', tone: 'text-success' };
+      return { statusKey: 'RUNNING', tone: 'text-success' };
     case 'PAUSED':
-      return { label: 'Paused', tone: 'text-muted-foreground' };
+      return { statusKey: 'PAUSED', tone: 'text-muted-foreground' };
     default:
-      return { label: 'Starting', tone: 'text-warning' };
+      return { statusKey: null, tone: 'text-warning' };
   }
 }
 
@@ -30,6 +31,8 @@ function statusLabel(status: SessionStatus): { label: string; tone: string } {
  * resume (re-opens the streaming viewer) and end controls.
  */
 export function MySessionsStrip() {
+  const t = useTranslations('portal');
+  const tc = useTranslations('common');
   const router = useRouter();
   const sessions = useSessions();
   const terminate = useTerminateSession();
@@ -47,20 +50,21 @@ export function MySessionsStrip() {
   const resume = (s: SessionRow) => router.push(`/session/${s.id}`);
   const end = (s: SessionRow) => {
     terminate(s.id);
-    toast.success('Session ended');
+    toast.success(t('mySessions.endedToast'));
   };
 
   return (
     <section>
       <div className="mb-4 flex items-center gap-2">
         <span className="size-2 rounded-full bg-success animate-pulse-ring" />
-        <h2 className="font-display text-lg font-semibold">My Sessions</h2>
+        <h2 className="font-display text-lg font-semibold">{t('mySessions.title')}</h2>
         <span className="text-xs text-muted-foreground">({mine.length})</span>
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:thin]">
         {mine.map((s) => {
-          const { label, tone } = statusLabel(s.status);
+          const { statusKey, tone } = statusMeta(s.status);
+          const label = statusKey ? tc(`sessionStatus.${statusKey}`) : t('mySessions.starting');
           const running = s.status === 'RUNNING' || s.status === 'DEGRADED';
           return (
             <div
@@ -82,15 +86,15 @@ export function MySessionsStrip() {
                 <button
                   type="button"
                   onClick={() => resume(s)}
-                  aria-label={`Resume ${s.workspaceName}`}
+                  aria-label={t('mySessions.resumeAria', { name: s.workspaceName })}
                   className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-gold-500/90 px-2.5 text-xs font-semibold text-anthracite-950 transition-colors hover:bg-gold-500 ring-gold-focus"
                 >
-                  <Play className="size-3.5 fill-anthracite-950" /> Resume
+                  <Play className="size-3.5 fill-anthracite-950" /> {t('mySessions.resume')}
                 </button>
                 <button
                   type="button"
                   onClick={() => end(s)}
-                  aria-label={`End ${s.workspaceName}`}
+                  aria-label={t('mySessions.endAria', { name: s.workspaceName })}
                   className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground/60 transition-colors hover:bg-destructive/15 hover:text-destructive ring-gold-focus"
                 >
                   <Power className="size-3.5" />

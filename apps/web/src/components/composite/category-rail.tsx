@@ -1,6 +1,7 @@
 'use client';
 
 import { LayoutGrid } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { categoryVisual } from '@/lib/workspace-visuals';
 import { cn } from '@/lib/utils';
 
@@ -27,10 +28,12 @@ export function CategoryRail({
   onSelect: (category: string | null) => void;
   className?: string;
 }) {
+  const t = useTranslations('portal');
+
   return (
-    <nav className={cn('flex flex-col gap-1', className)} aria-label="Workspace categories">
+    <nav className={cn('flex flex-col gap-1', className)} aria-label={t('launcher.categoriesNavAria')}>
       <RailItem
-        label="All Workspaces"
+        label={t('launcher.allWorkspaces')}
         count={total}
         active={active === null}
         onClick={() => onSelect(null)}
@@ -39,7 +42,7 @@ export function CategoryRail({
 
       <div className="my-2 px-3">
         <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/50">
-          Categories
+          {t('launcher.categories')}
         </span>
       </div>
 

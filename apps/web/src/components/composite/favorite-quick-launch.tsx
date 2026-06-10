@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Loader2, Play, Star } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -17,6 +18,7 @@ import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
  *   "+N" link back to the portal (default 4).
  */
 export function FavoriteQuickLaunch({ limit = 4 }: { limit?: number }) {
+  const t = useTranslations('portal');
   const router = useRouter();
   const workspaces = useWorkspaces();
   const launch = useLaunchSession();
@@ -37,7 +39,7 @@ export function FavoriteQuickLaunch({ limit = 4 }: { limit?: number }) {
     setLaunchingId(id);
     const session = await launch(id);
     if (!session) {
-      toast.error('Could not start the session');
+      toast.error(t('launcher.launchError'));
       setLaunchingId(null);
       return;
     }
@@ -48,7 +50,7 @@ export function FavoriteQuickLaunch({ limit = 4 }: { limit?: number }) {
     <div className="hidden items-center gap-2 md:flex">
       <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
         <Star className="size-3.5 fill-gold-400 text-gold-300" />
-        Favorites
+        {t('favorites.title')}
       </span>
       <div className="flex items-center gap-1.5">
         {shown.map((ws) => {
@@ -59,7 +61,7 @@ export function FavoriteQuickLaunch({ limit = 4 }: { limit?: number }) {
               type="button"
               onClick={() => void onLaunch(ws.id)}
               disabled={busy}
-              title={`Launch ${ws.friendlyName}`}
+              title={t('favorites.launchTitle', { name: ws.friendlyName })}
               className="group flex items-center gap-1.5 rounded-full border border-border-subtle bg-[var(--surface-2)]/60 py-1 pl-1 pr-2.5 text-xs transition-all duration-200 hover:border-[rgba(212,175,55,0.35)] hover:bg-[var(--surface-2)] hover:shadow-[0_0_0_1px_rgba(212,175,55,0.15)] disabled:opacity-60 ring-gold-focus"
             >
               <Monogram name={ws.friendlyName} className="size-5 rounded-full text-[9px]" />
@@ -75,7 +77,7 @@ export function FavoriteQuickLaunch({ limit = 4 }: { limit?: number }) {
         {overflow > 0 && (
           <Link
             href="/"
-            title="See all favorites"
+            title={t('favorites.seeAll')}
             className="flex items-center rounded-full border border-border-subtle bg-[var(--surface-2)]/60 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[rgba(212,175,55,0.35)] hover:text-gold-300 ring-gold-focus"
           >
             +{overflow}
