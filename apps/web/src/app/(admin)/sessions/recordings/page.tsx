@@ -1,6 +1,7 @@
 'use client';
 
 import { Clock, Film, HardDrive } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Monogram } from '@/components/composite/monogram';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
@@ -18,6 +19,8 @@ const STATUS_VARIANT: Record<RecordingRow['status'], 'success' | 'info' | 'outli
 };
 
 export default function RecordingsPage() {
+  const t = useTranslations('sessions');
+  const tc = useTranslations('common');
   const recordings = useRecordings();
   const totalMb = recordings.reduce((s, r) => s + r.sizeMb, 0);
   const avgDuration =
@@ -28,14 +31,14 @@ export default function RecordingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Session Recordings"
-        description="Record, store and replay session streams. Recordings are saved to S3-compatible object storage and can be downloaded or reviewed in-browser."
+        title={t('recordings.title')}
+        description={t('recordings.description')}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Recordings" value={recordings.length} icon={Film} primary />
-        <StatCard label="Total stored (GB)" value={Math.round(totalMb / 1024)} icon={HardDrive} />
-        <StatCard label="Avg duration (min)" value={Math.round(avgDuration / 60)} icon={Clock} />
+        <StatCard label={t('recordings.stats.recordings')} value={recordings.length} icon={Film} primary />
+        <StatCard label={t('recordings.stats.totalStored')} value={Math.round(totalMb / 1024)} icon={HardDrive} />
+        <StatCard label={t('recordings.stats.avgDuration')} value={Math.round(avgDuration / 60)} icon={Clock} />
       </div>
 
       {recordings.length > 0 ? (
@@ -44,12 +47,12 @@ export default function RecordingsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="px-5 py-3 font-medium">Workspace</th>
-                  <th className="px-5 py-3 font-medium">User</th>
-                  <th className="px-5 py-3 font-medium">Protocol</th>
-                  <th className="px-5 py-3 font-medium">Duration</th>
-                  <th className="px-5 py-3 font-medium">Size</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
+                  <th className="px-5 py-3 font-medium">{t('recordings.columns.workspace')}</th>
+                  <th className="px-5 py-3 font-medium">{t('recordings.columns.user')}</th>
+                  <th className="px-5 py-3 font-medium">{t('recordings.columns.protocol')}</th>
+                  <th className="px-5 py-3 font-medium">{t('recordings.columns.duration')}</th>
+                  <th className="px-5 py-3 font-medium">{t('recordings.columns.size')}</th>
+                  <th className="px-5 py-3 font-medium">{tc('labels.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -74,7 +77,7 @@ export default function RecordingsPage() {
                     </td>
                     <td className="px-5 py-3">
                       <Badge variant={STATUS_VARIANT[r.status]} className="capitalize">
-                        {r.status.toLowerCase()}
+                        {t(`recordings.status.${r.status}`)}
                       </Badge>
                     </td>
                   </tr>
@@ -91,24 +94,23 @@ export default function RecordingsPage() {
               <Film className="size-7" />
             </span>
             <div className="space-y-2">
-              <h2 className="font-display text-2xl font-medium">No recordings yet</h2>
+              <h2 className="font-display text-2xl font-medium">{t('recordings.emptyTitle')}</h2>
               <p className="mx-auto max-w-md text-sm text-muted-foreground">
-                Once recording is enabled for a workspace, session streams are captured and uploaded to your
-                configured S3 bucket. Recordings appear here as soon as a session ends.
+                {t('recordings.emptyDescription')}
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1.5">
-                <span className="size-1.5 rounded-full bg-gold-400" /> S3-compatible storage
+                <span className="size-1.5 rounded-full bg-gold-400" /> {t('recordings.features.s3Storage')}
               </span>
               <span className="flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1.5">
-                <span className="size-1.5 rounded-full bg-gold-400" /> In-browser playback
+                <span className="size-1.5 rounded-full bg-gold-400" /> {t('recordings.features.playback')}
               </span>
               <span className="flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1.5">
-                <span className="size-1.5 rounded-full bg-gold-400" /> Per-workspace opt-in
+                <span className="size-1.5 rounded-full bg-gold-400" /> {t('recordings.features.optIn')}
               </span>
               <span className="flex items-center gap-1.5 rounded-full border border-border-subtle px-3 py-1.5">
-                <span className="size-1.5 rounded-full bg-gold-400" /> Retention policy
+                <span className="size-1.5 rounded-full bg-gold-400" /> {t('recordings.features.retention')}
               </span>
             </div>
           </div>

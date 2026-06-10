@@ -1,1 +1,193 @@
-{}
+{
+  "list": {
+    "title": "Live Sessions",
+    "description": "Every running, provisioning, and paused workspace session across all zones.",
+    "sessionCount": "{count, plural, one {# session} other {# sessions}}",
+    "searchPlaceholder": "Search by user, workspace, zone or agent…",
+    "columns": {
+      "workspace": "Workspace",
+      "user": "User",
+      "zoneAgent": "Zone / Agent",
+      "memory": "Memory",
+      "uptime": "Uptime"
+    },
+    "viewDetails": "View details",
+    "pause": "Pause",
+    "toastPauseRequested": "Pause requested",
+    "toastTerminated": "Session terminated",
+    "toastTerminatedDescription": "The container is being destroyed.",
+    "emptyTitle": "No sessions match your filters",
+    "emptyDescription": "Try clearing the search or status filter.",
+    "confirmTitle": "Terminate session?",
+    "confirmDescription": "This will destroy the <strong>{workspace}</strong> container for <strong>{user}</strong>. Unsaved work in the session will be lost.",
+    "confirmDescriptionFallback": "This will destroy the session container."
+  },
+  "detail": {
+    "notFoundTitle": "Session not found",
+    "notFoundDescription": "It may have been terminated.",
+    "backToSessions": "Back to sessions",
+    "breadcrumb": "Sessions",
+    "openViewer": "Open viewer",
+    "pause": "Pause",
+    "toastPauseRequested": "Pause requested",
+    "toastTerminated": "Session terminated",
+    "livePreview": "Live preview · streaming over {connection}",
+    "resources": "Resources",
+    "memory": "Memory",
+    "placement": "Placement",
+    "user": "User",
+    "zone": "Zone",
+    "agent": "Agent",
+    "connection": "Connection",
+    "uptime": "Uptime",
+    "recording": "Recording"
+  },
+  "history": {
+    "title": "Session History",
+    "description": "Completed and terminated sessions across all zones and users.",
+    "recordCount": "{count, plural, one {# record} other {# records}}",
+    "stats": {
+      "totalSessions": "Total sessions",
+      "uniqueUsers": "Unique users",
+      "avgDuration": "Avg duration (min)"
+    },
+    "searchPlaceholder": "Search by user, workspace or zone…",
+    "columns": {
+      "workspace": "Workspace",
+      "user": "User",
+      "zone": "Zone",
+      "started": "Started",
+      "ended": "Ended",
+      "duration": "Duration",
+      "endReason": "End reason"
+    },
+    "endReason": {
+      "USER": "User ended",
+      "TIMEOUT": "Timed out",
+      "ADMIN": "Admin",
+      "ERROR": "Error"
+    },
+    "emptyTitle": "No session history",
+    "emptyDescriptionSearch": "Try a different search term.",
+    "emptyDescriptionDefault": "Completed sessions will appear here."
+  },
+  "recordings": {
+    "title": "Session Recordings",
+    "description": "Record, store and replay session streams. Recordings are saved to S3-compatible object storage and can be downloaded or reviewed in-browser.",
+    "stats": {
+      "recordings": "Recordings",
+      "totalStored": "Total stored (GB)",
+      "avgDuration": "Avg duration (min)"
+    },
+    "columns": {
+      "workspace": "Workspace",
+      "user": "User",
+      "protocol": "Protocol",
+      "duration": "Duration",
+      "size": "Size"
+    },
+    "status": {
+      "AVAILABLE": "Available",
+      "RECORDING": "Recording",
+      "FINALIZING": "Finalizing",
+      "FAILED": "Failed"
+    },
+    "emptyTitle": "No recordings yet",
+    "emptyDescription": "Once recording is enabled for a workspace, session streams are captured and uploaded to your configured S3 bucket. Recordings appear here as soon as a session ends.",
+    "features": {
+      "s3Storage": "S3-compatible storage",
+      "playback": "In-browser playback",
+      "optIn": "Per-workspace opt-in",
+      "retention": "Retention policy"
+    }
+  },
+  "staging": {
+    "title": "Staging",
+    "description": "Pre-warm sessions so users connect instantly. The platform keeps the desired number of ready sessions per workspace and zone.",
+    "liveOnly": "Staging is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "pools": "Staging pools",
+      "preWarmed": "Pre-warmed"
+    },
+    "poolsTitle": "Pools",
+    "empty": "No staging pools configured yet.",
+    "paused": "Paused",
+    "pause": "Pause",
+    "resume": "Resume",
+    "addTitle": "Add staging pool",
+    "workspace": "Workspace",
+    "zone": "Zone",
+    "desiredSessions": "Desired ready sessions",
+    "noWorkspaces": "No workspaces",
+    "noZones": "No zones",
+    "addPool": "Add pool",
+    "toastLoadFailed": "Failed to load staging pools",
+    "toastCreated": "Staging pool created",
+    "toastCreateFailed": "Could not create staging pool",
+    "toastAdjustFailed": "Could not adjust pool",
+    "toastUpdateFailed": "Could not update pool",
+    "toastRemoved": "Staging pool removed",
+    "toastRemoveFailed": "Could not remove pool"
+  },
+  "casting": {
+    "title": "Casting",
+    "description": "Publish shareable links that launch a workspace on demand — optionally anonymous — for kiosks, demos, and embedded access.",
+    "liveOnly": "Casting is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "castLinks": "Cast links",
+      "anonymous": "Anonymous"
+    },
+    "linksTitle": "Cast links",
+    "empty": "No cast links configured yet.",
+    "anonymous": "Anonymous",
+    "authRequired": "Auth required",
+    "maxBadge": "max {count}",
+    "live": "Live",
+    "copyLink": "Copy link",
+    "createTitle": "Create cast link",
+    "workspace": "Workspace",
+    "maxConcurrent": "Max concurrent (optional)",
+    "unlimitedPlaceholder": "unlimited",
+    "allowAnonymous": "Allow anonymous access",
+    "noWorkspaces": "No workspaces",
+    "createButton": "Create cast link",
+    "toastLoadFailed": "Failed to load casting configs",
+    "toastCreated": "Cast link created",
+    "toastCreateFailed": "Could not create cast link",
+    "toastUpdateFailed": "Could not update cast link",
+    "toastRemoved": "Cast link removed",
+    "toastRemoveFailed": "Could not remove cast link",
+    "toastLinkCopied": "Link copied"
+  },
+  "sharing": {
+    "title": "Session Sharing",
+    "description": "Live, time-limited shares opened from inside running sessions. Guests join the same container in view-only or interactive mode. Revoke a share at any time to disconnect every guest.",
+    "stats": {
+      "activeShares": "Active shares",
+      "connectedGuests": "Connected guests",
+      "interactive": "Interactive"
+    },
+    "liveNotice": "Shares are created from inside a running session. An org-wide live listing endpoint is not exposed yet, so this admin view is empty in live mode — manage a share from its session detail page.",
+    "activeSharesTitle": "Active shares",
+    "emptyTitle": "No active session shares",
+    "emptyDescription": "Shared sessions will appear here with their expiry and access links.",
+    "unknownOwner": "unknown owner",
+    "badges": {
+      "control": "control",
+      "viewOnly": "view-only",
+      "chat": "chat",
+      "av": "A/V",
+      "auth": "auth"
+    },
+    "expiry": {
+      "noExpiry": "No expiry",
+      "expired": "Expired",
+      "minutesLeft": "{count}m left",
+      "hoursLeft": "{count}h left"
+    },
+    "revoke": "Revoke",
+    "toastRevoked": "Share revoked",
+    "toastRevokedDescription": "Guests of {name} disconnected.",
+    "toastRevokeFailed": "Could not revoke share"
+  }
+}

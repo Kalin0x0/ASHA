@@ -1,6 +1,7 @@
 'use client';
 
 import { Eye, Monitor, MoreHorizontal, Square, XCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -31,15 +32,11 @@ import { useSessions, useTerminateSession } from '@/lib/hooks';
 import type { SessionStatus } from '@/lib/types';
 import { formatDuration } from '@/lib/utils';
 
-const STATUS_FILTERS: Array<{ label: string; value: SessionStatus | 'ALL' }> = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Running', value: 'RUNNING' },
-  { label: 'Provisioning', value: 'PROVISIONING' },
-  { label: 'Paused', value: 'PAUSED' },
-  { label: 'Degraded', value: 'DEGRADED' },
-];
+const STATUS_FILTERS: Array<SessionStatus | 'ALL'> = ['ALL', 'RUNNING', 'PROVISIONING', 'PAUSED', 'DEGRADED'];
 
 export default function SessionsPage() {
+  const t = useTranslations('sessions');
+  const tc = useTranslations('common');
   const router = useRouter();
   const sessions = useSessions();
   const terminate = useTerminateSession();
@@ -66,25 +63,25 @@ export default function SessionsPage() {
   const onTerminate = () => {
     if (!confirmId) return;
     terminate(confirmId);
-    toast.success('Session terminated', { description: 'The container is being destroyed.' });
+    toast.success(t('list.toastTerminated'), { description: t('list.toastTerminatedDescription') });
     setConfirmId(null);
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Live Sessions"
-        description="Every running, provisioning, and paused workspace session across all zones."
+        title={t('list.title')}
+        description={t('list.description')}
         actions={
           <Badge variant="gold" className="tnum">
-            {filtered.length} sessions
+            {t('list.sessionCount', { count: filtered.length })}
           </Badge>
         }
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Input
-          placeholder="Search by user, workspace, zone or agent…"
+          placeholder={t('list.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="sm:max-w-sm"
@@ -92,15 +89,15 @@ export default function SessionsPage() {
         <div className="flex flex-wrap gap-1.5">
           {STATUS_FILTERS.map((f) => (
             <button
-              key={f.value}
-              onClick={() => setStatus(f.value)}
+              key={f}
+              onClick={() => setStatus(f)}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ring-gold-focus ${
-                status === f.value
+                status === f
                   ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
                   : 'border-border-subtle text-muted-foreground hover:text-foreground'
               }`}
             >
-              {f.label}
+              {f === 'ALL' ? tc('labels.all') : tc(`sessionStatus.${f}`)}
             </button>
           ))}
         </div>
@@ -111,13 +108,13 @@ export default function SessionsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-[color-mix(in_srgb,var(--surface-2)_45%,transparent)] text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                <th className="px-5 py-3 font-medium">Workspace</th>
-                <th className="px-5 py-3 font-medium">User</th>
-                <th className="px-5 py-3 font-medium">Zone / Agent</th>
-                <th className="px-5 py-3 font-medium">Status</th>
+                <th className="px-5 py-3 font-medium">{t('list.columns.workspace')}</th>
+                <th className="px-5 py-3 font-medium">{t('list.columns.user')}</th>
+                <th className="px-5 py-3 font-medium">{t('list.columns.zoneAgent')}</th>
+                <th className="px-5 py-3 font-medium">{tc('labels.status')}</th>
                 <th className="px-5 py-3 font-medium">CPU</th>
-                <th className="px-5 py-3 font-medium">Memory</th>
-                <th className="px-5 py-3 font-medium">Uptime</th>
+                <th className="px-5 py-3 font-medium">{t('list.columns.memory')}</th>
+                <th className="px-5 py-3 font-medium">{t('list.columns.uptime')}</th>
                 <th className="px-5 py-3" />
               </tr>
             </thead>
@@ -161,19 +158,19 @@ export default function SessionsPage() {
                   <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon-sm" aria-label="Actions">
+                        <Button variant="ghost" size="icon-sm" aria-label={tc('labels.actions')}>
                           <MoreHorizontal className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onSelect={() => router.push(`/sessions/${s.id}`)}>
-                          <Eye /> View details
+                          <Eye /> {t('list.viewDetails')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => toast('Pause requested')}>
-                          <Square /> Pause
+                        <DropdownMenuItem onSelect={() => toast(t('list.toastPauseRequested'))}>
+                          <Square /> {t('list.pause')}
                         </DropdownMenuItem>
                         <DropdownMenuItem destructive onSelect={() => setConfirmId(s.id)}>
-                          <XCircle /> Terminate
+                          <XCircle /> {tc('actions.terminate')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -186,8 +183,8 @@ export default function SessionsPage() {
           {filtered.length === 0 && (
             <EmptyState
               icon={Monitor}
-              title="No sessions match your filters"
-              description="Try clearing the search or status filter."
+              title={t('list.emptyTitle')}
+              description={t('list.emptyDescription')}
             />
           )}
         </div>
@@ -196,25 +193,23 @@ export default function SessionsPage() {
       <Dialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Terminate session?</DialogTitle>
+            <DialogTitle>{t('list.confirmTitle')}</DialogTitle>
             <DialogDescription>
-              {target ? (
-                <>
-                  This will destroy the <span className="text-foreground">{target.workspaceName}</span> container
-                  for <span className="text-foreground">{target.user.name}</span>. Unsaved work in the session
-                  will be lost.
-                </>
-              ) : (
-                'This will destroy the session container.'
-              )}
+              {target
+                ? t.rich('list.confirmDescription', {
+                    workspace: target.workspaceName,
+                    user: target.user.name,
+                    strong: (chunks) => <span className="text-foreground">{chunks}</span>,
+                  })
+                : t('list.confirmDescriptionFallback')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setConfirmId(null)}>
-              Cancel
+              {tc('actions.cancel')}
             </Button>
             <Button variant="destructive" onClick={onTerminate}>
-              <XCircle className="size-4" /> Terminate
+              <XCircle className="size-4" /> {tc('actions.terminate')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,1 +1,193 @@
-{}
+{
+  "list": {
+    "title": "Live-Sitzungen",
+    "description": "Alle laufenden, in Bereitstellung befindlichen und pausierten Workspace-Sitzungen über alle Zonen hinweg.",
+    "sessionCount": "{count, plural, one {# Sitzung} other {# Sitzungen}}",
+    "searchPlaceholder": "Nach Benutzer, Workspace, Zone oder Agent suchen…",
+    "columns": {
+      "workspace": "Workspace",
+      "user": "Benutzer",
+      "zoneAgent": "Zone / Agent",
+      "memory": "Arbeitsspeicher",
+      "uptime": "Laufzeit"
+    },
+    "viewDetails": "Details anzeigen",
+    "pause": "Pausieren",
+    "toastPauseRequested": "Pausierung angefordert",
+    "toastTerminated": "Sitzung beendet",
+    "toastTerminatedDescription": "Der Container wird entfernt.",
+    "emptyTitle": "Keine Sitzungen entsprechen Ihren Filtern",
+    "emptyDescription": "Versuchen Sie, die Suche oder den Statusfilter zurückzusetzen.",
+    "confirmTitle": "Sitzung beenden?",
+    "confirmDescription": "Dadurch wird der <strong>{workspace}</strong>-Container für <strong>{user}</strong> entfernt. Nicht gespeicherte Arbeit in der Sitzung geht verloren.",
+    "confirmDescriptionFallback": "Dadurch wird der Sitzungscontainer entfernt."
+  },
+  "detail": {
+    "notFoundTitle": "Sitzung nicht gefunden",
+    "notFoundDescription": "Sie wurde möglicherweise beendet.",
+    "backToSessions": "Zurück zu den Sitzungen",
+    "breadcrumb": "Sitzungen",
+    "openViewer": "Viewer öffnen",
+    "pause": "Pausieren",
+    "toastPauseRequested": "Pausierung angefordert",
+    "toastTerminated": "Sitzung beendet",
+    "livePreview": "Live-Vorschau · Streaming über {connection}",
+    "resources": "Ressourcen",
+    "memory": "Arbeitsspeicher",
+    "placement": "Platzierung",
+    "user": "Benutzer",
+    "zone": "Zone",
+    "agent": "Agent",
+    "connection": "Verbindung",
+    "uptime": "Laufzeit",
+    "recording": "Aufzeichnung"
+  },
+  "history": {
+    "title": "Sitzungsverlauf",
+    "description": "Abgeschlossene und beendete Sitzungen über alle Zonen und Benutzer hinweg.",
+    "recordCount": "{count, plural, one {# Eintrag} other {# Einträge}}",
+    "stats": {
+      "totalSessions": "Sitzungen gesamt",
+      "uniqueUsers": "Eindeutige Benutzer",
+      "avgDuration": "Ø Dauer (Min.)"
+    },
+    "searchPlaceholder": "Nach Benutzer, Workspace oder Zone suchen…",
+    "columns": {
+      "workspace": "Workspace",
+      "user": "Benutzer",
+      "zone": "Zone",
+      "started": "Gestartet",
+      "ended": "Beendet",
+      "duration": "Dauer",
+      "endReason": "Endgrund"
+    },
+    "endReason": {
+      "USER": "Benutzer",
+      "TIMEOUT": "Zeitüberschreitung",
+      "ADMIN": "Administrator",
+      "ERROR": "Fehler"
+    },
+    "emptyTitle": "Kein Sitzungsverlauf",
+    "emptyDescriptionSearch": "Versuchen Sie einen anderen Suchbegriff.",
+    "emptyDescriptionDefault": "Abgeschlossene Sitzungen erscheinen hier."
+  },
+  "recordings": {
+    "title": "Sitzungsaufzeichnungen",
+    "description": "Sitzungsstreams aufzeichnen, speichern und wiedergeben. Aufzeichnungen werden in S3-kompatiblem Objektspeicher abgelegt und können heruntergeladen oder im Browser angesehen werden.",
+    "stats": {
+      "recordings": "Aufzeichnungen",
+      "totalStored": "Gesamt gespeichert (GB)",
+      "avgDuration": "Ø Dauer (Min.)"
+    },
+    "columns": {
+      "workspace": "Workspace",
+      "user": "Benutzer",
+      "protocol": "Protokoll",
+      "duration": "Dauer",
+      "size": "Größe"
+    },
+    "status": {
+      "AVAILABLE": "Verfügbar",
+      "RECORDING": "Aufnahme",
+      "FINALIZING": "Finalisierung",
+      "FAILED": "Fehlgeschlagen"
+    },
+    "emptyTitle": "Noch keine Aufzeichnungen",
+    "emptyDescription": "Sobald die Aufzeichnung für einen Workspace aktiviert ist, werden Sitzungsstreams erfasst und in Ihren konfigurierten S3-Bucket hochgeladen. Aufzeichnungen erscheinen hier, sobald eine Sitzung endet.",
+    "features": {
+      "s3Storage": "S3-kompatibler Speicher",
+      "playback": "Wiedergabe im Browser",
+      "optIn": "Opt-in pro Workspace",
+      "retention": "Aufbewahrungsrichtlinie"
+    }
+  },
+  "staging": {
+    "title": "Staging",
+    "description": "Sitzungen vorwärmen, damit sich Benutzer sofort verbinden können. Die Plattform hält die gewünschte Anzahl bereiter Sitzungen pro Workspace und Zone vor.",
+    "liveOnly": "Staging ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "pools": "Staging-Pools",
+      "preWarmed": "Vorgewärmt"
+    },
+    "poolsTitle": "Pools",
+    "empty": "Noch keine Staging-Pools konfiguriert.",
+    "paused": "Pausiert",
+    "pause": "Pausieren",
+    "resume": "Fortsetzen",
+    "addTitle": "Staging-Pool hinzufügen",
+    "workspace": "Workspace",
+    "zone": "Zone",
+    "desiredSessions": "Gewünschte bereite Sitzungen",
+    "noWorkspaces": "Keine Workspaces",
+    "noZones": "Keine Zonen",
+    "addPool": "Pool hinzufügen",
+    "toastLoadFailed": "Staging-Pools konnten nicht geladen werden",
+    "toastCreated": "Staging-Pool erstellt",
+    "toastCreateFailed": "Staging-Pool konnte nicht erstellt werden",
+    "toastAdjustFailed": "Pool konnte nicht angepasst werden",
+    "toastUpdateFailed": "Pool konnte nicht aktualisiert werden",
+    "toastRemoved": "Staging-Pool entfernt",
+    "toastRemoveFailed": "Pool konnte nicht entfernt werden"
+  },
+  "casting": {
+    "title": "Casting",
+    "description": "Veröffentlichen Sie teilbare Links, die einen Workspace bei Bedarf starten — optional anonym — für Kioske, Demos und eingebetteten Zugriff.",
+    "liveOnly": "Casting ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "castLinks": "Cast-Links",
+      "anonymous": "Anonym"
+    },
+    "linksTitle": "Cast-Links",
+    "empty": "Noch keine Cast-Links konfiguriert.",
+    "anonymous": "Anonym",
+    "authRequired": "Anmeldung erforderlich",
+    "maxBadge": "max. {count}",
+    "live": "Live",
+    "copyLink": "Link kopieren",
+    "createTitle": "Cast-Link erstellen",
+    "workspace": "Workspace",
+    "maxConcurrent": "Max. gleichzeitig (optional)",
+    "unlimitedPlaceholder": "unbegrenzt",
+    "allowAnonymous": "Anonymen Zugriff erlauben",
+    "noWorkspaces": "Keine Workspaces",
+    "createButton": "Cast-Link erstellen",
+    "toastLoadFailed": "Casting-Konfigurationen konnten nicht geladen werden",
+    "toastCreated": "Cast-Link erstellt",
+    "toastCreateFailed": "Cast-Link konnte nicht erstellt werden",
+    "toastUpdateFailed": "Cast-Link konnte nicht aktualisiert werden",
+    "toastRemoved": "Cast-Link entfernt",
+    "toastRemoveFailed": "Cast-Link konnte nicht entfernt werden",
+    "toastLinkCopied": "Link kopiert"
+  },
+  "sharing": {
+    "title": "Sitzungsfreigabe",
+    "description": "Live- und zeitlich begrenzte Freigaben, die aus laufenden Sitzungen heraus geöffnet werden. Gäste treten demselben Container im Nur-Ansehen-Modus oder interaktiv bei. Widerrufen Sie eine Freigabe jederzeit, um alle Gäste zu trennen.",
+    "stats": {
+      "activeShares": "Aktive Freigaben",
+      "connectedGuests": "Verbundene Gäste",
+      "interactive": "Interaktiv"
+    },
+    "liveNotice": "Freigaben werden aus einer laufenden Sitzung heraus erstellt. Ein organisationsweiter Live-Listenendpunkt ist noch nicht verfügbar, daher ist diese Admin-Ansicht im Live-Modus leer — verwalten Sie eine Freigabe über ihre Sitzungsdetailseite.",
+    "activeSharesTitle": "Aktive Freigaben",
+    "emptyTitle": "Keine aktiven Sitzungsfreigaben",
+    "emptyDescription": "Freigegebene Sitzungen erscheinen hier mit Ablaufzeit und Zugriffslinks.",
+    "unknownOwner": "unbekannter Besitzer",
+    "badges": {
+      "control": "Steuerung",
+      "viewOnly": "nur ansehen",
+      "chat": "Chat",
+      "av": "A/V",
+      "auth": "Auth"
+    },
+    "expiry": {
+      "noExpiry": "Kein Ablauf",
+      "expired": "Abgelaufen",
+      "minutesLeft": "noch {count} Min.",
+      "hoursLeft": "noch {count} Std."
+    },
+    "revoke": "Widerrufen",
+    "toastRevoked": "Freigabe widerrufen",
+    "toastRevokedDescription": "Gäste von {name} wurden getrennt.",
+    "toastRevokeFailed": "Freigabe konnte nicht widerrufen werden"
+  }
+}
