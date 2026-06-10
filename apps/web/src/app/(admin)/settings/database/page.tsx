@@ -1,6 +1,7 @@
 'use client';
 
 import { Database, DatabaseBackup, HardDriveDownload, Loader2, Play } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -19,6 +20,8 @@ function formatBytes(n: number): string {
 }
 
 export default function DatabasePage() {
+  const t = useTranslations('settings');
+  const locale = useLocale();
   const [backups, setBackups] = useState<ApiBackup[]>([]);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
@@ -29,11 +32,11 @@ export default function DatabasePage() {
     try {
       setBackups(await getBackups());
     } catch {
-      toast.error('Failed to load backups');
+      toast.error(t('database.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -43,11 +46,11 @@ export default function DatabasePage() {
     setRunning(true);
     try {
       const res = await runBackup();
-      if (res.status === 'completed') toast.success('Backup completed');
-      else toast.error('Backup failed', { description: 'pg_dump did not complete — check server logs' });
+      if (res.status === 'completed') toast.success(t('database.toasts.completed'));
+      else toast.error(t('database.toasts.failed'), { description: t('database.toasts.failedDescription') });
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not run backup');
+      toast.error(e instanceof Error ? e.message : t('database.toasts.runFailed'));
     } finally {
       setRunning(false);
     }
@@ -58,47 +61,50 @@ export default function DatabasePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Database"
-        description="Automated pg_dump backups with retention. Trigger an on-demand backup or review the backup history."
+        title={t('database.title')}
+        description={t('database.description')}
         actions={
           <Button size="sm" onClick={() => void onRun()} disabled={!isLive || running}>
             {running ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
-            Run backup now
+            {t('database.runBackupNow')}
           </Button>
         }
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Database backups are live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('database.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Backups" value={backups.length} icon={DatabaseBackup} primary />
+        <StatCard label={t('database.stats.backups')} value={backups.length} icon={DatabaseBackup} primary />
         <StatCard
-          label="Latest size"
+          label={t('database.stats.latestSize')}
           value={lastOk?.bytes ?? 0}
           icon={Database}
           format={(v) => formatBytes(v)}
         />
         <StatCard
-          label="Last backup"
+          label={t('database.stats.lastBackup')}
           value={0}
           icon={HardDriveDownload}
-          format={() => (lastOk ? new Date(lastOk.createdAt).toLocaleDateString() : '—')}
+          format={() => (lastOk ? new Date(lastOk.createdAt).toLocaleDateString(locale) : '—')}
         />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Backup history</h2>
+          <h2 className="font-display text-lg font-medium">{t('database.history')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {backups.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">No backups recorded yet.</p>
+            <p className="p-5 text-sm text-muted-foreground">{t('database.empty')}</p>
           ) : (
             backups.map((b) => (
               <div key={b.id} className="flex items-center gap-3 px-5 py-3 text-sm">
@@ -108,10 +114,10 @@ export default function DatabasePage() {
                 </div>
                 <span className="text-xs text-muted-foreground tnum">{formatBytes(b.bytes)}</span>
                 <Badge variant={b.status === 'completed' ? 'success' : b.status === 'failed' ? 'outline' : 'info'}>
-                  {b.status}
+                  {t.has(`database.status.${b.status}`) ? t(`database.status.${b.status}`) : b.status}
                 </Badge>
                 <span className="shrink-0 text-xs text-muted-foreground tnum">
-                  {new Date(b.createdAt).toLocaleString()}
+                  {new Date(b.createdAt).toLocaleString(locale)}
                 </span>
               </div>
             ))

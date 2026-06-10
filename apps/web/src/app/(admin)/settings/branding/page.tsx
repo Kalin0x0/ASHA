@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2, Palette, Save } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -11,6 +12,8 @@ import { type ApiBranding, getBranding, upsertBranding } from '@/lib/api/endpoin
 import { isLive } from '@/lib/api/mode';
 
 export default function BrandingPage() {
+  const t = useTranslations('settings');
+  const tCommon = useTranslations('common');
   const [branding, setBranding] = useState<ApiBranding | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -21,11 +24,11 @@ export default function BrandingPage() {
     try {
       setBranding(await getBranding());
     } catch {
-      toast.error('Failed to load branding');
+      toast.error(t('branding.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -56,9 +59,9 @@ export default function BrandingPage() {
         customCss: b.customCss ?? '',
       });
       setBranding(saved);
-      toast.success('Branding saved');
+      toast.success(t('branding.toasts.saved'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not save branding');
+      toast.error(e instanceof Error ? e.message : t('branding.toasts.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -67,20 +70,23 @@ export default function BrandingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Branding"
-        description="White-label the portal and login screen with your product name, logo, colors, and custom CSS."
+        title={t('branding.title')}
+        description={t('branding.description')}
         actions={
           <Button size="sm" onClick={() => void onSave()} disabled={!isLive || saving}>
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-            Save
+            {tCommon('actions.save')}
           </Button>
         }
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Branding is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('branding.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
@@ -88,37 +94,37 @@ export default function BrandingPage() {
         <Card elevation={1} className="space-y-4 p-5 lg:col-span-2">
           <div className="flex items-center gap-2">
             <Palette className="size-5 text-gold-300" />
-            <h2 className="font-display text-lg font-medium">Identity</h2>
+            <h2 className="font-display text-lg font-medium">{t('branding.identity')}</h2>
             {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
           </div>
           <div>
-            <Label>Product name</Label>
+            <Label>{t('branding.fields.productName')}</Label>
             <Input value={b.productName} onChange={(e) => set({ productName: e.target.value })} />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <Label>Logo URL</Label>
+              <Label>{t('branding.fields.logoUrl')}</Label>
               <Input placeholder="https://…/logo.svg" value={b.logoUrl ?? ''} onChange={(e) => set({ logoUrl: e.target.value })} />
             </div>
             <div>
-              <Label>Favicon URL</Label>
+              <Label>{t('branding.fields.faviconUrl')}</Label>
               <Input placeholder="https://…/favicon.ico" value={b.faviconUrl ?? ''} onChange={(e) => set({ faviconUrl: e.target.value })} />
             </div>
             <div className="sm:col-span-2">
-              <Label>Login background URL</Label>
+              <Label>{t('branding.fields.loginBackgroundUrl')}</Label>
               <Input placeholder="https://…/bg.jpg" value={b.loginBackgroundUrl ?? ''} onChange={(e) => set({ loginBackgroundUrl: e.target.value })} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Primary color</Label>
+              <Label>{t('branding.fields.primaryColor')}</Label>
               <div className="flex items-center gap-2">
                 <input type="color" value={b.primaryColor} onChange={(e) => set({ primaryColor: e.target.value })} className="h-9 w-12 rounded border border-border-subtle bg-transparent" />
                 <Input value={b.primaryColor} onChange={(e) => set({ primaryColor: e.target.value })} />
               </div>
             </div>
             <div>
-              <Label>Accent color</Label>
+              <Label>{t('branding.fields.accentColor')}</Label>
               <div className="flex items-center gap-2">
                 <input type="color" value={b.accentColor} onChange={(e) => set({ accentColor: e.target.value })} className="h-9 w-12 rounded border border-border-subtle bg-transparent" />
                 <Input value={b.accentColor} onChange={(e) => set({ accentColor: e.target.value })} />
@@ -126,7 +132,7 @@ export default function BrandingPage() {
             </div>
           </div>
           <div>
-            <Label>Custom CSS</Label>
+            <Label>{t('branding.fields.customCss')}</Label>
             <textarea
               value={b.customCss ?? ''}
               onChange={(e) => set({ customCss: e.target.value })}
@@ -138,12 +144,12 @@ export default function BrandingPage() {
         </Card>
 
         <Card elevation={1} className="space-y-4 p-5">
-          <h2 className="font-display text-lg font-medium">Preview</h2>
+          <h2 className="font-display text-lg font-medium">{t('branding.preview')}</h2>
           <div className="overflow-hidden rounded-lg border border-border-subtle">
             <div className="flex items-center gap-2 p-4" style={{ background: b.primaryColor }}>
               {b.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={b.logoUrl} alt="logo" className="h-6" />
+                <img src={b.logoUrl} alt={t('branding.logoAlt')} className="h-6" />
               ) : (
                 <span className="font-display text-lg font-medium text-white">{b.productName}</span>
               )}
@@ -152,7 +158,7 @@ export default function BrandingPage() {
               <div className="h-2 w-3/4 rounded-full bg-anthracite-700" />
               <div className="h-2 w-1/2 rounded-full bg-anthracite-700" />
               <button className="mt-2 rounded-md px-3 py-1.5 text-sm font-medium text-anthracite-950" style={{ background: b.accentColor }}>
-                Sign in
+                {t('branding.signIn')}
               </button>
             </div>
           </div>

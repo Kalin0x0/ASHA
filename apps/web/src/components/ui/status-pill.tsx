@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import type { AgentStatus, SessionStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -53,15 +54,17 @@ export function StatusPill({
   return (
     <span className={cn('inline-flex items-center gap-2 text-xs font-medium', t.text, className)}>
       <StatusDot tone={tone} />
-      <span className="capitalize">{label.toLowerCase()}</span>
+      <span>{label}</span>
     </span>
   );
 }
 
 export function SessionStatusPill({ status }: { status: SessionStatus }) {
-  return <StatusPill label={status} tone={SESSION_TONE[status]} />;
+  const t = useTranslations('common');
+  return <StatusPill label={t(`sessionStatus.${status}`)} tone={SESSION_TONE[status]} />;
 }
 
 export function AgentStatusPill({ status }: { status: AgentStatus }) {
-  return <StatusPill label={status} tone={AGENT_TONE[status]} />;
+  const t = useTranslations('common');
+  return <StatusPill label={t(`agentStatus.${status}`)} tone={AGENT_TONE[status]} />;
 }

@@ -1,1 +1,194 @@
-{}
+{
+  "general": {
+    "title": "Allgemein",
+    "description": "Organisationsweite Schlüssel/Wert-Einstellungen — Sitzungsstandards, Sicherheitsoptionen und weitere Parameter, die plattformweit verwendet werden.",
+    "liveOnly": "Allgemeine Einstellungen sind nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "sectionTitle": "Einstellungen",
+    "fields": {
+      "key": "Schlüssel",
+      "value": "Wert"
+    },
+    "placeholders": {
+      "key": "namespace.key",
+      "value": "Wert"
+    },
+    "addSetting": "Einstellung hinzufügen",
+    "toasts": {
+      "loadFailed": "Einstellungen konnten nicht geladen werden",
+      "saved": "Einstellungen gespeichert",
+      "saveFailed": "Einstellungen konnten nicht gespeichert werden"
+    }
+  },
+  "security": {
+    "title": "Sicherheit",
+    "description": "Verwalten Sie Passkeys (WebAuthn) für die passwortlose, Phishing-resistente Anmeldung an Ihrem Konto.",
+    "liveOnly": "Die Passkey-Verwaltung ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "passkeys": "Passkeys",
+      "method": "Methode"
+    },
+    "yourPasskeys": "Ihre Passkeys",
+    "empty": "Noch keine Passkeys registriert.",
+    "added": "Hinzugefügt am {date}",
+    "addPasskey": "Passkey hinzufügen",
+    "addPasskeyHint": "Registrieren Sie den Authenticator dieses Geräts (Touch ID, Windows Hello, einen Sicherheitsschlüssel oder Ihr Telefon).",
+    "fields": {
+      "deviceName": "Gerätename (optional)"
+    },
+    "placeholders": {
+      "deviceName": "MacBook Touch ID"
+    },
+    "registerPasskey": "Passkey registrieren",
+    "toasts": {
+      "loadFailed": "Passkeys konnten nicht geladen werden",
+      "registered": "Passkey registriert",
+      "registrationFailed": "Passkey-Registrierung fehlgeschlagen",
+      "removed": "Passkey entfernt",
+      "removeFailed": "Passkey konnte nicht entfernt werden"
+    }
+  },
+  "branding": {
+    "title": "Branding",
+    "description": "Gestalten Sie Portal und Anmeldebildschirm im White-Label-Stil — mit Ihrem Produktnamen, Logo, Ihren Farben und eigenem CSS.",
+    "liveOnly": "Branding ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "identity": "Identität",
+    "fields": {
+      "productName": "Produktname",
+      "logoUrl": "Logo-URL",
+      "faviconUrl": "Favicon-URL",
+      "loginBackgroundUrl": "URL des Anmeldehintergrunds",
+      "primaryColor": "Primärfarbe",
+      "accentColor": "Akzentfarbe",
+      "customCss": "Eigenes CSS"
+    },
+    "preview": "Vorschau",
+    "logoAlt": "Logo",
+    "signIn": "Anmelden",
+    "toasts": {
+      "loadFailed": "Branding konnte nicht geladen werden",
+      "saved": "Branding gespeichert",
+      "saveFailed": "Branding konnte nicht gespeichert werden"
+    }
+  },
+  "banners": {
+    "title": "Banner",
+    "description": "Compliance-Banner und forensische Wasserzeichen, die über Sitzungen angezeigt werden — begrenzt auf einen Workspace, eine Gruppe oder einen Benutzer.",
+    "liveOnly": "Banner sind nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "configs": "Konfigurationen",
+      "withWatermark": "Mit Wasserzeichen"
+    },
+    "configured": "Konfiguriert",
+    "empty": "Noch keine Banner- oder Wasserzeichen-Konfigurationen.",
+    "emptyText": "(leer)",
+    "scopes": {
+      "WORKSPACE": "Workspace",
+      "GROUP": "Gruppe",
+      "USER": "Benutzer"
+    },
+    "badges": {
+      "banner": "Banner",
+      "watermark": "Wasserzeichen {percent} %"
+    },
+    "addTitle": "Banner / Wasserzeichen hinzufügen",
+    "fields": {
+      "scope": "Geltungsbereich",
+      "targetId": "Ziel-ID (optional — leer = alle im Geltungsbereich)",
+      "bannerText": "Bannertext",
+      "bannerColor": "Bannerfarbe",
+      "watermarkText": "Wasserzeichentext",
+      "watermarkOpacity": "Wasserzeichen-Deckkraft ({percent} %)"
+    },
+    "placeholders": {
+      "targetId": "Workspace-/Gruppen-/Benutzer-ID",
+      "bannerText": "NUR AUTORISIERTE NUTZUNG"
+    },
+    "toasts": {
+      "loadFailed": "Banner konnten nicht geladen werden",
+      "missingText": "Geben Sie einen Bannertext oder Wasserzeichentext an",
+      "saved": "Banner / Wasserzeichen gespeichert",
+      "saveFailed": "Speichern fehlgeschlagen",
+      "removed": "Entfernt",
+      "removeFailed": "Entfernen fehlgeschlagen"
+    }
+  },
+  "licensing": {
+    "title": "Lizenzierung",
+    "description": "Erzwingen Sie organisationsweite Limits für gleichzeitige Sitzungen oder benannte Benutzer. Die Durchsetzung erfolgt beim Sitzungsstart.",
+    "liveOnly": "Lizenzierung ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "license": "Lizenz",
+      "concurrentInUse": "Gleichzeitig in Nutzung",
+      "namedUsers": "Benannte Benutzer"
+    },
+    "licensed": "Lizenziert",
+    "community": "Community",
+    "types": {
+      "CONCURRENT": "Gleichzeitige Sitzungen",
+      "NAMED_USER": "Benannte Benutzer"
+    },
+    "utilization": "Auslastung",
+    "meters": {
+      "concurrent": "Gleichzeitige Sitzungen",
+      "seats": "Plätze für benannte Benutzer"
+    },
+    "licenseKey": "Lizenzschlüssel",
+    "fields": {
+      "mode": "Modus",
+      "concurrentLimit": "Limit für gleichzeitige Sitzungen",
+      "seats": "Plätze für benannte Benutzer"
+    },
+    "saveLicense": "Lizenz speichern",
+    "enforcedAtLaunch": "Beim Start durchgesetzt",
+    "toasts": {
+      "loadFailed": "Lizenz konnte nicht geladen werden",
+      "saved": "Lizenz gespeichert",
+      "saveFailed": "Lizenz konnte nicht gespeichert werden"
+    }
+  },
+  "database": {
+    "title": "Datenbank",
+    "description": "Automatisierte pg_dump-Backups mit Aufbewahrung. Stoßen Sie ein Backup bei Bedarf an oder prüfen Sie den Backup-Verlauf.",
+    "liveOnly": "Datenbank-Backups sind nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "runBackupNow": "Backup jetzt ausführen",
+    "stats": {
+      "backups": "Backups",
+      "latestSize": "Letzte Größe",
+      "lastBackup": "Letztes Backup"
+    },
+    "history": "Backup-Verlauf",
+    "empty": "Noch keine Backups vorhanden.",
+    "status": {
+      "completed": "abgeschlossen",
+      "failed": "fehlgeschlagen",
+      "running": "läuft"
+    },
+    "toasts": {
+      "loadFailed": "Backups konnten nicht geladen werden",
+      "completed": "Backup abgeschlossen",
+      "failed": "Backup fehlgeschlagen",
+      "failedDescription": "pg_dump wurde nicht abgeschlossen — prüfen Sie die Serverprotokolle",
+      "runFailed": "Backup konnte nicht ausgeführt werden"
+    }
+  },
+  "config": {
+    "title": "Konfig Import / Export",
+    "description": "Exportieren Sie portables Branding und Einstellungen als JSON und importieren Sie sie in eine andere Installation. Geheimnisse und Identitäten sind niemals enthalten.",
+    "liveOnly": "Konfig Import/Export ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "export": "Export",
+    "exportHint": "Laden Sie das aktuelle Branding und die allgemeinen Einstellungen der Organisation als JSON-Datei herunter.",
+    "exportConfig": "Konfig exportieren",
+    "import": "Import",
+    "importHint": "Fügen Sie ein Konfigurations-JSON ein oder laden Sie eine Datei hoch und übernehmen Sie sie anschließend.",
+    "importConfig": "Konfig importieren",
+    "payload": "Payload",
+    "toasts": {
+      "exported": "Konfig exportiert",
+      "exportFailed": "Export fehlgeschlagen",
+      "invalidJson": "Ungültiges JSON",
+      "imported": "Konfig importiert",
+      "importedDescription": "Branding und Einstellungen übernommen.",
+      "importFailed": "Import fehlgeschlagen"
+    }
+  }
+}

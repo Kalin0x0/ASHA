@@ -1,1 +1,194 @@
-{}
+{
+  "general": {
+    "title": "General",
+    "description": "Organization-wide key/value settings — session defaults, security toggles, and other tunables consumed across the platform.",
+    "liveOnly": "General settings are live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "sectionTitle": "Settings",
+    "fields": {
+      "key": "Key",
+      "value": "Value"
+    },
+    "placeholders": {
+      "key": "namespace.key",
+      "value": "value"
+    },
+    "addSetting": "Add setting",
+    "toasts": {
+      "loadFailed": "Failed to load settings",
+      "saved": "Settings saved",
+      "saveFailed": "Could not save settings"
+    }
+  },
+  "security": {
+    "title": "Security",
+    "description": "Manage passkeys (WebAuthn) for passwordless, phishing-resistant sign-in to your account.",
+    "liveOnly": "Passkey management is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "passkeys": "Passkeys",
+      "method": "Method"
+    },
+    "yourPasskeys": "Your passkeys",
+    "empty": "No passkeys registered yet.",
+    "added": "Added {date}",
+    "addPasskey": "Add a passkey",
+    "addPasskeyHint": "Register this device’s authenticator (Touch ID, Windows Hello, a security key, or your phone).",
+    "fields": {
+      "deviceName": "Device name (optional)"
+    },
+    "placeholders": {
+      "deviceName": "MacBook Touch ID"
+    },
+    "registerPasskey": "Register passkey",
+    "toasts": {
+      "loadFailed": "Failed to load passkeys",
+      "registered": "Passkey registered",
+      "registrationFailed": "Passkey registration failed",
+      "removed": "Passkey removed",
+      "removeFailed": "Could not remove passkey"
+    }
+  },
+  "branding": {
+    "title": "Branding",
+    "description": "White-label the portal and login screen with your product name, logo, colors, and custom CSS.",
+    "liveOnly": "Branding is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "identity": "Identity",
+    "fields": {
+      "productName": "Product name",
+      "logoUrl": "Logo URL",
+      "faviconUrl": "Favicon URL",
+      "loginBackgroundUrl": "Login background URL",
+      "primaryColor": "Primary color",
+      "accentColor": "Accent color",
+      "customCss": "Custom CSS"
+    },
+    "preview": "Preview",
+    "logoAlt": "logo",
+    "signIn": "Sign in",
+    "toasts": {
+      "loadFailed": "Failed to load branding",
+      "saved": "Branding saved",
+      "saveFailed": "Could not save branding"
+    }
+  },
+  "banners": {
+    "title": "Banners",
+    "description": "Compliance banners and forensic watermarks shown over sessions, scoped to a workspace, group, or user.",
+    "liveOnly": "Banners are live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "configs": "Configs",
+      "withWatermark": "With watermark"
+    },
+    "configured": "Configured",
+    "empty": "No banner or watermark configs yet.",
+    "emptyText": "(empty)",
+    "scopes": {
+      "WORKSPACE": "Workspace",
+      "GROUP": "Group",
+      "USER": "User"
+    },
+    "badges": {
+      "banner": "banner",
+      "watermark": "watermark {percent}%"
+    },
+    "addTitle": "Add banner / watermark",
+    "fields": {
+      "scope": "Scope",
+      "targetId": "Target ID (optional — blank = all in scope)",
+      "bannerText": "Banner text",
+      "bannerColor": "Banner color",
+      "watermarkText": "Watermark text",
+      "watermarkOpacity": "Watermark opacity ({percent}%)"
+    },
+    "placeholders": {
+      "targetId": "workspace/group/user id",
+      "bannerText": "AUTHORIZED USE ONLY"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load banners",
+      "missingText": "Provide a banner text or watermark text",
+      "saved": "Banner / watermark saved",
+      "saveFailed": "Could not save",
+      "removed": "Removed",
+      "removeFailed": "Could not remove"
+    }
+  },
+  "licensing": {
+    "title": "Licensing",
+    "description": "Enforce concurrent-session or named-user limits across the organization. Enforcement runs at session launch.",
+    "liveOnly": "Licensing is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "license": "License",
+      "concurrentInUse": "Concurrent in use",
+      "namedUsers": "Named users"
+    },
+    "licensed": "Licensed",
+    "community": "Community",
+    "types": {
+      "CONCURRENT": "Concurrent sessions",
+      "NAMED_USER": "Named users"
+    },
+    "utilization": "Utilization",
+    "meters": {
+      "concurrent": "Concurrent sessions",
+      "seats": "Named-user seats"
+    },
+    "licenseKey": "License key",
+    "fields": {
+      "mode": "Mode",
+      "concurrentLimit": "Concurrent session limit",
+      "seats": "Named-user seats"
+    },
+    "saveLicense": "Save license",
+    "enforcedAtLaunch": "Enforced at launch",
+    "toasts": {
+      "loadFailed": "Failed to load license",
+      "saved": "License saved",
+      "saveFailed": "Could not save license"
+    }
+  },
+  "database": {
+    "title": "Database",
+    "description": "Automated pg_dump backups with retention. Trigger an on-demand backup or review the backup history.",
+    "liveOnly": "Database backups are live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "runBackupNow": "Run backup now",
+    "stats": {
+      "backups": "Backups",
+      "latestSize": "Latest size",
+      "lastBackup": "Last backup"
+    },
+    "history": "Backup history",
+    "empty": "No backups recorded yet.",
+    "status": {
+      "completed": "completed",
+      "failed": "failed",
+      "running": "running"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load backups",
+      "completed": "Backup completed",
+      "failed": "Backup failed",
+      "failedDescription": "pg_dump did not complete — check server logs",
+      "runFailed": "Could not run backup"
+    }
+  },
+  "config": {
+    "title": "Config Import / Export",
+    "description": "Export portable branding and settings as JSON, and re-import them into another deployment. Secrets and identities are never included.",
+    "liveOnly": "Config import/export is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "export": "Export",
+    "exportHint": "Download the current org branding and general settings as a JSON file.",
+    "exportConfig": "Export config",
+    "import": "Import",
+    "importHint": "Paste a config JSON or upload a file, then apply.",
+    "importConfig": "Import config",
+    "payload": "Payload",
+    "toasts": {
+      "exported": "Config exported",
+      "exportFailed": "Export failed",
+      "invalidJson": "Invalid JSON",
+      "imported": "Config imported",
+      "importedDescription": "Branding and settings applied.",
+      "importFailed": "Import failed"
+    }
+  }
+}

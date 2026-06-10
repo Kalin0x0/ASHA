@@ -1,6 +1,7 @@
 'use client';
 
 import { Download, FileJson, Loader2, Upload } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -10,6 +11,7 @@ import { exportConfig, importConfig } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 
 export default function ConfigPage() {
+  const t = useTranslations('settings');
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [payload, setPayload] = useState('');
@@ -27,9 +29,9 @@ export default function ConfigPage() {
       a.click();
       URL.revokeObjectURL(url);
       setPayload(json);
-      toast.success('Config exported');
+      toast.success(t('config.toasts.exported'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Export failed');
+      toast.error(e instanceof Error ? e.message : t('config.toasts.exportFailed'));
     } finally {
       setExporting(false);
     }
@@ -40,7 +42,7 @@ export default function ConfigPage() {
     try {
       parsed = JSON.parse(payload);
     } catch {
-      toast.error('Invalid JSON');
+      toast.error(t('config.toasts.invalidJson'));
       return;
     }
     setImporting(true);
@@ -49,9 +51,9 @@ export default function ConfigPage() {
         branding: parsed.branding as Record<string, never> | undefined,
         settings: parsed.settings as { key: string; value: unknown }[] | undefined,
       });
-      toast.success('Config imported', { description: 'Branding and settings applied.' });
+      toast.success(t('config.toasts.imported'), { description: t('config.toasts.importedDescription') });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Import failed');
+      toast.error(e instanceof Error ? e.message : t('config.toasts.importFailed'));
     } finally {
       setImporting(false);
     }
@@ -66,14 +68,17 @@ export default function ConfigPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Config Import / Export"
-        description="Export portable branding and settings as JSON, and re-import them into another deployment. Secrets and identities are never included."
+        title={t('config.title')}
+        description={t('config.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Config import/export is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('config.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
@@ -81,23 +86,23 @@ export default function ConfigPage() {
         <Card elevation={1} className="space-y-3 p-5">
           <div className="flex items-center gap-2">
             <Download className="size-5 text-gold-300" />
-            <h2 className="font-display text-lg font-medium">Export</h2>
+            <h2 className="font-display text-lg font-medium">{t('config.export')}</h2>
           </div>
           <p className="text-sm text-muted-foreground">
-            Download the current org branding and general settings as a JSON file.
+            {t('config.exportHint')}
           </p>
           <Button size="sm" onClick={() => void onExport()} disabled={!isLive || exporting}>
             {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
-            Export config
+            {t('config.exportConfig')}
           </Button>
         </Card>
 
         <Card elevation={1} className="space-y-3 p-5">
           <div className="flex items-center gap-2">
             <Upload className="size-5 text-gold-300" />
-            <h2 className="font-display text-lg font-medium">Import</h2>
+            <h2 className="font-display text-lg font-medium">{t('config.import')}</h2>
           </div>
-          <p className="text-sm text-muted-foreground">Paste a config JSON or upload a file, then apply.</p>
+          <p className="text-sm text-muted-foreground">{t('config.importHint')}</p>
           <input
             type="file"
             accept="application/json"
@@ -109,7 +114,7 @@ export default function ConfigPage() {
           />
           <Button size="sm" onClick={() => void onImport()} disabled={!isLive || importing || !payload.trim()}>
             {importing ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-            Import config
+            {t('config.importConfig')}
           </Button>
         </Card>
       </div>
@@ -117,7 +122,7 @@ export default function ConfigPage() {
       <Card elevation={1} className="space-y-2 p-5">
         <div className="flex items-center gap-2">
           <FileJson className="size-5 text-gold-300" />
-          <h2 className="font-display text-lg font-medium">Payload</h2>
+          <h2 className="font-display text-lg font-medium">{t('config.payload')}</h2>
         </div>
         <textarea
           value={payload}

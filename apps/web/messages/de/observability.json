@@ -1,1 +1,63 @@
-{}
+{
+  "reporting": {
+    "title": "Berichte",
+    "description": "Plattformweite Nutzungsanalysen: Sitzungsvolumen im Zeitverlauf, Top-Workspaces und Kapazität.",
+    "loadError": "Berichtsdaten konnten nicht geladen werden",
+    "liveOnlyNotice": "Berichte sind nur mit Live-Backend verfügbar. Starten Sie mit",
+    "totalSessions": "Sitzungen gesamt",
+    "activeNow": "Jetzt aktiv",
+    "agentsOnline": "Agents online",
+    "recordings": "Aufzeichnungen",
+    "sessionsTrendTitle": "Sitzungen — letzte {days} Tage",
+    "noSessionData": "Keine Sitzungsdaten im Zeitraum.",
+    "topWorkspaces": "Top-Workspaces",
+    "noWorkspaceUsage": "Noch keine Workspace-Nutzung."
+  },
+  "auditLog": {
+    "title": "Audit-Log",
+    "description": "Unveränderliches Protokoll administrativer und sicherheitsrelevanter Aktionen in der gesamten Organisation.",
+    "loadError": "Audit-Log konnte nicht geladen werden",
+    "liveOnlyNotice": "Das Audit-Log ist nur mit Live-Backend verfügbar. Starten Sie mit",
+    "filterPlaceholder": "Nach Aktion filtern (z. B. session, apikey, vmprovider)…",
+    "noEntriesTitle": "Keine passenden Audit-Einträge",
+    "noEntriesDescription": "Versuchen Sie einen anderen Filterbegriff.",
+    "backendNotConnectedTitle": "Backend nicht verbunden",
+    "backendNotConnectedDescription": "Starten Sie mit NEXT_PUBLIC_API_MODE=live, um das Audit-Log anzuzeigen."
+  },
+  "metrics": {
+    "title": "Metriken",
+    "description": "Zeitreihen der Plattform-Metriken, erfasst von Agents und der Control Plane.",
+    "loadError": "Metrik konnte nicht geladen werden",
+    "liveOnlyNotice": "Metriken sind nur mit Live-Backend verfügbar. Starten Sie mit",
+    "metricLabels": {
+      "cpu": "CPU-Auslastung",
+      "memory": "Speicherauslastung",
+      "sessions": "Gleichzeitige Sitzungen",
+      "load": "Agent-Last"
+    },
+    "rangeLabels": {
+      "h6": "6h",
+      "h24": "24h",
+      "h72": "3T",
+      "h168": "7T"
+    },
+    "noSamples": "Keine Messwerte für diese Metrik im gewählten Zeitraum."
+  },
+  "logForwarding": {
+    "title": "Log-Weiterleitung",
+    "description": "Streamen Sie Sitzungs- und Audit-Ereignisse über Fluent Bit an Ihr SIEM — Syslog, Splunk HEC, Elasticsearch, Loki oder generisches HTTP.",
+    "loadError": "Log-Weiterleitungen konnten nicht geladen werden",
+    "liveOnlyNotice": "Die Log-Weiterleitung ist nur mit Live-Backend verfügbar. Starten Sie mit",
+    "forwarders": "Weiterleitungen",
+    "configuredForwarders": "Konfigurierte Weiterleitungen",
+    "emptyList": "Noch keine Log-Weiterleitungen konfiguriert.",
+    "addForwarder": "Weiterleitung hinzufügen",
+    "endpointUrl": "Endpoint-URL",
+    "createdToast": "Log-Weiterleitung hinzugefügt",
+    "createdToastDescription": "Standardmäßig deaktiviert — aktivieren Sie sie nach der Überprüfung.",
+    "createError": "Weiterleitung konnte nicht hinzugefügt werden",
+    "updateError": "Weiterleitung konnte nicht aktualisiert werden",
+    "deletedToast": "Weiterleitung entfernt",
+    "deleteError": "Weiterleitung konnte nicht entfernt werden"
+  }
+}
