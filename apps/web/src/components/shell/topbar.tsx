@@ -3,6 +3,8 @@
 import { AppWindow, Bell, ChevronRight, LogOut, Menu, Search, Settings, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { LanguageSwitcher } from '@/components/composite/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -22,6 +24,8 @@ export function Topbar() {
   const router = useRouter();
   const { setCommandOpen, setMobileOpen } = useUIStore();
   const match = findNavItem(pathname);
+  const t = useTranslations('shell.topbar');
+  const tNav = useTranslations('shell.nav');
 
   return (
     <header className="sticky top-0 z-30 flex h-[var(--spacing-topbar)] items-center gap-3 border-b border-border-subtle bg-[color-mix(in_srgb,var(--surface-1)_82%,transparent)] px-4 shadow-[0_1px_0_var(--highlight-top),0_10px_30px_-20px_rgba(0,0,0,0.6)] backdrop-blur-xl backdrop-saturate-150 lg:px-6">
@@ -29,18 +33,20 @@ export function Topbar() {
       <button
         onClick={() => setMobileOpen(true)}
         className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground lg:hidden ring-gold-focus transition-colors"
-        aria-label="Open menu"
+        aria-label={t('openMenu')}
       >
         <Menu className="size-5" />
       </button>
 
       {/* Breadcrumb */}
       <nav className="hidden items-center gap-1.5 text-[13px] sm:flex" aria-label="Breadcrumb">
-        <span className="text-muted-foreground/70 font-medium">{match?.group.label ?? 'Chista'}</span>
+        <span className="text-muted-foreground/70 font-medium">
+          {match ? tNav(`groups.${match.group.key}`) : 'Chista'}
+        </span>
         {match && (
           <>
             <ChevronRight className="size-3.5 text-muted-foreground/40" />
-            <span className="font-semibold text-foreground">{match.item.label}</span>
+            <span className="font-semibold text-foreground">{tNav(`items.${match.item.key}`)}</span>
           </>
         )}
       </nav>
@@ -51,7 +57,7 @@ export function Topbar() {
         className="group ml-auto flex h-9 items-center gap-2.5 rounded-lg border border-border-subtle bg-[var(--surface-2)]/60 px-3 text-[13px] text-muted-foreground transition-all duration-200 hover:border-[rgba(212,175,55,0.3)] hover:bg-[var(--surface-2)] hover:text-foreground hover:shadow-[0_0_0_1px_rgba(212,175,55,0.15)] sm:w-64 ring-gold-focus"
       >
         <Search className="size-3.5 shrink-0" />
-        <span className="hidden sm:inline">Search…</span>
+        <span className="hidden sm:inline">{t('search')}</span>
         <kbd className="ml-auto hidden rounded-md border border-border-subtle bg-secondary px-1.5 py-0.5 text-[10px] font-medium sm:inline-flex">
           ⌘K
         </kbd>
@@ -64,31 +70,34 @@ export function Topbar() {
         onClick={() => router.push('/')}
         className="hidden gap-1.5 sm:inline-flex"
       >
-        <AppWindow className="size-4" /> Workstation
+        <AppWindow className="size-4" /> {t('workstation')}
       </Button>
 
       {/* Notifications */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="Notifications" className="relative">
+          <Button variant="ghost" size="icon-sm" aria-label={t('notifications')} className="relative">
             <Bell className="size-4" />
             <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-gold-500 ring-1 ring-[var(--surface-1)]" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-80">
           <DropdownMenuLabel className="flex items-center justify-between">
-            <span>Notifications</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-gold-300">3 new</span>
+            <span>{t('notifications')}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-gold-300">
+              {t('notificationsNew', { count: 3 })}
+            </span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <div className="px-1.5 py-1">
-            <NotificationRow text="Agent us-east-agent-02 reported unhealthy" at="8m ago" tone="warn" />
-            <NotificationRow text="CPU on homelab-agent-01 exceeded 85%" at="22m ago" tone="warn" />
-            <NotificationRow text="License renewed — 25 concurrent seats" at="2h ago" tone="ok" />
+            <NotificationRow text={t('demoNotifications.agentUnhealthy')} at="8m" tone="warn" />
+            <NotificationRow text={t('demoNotifications.cpuHigh')} at="22m" tone="warn" />
+            <NotificationRow text={t('demoNotifications.licenseRenewed')} at="2h" tone="ok" />
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
 
+      <LanguageSwitcher />
       <ThemeToggle />
 
       {/* Account menu */}
@@ -96,7 +105,7 @@ export function Topbar() {
         <DropdownMenuTrigger asChild>
           <button
             className="flex items-center gap-2 rounded-full ring-gold-focus outline-none transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            aria-label="Account"
+            aria-label={t('account')}
           >
             <Avatar className="size-8 ring-2 ring-border-subtle transition-all hover:ring-gold-500/40">
               <AvatarFallback className="text-[11px] font-bold bg-gradient-to-br from-gold-700 to-gold-900 text-gold-200">
@@ -112,14 +121,14 @@ export function Topbar() {
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => router.push('/settings/general')}>
-            <Settings className="size-4" /> Settings
+            <Settings className="size-4" /> {t('settings')}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => router.push('/users')}>
-            <User className="size-4" /> Profile
+            <User className="size-4" /> {t('profile')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem destructive onSelect={() => router.push('/login')}>
-            <LogOut className="size-4" /> Sign out
+            <LogOut className="size-4" /> {t('signOut')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

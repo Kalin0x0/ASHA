@@ -1,0 +1,87 @@
+{
+  "actions": {
+    "add": "Add",
+    "back": "Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "copy": "Copy",
+    "copied": "Copied",
+    "create": "Create",
+    "delete": "Delete",
+    "disable": "Disable",
+    "download": "Download",
+    "edit": "Edit",
+    "enable": "Enable",
+    "launch": "Launch",
+    "open": "Open",
+    "refresh": "Refresh",
+    "remove": "Remove",
+    "retry": "Retry",
+    "save": "Save",
+    "search": "Search",
+    "terminate": "Terminate",
+    "upload": "Upload",
+    "view": "View"
+  },
+  "labels": {
+    "actions": "Actions",
+    "active": "Active",
+    "all": "All",
+    "description": "Description",
+    "disabled": "Disabled",
+    "enabled": "Enabled",
+    "loading": "Loading…",
+    "name": "Name",
+    "no": "No",
+    "none": "None",
+    "off": "Off",
+    "on": "On",
+    "status": "Status",
+    "total": "Total",
+    "type": "Type",
+    "unknown": "Unknown",
+    "yes": "Yes"
+  },
+  "sessionStatus": {
+    "REQUESTED": "Requested",
+    "SCHEDULED": "Scheduled",
+    "PROVISIONING": "Provisioning",
+    "RUNNING": "Running",
+    "DEGRADED": "Degraded",
+    "PAUSED": "Paused",
+    "TERMINATING": "Terminating",
+    "DESTROYED": "Destroyed",
+    "ERROR": "Error"
+  },
+  "agentStatus": {
+    "ONLINE": "Online",
+    "OFFLINE": "Offline",
+    "DRAINING": "Draining",
+    "UNHEALTHY": "Unhealthy"
+  },
+  "userStatus": {
+    "ACTIVE": "Active",
+    "DISABLED": "Disabled",
+    "INVITED": "Invited",
+    "LOCKED": "Locked"
+  },
+  "zoneStatus": {
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "offline": "Offline"
+  },
+  "time": {
+    "never": "Never",
+    "justNow": "Just now"
+  },
+  "units": {
+    "vcpu": "vCPU",
+    "gb": "GB",
+    "mb": "MB",
+    "sessions": "sessions"
+  },
+  "meta": {
+    "description": "Chista streams containerized desktops, browsers, and apps to any browser. Self-hosted, multi-tenant, enterprise-grade."
+  }
+}

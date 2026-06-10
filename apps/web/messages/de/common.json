@@ -1,0 +1,87 @@
+{
+  "actions": {
+    "add": "Hinzufügen",
+    "back": "Zurück",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "confirm": "Bestätigen",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "create": "Erstellen",
+    "delete": "Löschen",
+    "disable": "Deaktivieren",
+    "download": "Herunterladen",
+    "edit": "Bearbeiten",
+    "enable": "Aktivieren",
+    "launch": "Starten",
+    "open": "Öffnen",
+    "refresh": "Aktualisieren",
+    "remove": "Entfernen",
+    "retry": "Erneut versuchen",
+    "save": "Speichern",
+    "search": "Suchen",
+    "terminate": "Beenden",
+    "upload": "Hochladen",
+    "view": "Anzeigen"
+  },
+  "labels": {
+    "actions": "Aktionen",
+    "active": "Aktiv",
+    "all": "Alle",
+    "description": "Beschreibung",
+    "disabled": "Deaktiviert",
+    "enabled": "Aktiviert",
+    "loading": "Lädt…",
+    "name": "Name",
+    "no": "Nein",
+    "none": "Keine",
+    "off": "Aus",
+    "on": "An",
+    "status": "Status",
+    "total": "Gesamt",
+    "type": "Typ",
+    "unknown": "Unbekannt",
+    "yes": "Ja"
+  },
+  "sessionStatus": {
+    "REQUESTED": "Angefordert",
+    "SCHEDULED": "Geplant",
+    "PROVISIONING": "Wird bereitgestellt",
+    "RUNNING": "Läuft",
+    "DEGRADED": "Beeinträchtigt",
+    "PAUSED": "Pausiert",
+    "TERMINATING": "Wird beendet",
+    "DESTROYED": "Beendet",
+    "ERROR": "Fehler"
+  },
+  "agentStatus": {
+    "ONLINE": "Online",
+    "OFFLINE": "Offline",
+    "DRAINING": "Auslaufend",
+    "UNHEALTHY": "Fehlerhaft"
+  },
+  "userStatus": {
+    "ACTIVE": "Aktiv",
+    "DISABLED": "Deaktiviert",
+    "INVITED": "Eingeladen",
+    "LOCKED": "Gesperrt"
+  },
+  "zoneStatus": {
+    "healthy": "Betriebsbereit",
+    "degraded": "Beeinträchtigt",
+    "offline": "Offline"
+  },
+  "time": {
+    "never": "Nie",
+    "justNow": "Gerade eben"
+  },
+  "units": {
+    "vcpu": "vCPU",
+    "gb": "GB",
+    "mb": "MB",
+    "sessions": "Sitzungen"
+  },
+  "meta": {
+    "description": "Chista streamt containerisierte Desktops, Browser und Anwendungen in jeden Browser. Self-hosted, mandantenfähig, Enterprise-tauglich."
+  }
+}

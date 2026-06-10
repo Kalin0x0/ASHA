@@ -44,107 +44,112 @@ import {
   Webhook,
 } from 'lucide-react';
 
+/**
+ * Navigation is defined by stable translation keys, not display strings —
+ * labels live in `messages/<locale>/shell.json` under `nav.groups.*` /
+ * `nav.items.*` and are resolved at render time with `useTranslations`.
+ */
 export interface NavItem {
-  label: string;
+  key: string;
   href: string;
   icon: LucideIcon;
 }
 
 export interface NavGroup {
-  label: string;
+  key: string;
   items: NavItem[];
 }
 
 export const navGroups: NavGroup[] = [
   {
-    label: 'Overview',
-    items: [{ label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }],
+    key: 'overview',
+    items: [{ key: 'dashboard', href: '/dashboard', icon: LayoutDashboard }],
   },
   {
-    label: 'Workspaces',
+    key: 'workspaces',
     items: [
-      { label: 'Catalog', href: '/workspaces', icon: AppWindow },
-      { label: 'Images', href: '/workspaces/images', icon: Container },
-      { label: 'Registry', href: '/registry', icon: Boxes },
+      { key: 'catalog', href: '/workspaces', icon: AppWindow },
+      { key: 'images', href: '/workspaces/images', icon: Container },
+      { key: 'registry', href: '/registry', icon: Boxes },
     ],
   },
   {
-    label: 'Sessions',
+    key: 'sessions',
     items: [
-      { label: 'Live Sessions', href: '/sessions', icon: MonitorPlay },
-      { label: 'History', href: '/sessions/history', icon: History },
-      { label: 'Recordings', href: '/sessions/recordings', icon: Film },
-      { label: 'Staging', href: '/sessions/staging', icon: Layers },
-      { label: 'Casting', href: '/sessions/casting', icon: Cast },
-      { label: 'Sharing', href: '/sessions/sharing', icon: Share2 },
+      { key: 'liveSessions', href: '/sessions', icon: MonitorPlay },
+      { key: 'history', href: '/sessions/history', icon: History },
+      { key: 'recordings', href: '/sessions/recordings', icon: Film },
+      { key: 'staging', href: '/sessions/staging', icon: Layers },
+      { key: 'casting', href: '/sessions/casting', icon: Cast },
+      { key: 'sharing', href: '/sessions/sharing', icon: Share2 },
     ],
   },
   {
-    label: 'Access',
+    key: 'access',
     items: [
-      { label: 'Users', href: '/users', icon: Users },
-      { label: 'Groups', href: '/groups', icon: UsersRound },
-      { label: 'Roles', href: '/roles', icon: ShieldCheck },
-      { label: 'Authentication', href: '/authentication', icon: KeyRound },
+      { key: 'users', href: '/users', icon: Users },
+      { key: 'groups', href: '/groups', icon: UsersRound },
+      { key: 'roles', href: '/roles', icon: ShieldCheck },
+      { key: 'authentication', href: '/authentication', icon: KeyRound },
     ],
   },
   {
-    label: 'Infrastructure',
+    key: 'infrastructure',
     items: [
-      { label: 'Zones', href: '/infrastructure/zones', icon: Globe },
-      { label: 'Agents', href: '/infrastructure/agents', icon: Server },
-      { label: 'Servers', href: '/infrastructure/servers', icon: HardDrive },
-      { label: 'Server Pools', href: '/infrastructure/server-pools', icon: Network },
-      { label: 'AutoScale', href: '/infrastructure/autoscale', icon: Gauge },
-      { label: 'VM Providers', href: '/infrastructure/vm-providers', icon: Cloud },
-      { label: 'DNS Providers', href: '/infrastructure/dns-providers', icon: Route },
+      { key: 'zones', href: '/infrastructure/zones', icon: Globe },
+      { key: 'agents', href: '/infrastructure/agents', icon: Server },
+      { key: 'servers', href: '/infrastructure/servers', icon: HardDrive },
+      { key: 'serverPools', href: '/infrastructure/server-pools', icon: Network },
+      { key: 'autoscale', href: '/infrastructure/autoscale', icon: Gauge },
+      { key: 'vmProviders', href: '/infrastructure/vm-providers', icon: Cloud },
+      { key: 'dnsProviders', href: '/infrastructure/dns-providers', icon: Route },
     ],
   },
   {
-    label: 'Storage',
+    key: 'storage',
     items: [
-      { label: 'Storage Mappings', href: '/storage/mappings', icon: FolderTree },
-      { label: 'Persistent Profiles', href: '/storage/profiles', icon: FolderCog },
-      { label: 'Volume Mappings', href: '/storage/volumes', icon: Database },
-      { label: 'File Mappings', href: '/storage/file-mappings', icon: FileCog },
+      { key: 'storageMappings', href: '/storage/mappings', icon: FolderTree },
+      { key: 'persistentProfiles', href: '/storage/profiles', icon: FolderCog },
+      { key: 'volumeMappings', href: '/storage/volumes', icon: Database },
+      { key: 'fileMappings', href: '/storage/file-mappings', icon: FileCog },
     ],
   },
   {
-    label: 'Connectivity',
+    key: 'connectivity',
     items: [
-      { label: 'Connection Proxies', href: '/connectivity/proxies', icon: Cable },
-      { label: 'Web Filtering', href: '/connectivity/web-filtering', icon: Filter },
-      { label: 'Browser Isolation', href: '/connectivity/browser-isolation', icon: ShieldHalf },
-      { label: 'Egress', href: '/connectivity/egress', icon: DoorOpen },
+      { key: 'connectionProxies', href: '/connectivity/proxies', icon: Cable },
+      { key: 'webFiltering', href: '/connectivity/web-filtering', icon: Filter },
+      { key: 'browserIsolation', href: '/connectivity/browser-isolation', icon: ShieldHalf },
+      { key: 'egress', href: '/connectivity/egress', icon: DoorOpen },
     ],
   },
   {
-    label: 'Settings',
+    key: 'settings',
     items: [
-      { label: 'General', href: '/settings/general', icon: Settings2 },
-      { label: 'Security', href: '/settings/security', icon: Fingerprint },
-      { label: 'Branding', href: '/settings/branding', icon: Palette },
-      { label: 'Banners', href: '/settings/banners', icon: Flag },
-      { label: 'Licensing', href: '/settings/licensing', icon: BadgeCheck },
-      { label: 'Database', href: '/settings/database', icon: DatabaseBackup },
-      { label: 'Config Import/Export', href: '/settings/config', icon: FileJson },
+      { key: 'general', href: '/settings/general', icon: Settings2 },
+      { key: 'security', href: '/settings/security', icon: Fingerprint },
+      { key: 'branding', href: '/settings/branding', icon: Palette },
+      { key: 'banners', href: '/settings/banners', icon: Flag },
+      { key: 'licensing', href: '/settings/licensing', icon: BadgeCheck },
+      { key: 'database', href: '/settings/database', icon: DatabaseBackup },
+      { key: 'configImportExport', href: '/settings/config', icon: FileJson },
     ],
   },
   {
-    label: 'Observability',
+    key: 'observability',
     items: [
-      { label: 'Reporting', href: '/observability/reporting', icon: TrendingUp },
-      { label: 'Audit Log', href: '/observability/audit-log', icon: ScrollText },
-      { label: 'Metrics', href: '/observability/metrics', icon: Activity },
-      { label: 'Log Forwarding', href: '/observability/log-forwarding', icon: Send },
+      { key: 'reporting', href: '/observability/reporting', icon: TrendingUp },
+      { key: 'auditLog', href: '/observability/audit-log', icon: ScrollText },
+      { key: 'metrics', href: '/observability/metrics', icon: Activity },
+      { key: 'logForwarding', href: '/observability/log-forwarding', icon: Send },
     ],
   },
   {
-    label: 'Developer',
+    key: 'developer',
     items: [
-      { label: 'API Keys', href: '/developer/api-keys', icon: KeyRound },
-      { label: 'Webhooks', href: '/developer/webhooks', icon: Webhook },
-      { label: 'API Docs', href: '/developer/api-docs', icon: BookOpen },
+      { key: 'apiKeys', href: '/developer/api-keys', icon: KeyRound },
+      { key: 'webhooks', href: '/developer/webhooks', icon: Webhook },
+      { key: 'apiDocs', href: '/developer/api-docs', icon: BookOpen },
     ],
   },
 ];

@@ -3,6 +3,7 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Logo } from '@/components/brand/logo';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -14,6 +15,8 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
   const pathname = usePathname();
   const activeHref = findNavItem(pathname)?.item.href;
   const { toggleSidebar } = useUIStore();
+  const tNav = useTranslations('shell.nav');
+  const tSidebar = useTranslations('shell.sidebar');
 
   return (
     <div className="flex h-full flex-col glass-rail">
@@ -31,7 +34,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
           <button
             onClick={toggleSidebar}
             className="ml-auto hidden rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:block ring-gold-focus"
-            aria-label="Collapse sidebar"
+            aria-label={tSidebar('collapse')}
           >
             <PanelLeftClose className="size-4" />
           </button>
@@ -43,7 +46,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
         <button
           onClick={toggleSidebar}
           className="mx-auto mt-2 hidden rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:block ring-gold-focus"
-          aria-label="Expand sidebar"
+          aria-label={tSidebar('expand')}
         >
           <PanelLeftOpen className="size-4" />
         </button>
@@ -52,10 +55,10 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
       <ScrollArea className="flex-1 px-2.5 py-3">
         <nav className="flex flex-col gap-5">
           {navGroups.map((group) => (
-            <div key={group.label} className="flex flex-col gap-0.5">
+            <div key={group.key} className="flex flex-col gap-0.5">
               {!collapsed && (
                 <span className="px-2.5 pb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/50">
-                  {group.label}
+                  {tNav(`groups.${group.key}`)}
                 </span>
               )}
               {group.items.map((item) => {
@@ -85,7 +88,9 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
                       )}
                     />
                     {!collapsed && (
-                      <span className={cn('truncate text-[13px]', active && 'font-medium')}>{item.label}</span>
+                      <span className={cn('truncate text-[13px]', active && 'font-medium')}>
+                        {tNav(`items.${item.key}`)}
+                      </span>
                     )}
                   </Link>
                 );
@@ -93,7 +98,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
                 return collapsed ? (
                   <Tooltip key={item.href}>
                     <TooltipTrigger asChild>{link}</TooltipTrigger>
-                    <TooltipContent side="right">{item.label}</TooltipContent>
+                    <TooltipContent side="right">{tNav(`items.${item.key}`)}</TooltipContent>
                   </Tooltip>
                 ) : (
                   link
@@ -110,7 +115,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <span className="size-1.5 rounded-full bg-success animate-pulse-ring" />
-              All systems operational
+              {tSidebar('allSystemsOperational')}
             </span>
             <span className="text-muted-foreground/50 font-medium">Chista</span>
           </div>
