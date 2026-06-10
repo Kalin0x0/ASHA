@@ -1,6 +1,7 @@
 'use client';
 
 import { Filter, Loader2, Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -21,6 +22,8 @@ import { isLive } from '@/lib/api/mode';
 const CATEGORIES = ['ads', 'malware', 'adult', 'social', 'gambling', 'streaming', 'phishing'];
 
 export default function WebFilteringPage() {
+  const t = useTranslations('connectivity');
+  const tc = useTranslations('common');
   const [filters, setFilters] = useState<ApiWebFilter[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -34,11 +37,11 @@ export default function WebFilteringPage() {
     try {
       setFilters(await getWebFilters());
     } catch {
-      toast.error('Failed to load web filters');
+      toast.error(t('webFiltering.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -53,11 +56,11 @@ export default function WebFilteringPage() {
     try {
       const categories = Object.fromEntries(blocked.map((c) => [c, true]));
       await createWebFilter({ name, categories, enabled: false });
-      toast.success('Web filter created', { description: 'Disabled by default — enable after review.' });
+      toast.success(t('webFiltering.toasts.created'), { description: t('webFiltering.toasts.createdDescription') });
       setName('');
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not create filter');
+      toast.error(e instanceof Error ? e.message : t('webFiltering.toasts.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -69,7 +72,7 @@ export default function WebFilteringPage() {
       await updateWebFilter(f.id, { enabled: !f.enabled });
       await refresh();
     } catch {
-      toast.error('Could not update filter');
+      toast.error(t('webFiltering.toasts.updateFailed'));
     } finally {
       setBusyId(null);
     }
@@ -79,10 +82,10 @@ export default function WebFilteringPage() {
     setBusyId(id);
     try {
       await deleteWebFilter(id);
-      toast.success('Filter removed');
+      toast.success(t('webFiltering.toasts.removed'));
       await refresh();
     } catch {
-      toast.error('Could not remove filter');
+      toast.error(t('webFiltering.toasts.removeFailed'));
     } finally {
       setBusyId(null);
     }
@@ -94,41 +97,44 @@ export default function WebFilteringPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Web Filtering"
-        description="Squid-based content filtering for session egress. Block categories of sites; the policy is rendered to a Squid config and applied per session."
+        title={t('webFiltering.title')}
+        description={t('webFiltering.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Web filtering is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('webFiltering.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="Filter policies" value={filters.length} icon={Filter} primary />
-        <StatCard label="Enabled" value={filters.filter((f) => f.enabled).length} icon={Filter} />
+        <StatCard label={t('webFiltering.stats.policies')} value={filters.length} icon={Filter} primary />
+        <StatCard label={tc('labels.enabled')} value={filters.filter((f) => f.enabled).length} icon={Filter} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Policies</h2>
+          <h2 className="font-display text-lg font-medium">{t('webFiltering.policiesTitle')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {filters.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">No web filter policies configured yet.</p>
+            <p className="p-5 text-sm text-muted-foreground">{t('webFiltering.empty')}</p>
           ) : (
             filters.map((f) => (
               <div key={f.id} className="flex items-center gap-3 px-5 py-3 text-sm">
                 <Filter className="size-4 text-gold-300" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{f.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{blockedCount(f)} categories blocked · TTL {f.cacheTtl}s</p>
+                  <p className="truncate text-xs text-muted-foreground">{t('webFiltering.policyMeta', { count: blockedCount(f), ttl: f.cacheTtl })}</p>
                 </div>
-                <Badge variant={f.enabled ? 'success' : 'outline'}>{f.enabled ? 'Enabled' : 'Disabled'}</Badge>
+                <Badge variant={f.enabled ? 'success' : 'outline'}>{f.enabled ? tc('labels.enabled') : tc('labels.disabled')}</Badge>
                 <Button variant="secondary" size="sm" disabled={busyId === f.id} onClick={() => void onToggle(f)}>
-                  {f.enabled ? 'Disable' : 'Enable'}
+                  {f.enabled ? tc('actions.disable') : tc('actions.enable')}
                 </Button>
                 <Button variant="ghost" size="icon-sm" disabled={busyId === f.id} onClick={() => void onDelete(f.id)}>
                   <Trash2 className="size-4 text-destructive" />
@@ -140,13 +146,13 @@ export default function WebFilteringPage() {
       </Card>
 
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add policy</h2>
+        <h2 className="font-display text-lg font-medium">{t('webFiltering.addTitle')}</h2>
         <div>
-          <Label>Name</Label>
+          <Label>{tc('labels.name')}</Label>
           <Input placeholder="default-filter" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
-          <Label className="mb-1.5">Blocked categories</Label>
+          <Label className="mb-1.5">{t('webFiltering.form.blockedCategories')}</Label>
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((c) => (
               <button
@@ -158,14 +164,14 @@ export default function WebFilteringPage() {
                     : 'border-border-subtle text-muted-foreground hover:bg-secondary'
                 }`}
               >
-                {c}
+                {t(`webFiltering.categories.${c}`)}
               </button>
             ))}
           </div>
         </div>
         <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !name || creating}>
           {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-          Add policy
+          {t('webFiltering.addButton')}
         </Button>
       </Card>
     </div>

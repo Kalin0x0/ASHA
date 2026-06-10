@@ -1,6 +1,7 @@
 'use client';
 
 import { Database, HardDrive, Loader2, Lock, Package, Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/composite/empty-state';
@@ -17,6 +18,8 @@ import {
 } from '@/lib/hooks.storage';
 
 export default function VolumeMappingsPage() {
+  const t = useTranslations('storage');
+  const tc = useTranslations('common');
   const { data: volumes = [], isLoading } = useVolumeMappings();
   const create = useCreateVolumeMapping();
   const remove = useDeleteVolumeMapping();
@@ -31,13 +34,13 @@ export default function VolumeMappingsPage() {
     if (!name || !hostPath || !destPath) return;
     try {
       await create.mutateAsync({ name, hostPath, destPath, readOnly });
-      toast.success('Volume mapping created');
+      toast.success(t('volumes.toasts.created'));
       setName('');
       setHostPath('');
       setDestPath('/data');
       setReadOnly(true);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not create mapping');
+      toast.error(e instanceof Error ? e.message : t('volumes.toasts.createFailed'));
     }
   };
 
@@ -45,9 +48,9 @@ export default function VolumeMappingsPage() {
     setBusyId(id);
     try {
       await remove.mutateAsync(id);
-      toast.success('Mapping removed');
+      toast.success(t('volumes.toasts.removed'));
     } catch {
-      toast.error('Could not remove mapping');
+      toast.error(t('volumes.toasts.removeFailed'));
     } finally {
       setBusyId(null);
     }
@@ -56,24 +59,24 @@ export default function VolumeMappingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Volume Mappings"
-        description="Named Docker volumes or host-path mounts injected into workspace containers at launch. Use these to share datasets, code repositories, or shared assets across sessions."
+        title={t('volumes.title')}
+        description={t('volumes.description')}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Volume mappings" value={volumes.length} icon={Database} primary />
-        <StatCard label="Read-only" value={volumes.filter((v) => v.readOnly).length} icon={Lock} />
-        <StatCard label="Read-write" value={volumes.filter((v) => !v.readOnly).length} icon={HardDrive} />
+        <StatCard label={t('volumes.stats.volumeMappings')} value={volumes.length} icon={Database} primary />
+        <StatCard label={t('volumes.stats.readOnly')} value={volumes.filter((v) => v.readOnly).length} icon={Lock} />
+        <StatCard label={t('volumes.stats.readWrite')} value={volumes.filter((v) => !v.readOnly).length} icon={HardDrive} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Configured volumes</h2>
+          <h2 className="font-display text-lg font-medium">{t('volumes.configuredTitle')}</h2>
           {isLoading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {volumes.length === 0 ? (
-            <EmptyState icon={Database} title="No volumes configured" description="Add a volume mapping to persist data across sessions." />
+            <EmptyState icon={Database} title={t('volumes.empty.title')} description={t('volumes.empty.description')} />
           ) : (
             volumes.map((v) => (
               <div key={v.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
@@ -86,10 +89,10 @@ export default function VolumeMappingsPage() {
                 </div>
                 {v.readOnly ? (
                   <Badge variant="outline">
-                    <Lock className="size-3" /> read-only
+                    <Lock className="size-3" /> {t('volumes.badges.readOnly')}
                   </Badge>
                 ) : (
-                  <Badge variant="success">read-write</Badge>
+                  <Badge variant="success">{t('volumes.badges.readWrite')}</Badge>
                 )}
                 <Button
                   variant="ghost"
@@ -110,18 +113,18 @@ export default function VolumeMappingsPage() {
       </Card>
 
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add volume mapping</h2>
+        <h2 className="font-display text-lg font-medium">{t('volumes.addTitle')}</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <Label>Name</Label>
+            <Label>{tc('labels.name')}</Label>
             <Input placeholder="shared-datasets" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Host path or volume name</Label>
+            <Label>{t('volumes.form.hostPath')}</Label>
             <Input placeholder="/srv/chista/datasets" value={hostPath} onChange={(e) => setHostPath(e.target.value)} />
           </div>
           <div>
-            <Label>Destination path (in container)</Label>
+            <Label>{t('volumes.form.destPath')}</Label>
             <Input placeholder="/data/datasets" value={destPath} onChange={(e) => setDestPath(e.target.value)} />
           </div>
           <div className="flex items-end">
@@ -132,7 +135,7 @@ export default function VolumeMappingsPage() {
                 onChange={(e) => setReadOnly(e.target.checked)}
                 className="size-4 accent-gold-500"
               />
-              Read-only
+              {t('volumes.form.readOnly')}
             </label>
           </div>
         </div>
@@ -142,11 +145,10 @@ export default function VolumeMappingsPage() {
           disabled={!name || !hostPath || !destPath || create.isPending}
         >
           {create.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-          Add volume
+          {t('volumes.addButton')}
         </Button>
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Package className="size-3.5" /> Host paths and named Docker volumes are both supported. Read-only
-          mounts are recommended for shared datasets and model stores.
+          <Package className="size-3.5" /> {t('volumes.footnote')}
         </p>
       </Card>
     </div>

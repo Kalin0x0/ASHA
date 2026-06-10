@@ -1,1 +1,175 @@
-{}
+{
+  "mappings": {
+    "title": "Speicher-Mappings",
+    "description": "Binden Sie Netzwerk- und Cloud-Speicher (S3, NextCloud, Google Drive, OneDrive, Dropbox) in Sitzungen ein – mit Geltungsbereich Benutzer, Gruppe oder Workspace.",
+    "liveOnly": "Speicher-Mappings sind nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "mappings": "Mappings"
+    },
+    "configuredTitle": "Konfigurierte Mappings",
+    "empty": "Noch keine Speicher-Mappings konfiguriert.",
+    "kinds": {
+      "S3": "S3",
+      "NEXTCLOUD": "NextCloud",
+      "GDRIVE": "Google Drive",
+      "ONEDRIVE": "OneDrive",
+      "DROPBOX": "Dropbox",
+      "CUSTOM": "Benutzerdefiniert (rclone)"
+    },
+    "scopes": {
+      "USER": "Benutzer",
+      "GROUP": "Gruppe",
+      "WORKSPACE": "Workspace"
+    },
+    "fields": {
+      "bucket": "Bucket",
+      "region": "Region",
+      "accessKeyId": "Access Key ID",
+      "secretAccessKey": "Secret Access Key",
+      "endpoint": "Endpunkt (optional)",
+      "webdavUrl": "WebDAV-URL",
+      "username": "Benutzername",
+      "password": "Passwort",
+      "clientId": "Client-ID",
+      "clientSecret": "Client-Secret",
+      "refreshToken": "Refresh-Token",
+      "accessToken": "Access-Token",
+      "rcloneRemote": "rclone-Remote-Spezifikation"
+    },
+    "addTitle": "Mapping hinzufügen",
+    "addButton": "Mapping hinzufügen",
+    "form": {
+      "mountPath": "Mount-Pfad",
+      "scope": "Geltungsbereich",
+      "readOnly": "Schreibgeschützt"
+    },
+    "toasts": {
+      "loadFailed": "Speicher-Mappings konnten nicht geladen werden",
+      "created": "Speicher-Mapping erstellt",
+      "createFailed": "Mapping konnte nicht erstellt werden",
+      "updateFailed": "Mapping konnte nicht aktualisiert werden",
+      "removed": "Mapping entfernt",
+      "removeFailed": "Mapping konnte nicht entfernt werden"
+    }
+  },
+  "profiles": {
+    "title": "Persistente Profile",
+    "description": "Benutzer-Home-Verzeichnisse und Anwendungsdaten, die über Sitzungen hinweg erhalten bleiben. Jedes Profil wird durch ein Docker-Volume oder einen S3-kompatiblen Objektspeicher gesichert.",
+    "stats": {
+      "profiles": "Profile",
+      "withUser": "Mit zugewiesenem Benutzer",
+      "allocated": "Zugewiesen (GB)"
+    },
+    "configuredTitle": "Konfigurierte Profile",
+    "empty": {
+      "title": "Keine persistenten Profile",
+      "description": "Profile bewahren Benutzerdaten zwischen Sitzungen mithilfe von Docker-Volumes oder S3."
+    },
+    "unassigned": "nicht zugewiesen",
+    "lastUsed": "zuletzt verwendet: {time}",
+    "time": {
+      "never": "nie",
+      "justNow": "gerade eben",
+      "hoursAgo": "{hours, plural, one {vor # Stunde} other {vor # Stunden}}",
+      "daysAgo": "{days, plural, one {vor # Tag} other {vor # Tagen}}"
+    },
+    "sizeGb": "{size} GB",
+    "unlimited": "unbegrenzt",
+    "backends": {
+      "DOCKER_VOLUME": "Docker-Volume",
+      "S3": "S3"
+    },
+    "addTitle": "Persistentes Profil hinzufügen",
+    "addButton": "Profil hinzufügen",
+    "form": {
+      "volumeName": "Volume-Name",
+      "sizeLimit": "Größenlimit (MB, optional)",
+      "userId": "Benutzer-ID (optional)",
+      "workspaceId": "Workspace-ID (optional)"
+    },
+    "footnote": "Profile werden normalerweise automatisch bereitgestellt, wenn ein Benutzer zum ersten Mal einen Workspace mit aktivierter Persistenz startet. Erstellen Sie hier eines, um Speicher vorab zuzuweisen oder ein Backend festzulegen.",
+    "toasts": {
+      "created": "Persistentes Profil erstellt",
+      "createFailed": "Profil konnte nicht erstellt werden",
+      "removed": "Profil entfernt",
+      "removeFailed": "Profil konnte nicht entfernt werden"
+    }
+  },
+  "volumes": {
+    "title": "Volume-Mappings",
+    "description": "Benannte Docker-Volumes oder Host-Pfad-Mounts, die beim Start in Workspace-Container eingebunden werden. Nutzen Sie sie, um Datensätze, Code-Repositories oder gemeinsame Assets über Sitzungen hinweg zu teilen.",
+    "stats": {
+      "volumeMappings": "Volume-Mappings",
+      "readOnly": "Schreibgeschützt",
+      "readWrite": "Lese-/Schreibzugriff"
+    },
+    "configuredTitle": "Konfigurierte Volumes",
+    "empty": {
+      "title": "Keine Volumes konfiguriert",
+      "description": "Fügen Sie ein Volume-Mapping hinzu, um Daten über Sitzungen hinweg zu speichern."
+    },
+    "badges": {
+      "readOnly": "schreibgeschützt",
+      "readWrite": "beschreibbar"
+    },
+    "addTitle": "Volume-Mapping hinzufügen",
+    "addButton": "Volume hinzufügen",
+    "form": {
+      "hostPath": "Host-Pfad oder Volume-Name",
+      "destPath": "Zielpfad (im Container)",
+      "readOnly": "Schreibgeschützt"
+    },
+    "footnote": "Host-Pfade und benannte Docker-Volumes werden beide unterstützt. Schreibgeschützte Mounts werden für gemeinsame Datensätze und Modellspeicher empfohlen.",
+    "toasts": {
+      "created": "Volume-Mapping erstellt",
+      "createFailed": "Mapping konnte nicht erstellt werden",
+      "removed": "Mapping entfernt",
+      "removeFailed": "Mapping konnte nicht entfernt werden"
+    }
+  },
+  "fileMappings": {
+    "title": "Datei-Mappings",
+    "description": "Einzelne Dateien, die beim Start in Container-Sitzungen eingefügt werden – Konfigurationsdateien, SSH-Schlüssel, Zertifikate oder Unternehmens-Truststores. Unterstützt POSIX-Besitzrechte und Modus-Bits.",
+    "stats": {
+      "fileMappings": "Datei-Mappings",
+      "homeProfileFiles": "Home-Profil-Dateien",
+      "restricted": "Eingeschränkt (0600)"
+    },
+    "configuredTitle": "Konfigurierte Dateien",
+    "empty": {
+      "title": "Keine Datei-Mappings konfiguriert",
+      "description": "Binden Sie Host-Dateien für gemeinsame Konfiguration oder Secrets in Sitzungscontainer ein."
+    },
+    "badges": {
+      "home": "Home"
+    },
+    "targets": {
+      "CONTAINER": "Container",
+      "WINDOWS": "Windows"
+    },
+    "scopes": {
+      "USER": "Benutzer",
+      "GROUP": "Gruppe",
+      "WORKSPACE": "Workspace"
+    },
+    "addTitle": "Datei-Mapping hinzufügen",
+    "addButton": "Datei-Mapping hinzufügen",
+    "form": {
+      "scope": "Geltungsbereich",
+      "sourcePath": "Quellpfad",
+      "destPath": "Zielpfad (im Container)",
+      "owner": "Besitzer (optional)",
+      "group": "Gruppe (optional)",
+      "mode": "Modus (oktal)",
+      "homeProfile": "In das Home-Profil einfügen"
+    },
+    "footnote": "Dateien werden beim Containerstart mit dem konfigurierten Besitzer, der Gruppe und dem Modus geschrieben – ohne Secrets fest in das Image einzubauen.",
+    "toasts": {
+      "modeInvalid": "Der Modus muss oktal sein, z. B. 0644",
+      "created": "Datei-Mapping erstellt",
+      "createFailed": "Mapping konnte nicht erstellt werden",
+      "removed": "Mapping entfernt",
+      "removeFailed": "Mapping konnte nicht entfernt werden"
+    }
+  }
+}

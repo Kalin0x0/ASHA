@@ -1,1 +1,175 @@
-{}
+{
+  "mappings": {
+    "title": "Storage Mappings",
+    "description": "Mount network and cloud storage (S3, NextCloud, Google Drive, OneDrive, Dropbox) into sessions, scoped by user, group, or workspace.",
+    "liveOnly": "Storage mappings are live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "mappings": "Mappings"
+    },
+    "configuredTitle": "Configured mappings",
+    "empty": "No storage mappings configured yet.",
+    "kinds": {
+      "S3": "S3",
+      "NEXTCLOUD": "NextCloud",
+      "GDRIVE": "Google Drive",
+      "ONEDRIVE": "OneDrive",
+      "DROPBOX": "Dropbox",
+      "CUSTOM": "Custom (rclone)"
+    },
+    "scopes": {
+      "USER": "User",
+      "GROUP": "Group",
+      "WORKSPACE": "Workspace"
+    },
+    "fields": {
+      "bucket": "Bucket",
+      "region": "Region",
+      "accessKeyId": "Access Key ID",
+      "secretAccessKey": "Secret Access Key",
+      "endpoint": "Endpoint (optional)",
+      "webdavUrl": "WebDAV URL",
+      "username": "Username",
+      "password": "Password",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "refreshToken": "Refresh Token",
+      "accessToken": "Access Token",
+      "rcloneRemote": "rclone remote spec"
+    },
+    "addTitle": "Add mapping",
+    "addButton": "Add mapping",
+    "form": {
+      "mountPath": "Mount path",
+      "scope": "Scope",
+      "readOnly": "Read-only"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load storage mappings",
+      "created": "Storage mapping created",
+      "createFailed": "Could not create mapping",
+      "updateFailed": "Could not update mapping",
+      "removed": "Mapping removed",
+      "removeFailed": "Could not remove mapping"
+    }
+  },
+  "profiles": {
+    "title": "Persistent Profiles",
+    "description": "User home directories and application data that survive across sessions. Each profile is backed by a Docker volume or S3-compatible object store.",
+    "stats": {
+      "profiles": "Profiles",
+      "withUser": "With user assigned",
+      "allocated": "Allocated (GB)"
+    },
+    "configuredTitle": "Configured profiles",
+    "empty": {
+      "title": "No persistent profiles",
+      "description": "Profiles preserve user data between sessions using Docker volumes or S3."
+    },
+    "unassigned": "unassigned",
+    "lastUsed": "last used {time}",
+    "time": {
+      "never": "never",
+      "justNow": "just now",
+      "hoursAgo": "{hours}h ago",
+      "daysAgo": "{days}d ago"
+    },
+    "sizeGb": "{size} GB",
+    "unlimited": "unlimited",
+    "backends": {
+      "DOCKER_VOLUME": "Docker volume",
+      "S3": "S3"
+    },
+    "addTitle": "Add persistent profile",
+    "addButton": "Add profile",
+    "form": {
+      "volumeName": "Volume name",
+      "sizeLimit": "Size limit (MB, optional)",
+      "userId": "User ID (optional)",
+      "workspaceId": "Workspace ID (optional)"
+    },
+    "footnote": "Profiles are normally provisioned automatically the first time a user launches a workspace with persistence enabled. Create one here to pre-allocate or pin a backend.",
+    "toasts": {
+      "created": "Persistent profile created",
+      "createFailed": "Could not create profile",
+      "removed": "Profile removed",
+      "removeFailed": "Could not remove profile"
+    }
+  },
+  "volumes": {
+    "title": "Volume Mappings",
+    "description": "Named Docker volumes or host-path mounts injected into workspace containers at launch. Use these to share datasets, code repositories, or shared assets across sessions.",
+    "stats": {
+      "volumeMappings": "Volume mappings",
+      "readOnly": "Read-only",
+      "readWrite": "Read-write"
+    },
+    "configuredTitle": "Configured volumes",
+    "empty": {
+      "title": "No volumes configured",
+      "description": "Add a volume mapping to persist data across sessions."
+    },
+    "badges": {
+      "readOnly": "read-only",
+      "readWrite": "read-write"
+    },
+    "addTitle": "Add volume mapping",
+    "addButton": "Add volume",
+    "form": {
+      "hostPath": "Host path or volume name",
+      "destPath": "Destination path (in container)",
+      "readOnly": "Read-only"
+    },
+    "footnote": "Host paths and named Docker volumes are both supported. Read-only mounts are recommended for shared datasets and model stores.",
+    "toasts": {
+      "created": "Volume mapping created",
+      "createFailed": "Could not create mapping",
+      "removed": "Mapping removed",
+      "removeFailed": "Could not remove mapping"
+    }
+  },
+  "fileMappings": {
+    "title": "File Mappings",
+    "description": "Individual files injected into container sessions at launch — config files, SSH keys, certificates, or corporate trust stores. Supports POSIX ownership and mode bits.",
+    "stats": {
+      "fileMappings": "File mappings",
+      "homeProfileFiles": "Home-profile files",
+      "restricted": "Restricted (0600)"
+    },
+    "configuredTitle": "Configured files",
+    "empty": {
+      "title": "No file mappings configured",
+      "description": "Map host files into session containers for shared config or secrets."
+    },
+    "badges": {
+      "home": "home"
+    },
+    "targets": {
+      "CONTAINER": "Container",
+      "WINDOWS": "Windows"
+    },
+    "scopes": {
+      "USER": "User",
+      "GROUP": "Group",
+      "WORKSPACE": "Workspace"
+    },
+    "addTitle": "Add file mapping",
+    "addButton": "Add file mapping",
+    "form": {
+      "scope": "Scope",
+      "sourcePath": "Source path",
+      "destPath": "Destination path (in container)",
+      "owner": "Owner (optional)",
+      "group": "Group (optional)",
+      "mode": "Mode (octal)",
+      "homeProfile": "Inject into home profile"
+    },
+    "footnote": "Files are written at container start with the configured owner, group, and mode — without baking secrets into the image.",
+    "toasts": {
+      "modeInvalid": "Mode must be octal, e.g. 0644",
+      "created": "File mapping created",
+      "createFailed": "Could not create mapping",
+      "removed": "Mapping removed",
+      "removeFailed": "Could not remove mapping"
+    }
+  }
+}
