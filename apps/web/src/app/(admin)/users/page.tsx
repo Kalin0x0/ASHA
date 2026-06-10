@@ -1,6 +1,7 @@
 'use client';
 
 import { Search, Shield, UserCheck, Users as UsersIcon } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { EmptyState } from '@/components/composite/empty-state';
 import { Monogram } from '@/components/composite/monogram';
@@ -19,15 +20,18 @@ const STATUS_VARIANT: Record<UserRow['status'], 'success' | 'outline' | 'info' |
   LOCKED: 'destructive',
 };
 
-function formatDate(iso: string | null): string {
-  if (!iso) return 'Never';
+function formatDate(iso: string | null, locale: string, never: string): string {
+  if (!iso) return never;
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? '—'
-    : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    : d.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 export default function UsersPage() {
+  const t = useTranslations('access');
+  const tc = useTranslations('common');
+  const locale = useLocale();
   const users = useUsers();
   const [query, setQuery] = useState('');
 
@@ -47,18 +51,18 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Users" description="People with access to this Chista deployment." />
+      <PageHeader title={t('users.title')} description={t('users.description')} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Total Users" value={users.length} icon={UsersIcon} primary />
-        <StatCard label="Active" value={active} icon={UserCheck} />
-        <StatCard label="With 2FA" value={withMfa} icon={Shield} />
+        <StatCard label={t('users.stats.totalUsers')} value={users.length} icon={UsersIcon} primary />
+        <StatCard label={tc('labels.active')} value={active} icon={UserCheck} />
+        <StatCard label={t('users.stats.withTwoFactor')} value={withMfa} icon={Shield} />
       </div>
 
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search users…"
+          placeholder={t('users.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="h-10 pl-9"
@@ -70,11 +74,11 @@ export default function UsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-[color-mix(in_srgb,var(--surface-2)_45%,transparent)] text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                <th className="px-5 py-3 font-medium">User</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium">Groups</th>
-                <th className="px-5 py-3 font-medium">2FA</th>
-                <th className="px-5 py-3 font-medium">Last login</th>
+                <th className="px-5 py-3 font-medium">{t('users.table.user')}</th>
+                <th className="px-5 py-3 font-medium">{tc('labels.status')}</th>
+                <th className="px-5 py-3 font-medium">{t('users.table.groups')}</th>
+                <th className="px-5 py-3 font-medium">{t('users.table.twoFactor')}</th>
+                <th className="px-5 py-3 font-medium">{t('users.table.lastLogin')}</th>
               </tr>
             </thead>
             <tbody>
@@ -94,7 +98,7 @@ export default function UsersPage() {
                   </td>
                   <td className="px-5 py-3">
                     <Badge variant={STATUS_VARIANT[u.status]} className="capitalize">
-                      {u.status.toLowerCase()}
+                      {tc(`userStatus.${u.status}`)}
                     </Badge>
                   </td>
                   <td className="px-5 py-3">
@@ -112,12 +116,14 @@ export default function UsersPage() {
                   </td>
                   <td className="px-5 py-3">
                     {u.twoFactor ? (
-                      <Badge variant="success">On</Badge>
+                      <Badge variant="success">{tc('labels.on')}</Badge>
                     ) : (
-                      <span className="text-xs text-muted-foreground">Off</span>
+                      <span className="text-xs text-muted-foreground">{tc('labels.off')}</span>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">{formatDate(u.lastLoginAt)}</td>
+                  <td className="px-5 py-3 text-muted-foreground">
+                    {formatDate(u.lastLoginAt, locale, tc('time.never'))}
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
@@ -125,8 +131,8 @@ export default function UsersPage() {
                   <td colSpan={5}>
                     <EmptyState
                       icon={UsersIcon}
-                      title="No users found"
-                      description={query ? 'Try a different search term.' : 'No users have been added yet.'}
+                      title={t('users.empty.title')}
+                      description={query ? t('users.empty.searchDescription') : t('users.empty.noUsersDescription')}
                     />
                   </td>
                 </tr>

@@ -8,6 +8,7 @@ import {
   SYSTEM_ROLE_MATRIX,
 } from '@chista/rbac';
 import { Check, ShieldCheck } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Fragment } from 'react';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
@@ -22,18 +23,20 @@ const ROLES = Object.entries(SYSTEM_ROLE_MATRIX).map(([name, def]) => ({
 }));
 
 export default function RolesPage() {
+  const t = useTranslations('access');
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Roles & Permissions"
-        description="The built-in system roles and the permissions each grants. Custom roles arrive in a later phase."
+        title={t('roles.title')}
+        description={t('roles.description')}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {ROLES.map((r) => (
           <StatCard
             key={r.name}
-            label={r.name}
+            label={t(`roles.roleNames.${r.name}`)}
             value={r.keys.size}
             suffix={`/ ${PERMISSION_KEYS.length}`}
             icon={ShieldCheck}
@@ -47,10 +50,10 @@ export default function RolesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-[color-mix(in_srgb,var(--surface-2)_45%,transparent)] text-left text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                <th className="px-5 py-3 font-medium">Permission</th>
+                <th className="px-5 py-3 font-medium">{t('roles.table.permission')}</th>
                 {ROLES.map((r) => (
                   <th key={r.name} className="px-4 py-3 text-center font-medium">
-                    {r.name}
+                    {t(`roles.roleNames.${r.name}`)}
                   </th>
                 ))}
               </tr>
@@ -63,13 +66,13 @@ export default function RolesPage() {
                       colSpan={ROLES.length + 1}
                       className="px-5 py-2 text-xs font-semibold uppercase tracking-wider text-gold-300/80"
                     >
-                      {cat}
+                      {t(`roles.categories.${cat}`)}
                     </td>
                   </tr>
                   {PERMISSION_CATALOG.filter((p) => p.category === cat).map((p) => (
                     <tr key={p.key} className="border-b border-border-subtle/50 transition-all duration-150 last:border-0 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
                       <td className="px-5 py-2.5">
-                        <p className="font-medium">{p.description}</p>
+                        <p className="font-medium">{t(`roles.permissions.${p.key}`)}</p>
                         <p className="font-mono text-[11px] text-muted-foreground">{p.key}</p>
                       </td>
                       {ROLES.map((r) => (
