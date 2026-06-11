@@ -206,6 +206,97 @@ export interface HistoryRow {
   connectionType: string;
 }
 
+// ── Bug reporting + fix memory ────────────────────────────────────────────────
+
+export type BugSource = 'USER' | 'AUTOMATIC';
+export type BugSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type BugStatus =
+  | 'OPEN'
+  | 'TRIAGED'
+  | 'IN_PROGRESS'
+  | 'RESOLVED'
+  | 'CLOSED'
+  | 'WONT_FIX'
+  | 'DUPLICATE';
+
+export interface BugFixRow {
+  id: string;
+  title: string;
+  rootCause: string;
+  resolution: string;
+  prevention: string | null;
+  filesTouched: string[];
+  commitRef: string | null;
+  authoredBy: 'AI' | 'HUMAN';
+  authorName: string | null;
+  tags: string[];
+  reusedCount: number;
+  createdAt: string;
+  /** How many reports reference this fix (live API only). */
+  reportCount?: number;
+}
+
+export interface BugReportRow {
+  id: string;
+  source: BugSource;
+  status: BugStatus;
+  severity: BugSeverity;
+  title: string;
+  description: string;
+  errorCode: string | null;
+  errorName: string | null;
+  stackTrace: string | null;
+  component: string | null;
+  route: string | null;
+  httpStatus: number | null;
+  reporterEmail: string | null;
+  occurrences: number;
+  createdAt: string;
+  lastSeenAt: string;
+  resolvedAt: string | null;
+  fix: BugFixRow | null;
+  /** A prior fix matched by fingerprint — the "we've solved this before" signal. */
+  knownFix?: BugFixRow | null;
+}
+
+export interface BugStats {
+  open: number;
+  critical: number;
+  automatic: number;
+  resolved: number;
+  knowledgeEntries: number;
+}
+
+/** Payload a user submits from the report-a-bug dialog. */
+export interface BugReportInput {
+  title: string;
+  description: string;
+  severity: BugSeverity;
+  route?: string;
+}
+
+/** Payload an operator/AI submits when resolving a bug into the fix memory. */
+export interface BugResolveInput {
+  rootCause: string;
+  resolution: string;
+  prevention?: string;
+  filesTouched?: string[];
+  commitRef?: string;
+  authoredBy?: 'AI' | 'HUMAN';
+  authorName?: string;
+  tags?: string[];
+}
+
+/** Shape captured automatically by the web error boundary / window handlers. */
+export interface ClientErrorInput {
+  errorName?: string;
+  message: string;
+  stack?: string;
+  route?: string;
+  component?: string;
+  severity?: BugSeverity;
+}
+
 export interface KpiSeriesPoint {
   t: string;
   value: number;

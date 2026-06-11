@@ -8,6 +8,7 @@ import { useLocale } from 'next-intl';
 import { Toaster } from 'sonner';
 import { OfflineIndicator } from '@/components/composite/offline-indicator';
 import { ConfirmProvider } from '@/components/ui/confirm';
+import { ErrorReporter } from '@/components/composite/error-reporter';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { localeDir } from '@/i18n/locales';
 import { AuthProvider } from '@/lib/api/auth-context';
@@ -42,6 +43,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <PwaProvider>
               <TooltipProvider delayDuration={200} skipDelayDuration={300}>
                 <ConfirmProvider>{children}</ConfirmProvider>
+                <ErrorReporter />
                 <OfflineIndicator />
                 <Toaster
                   position="bottom-right"

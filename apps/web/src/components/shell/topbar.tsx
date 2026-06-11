@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { BackgroundPicker } from '@/components/composite/background-picker';
 import { InstallButton } from '@/components/composite/install-button';
 import { LanguageSwitcher } from '@/components/composite/language-switcher';
+import { ReportBugDialog } from '@/components/composite/report-bug-dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,7 @@ export function Topbar() {
       </DropdownMenu>
 
       <BackgroundPicker />
+      <ReportBugDialog />
       <LanguageSwitcher />
       <ThemeToggle />
 

@@ -2,6 +2,10 @@ import type { ApiMarketplaceEntry, ApiRegistry } from '@/lib/api/endpoints';
 import { buildInitialData, type MockData } from '@/lib/mock/data';
 import { resolveStreamUrl } from '@/lib/stream';
 import type {
+  BugReportInput,
+  BugReportRow,
+  BugResolveInput,
+  ClientErrorInput,
   CreateFeedbackInput,
   CreateUserInput,
   CreateWorkspaceInput,
@@ -394,6 +398,115 @@ class MockStore {
     item.updatedAt = new Date().toISOString();
     this.emit();
     return item;
+  }
+
+  // ── Bug reports + fix memory (mock) ────────────────────────────────────────
+
+  private shortCode(seed: string): string {
+    let h = 0;
+    for (let i = 0; i < seed.length; i += 1) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+    return `ERR-${h.toString(16).toUpperCase().padStart(8, '0').slice(0, 8)}`;
+  }
+
+  submitBug(input: BugReportInput & { reporterEmail?: string }): BugReportRow {
+    const now = new Date().toISOString();
+    const report: BugReportRow = {
+      id: `bug-${Math.floor(Math.random() * 1e6)}`,
+      source: 'USER',
+      status: 'OPEN',
+      severity: input.severity,
+      title: input.title,
+      description: input.description,
+      errorCode: this.shortCode(`user|${input.title}`),
+      errorName: null,
+      stackTrace: null,
+      component: 'web',
+      route: input.route ?? null,
+      httpStatus: null,
+      reporterEmail: input.reporterEmail ?? 'you@chista.local',
+      occurrences: 1,
+      createdAt: now,
+      lastSeenAt: now,
+      resolvedAt: null,
+      fix: null,
+    };
+    this.data.bugReports = [report, ...this.data.bugReports];
+    this.emit();
+    return report;
+  }
+
+  /** Auto-capture from the web error boundary / window handlers (mock mode). */
+  ingestBug(input: ClientErrorInput): BugReportRow {
+    const code = this.shortCode(`${input.component ?? 'web'}|${input.errorName ?? ''}|${input.message}`);
+    const existing = this.data.bugReports.find(
+      (b) => b.errorCode === code && b.status !== 'RESOLVED' && b.status !== 'CLOSED',
+    );
+    if (existing) {
+      existing.occurrences += 1;
+      existing.lastSeenAt = new Date().toISOString();
+      this.emit();
+      return existing;
+    }
+    const now = new Date().toISOString();
+    const report: BugReportRow = {
+      id: `bug-${Math.floor(Math.random() * 1e6)}`,
+      source: 'AUTOMATIC',
+      status: 'OPEN',
+      severity: input.severity ?? 'HIGH',
+      title: input.errorName ? `${input.errorName}: ${input.message}` : input.message,
+      description: input.message,
+      errorName: input.errorName ?? null,
+      stackTrace: input.stack ?? null,
+      errorCode: code,
+      component: input.component ?? 'web',
+      route: input.route ?? null,
+      httpStatus: null,
+      reporterEmail: null,
+      occurrences: 1,
+      createdAt: now,
+      lastSeenAt: now,
+      resolvedAt: null,
+      fix: null,
+    };
+    this.data.bugReports = [report, ...this.data.bugReports];
+    this.emit();
+    return report;
+  }
+
+  updateBug(id: string, patch: { status?: BugReportRow['status']; severity?: BugReportRow['severity'] }) {
+    const b = this.data.bugReports.find((x) => x.id === id);
+    if (!b) return;
+    if (patch.status) {
+      b.status = patch.status;
+      if (patch.status === 'RESOLVED' && !b.resolvedAt) b.resolvedAt = new Date().toISOString();
+    }
+    if (patch.severity) b.severity = patch.severity;
+    this.emit();
+  }
+
+  resolveBug(id: string, input: BugResolveInput) {
+    const b = this.data.bugReports.find((x) => x.id === id);
+    if (!b) return;
+    const fix = {
+      id: `fix-${Math.floor(Math.random() * 1e6)}`,
+      title: b.title,
+      rootCause: input.rootCause,
+      resolution: input.resolution,
+      prevention: input.prevention ?? null,
+      filesTouched: input.filesTouched ?? [],
+      commitRef: input.commitRef ?? null,
+      authoredBy: input.authoredBy ?? 'HUMAN',
+      authorName: input.authorName ?? 'You',
+      tags: input.tags ?? [],
+      reusedCount: 0,
+      createdAt: new Date().toISOString(),
+      reportCount: 1,
+    };
+    this.data.bugFixes = [fix, ...this.data.bugFixes];
+    b.status = 'RESOLVED';
+    b.resolvedAt = new Date().toISOString();
+    b.fix = fix;
+    this.emit();
   }
 
   getDashboard(): DashboardSnapshot {

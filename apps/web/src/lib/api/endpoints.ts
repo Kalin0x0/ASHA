@@ -1,6 +1,15 @@
 'use client';
 
-import type { SessionStatus } from '@/lib/types';
+import type {
+  BugReportInput,
+  BugReportRow,
+  BugResolveInput,
+  BugStats,
+  BugStatus,
+  BugFixRow,
+  ClientErrorInput,
+  SessionStatus,
+} from '@/lib/types';
 import type { AuthTokens, AuthUser } from './auth-store';
 import { apiFetch } from './client';
 import { API_BASE_URL } from './mode';
@@ -1095,3 +1104,35 @@ export const getPasskeyLoginOptions = (email: string) =>
   apiFetch<Record<string, unknown>>('/auth/webauthn/login/options', { method: 'POST', body: { email }, auth: false });
 export const verifyPasskeyLogin = (email: string, response: unknown) =>
   apiFetch<ApiLoginResponse>('/auth/webauthn/login/verify', { method: 'POST', body: { email, response }, auth: false });
+
+// ── Bug reports + fix memory ──────────────────────────────────────────────────
+// The API returns BugReport rows whose field names match BugReportRow, so the
+// live hooks pass them through directly.
+
+export const getBugReports = (params?: {
+  status?: BugStatus;
+  severity?: string;
+  source?: string;
+  q?: string;
+}) => {
+  const qs = new URLSearchParams();
+  if (params?.status) qs.set('status', params.status);
+  if (params?.severity) qs.set('severity', params.severity);
+  if (params?.source) qs.set('source', params.source);
+  if (params?.q) qs.set('q', params.q);
+  const suffix = qs.toString() ? `?${qs}` : '';
+  return apiFetch<BugReportRow[]>(`/bug-reports${suffix}`);
+};
+export const getBugStats = () => apiFetch<BugStats>('/bug-reports/stats');
+export const getBugReport = (id: string) => apiFetch<BugReportRow>(`/bug-reports/${id}`);
+export const getBugKnowledge = (q?: string) =>
+  apiFetch<BugFixRow[]>(`/bug-reports/knowledge${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+export const submitBugReport = (body: BugReportInput) =>
+  apiFetch<BugReportRow>('/bug-reports', { method: 'POST', body });
+export const updateBugReport = (id: string, body: { status?: BugStatus; severity?: string }) =>
+  apiFetch<BugReportRow>(`/bug-reports/${id}`, { method: 'PATCH', body });
+export const resolveBugReport = (id: string, body: BugResolveInput) =>
+  apiFetch<BugReportRow>(`/bug-reports/${id}/resolve`, { method: 'POST', body });
+/** Fire-and-forget intake for an automatically-captured client error. */
+export const ingestClientError = (body: ClientErrorInput & { appVersion?: string }) =>
+  apiFetch<{ errorCode: string }>('/bug-reports/ingest', { method: 'POST', body });

@@ -52,6 +52,13 @@ palette + live dashboard), Sessions (list+detail), Workspaces, Agents, Login, Po
 viewer; API (auth/RBAC/tenant/sessions/agents/workspaces/health); agent dockerode lifecycle;
 docker-compose + Traefik + Helm skeleton. `next build` ✓, `nest build` ✓, Turbo typecheck ✓.
 
+**Bug reports + fix-memory (DONE & build-verified):** users report bugs from the topbar; unexpected
+crashes are auto-captured (API global exception filter with an error code + log; web error
+boundaries + `window` handlers) and deduped by fingerprint. Resolving a bug records _what it was_ +
+_how it was fixed_ into a durable **fix memory** so a recurrence surfaces the prior fix automatically.
+Fully REST so Claude Code / any UI can read & fix. See [`docs/project/BUG_REPORTS.md`](docs/project/BUG_REPORTS.md).
+Admin UI at `/observability/bug-reports` + `/observability/knowledge-base`; perms `BUG_VIEW`/`BUG_MANAGE`.
+
 **Stubbed (schema/route exists, no real impl yet):** most admin pages (Users/Groups/Roles/Auth/
 Storage/Connectivity/Settings/Observability/Developer render a branded "coming soon"); many API
 domains have no controller yet; RDP/SSH, recording, sharing, SSO, autoscale, VM providers, k8s.

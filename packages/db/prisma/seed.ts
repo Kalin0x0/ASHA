@@ -53,6 +53,9 @@ const PERMISSIONS: Array<{ key: string; category: string; description: string }>
   // Observability / developer
   { key: 'AUDIT_VIEW', category: 'Observability', description: 'View audit logs' },
   { key: 'REPORTING_VIEW', category: 'Observability', description: 'View reports & metrics' },
+  // Support
+  { key: 'BUG_VIEW', category: 'Support', description: 'View bug reports & fix knowledge' },
+  { key: 'BUG_MANAGE', category: 'Support', description: 'Triage, resolve & document bug reports' },
   { key: 'WEBHOOK_MANAGE', category: 'Developer', description: 'Manage webhooks' },
   { key: 'APIKEY_MANAGE', category: 'Developer', description: 'Manage API keys' },
 ];
@@ -80,6 +83,7 @@ const ROLE_DEFS: Array<{ name: string; description: string; keys: string[] }> = 
       'AGENT_VIEW',
       'REPORTING_VIEW',
       'AUDIT_VIEW',
+      'BUG_VIEW',
     ],
   },
   {
@@ -384,6 +388,80 @@ async function main() {
     };
     await prisma.registryEntry.upsert({ where: { id }, update: data, create: { id, ...data } });
   }
+
+  console.log('▸ Seeding bug reports + fix memory…');
+  // A resolved bug WITH its documented fix — demonstrates the "fix memory":
+  // a future report carrying the same fingerprint surfaces this resolution.
+  const sampleFingerprint = 'seed-fp-users-groups-undefined-map';
+  const sampleFix = await prisma.bugFix.upsert({
+    where: { id: 'seed-fix-1' },
+    update: {},
+    create: {
+      id: 'seed-fix-1',
+      orgId: org.id,
+      fingerprint: sampleFingerprint,
+      title: 'Users/Groups page crashes on null groups relation',
+      rootCause:
+        'The users list endpoint did not include the `groups` relation in its Prisma select, so the web mapper called .map() on undefined and threw a TypeError.',
+      resolution:
+        'Added `groups` to the API SAFE_SELECT and guarded the mapper with `(u.groups ?? [])` so a missing relation degrades to an empty list instead of crashing.',
+      prevention:
+        'When a UI field maps over a relation, ensure the API selects that relation and the mapper null-guards it. Add a smoke test that renders the page in live mode.',
+      filesTouched: [
+        'apps/api/src/modules/users/users.service.ts',
+        'apps/web/src/lib/api/map.ts',
+      ],
+      authoredBy: 'AI',
+      authorName: 'Claude Code',
+      tags: ['web', 'api', 'null-safety'],
+      reusedCount: 0,
+    },
+  });
+  await prisma.bugReport.upsert({
+    where: { id: 'seed-bug-1' },
+    update: {},
+    create: {
+      id: 'seed-bug-1',
+      orgId: org.id,
+      source: 'USER',
+      status: 'RESOLVED',
+      severity: 'HIGH',
+      title: 'Access → Users and Groups show an error message',
+      description:
+        'Opening Access → Users (or Groups) renders a red error instead of the table. Happens every time on a fresh login.',
+      fingerprint: sampleFingerprint,
+      errorCode: 'ERR-USRGRP01',
+      component: 'web',
+      route: '/users',
+      reporterEmail: ADMIN_EMAIL,
+      fixId: sampleFix.id,
+      resolvedAt: new Date(),
+      occurrences: 3,
+    },
+  });
+  // An open, automatically-captured crash awaiting triage by an AI/operator.
+  await prisma.bugReport.upsert({
+    where: { id: 'seed-bug-2' },
+    update: {},
+    create: {
+      id: 'seed-bug-2',
+      orgId: org.id,
+      source: 'AUTOMATIC',
+      status: 'OPEN',
+      severity: 'CRITICAL',
+      title: 'TypeError: Cannot read properties of undefined (reading "id")',
+      description: 'Unhandled exception captured automatically by the API exception filter.',
+      errorName: 'TypeError',
+      errorCode: 'ERR-9F2C71A4',
+      stackTrace:
+        'TypeError: Cannot read properties of undefined (reading "id")\n    at SessionsService.connection (sessions.service.ts:212:31)\n    at SessionsController.connection (sessions.controller.ts:88:24)',
+      fingerprint: 'seed-fp-sessions-connection-undefined-id',
+      component: 'api',
+      route: '/api/v1/sessions/abc123/connection',
+      httpStatus: 500,
+      occurrences: 7,
+    },
+  });
 
   console.log('\n✓ Seed complete.');
   console.log('  ┌──────────────────────────────────────────────┐');

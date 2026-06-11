@@ -45,6 +45,8 @@ export const PERMISSION_CATALOG: readonly PermissionDef[] = [
   { key: 'LICENSE_MANAGE', category: 'Settings', description: 'Manage licensing' },
   { key: 'AUDIT_VIEW', category: 'Observability', description: 'View audit logs' },
   { key: 'REPORTING_VIEW', category: 'Observability', description: 'View reports & metrics' },
+  { key: 'BUG_VIEW', category: 'Support', description: 'View bug reports & fix knowledge' },
+  { key: 'BUG_MANAGE', category: 'Support', description: 'Triage, resolve & document bug reports' },
   { key: 'WEBHOOK_MANAGE', category: 'Developer', description: 'Manage webhooks' },
   { key: 'APIKEY_MANAGE', category: 'Developer', description: 'Manage API keys' },
 ] as const;
@@ -67,6 +69,7 @@ export const SYSTEM_ROLE_MATRIX: Record<string, string[] | '*'> = {
     'AGENT_VIEW',
     'REPORTING_VIEW',
     'AUDIT_VIEW',
+    'BUG_VIEW',
   ],
   User: ['SESSION_VIEW', 'SESSION_LAUNCH', 'SESSION_TERMINATE_OWN', 'SESSION_SHARE', 'WORKSPACE_VIEW'],
 };

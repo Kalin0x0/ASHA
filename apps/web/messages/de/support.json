@@ -1,0 +1,124 @@
+{
+  "report": {
+    "trigger": "Fehler melden",
+    "title": "Fehler melden",
+    "description": "Sagen Sie uns, was schiefgelaufen ist. Ihre Meldung wird im zentralen Tracker gespeichert, damit sie gesichtet und behoben werden kann.",
+    "success": "Fehlermeldung gesendet",
+    "successDescription": "Vielen Dank — Ihre Meldung wurde gespeichert und wird gesichtet.",
+    "error": "Die Meldung konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
+    "submit": "Meldung senden",
+    "routeNote": "Erfasst auf {route}",
+    "fields": {
+      "title": "Zusammenfassung",
+      "titlePlaceholder": "Kurze Zusammenfassung des Problems",
+      "description": "Was ist passiert?",
+      "descriptionPlaceholder": "Schritte zur Reproduktion, erwartetes Verhalten und was stattdessen geschah.",
+      "severity": "Schweregrad"
+    }
+  },
+  "severity": {
+    "LOW": "Niedrig",
+    "MEDIUM": "Mittel",
+    "HIGH": "Hoch",
+    "CRITICAL": "Kritisch"
+  },
+  "status": {
+    "OPEN": "Offen",
+    "TRIAGED": "Gesichtet",
+    "IN_PROGRESS": "In Bearbeitung",
+    "RESOLVED": "Behoben",
+    "CLOSED": "Geschlossen",
+    "WONT_FIX": "Wird nicht behoben",
+    "DUPLICATE": "Duplikat"
+  },
+  "source": {
+    "USER": "Gemeldet",
+    "AUTOMATIC": "Automatisch"
+  },
+  "errorBoundary": {
+    "title": "Etwas ist schiefgelaufen",
+    "description": "In diesem Bereich ist ein unerwarteter Fehler aufgetreten und wurde automatisch gemeldet.",
+    "reference": "Referenz",
+    "retry": "Erneut versuchen"
+  },
+  "page": {
+    "title": "Fehlermeldungen",
+    "description": "Nutzermeldungen und automatisch erfasste Abstürze in einem Tracker. Beim Beheben einer Meldung wird dokumentiert, wie sie behoben wurde.",
+    "stats": {
+      "open": "Offen",
+      "critical": "Kritisch",
+      "automatic": "Automatisch erfasst",
+      "resolved": "Behoben"
+    },
+    "searchPlaceholder": "Nach Titel, Code oder Route suchen…",
+    "filters": {
+      "all": "Alle Status",
+      "active": "Aktiv",
+      "allSources": "Alle Quellen"
+    },
+    "empty": {
+      "title": "Keine Fehlermeldungen",
+      "description": "Nichts entspricht Ihren Filtern. Gemeldete Fehler und erfasste Abstürze erscheinen hier."
+    },
+    "table": {
+      "severity": "Schweregrad",
+      "report": "Meldung",
+      "status": "Status",
+      "occurrences": "Anzahl",
+      "lastSeen": "Zuletzt gesehen",
+      "hasFix": "Lösung dokumentiert"
+    }
+  },
+  "detail": {
+    "component": "Komponente",
+    "route": "Route",
+    "occurrences": "Vorkommen",
+    "firstSeen": "Zuerst gesehen",
+    "lastSeen": "Zuletzt gesehen",
+    "reporter": "Melder",
+    "automatic": "Automatische Erfassung",
+    "description": "Beschreibung",
+    "stackTrace": "Fehlerprotokoll",
+    "documentedFix": "Dokumentierte Lösung",
+    "knownFix": "Schon einmal gelöst — so geht's",
+    "markInProgress": "In Bearbeitung setzen",
+    "wontFix": "Wird nicht behoben",
+    "resolvedNote": "Behoben am {date}",
+    "reopen": "Wieder öffnen",
+    "notFound": "Diese Meldung konnte nicht gefunden werden."
+  },
+  "fix": {
+    "rootCause": "Ursache",
+    "resolution": "Wie es behoben wurde",
+    "prevention": "Vorbeugung",
+    "filesTouched": "Geänderte Dateien"
+  },
+  "resolve": {
+    "open": "Beheben & Lösung dokumentieren",
+    "heading": "Lösung dokumentieren",
+    "intro": "Halten Sie fest, was es war und wie es behoben wurde. Dies wird im Lösungsspeicher gesichert, damit dasselbe Problem beim nächsten Mal erkannt wird.",
+    "rootCause": "Ursache",
+    "rootCausePlaceholder": "Was war die eigentliche Ursache?",
+    "resolution": "Lösung",
+    "resolutionPlaceholder": "Welche Änderung hat es behoben?",
+    "prevention": "Vorbeugung (optional)",
+    "preventionPlaceholder": "Wie lässt sich das künftig vermeiden?",
+    "filesTouched": "Geänderte Dateien (optional)",
+    "tags": "Schlagwörter (optional)",
+    "authoredByAi": "Von einem KI-Agenten behoben",
+    "submit": "Lösung speichern & beheben",
+    "success": "Lösung dokumentiert und Meldung behoben",
+    "error": "Die Meldung konnte nicht behoben werden. Bitte versuchen Sie es erneut."
+  },
+  "knowledge": {
+    "title": "Lösungsspeicher",
+    "description": "Jede dokumentierte Lösung. Taucht ein bekanntes Problem erneut auf, erscheint die passende Lösung automatisch — so muss es nie zweimal diagnostiziert werden.",
+    "searchPlaceholder": "Lösungsspeicher durchsuchen…",
+    "empty": {
+      "title": "Noch keine Lösungen erfasst",
+      "description": "Wenn eine Fehlermeldung behoben wird, werden Ursache und Lösung hier gespeichert."
+    },
+    "reused": "{count, plural, one {# Mal} other {# Mal}} erneut aufgetreten",
+    "reusedTitle": "Wie viele spätere Meldungen dieser Lösung entsprachen"
+  }
+}

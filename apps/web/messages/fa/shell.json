@@ -52,6 +52,8 @@
       "database": "پایگاه داده",
       "configImportExport": "درون‌ریزی/برون‌بری پیکربندی",
       "reporting": "گزارش‌گیری",
+      "bugReports": "گزارش‌های اشکال",
+      "knowledgeBase": "حافظهٔ راه‌حل‌ها",
       "auditLog": "لاگ ممیزی",
       "metrics": "متریک‌ها",
       "feedback": "بازخورد و اشکالات",
