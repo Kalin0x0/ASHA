@@ -1,0 +1,176 @@
+{
+  "users": {
+    "title": "کاربران",
+    "description": "افرادی که به این استقرار Chista دسترسی دارند.",
+    "stats": {
+      "totalUsers": "کل کاربران",
+      "withTwoFactor": "با ۲FA"
+    },
+    "searchPlaceholder": "جستجوی کاربران…",
+    "table": {
+      "user": "کاربر",
+      "groups": "گروه‌ها",
+      "twoFactor": "۲FA",
+      "lastLogin": "آخرین ورود"
+    },
+    "empty": {
+      "title": "کاربری یافت نشد",
+      "searchDescription": "عبارت جستجوی دیگری را امتحان کنید.",
+      "noUsersDescription": "هنوز کاربری افزوده نشده است."
+    }
+  },
+  "groups": {
+    "title": "گروه‌ها",
+    "description": "گروه‌های عضویت که از تخصیص‌های فعلی کاربران استخراج می‌شوند — برای محدودسازی دسترسی به فضای کاری و نقش‌ها استفاده می‌شوند.",
+    "stats": {
+      "groups": "گروه‌ها",
+      "memberships": "عضویت‌ها"
+    },
+    "memberCount": "{count, plural, one {# عضو} other {# عضو}}",
+    "empty": {
+      "title": "هنوز گروهی وجود ندارد",
+      "description": "گروه‌ها از عضویت‌های کاربران استخراج می‌شوند. کاربران را افزوده و آن‌ها را به گروه‌ها اختصاص دهید."
+    }
+  },
+  "roles": {
+    "title": "نقش‌ها و مجوزها",
+    "description": "نقش‌های سیستمی داخلی و مجوزهایی که هر کدام اعطا می‌کنند. نقش‌های سفارشی در فاز بعدی ارائه می‌شوند.",
+    "table": {
+      "permission": "مجوز"
+    },
+    "roleNames": {
+      "Super Admin": "سوپر ادمین",
+      "Administrator": "مدیر",
+      "Operator": "اپراتور",
+      "User": "کاربر"
+    },
+    "categories": {
+      "Sessions": "نشست‌ها",
+      "Workspaces": "فضاهای کاری",
+      "Access": "دسترسی",
+      "Infrastructure": "زیرساخت",
+      "Storage": "ذخیره‌سازی",
+      "Connectivity": "اتصالات",
+      "Settings": "تنظیمات",
+      "Observability": "مشاهده‌پذیری",
+      "Developer": "توسعه‌دهنده"
+    },
+    "permissions": {
+      "SESSION_VIEW": "مشاهده نشست‌های خود",
+      "SESSION_VIEW_ANY": "مشاهده همه نشست‌ها",
+      "SESSION_LAUNCH": "اجرای فضاهای کاری",
+      "SESSION_TERMINATE_OWN": "خاتمه نشست‌های خود",
+      "SESSION_TERMINATE_ANY": "خاتمه هر نشست",
+      "SESSION_CONTROL_ANY": "در دست گرفتن کنترل هر نشست",
+      "SESSION_SHARE": "اشتراک‌گذاری نشست‌ها",
+      "RECORDING_VIEW": "مشاهده ضبط‌های نشست",
+      "WORKSPACE_VIEW": "مشاهده فضاهای کاری",
+      "WORKSPACE_CREATE": "ایجاد فضاهای کاری",
+      "WORKSPACE_EDIT": "ویرایش فضاهای کاری",
+      "WORKSPACE_DELETE": "حذف فضاهای کاری",
+      "REGISTRY_MANAGE": "مدیریت رجیستری‌ها",
+      "IMAGE_MANAGE": "مدیریت ایمیج‌ها",
+      "USER_VIEW": "مشاهده کاربران",
+      "USER_CREATE": "ایجاد کاربران",
+      "USER_EDIT": "ویرایش کاربران",
+      "USER_DELETE": "حذف کاربران",
+      "GROUP_MANAGE": "مدیریت گروه‌ها",
+      "ROLE_MANAGE": "مدیریت نقش‌ها و مجوزها",
+      "AUTH_MANAGE": "مدیریت ارائه‌دهندگان احراز هویت",
+      "ZONE_MANAGE": "مدیریت نواحی استقرار",
+      "AGENT_VIEW": "مشاهده ایجنت‌ها",
+      "AGENT_MANAGE": "مدیریت ایجنت‌ها",
+      "SERVER_MANAGE": "مدیریت سرورها",
+      "POOL_MANAGE": "مدیریت استخرهای سرور",
+      "AUTOSCALE_MANAGE": "مدیریت پیکربندی‌های مقیاس خودکار",
+      "PROVIDER_MANAGE": "مدیریت ارائه‌دهندگان VM/DNS",
+      "STORAGE_MANAGE": "مدیریت ذخیره‌سازی و نگاشت‌های فایل",
+      "CONNECTIVITY_MANAGE": "مدیریت پروکسی‌ها/خروجی/فیلترینگ",
+      "SETTINGS_MANAGE": "مدیریت تنظیمات سراسری",
+      "BRANDING_MANAGE": "مدیریت برندینگ",
+      "LICENSE_MANAGE": "مدیریت لایسنس",
+      "AUDIT_VIEW": "مشاهده لاگ‌های ممیزی",
+      "REPORTING_VIEW": "مشاهده گزارش‌ها و متریک‌ها",
+      "WEBHOOK_MANAGE": "مدیریت وب‌هوک‌ها",
+      "APIKEY_MANAGE": "مدیریت کلیدهای API"
+    }
+  },
+  "authentication": {
+    "title": "احراز هویت",
+    "description": "پیکربندی ارائه‌دهندگان هویت خارجی (OIDC، SAML 2.0، LDAP/AD)، نگاشت گروه‌های SSO و تأمین SCIM 2.0.",
+    "liveOnlyNotice": "مدیریت احراز هویت تنها با بک‌اند زنده در دسترس است. اجرا با",
+    "stats": {
+      "providers": "ارائه‌دهندگان",
+      "scim": "SCIM"
+    },
+    "providerType": {
+      "LOCAL": "محلی",
+      "OIDC": "OIDC",
+      "SAML": "SAML 2.0",
+      "LDAP": "LDAP / AD"
+    },
+    "configFields": {
+      "OIDC": {
+        "issuer": "آدرس Issuer",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret",
+        "redirectUri": "Redirect URI (اختیاری)"
+      },
+      "SAML": {
+        "entryPoint": "آدرس SSO ارائه‌دهنده هویت",
+        "issuer": "SP Entity ID",
+        "cert": "گواهی امضای ارائه‌دهنده هویت (PEM)"
+      },
+      "LDAP": {
+        "url": "آدرس LDAP",
+        "bindDN": "Bind DN",
+        "bindCredentials": "رمز عبور Bind",
+        "searchBase": "Search Base",
+        "searchFilter": "Search Filter"
+      }
+    },
+    "identityProviders": {
+      "title": "ارائه‌دهندگان هویت",
+      "empty": "هنوز ارائه‌دهنده خارجی‌ای پیکربندی نشده است.",
+      "testLdap": "آزمایش اتصال LDAP"
+    },
+    "addProvider": {
+      "title": "افزودن ارائه‌دهنده",
+      "displayName": "نام نمایشی",
+      "displayNamePlaceholder": "ورود {type}",
+      "createdDisabledNote": "غیرفعال ایجاد شد — پس از آزمایش موفق فعال کنید"
+    },
+    "scim": {
+      "title": "تأمین SCIM 2.0",
+      "description": "برای ارائه‌دهنده هویت خود (Okta، Azure AD، OneLogin) یک توکن صادر کنید تا کاربران و گروه‌ها را به‌طور خودکار از طریق نقطه پایانی SCIM در این مسیر تأمین و لغو تأمین کند:",
+      "issueToken": "صدور توکن SCIM"
+    },
+    "mappings": {
+      "title": "نگاشت گروه‌ها",
+      "empty": "هنوز نگاشتی وجود ندارد — کاربران احراز هویت می‌شوند اما به‌طور خودکار به گروهی نمی‌پیوندند.",
+      "attribute": "ویژگی",
+      "value": "مقدار",
+      "chistaGroup": "گروه Chista",
+      "selectGroup": "انتخاب گروه…"
+    },
+    "toasts": {
+      "loadFailed": "بارگذاری ارائه‌دهندگان احراز هویت ناموفق بود",
+      "providerAdded": "ارائه‌دهنده {type} افزوده شد",
+      "providerAddedDescription": "به‌طور پیش‌فرض غیرفعال — پس از آزمایش فعال کنید.",
+      "createFailed": "ایجاد ارائه‌دهنده ممکن نشد",
+      "updateFailed": "به‌روزرسانی ارائه‌دهنده ممکن نشد",
+      "providerRemoved": "ارائه‌دهنده حذف شد",
+      "removeFailed": "حذف ارائه‌دهنده ممکن نشد",
+      "ldapTestSucceeded": "اتصال LDAP موفق بود",
+      "ldapTestFailed": "آزمایش LDAP ناموفق بود",
+      "scimTokenIssued": "توکن SCIM صادر شد",
+      "scimTokenIssuedDescription": "اکنون آن را کپی کنید — فقط یک‌بار نمایش داده می‌شود.",
+      "scimTokenFailed": "صدور توکن SCIM ممکن نشد",
+      "copied": "در کلیپ‌بورد کپی شد",
+      "mappingsLoadFailed": "بارگذاری نگاشت‌ها ناموفق بود",
+      "mappingAdded": "نگاشت افزوده شد",
+      "mappingAddFailed": "افزودن نگاشت ممکن نشد",
+      "mappingRemoveFailed": "حذف نگاشت ممکن نشد"
+    }
+  }
+}

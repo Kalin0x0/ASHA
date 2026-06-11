@@ -1,0 +1,49 @@
+{
+  "header": {
+    "myWorkspaces": "My Workspaces",
+    "admin": "Admin"
+  },
+  "launcher": {
+    "eyebrow": "Your Workspaces",
+    "title": "Launch a <gradient>workspace</gradient>",
+    "subtitle": "A secure, isolated desktop or application — streamed straight to your browser. Nothing to install, nothing left behind.",
+    "searchPlaceholder": "Search workspaces…",
+    "categoriesNavAria": "Workspace categories",
+    "categories": "Categories",
+    "allWorkspaces": "All Workspaces",
+    "allWorkspacesHeading": "All workspaces",
+    "noResults": "No workspaces match your search.",
+    "clearFilters": "Clear filters",
+    "launchError": "Could not start the session"
+  },
+  "card": {
+    "launch": "Launch",
+    "starting": "Starting…",
+    "unavailable": "Unavailable",
+    "gpu": "GPU",
+    "vcpu": "{count} vCPU",
+    "gb": "{value} GB",
+    "launchAria": "Launch {name}",
+    "unavailableAria": "{name} (unavailable)",
+    "addFavorite": "Add to favorites",
+    "removeFavorite": "Remove from favorites"
+  },
+  "mySessions": {
+    "title": "My Sessions",
+    "starting": "Starting",
+    "resume": "Resume",
+    "resumeAria": "Resume {name}",
+    "endAria": "End {name}",
+    "endedToast": "Session ended"
+  },
+  "favorites": {
+    "title": "Favorites",
+    "reorderHint": "drag to reorder",
+    "dragToReorder": "Drag to reorder",
+    "launchTitle": "Launch {name}",
+    "seeAll": "See all favorites",
+    "addedToast": "Added {name} to favorites",
+    "removedToast": "Removed {name} from favorites",
+    "workspaceFallback": "workspace"
+  }
+}

@@ -3,6 +3,7 @@
 import { ArrowRight, Fingerprint, KeyRound, Network, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { ChistaMark } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import { isLive } from '@/lib/api/mode';
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useTranslations('auth');
   const { login, loginWithPasskey } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,7 +46,7 @@ export default function LoginPage() {
       await login(email, password);
       router.push(getAuth().user?.isSystemAdmin ? '/dashboard' : '/');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Sign in failed');
+      toast.error(err instanceof Error ? err.message : t('errors.signInFailed'));
       setLoading(false);
     }
   };
@@ -55,7 +57,7 @@ export default function LoginPage() {
       return;
     }
     if (!email) {
-      toast.error('Enter your email first, then use your passkey');
+      toast.error(t('errors.enterEmailFirst'));
       return;
     }
     setPasskeyLoading(true);
@@ -63,7 +65,7 @@ export default function LoginPage() {
       await loginWithPasskey(email);
       router.push(getAuth().user?.isSystemAdmin ? '/dashboard' : '/');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Passkey sign in failed');
+      toast.error(err instanceof Error ? err.message : t('errors.passkeyFailed'));
     } finally {
       setPasskeyLoading(false);
     }
@@ -81,9 +83,11 @@ export default function LoginPage() {
         </div>
         <div className="space-y-1">
           <h1 className="font-display text-3xl font-medium tracking-tight">
-            Welcome <span className="text-gradient-gold">back</span>
+            {t.rich('welcome', {
+              gold: (chunks) => <span className="text-gradient-gold">{chunks}</span>,
+            })}
           </h1>
-          <p className="text-sm text-muted-foreground">Sign in to your Chista workspace</p>
+          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
         </div>
       </div>
 
@@ -92,22 +96,22 @@ export default function LoginPage() {
         <div className="p-7">
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email">Email or username</Label>
+              <Label htmlFor="email">{t('emailLabel')}</Label>
               <Input
                 id="email"
                 type="text"
                 autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
+                placeholder={t('emailPlaceholder')}
                 required
               />
             </div>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('passwordLabel')}</Label>
                 <button type="button" className="text-xs text-gold-300 hover:text-gold-200 transition-colors hover:underline">
-                  Forgot password?
+                  {t('forgotPassword')}
                 </button>
               </div>
               <Input
@@ -122,14 +126,14 @@ export default function LoginPage() {
             </div>
 
             <Button type="submit" loading={loading} className="mt-2 h-11 w-full text-sm font-medium">
-              {!loading && <ArrowRight className="size-4" />}
-              Sign in
+              {!loading && <ArrowRight className="size-4 rtl:rotate-180" />}
+              {t('signIn')}
             </Button>
           </form>
 
           <div className="my-5 flex items-center gap-3">
             <Separator className="flex-1 opacity-50" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50">or continue with</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50">{t('orContinueWith')}</span>
             <Separator className="flex-1 opacity-50" />
           </div>
 
@@ -142,7 +146,7 @@ export default function LoginPage() {
               className="h-10 w-full justify-start gap-3 border border-border-subtle"
             >
               {!passkeyLoading && <Fingerprint className="size-4 text-gold-300" />}
-              <span>Sign in with a passkey</span>
+              <span>{t('passkey')}</span>
             </Button>
 
             {isLive && ssoProviders.filter((p) => p.type !== 'LDAP').length > 0 ? (
@@ -158,7 +162,7 @@ export default function LoginPage() {
                   >
                     <Network className="size-4 text-info-400" />
                     <span>{p.name}</span>
-                    <span className="ml-auto text-[10px] text-muted-foreground">{p.type}</span>
+                    <span className="ms-auto text-[10px] text-muted-foreground">{p.type}</span>
                   </Button>
                 ))
             ) : (
@@ -169,7 +173,7 @@ export default function LoginPage() {
                 onClick={() => router.push('/dashboard')}
               >
                 <KeyRound className="size-4 text-info-400" />
-                <span>SSO / OIDC</span>
+                <span>{t('sso')}</span>
               </Button>
             )}
           </div>
@@ -179,7 +183,7 @@ export default function LoginPage() {
         <div className="flex items-center gap-2.5 rounded-b-2xl border-t border-border-subtle bg-[var(--surface-1)]/40 px-5 py-3">
           <ShieldCheck className="size-4 shrink-0 text-gold-400" />
           <p className="text-xs text-muted-foreground">
-            Authorized access only. Activity may be monitored.
+            {t('trustNotice')}
           </p>
         </div>
       </div>

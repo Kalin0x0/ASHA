@@ -6,6 +6,7 @@ import { CornerDownLeft, MonitorPlay, Moon, Play, Search, Star, Sun } from 'luci
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
@@ -19,6 +20,8 @@ export function CommandPalette() {
   const workspaces = useWorkspaces();
   const favorites = useFavorites();
   const launch = useLaunchSession();
+  const t = useTranslations('shell.palette');
+  const tNav = useTranslations('shell.nav');
 
   const favWorkspaces = useMemo(
     () => orderByFavorites(workspaces.filter((w) => w.enabled), favorites.ids),
@@ -28,7 +31,7 @@ export function CommandPalette() {
   const launchWorkspace = async (id: string) => {
     const session = await launch(id);
     if (!session) {
-      toast.error('Could not start the session');
+      toast.error(t('launchError'));
       return;
     }
     router.push(`/session/${session.id}`);
@@ -55,13 +58,13 @@ export function CommandPalette() {
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-anthracite-950/70 backdrop-blur-md data-[state=open]:animate-in data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content className="gold-hairline glass-strong fixed left-1/2 top-[14%] z-50 w-full max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-border-subtle shadow-[var(--shadow-lifted),0_0_0_1px_rgba(212,175,55,0.07)] data-[state=open]:animate-rise">
-          <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">{t('title')}</DialogPrimitive.Title>
           <Command className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground">
             <div className="flex items-center gap-3 border-b border-border-subtle px-4">
               <Search className="size-[18px] text-gold-300" />
               <Command.Input
                 autoFocus
-                placeholder="Search pages and actions…"
+                placeholder={t('placeholder')}
                 className="h-14 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
               />
               <kbd className="rounded border border-border-subtle bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
@@ -70,47 +73,47 @@ export function CommandPalette() {
             </div>
             <Command.List className="max-h-[60vh] overflow-y-auto p-2">
               <Command.Empty className="py-8 text-center text-sm text-muted-foreground">
-                No results found.
+                {t('noResults')}
               </Command.Empty>
 
               {favWorkspaces.length > 0 && (
-                <Command.Group heading="Favorites">
+                <Command.Group heading={t('favorites')}>
                   {favWorkspaces.map((ws) => (
                     <Item
                       key={ws.id}
                       onSelect={() => run(() => void launchWorkspace(ws.id))}
                       icon={<Star className="size-4 fill-gold-400 text-gold-300" />}
                     >
-                      Launch {ws.friendlyName}
+                      {t('launchWorkspace', { name: ws.friendlyName })}
                     </Item>
                   ))}
                 </Command.Group>
               )}
 
-              <Command.Group heading="Quick actions">
+              <Command.Group heading={t('quickActions')}>
                 <Item onSelect={() => run(() => router.push('/'))} icon={<Play className="size-4" />}>
-                  Launch a workspace
+                  {t('launchAWorkspace')}
                 </Item>
                 <Item onSelect={() => run(() => router.push('/sessions'))} icon={<MonitorPlay className="size-4" />}>
-                  View live sessions
+                  {t('viewLiveSessions')}
                 </Item>
                 <Item
                   onSelect={() => run(() => setTheme(resolvedTheme === 'light' ? 'dark' : 'light'))}
                   icon={resolvedTheme === 'light' ? <Moon className="size-4" /> : <Sun className="size-4" />}
                 >
-                  Toggle theme
+                  {t('toggleTheme')}
                 </Item>
               </Command.Group>
 
               {navGroups.map((group) => (
-                <Command.Group key={group.label} heading={group.label}>
+                <Command.Group key={group.key} heading={tNav(`groups.${group.key}`)}>
                   {group.items.map((item) => (
                     <Item
                       key={item.href}
                       onSelect={() => run(() => router.push(item.href))}
                       icon={<item.icon className="size-4" />}
                     >
-                      {item.label}
+                      {tNav(`items.${item.key}`)}
                     </Item>
                   ))}
                 </Command.Group>
@@ -118,9 +121,9 @@ export function CommandPalette() {
             </Command.List>
             <div className="flex items-center justify-between border-t border-border-subtle px-4 py-2 text-[11px] text-muted-foreground">
               <span className="inline-flex items-center gap-1">
-                <CornerDownLeft className="size-3" /> to select
+                <CornerDownLeft className="size-3" /> {t('toSelect')}
               </span>
-              <span>Chista Command</span>
+              <span>{t('brand')}</span>
             </div>
           </Command>
         </DialogPrimitive.Content>

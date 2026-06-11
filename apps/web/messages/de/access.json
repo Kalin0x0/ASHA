@@ -1,0 +1,176 @@
+{
+  "users": {
+    "title": "Benutzer",
+    "description": "Personen mit Zugriff auf diese Chista-Installation.",
+    "stats": {
+      "totalUsers": "Benutzer gesamt",
+      "withTwoFactor": "Mit 2FA"
+    },
+    "searchPlaceholder": "Benutzer suchen…",
+    "table": {
+      "user": "Benutzer",
+      "groups": "Gruppen",
+      "twoFactor": "2FA",
+      "lastLogin": "Letzte Anmeldung"
+    },
+    "empty": {
+      "title": "Keine Benutzer gefunden",
+      "searchDescription": "Versuchen Sie einen anderen Suchbegriff.",
+      "noUsersDescription": "Es wurden noch keine Benutzer hinzugefügt."
+    }
+  },
+  "groups": {
+    "title": "Gruppen",
+    "description": "Mitgliedschaftsgruppen, abgeleitet aus den aktuellen Benutzerzuweisungen — sie steuern Workspace-Zugriff und Rollen.",
+    "stats": {
+      "groups": "Gruppen",
+      "memberships": "Mitgliedschaften"
+    },
+    "memberCount": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
+    "empty": {
+      "title": "Noch keine Gruppen",
+      "description": "Gruppen werden aus Benutzermitgliedschaften abgeleitet. Fügen Sie Benutzer hinzu und weisen Sie sie Gruppen zu."
+    }
+  },
+  "roles": {
+    "title": "Rollen & Berechtigungen",
+    "description": "Die integrierten Systemrollen und die Berechtigungen, die sie jeweils gewähren. Benutzerdefinierte Rollen folgen in einer späteren Phase.",
+    "table": {
+      "permission": "Berechtigung"
+    },
+    "roleNames": {
+      "Super Admin": "Super-Admin",
+      "Administrator": "Administrator",
+      "Operator": "Operator",
+      "User": "Benutzer"
+    },
+    "categories": {
+      "Sessions": "Sitzungen",
+      "Workspaces": "Workspaces",
+      "Access": "Zugriff",
+      "Infrastructure": "Infrastruktur",
+      "Storage": "Speicher",
+      "Connectivity": "Konnektivität",
+      "Settings": "Einstellungen",
+      "Observability": "Observability",
+      "Developer": "Entwickler"
+    },
+    "permissions": {
+      "SESSION_VIEW": "Eigene Sitzungen anzeigen",
+      "SESSION_VIEW_ANY": "Alle Sitzungen anzeigen",
+      "SESSION_LAUNCH": "Workspaces starten",
+      "SESSION_TERMINATE_OWN": "Eigene Sitzungen beenden",
+      "SESSION_TERMINATE_ANY": "Beliebige Sitzungen beenden",
+      "SESSION_CONTROL_ANY": "Kontrolle über beliebige Sitzungen übernehmen",
+      "SESSION_SHARE": "Sitzungen teilen",
+      "RECORDING_VIEW": "Sitzungsaufzeichnungen anzeigen",
+      "WORKSPACE_VIEW": "Workspaces anzeigen",
+      "WORKSPACE_CREATE": "Workspaces erstellen",
+      "WORKSPACE_EDIT": "Workspaces bearbeiten",
+      "WORKSPACE_DELETE": "Workspaces löschen",
+      "REGISTRY_MANAGE": "Registries verwalten",
+      "IMAGE_MANAGE": "Images verwalten",
+      "USER_VIEW": "Benutzer anzeigen",
+      "USER_CREATE": "Benutzer erstellen",
+      "USER_EDIT": "Benutzer bearbeiten",
+      "USER_DELETE": "Benutzer löschen",
+      "GROUP_MANAGE": "Gruppen verwalten",
+      "ROLE_MANAGE": "Rollen & Berechtigungen verwalten",
+      "AUTH_MANAGE": "Authentifizierungsprovider verwalten",
+      "ZONE_MANAGE": "Bereitstellungszonen verwalten",
+      "AGENT_VIEW": "Agents anzeigen",
+      "AGENT_MANAGE": "Agents verwalten",
+      "SERVER_MANAGE": "Server verwalten",
+      "POOL_MANAGE": "Server-Pools verwalten",
+      "AUTOSCALE_MANAGE": "Autoscale-Konfigurationen verwalten",
+      "PROVIDER_MANAGE": "VM-/DNS-Provider verwalten",
+      "STORAGE_MANAGE": "Speicher & Datei-Mappings verwalten",
+      "CONNECTIVITY_MANAGE": "Proxys/Egress/Filterung verwalten",
+      "SETTINGS_MANAGE": "Globale Einstellungen verwalten",
+      "BRANDING_MANAGE": "Branding verwalten",
+      "LICENSE_MANAGE": "Lizenzierung verwalten",
+      "AUDIT_VIEW": "Audit-Logs anzeigen",
+      "REPORTING_VIEW": "Berichte & Metriken anzeigen",
+      "WEBHOOK_MANAGE": "Webhooks verwalten",
+      "APIKEY_MANAGE": "API-Schlüssel verwalten"
+    }
+  },
+  "authentication": {
+    "title": "Authentifizierung",
+    "description": "Konfigurieren Sie externe Identitätsprovider (OIDC, SAML 2.0, LDAP/AD), SSO-Gruppenzuordnungen und SCIM 2.0-Provisionierung.",
+    "liveOnlyNotice": "Die Authentifizierungsverwaltung ist nur mit Live-Backend verfügbar. Starten Sie mit",
+    "stats": {
+      "providers": "Provider",
+      "scim": "SCIM"
+    },
+    "providerType": {
+      "LOCAL": "Lokal",
+      "OIDC": "OIDC",
+      "SAML": "SAML 2.0",
+      "LDAP": "LDAP / AD"
+    },
+    "configFields": {
+      "OIDC": {
+        "issuer": "Issuer-URL",
+        "clientId": "Client-ID",
+        "clientSecret": "Client-Secret",
+        "redirectUri": "Redirect-URI (optional)"
+      },
+      "SAML": {
+        "entryPoint": "IdP-SSO-URL",
+        "issuer": "SP-Entity-ID",
+        "cert": "IdP-Signaturzertifikat (PEM)"
+      },
+      "LDAP": {
+        "url": "LDAP-URL",
+        "bindDN": "Bind-DN",
+        "bindCredentials": "Bind-Passwort",
+        "searchBase": "Suchbasis",
+        "searchFilter": "Suchfilter"
+      }
+    },
+    "identityProviders": {
+      "title": "Identitätsprovider",
+      "empty": "Noch keine externen Provider konfiguriert.",
+      "testLdap": "LDAP-Bind testen"
+    },
+    "addProvider": {
+      "title": "Provider hinzufügen",
+      "displayName": "Anzeigename",
+      "displayNamePlaceholder": "{type}-Anmeldung",
+      "createdDisabledNote": "Wird deaktiviert erstellt — nach erfolgreichem Test aktivieren"
+    },
+    "scim": {
+      "title": "SCIM 2.0-Provisionierung",
+      "description": "Stellen Sie ein Bearer-Token für Ihren IdP (Okta, Azure AD, OneLogin) aus, um Benutzer und Gruppen automatisch zu provisionieren und zu deprovisionieren — über den SCIM-Endpunkt unter",
+      "issueToken": "SCIM-Token ausstellen"
+    },
+    "mappings": {
+      "title": "Gruppenzuordnungen",
+      "empty": "Noch keine Zuordnungen — Benutzer authentifizieren sich, treten aber automatisch keinen Gruppen bei.",
+      "attribute": "Attribut",
+      "value": "Wert",
+      "chistaGroup": "Chista-Gruppe",
+      "selectGroup": "Gruppe auswählen…"
+    },
+    "toasts": {
+      "loadFailed": "Auth-Provider konnten nicht geladen werden",
+      "providerAdded": "{type}-Provider hinzugefügt",
+      "providerAddedDescription": "Standardmäßig deaktiviert — nach erfolgreichem Test aktivieren.",
+      "createFailed": "Provider konnte nicht erstellt werden",
+      "updateFailed": "Provider konnte nicht aktualisiert werden",
+      "providerRemoved": "Provider entfernt",
+      "removeFailed": "Provider konnte nicht entfernt werden",
+      "ldapTestSucceeded": "LDAP-Bind erfolgreich",
+      "ldapTestFailed": "LDAP-Test fehlgeschlagen",
+      "scimTokenIssued": "SCIM-Token ausgestellt",
+      "scimTokenIssuedDescription": "Kopieren Sie ihn jetzt — er wird nur einmal angezeigt.",
+      "scimTokenFailed": "SCIM-Token konnte nicht ausgestellt werden",
+      "copied": "In die Zwischenablage kopiert",
+      "mappingsLoadFailed": "Zuordnungen konnten nicht geladen werden",
+      "mappingAdded": "Zuordnung hinzugefügt",
+      "mappingAddFailed": "Zuordnung konnte nicht hinzugefügt werden",
+      "mappingRemoveFailed": "Zuordnung konnte nicht entfernt werden"
+    }
+  }
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import { BadgeCheck, Loader2, Save, Users, Zap } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -14,6 +15,7 @@ import { isLive } from '@/lib/api/mode';
 import { cn } from '@/lib/utils';
 
 export default function LicensingPage() {
+  const t = useTranslations('settings');
   const [usage, setUsage] = useState<ApiLicenseUsage | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -31,11 +33,11 @@ export default function LicensingPage() {
       if (u.seats) setSeats(u.seats);
       if (u.concurrentSessions) setConcurrent(u.concurrentSessions);
     } catch {
-      toast.error('Failed to load license');
+      toast.error(t('licensing.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -45,10 +47,10 @@ export default function LicensingPage() {
     setSaving(true);
     try {
       await upsertLicense({ type, seats, concurrentSessions: concurrent });
-      toast.success('License saved');
+      toast.success(t('licensing.toasts.saved'));
       await refresh();
     } catch {
-      toast.error('Could not save license');
+      toast.error(t('licensing.toasts.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -59,58 +61,61 @@ export default function LicensingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Licensing"
-        description="Enforce concurrent-session or named-user limits across the organization. Enforcement runs at session launch."
+        title={t('licensing.title')}
+        description={t('licensing.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Licensing is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('licensing.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
-          label="License"
+          label={t('licensing.stats.license')}
           value={usage?.licensed ? 1 : 0}
           icon={BadgeCheck}
           primary
-          format={() => (usage?.licensed ? usage?.type ?? 'Licensed' : 'Community')}
+          format={() => (usage?.licensed ? (usage?.type ? t(`licensing.types.${usage.type}`) : t('licensing.licensed')) : t('licensing.community'))}
         />
-        <StatCard label="Concurrent in use" value={usage?.usedConcurrent ?? 0} icon={Zap} />
-        <StatCard label="Named users" value={usage?.usedSeats ?? 0} icon={Users} />
+        <StatCard label={t('licensing.stats.concurrentInUse')} value={usage?.usedConcurrent ?? 0} icon={Zap} />
+        <StatCard label={t('licensing.stats.namedUsers')} value={usage?.usedSeats ?? 0} icon={Users} />
       </div>
 
       {usage?.licensed && (
         <Card elevation={1} className="space-y-4 p-5">
-          <h2 className="font-display text-lg font-medium">Utilization</h2>
-          <Meter label="Concurrent sessions" used={usage.usedConcurrent} max={usage.concurrentSessions} pct={pct(usage.usedConcurrent, usage.concurrentSessions)} />
-          <Meter label="Named-user seats" used={usage.usedSeats} max={usage.seats} pct={pct(usage.usedSeats, usage.seats)} />
+          <h2 className="font-display text-lg font-medium">{t('licensing.utilization')}</h2>
+          <Meter label={t('licensing.meters.concurrent')} used={usage.usedConcurrent} max={usage.concurrentSessions} pct={pct(usage.usedConcurrent, usage.concurrentSessions)} />
+          <Meter label={t('licensing.meters.seats')} used={usage.usedSeats} max={usage.seats} pct={pct(usage.usedSeats, usage.seats)} />
         </Card>
       )}
 
       <Card elevation={1} className="space-y-4 p-5">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-medium">License key</h2>
+          <h2 className="font-display text-lg font-medium">{t('licensing.licenseKey')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
 
         <div>
-          <label className="text-xs text-muted-foreground">Mode</label>
+          <label className="text-xs text-muted-foreground">{t('licensing.fields.mode')}</label>
           <div className="mt-1 flex gap-2">
-            {(['CONCURRENT', 'NAMED_USER'] as const).map((t) => (
+            {(['CONCURRENT', 'NAMED_USER'] as const).map((m) => (
               <button
-                key={t}
-                onClick={() => setType(t)}
+                key={m}
+                onClick={() => setType(m)}
                 className={cn(
                   'rounded-md border px-3 py-1.5 text-xs transition-colors',
-                  type === t
+                  type === m
                     ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
                     : 'border-border-subtle text-muted-foreground hover:bg-secondary',
                 )}
               >
-                {t === 'CONCURRENT' ? 'Concurrent sessions' : 'Named users'}
+                {t(`licensing.types.${m}`)}
               </button>
             ))}
           </div>
@@ -118,11 +123,11 @@ export default function LicensingPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-xs text-muted-foreground">Concurrent session limit</label>
+            <label className="text-xs text-muted-foreground">{t('licensing.fields.concurrentLimit')}</label>
             <Input type="number" min={1} value={concurrent} onChange={(e) => setConcurrent(Number(e.target.value))} />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Named-user seats</label>
+            <label className="text-xs text-muted-foreground">{t('licensing.fields.seats')}</label>
             <Input type="number" min={1} value={seats} onChange={(e) => setSeats(Number(e.target.value))} />
           </div>
         </div>
@@ -130,9 +135,9 @@ export default function LicensingPage() {
         <div className="flex items-center gap-3">
           <Button size="sm" onClick={() => void onSave()} disabled={!isLive || saving}>
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-            Save license
+            {t('licensing.saveLicense')}
           </Button>
-          <Badge variant="info">Enforced at launch</Badge>
+          <Badge variant="info">{t('licensing.enforcedAtLaunch')}</Badge>
         </div>
       </Card>
     </div>

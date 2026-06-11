@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -10,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
 
 export default function WorkspacesPage() {
+  const t = useTranslations('workspaces');
+  const tc = useTranslations('common');
   const workspaces = useWorkspaces();
   const launch = useLaunchSession();
   const [query, setQuery] = useState('');
@@ -37,25 +40,25 @@ export default function WorkspacesPage() {
     setTimeout(() => {
       launch(id);
       setLaunchingId(null);
-      toast.success('Session launching', { description: 'Allocating an agent and starting the container.' });
+      toast.success(t('catalog.toasts.launchTitle'), { description: t('catalog.toasts.launchDescription') });
     }, 700);
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Workspaces"
-        description="The catalog of containerized desktops, browsers, and applications users can launch."
+        title={t('catalog.title')}
+        description={t('catalog.description')}
         actions={
           <Button size="sm">
-            <Plus className="size-4" /> New workspace
+            <Plus className="size-4" /> {t('catalog.newWorkspace')}
           </Button>
         }
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Input
-          placeholder="Search workspaces…"
+          placeholder={t('catalog.searchPlaceholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="sm:max-w-sm"
@@ -71,7 +74,7 @@ export default function WorkspacesPage() {
                   : 'border-border-subtle text-muted-foreground hover:text-foreground'
               }`}
             >
-              {c}
+              {c === 'All' ? tc('labels.all') : c}
             </button>
           ))}
         </div>

@@ -13,6 +13,7 @@ import {
   UserCog,
   Users2,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -39,38 +40,34 @@ import {
 } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 
-type ProviderConfigField = { key: string; label: string; placeholder?: string; secret?: boolean };
+type ProviderConfigField = { key: string; placeholder?: string; secret?: boolean };
 
 // Provider-specific config templates so admins know what to fill in.
+// Field labels resolve via i18n at `access.authentication.configFields.<type>.<key>`.
 const CONFIG_FIELDS: Record<Exclude<AuthProviderType, 'LOCAL'>, ProviderConfigField[]> = {
   OIDC: [
-    { key: 'issuer', label: 'Issuer URL', placeholder: 'https://accounts.google.com' },
-    { key: 'clientId', label: 'Client ID' },
-    { key: 'clientSecret', label: 'Client Secret', secret: true },
-    { key: 'redirectUri', label: 'Redirect URI (optional)', placeholder: 'https://chista.local/api/v1/auth/oidc/<id>/callback' },
+    { key: 'issuer', placeholder: 'https://accounts.google.com' },
+    { key: 'clientId' },
+    { key: 'clientSecret', secret: true },
+    { key: 'redirectUri', placeholder: 'https://chista.local/api/v1/auth/oidc/<id>/callback' },
   ],
   SAML: [
-    { key: 'entryPoint', label: 'IdP SSO URL', placeholder: 'https://idp.example.com/sso' },
-    { key: 'issuer', label: 'SP Entity ID', placeholder: 'chista' },
-    { key: 'cert', label: 'IdP Signing Certificate (PEM)', secret: true },
+    { key: 'entryPoint', placeholder: 'https://idp.example.com/sso' },
+    { key: 'issuer', placeholder: 'chista' },
+    { key: 'cert', secret: true },
   ],
   LDAP: [
-    { key: 'url', label: 'LDAP URL', placeholder: 'ldaps://ad.example.com:636' },
-    { key: 'bindDN', label: 'Bind DN', placeholder: 'cn=svc,dc=example,dc=com' },
-    { key: 'bindCredentials', label: 'Bind Password', secret: true },
-    { key: 'searchBase', label: 'Search Base', placeholder: 'ou=users,dc=example,dc=com' },
-    { key: 'searchFilter', label: 'Search Filter', placeholder: '(uid={{username}})' },
+    { key: 'url', placeholder: 'ldaps://ad.example.com:636' },
+    { key: 'bindDN', placeholder: 'cn=svc,dc=example,dc=com' },
+    { key: 'bindCredentials', secret: true },
+    { key: 'searchBase', placeholder: 'ou=users,dc=example,dc=com' },
+    { key: 'searchFilter', placeholder: '(uid={{username}})' },
   ],
-};
-
-const TYPE_LABEL: Record<AuthProviderType, string> = {
-  LOCAL: 'Local',
-  OIDC: 'OIDC',
-  SAML: 'SAML 2.0',
-  LDAP: 'LDAP / AD',
 };
 
 export default function AuthenticationPage() {
+  const t = useTranslations('access');
+  const tc = useTranslations('common');
   const [providers, setProviders] = useState<ApiAuthProvider[]>([]);
   const [groups, setGroups] = useState<ApiGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -95,11 +92,11 @@ export default function AuthenticationPage() {
       setProviders(ps);
       setGroups(gs);
     } catch {
-      toast.error('Failed to load auth providers');
+      toast.error(t('authentication.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -110,12 +107,14 @@ export default function AuthenticationPage() {
     setCreating(true);
     try {
       await createAuthProvider({ type: newType, name: newName, enabled: false, config: newConfig });
-      toast.success(`${TYPE_LABEL[newType]} provider added`, { description: 'Disabled by default — enable after testing.' });
+      toast.success(t('authentication.toasts.providerAdded', { type: t(`authentication.providerType.${newType}`) }), {
+        description: t('authentication.toasts.providerAddedDescription'),
+      });
       setNewName('');
       setNewConfig({});
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not create provider');
+      toast.error(e instanceof Error ? e.message : t('authentication.toasts.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -127,7 +126,7 @@ export default function AuthenticationPage() {
       await updateAuthProvider(p.id, { enabled: !p.enabled });
       await refresh();
     } catch {
-      toast.error('Could not update provider');
+      toast.error(t('authentication.toasts.updateFailed'));
     } finally {
       setBusyId(null);
     }
@@ -137,10 +136,10 @@ export default function AuthenticationPage() {
     setBusyId(id);
     try {
       await deleteAuthProvider(id);
-      toast.success('Provider removed');
+      toast.success(t('authentication.toasts.providerRemoved'));
       await refresh();
     } catch {
-      toast.error('Could not remove provider');
+      toast.error(t('authentication.toasts.removeFailed'));
     } finally {
       setBusyId(null);
     }
@@ -150,10 +149,10 @@ export default function AuthenticationPage() {
     setBusyId(id);
     try {
       const res = await testLdapProvider(id);
-      if (res.ok) toast.success('LDAP bind succeeded', { description: res.message });
-      else toast.error('LDAP test failed', { description: res.message });
+      if (res.ok) toast.success(t('authentication.toasts.ldapTestSucceeded'), { description: res.message });
+      else toast.error(t('authentication.toasts.ldapTestFailed'), { description: res.message });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'LDAP test failed');
+      toast.error(e instanceof Error ? e.message : t('authentication.toasts.ldapTestFailed'));
     } finally {
       setBusyId(null);
     }
@@ -164,9 +163,11 @@ export default function AuthenticationPage() {
     try {
       const { token } = await issueScimToken();
       setScimToken(token);
-      toast.success('SCIM token issued', { description: 'Copy it now — it is shown only once.' });
+      toast.success(t('authentication.toasts.scimTokenIssued'), {
+        description: t('authentication.toasts.scimTokenIssuedDescription'),
+      });
     } catch {
-      toast.error('Could not issue SCIM token');
+      toast.error(t('authentication.toasts.scimTokenFailed'));
     } finally {
       setScimBusy(false);
     }
@@ -177,32 +178,32 @@ export default function AuthenticationPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Authentication"
-        description="Configure external identity providers (OIDC, SAML 2.0, LDAP/AD), SSO group mappings, and SCIM 2.0 provisioning."
+        title={t('authentication.title')}
+        description={t('authentication.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Authentication management is live-backend only. Run with{' '}
+          {t('authentication.liveOnlyNotice')}{' '}
           <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Providers" value={providers.length} icon={KeyRound} primary />
-        <StatCard label="Enabled" value={enabledCount} icon={ShieldCheck} />
-        <StatCard label="SCIM" value={1} icon={UserCog} format={() => 'RFC 7644'} />
+        <StatCard label={t('authentication.stats.providers')} value={providers.length} icon={KeyRound} primary />
+        <StatCard label={tc('labels.enabled')} value={enabledCount} icon={ShieldCheck} />
+        <StatCard label={t('authentication.stats.scim')} value={1} icon={UserCog} format={() => 'RFC 7644'} />
       </div>
 
       {/* Existing providers */}
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Identity providers</h2>
+          <h2 className="font-display text-lg font-medium">{t('authentication.identityProviders.title')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {providers.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">No external providers configured yet.</p>
+            <p className="p-5 text-sm text-muted-foreground">{t('authentication.identityProviders.empty')}</p>
           ) : (
             providers.map((p) => (
               <div key={p.id}>
@@ -214,23 +215,23 @@ export default function AuthenticationPage() {
                       {String((p.config as Record<string, unknown>).issuer ?? (p.config as Record<string, unknown>).url ?? (p.config as Record<string, unknown>).entryPoint ?? '—')}
                     </p>
                   </div>
-                  <Badge variant={p.type === 'OIDC' ? 'gold' : 'outline'}>{TYPE_LABEL[p.type]}</Badge>
-                  <Badge variant={p.enabled ? 'success' : 'outline'}>{p.enabled ? 'Enabled' : 'Disabled'}</Badge>
+                  <Badge variant={p.type === 'OIDC' ? 'gold' : 'outline'}>{t(`authentication.providerType.${p.type}`)}</Badge>
+                  <Badge variant={p.enabled ? 'success' : 'outline'}>{p.enabled ? tc('labels.enabled') : tc('labels.disabled')}</Badge>
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    title="Group mappings"
+                    title={t('authentication.mappings.title')}
                     onClick={() => setMappingsFor(mappingsFor === p.id ? null : p.id)}
                   >
                     <Users2 className={`size-4 ${mappingsFor === p.id ? 'text-gold-300' : ''}`} />
                   </Button>
                   {p.type === 'LDAP' && (
-                    <Button variant="ghost" size="icon-sm" disabled={busyId === p.id} onClick={() => void onTestLdap(p.id)} title="Test LDAP bind">
+                    <Button variant="ghost" size="icon-sm" disabled={busyId === p.id} onClick={() => void onTestLdap(p.id)} title={t('authentication.identityProviders.testLdap')}>
                       {busyId === p.id ? <Loader2 className="size-4 animate-spin" /> : <TestTube2 className="size-4" />}
                     </Button>
                   )}
                   <Button variant="secondary" size="sm" disabled={busyId === p.id} onClick={() => void onToggle(p)}>
-                    {p.enabled ? 'Disable' : 'Enable'}
+                    {p.enabled ? tc('actions.disable') : tc('actions.enable')}
                   </Button>
                   <Button variant="ghost" size="icon-sm" disabled={busyId === p.id} onClick={() => void onDelete(p.id)}>
                     <Trash2 className="size-4 text-destructive" />
@@ -249,35 +250,39 @@ export default function AuthenticationPage() {
 
       {/* Add provider */}
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add provider</h2>
+        <h2 className="font-display text-lg font-medium">{t('authentication.addProvider.title')}</h2>
         <div className="flex flex-wrap gap-2">
-          {(['OIDC', 'SAML', 'LDAP'] as const).map((t) => (
+          {(['OIDC', 'SAML', 'LDAP'] as const).map((pt) => (
             <button
-              key={t}
+              key={pt}
               onClick={() => {
-                setNewType(t);
+                setNewType(pt);
                 setNewConfig({});
               }}
               className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${
-                newType === t
+                newType === pt
                   ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
                   : 'border-border-subtle text-muted-foreground hover:bg-secondary'
               }`}
             >
-              {TYPE_LABEL[t]}
+              {t(`authentication.providerType.${pt}`)}
             </button>
           ))}
         </div>
 
         <div>
-          <Label>Display name</Label>
-          <Input placeholder={`${TYPE_LABEL[newType]} login`} value={newName} onChange={(e) => setNewName(e.target.value)} />
+          <Label>{t('authentication.addProvider.displayName')}</Label>
+          <Input
+            placeholder={t('authentication.addProvider.displayNamePlaceholder', { type: t(`authentication.providerType.${newType}`) })}
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {CONFIG_FIELDS[newType].map((f) => (
             <div key={f.key}>
-              <Label>{f.label}</Label>
+              <Label>{t(`authentication.configFields.${newType}.${f.key}`)}</Label>
               <Input
                 type={f.secret ? 'password' : 'text'}
                 placeholder={f.placeholder}
@@ -291,9 +296,9 @@ export default function AuthenticationPage() {
         <div className="flex items-center gap-3">
           <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !newName || creating}>
             {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-            Add provider
+            {t('authentication.addProvider.title')}
           </Button>
-          <Badge variant="info">Created disabled — enable after a successful test</Badge>
+          <Badge variant="info">{t('authentication.addProvider.createdDisabledNote')}</Badge>
         </div>
       </Card>
 
@@ -301,11 +306,10 @@ export default function AuthenticationPage() {
       <Card elevation={1} className="space-y-4 p-5">
         <div className="flex items-center gap-2">
           <UserCog className="size-5 text-gold-300" />
-          <h2 className="font-display text-lg font-medium">SCIM 2.0 provisioning</h2>
+          <h2 className="font-display text-lg font-medium">{t('authentication.scim.title')}</h2>
         </div>
         <p className="text-sm text-muted-foreground">
-          Issue a bearer token for your IdP (Okta, Azure AD, OneLogin) to automatically provision and
-          deprovision users and groups via the SCIM endpoint at{' '}
+          {t('authentication.scim.description')}{' '}
           <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">/scim/v2/&lt;orgId&gt;/Users</code>.
         </p>
         {scimToken ? (
@@ -316,10 +320,10 @@ export default function AuthenticationPage() {
               size="sm"
               onClick={() => {
                 void navigator.clipboard.writeText(scimToken);
-                toast.success('Copied to clipboard');
+                toast.success(t('authentication.toasts.copied'));
               }}
             >
-              <Copy className="size-3.5" /> Copy
+              <Copy className="size-3.5" /> {tc('actions.copy')}
             </Button>
             <Button variant="ghost" size="icon-sm" onClick={() => setScimToken(null)}>
               <Check className="size-4" />
@@ -328,7 +332,7 @@ export default function AuthenticationPage() {
         ) : (
           <Button size="sm" onClick={() => void onIssueScim()} disabled={!isLive || scimBusy}>
             {scimBusy ? <Loader2 className="size-3.5 animate-spin" /> : <KeyRound className="size-3.5" />}
-            Issue SCIM token
+            {t('authentication.scim.issueToken')}
           </Button>
         )}
       </Card>
@@ -342,6 +346,8 @@ export default function AuthenticationPage() {
  * are reconciled on every federated login.
  */
 function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiGroup[] }) {
+  const t = useTranslations('access');
+  const tc = useTranslations('common');
   const [mappings, setMappings] = useState<ApiSsoMapping[]>([]);
   const [loading, setLoading] = useState(false);
   const [groupId, setGroupId] = useState('');
@@ -354,11 +360,11 @@ function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiG
     try {
       setMappings(await getSsoMappings(providerId));
     } catch {
-      toast.error('Failed to load mappings');
+      toast.error(t('authentication.toasts.mappingsLoadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [providerId]);
+  }, [providerId, t]);
 
   useEffect(() => {
     void load();
@@ -372,10 +378,10 @@ function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiG
     try {
       await createSsoMapping({ authConfigId: providerId, groupId, attribute, value });
       setValue('');
-      toast.success('Mapping added');
+      toast.success(t('authentication.toasts.mappingAdded'));
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not add mapping');
+      toast.error(e instanceof Error ? e.message : t('authentication.toasts.mappingAddFailed'));
     } finally {
       setAdding(false);
     }
@@ -386,19 +392,19 @@ function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiG
       await deleteSsoMapping(id);
       await load();
     } catch {
-      toast.error('Could not remove mapping');
+      toast.error(t('authentication.toasts.mappingRemoveFailed'));
     }
   };
 
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-sm font-medium">
-        <Users2 className="size-4 text-gold-300" /> Group mappings
+        <Users2 className="size-4 text-gold-300" /> {t('authentication.mappings.title')}
         {loading && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
       </div>
 
       {mappings.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No mappings yet — users authenticate but join no groups automatically.</p>
+        <p className="text-xs text-muted-foreground">{t('authentication.mappings.empty')}</p>
       ) : (
         <div className="space-y-1.5">
           {mappings.map((m) => (
@@ -419,21 +425,21 @@ function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiG
 
       <div className="flex flex-wrap items-end gap-2">
         <div className="min-w-[8rem]">
-          <Label className="text-xs">Attribute</Label>
+          <Label className="text-xs">{t('authentication.mappings.attribute')}</Label>
           <Input value={attribute} onChange={(e) => setAttribute(e.target.value)} placeholder="groups" />
         </div>
         <div className="min-w-[8rem]">
-          <Label className="text-xs">Value</Label>
+          <Label className="text-xs">{t('authentication.mappings.value')}</Label>
           <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="admins" />
         </div>
         <div className="min-w-[10rem]">
-          <Label className="text-xs">Chista group</Label>
+          <Label className="text-xs">{t('authentication.mappings.chistaGroup')}</Label>
           <select
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}
             className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
           >
-            <option value="">Select group…</option>
+            <option value="">{t('authentication.mappings.selectGroup')}</option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name}
@@ -443,7 +449,7 @@ function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiG
         </div>
         <Button size="sm" onClick={() => void onAdd()} disabled={!groupId || !value || adding}>
           {adding ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-          Add
+          {tc('actions.add')}
         </Button>
       </div>
     </div>

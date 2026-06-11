@@ -1,0 +1,335 @@
+{
+  "zones": {
+    "title": "نواحی",
+    "description": "نواحی استقرار، ایجنت‌ها و سرورها را بر اساس منطقه برای مسیریابی و جداسازی ظرفیت گروه‌بندی می‌کنند.",
+    "liveOnly": "مدیریت نواحی فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "stats": {
+      "zones": "نواحی",
+      "regions": "مناطق"
+    },
+    "configuredZones": "نواحی پیکربندی‌شده",
+    "empty": {
+      "title": "هیچ ناحیه‌ای پیکربندی نشده است",
+      "description": "نواحی، ایجنت‌ها را بر اساس منطقه برای مسیریابی و جداسازی ظرفیت گروه‌بندی می‌کنند."
+    },
+    "default": "پیش‌فرض",
+    "setDefault": "تنظیم به‌عنوان پیش‌فرض",
+    "addZone": "افزودن ناحیه",
+    "form": {
+      "region": "منطقه (اختیاری)",
+      "regionPlaceholder": "فرانکفورت",
+      "proxyBaseUrl": "نشانی پایه پروکسی (اختیاری)"
+    },
+    "toasts": {
+      "loadFailed": "بارگذاری نواحی ناموفق بود",
+      "created": "ناحیه ایجاد شد",
+      "createFailed": "ایجاد ناحیه ممکن نشد",
+      "setDefaultFailed": "تنظیم پیش‌فرض ممکن نشد",
+      "removed": "ناحیه حذف شد",
+      "removeFailed": "حذف ناحیه ممکن نشد"
+    }
+  },
+  "agents": {
+    "title": "ایجنت‌ها",
+    "description": "ایجنت‌های پردازشی Docker که کانتینرهای نشست را در نواحی شما فراهم‌سازی و میزبانی می‌کنند.",
+    "stats": {
+      "onlineAgents": "ایجنت‌های آنلاین",
+      "hostedSessions": "نشست‌های میزبانی‌شده",
+      "avgCpu": "میانگین CPU"
+    },
+    "zonesTitle": "نواحی",
+    "zoneLoad": "{agents, plural, one {# ایجنت} other {# ایجنت}} · {sessions, plural, one {# نشست} other {# نشست}}"
+  },
+  "servers": {
+    "title": "سرورها",
+    "description": "سرورهای ایستا (میزبان‌های RDP/VNC/SSH) که پشتیبان فضاهای کاری از نوع سرور هستند. هر سرور سقفی برای نشست‌های هم‌زمان خود تعیین می‌کند.",
+    "liveOnly": "مدیریت سرورها فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "stats": {
+      "servers": "سرورها",
+      "capacity": "ظرفیت",
+      "inUse": "در حال استفاده"
+    },
+    "registeredServers": "سرورهای ثبت‌شده",
+    "empty": {
+      "title": "هیچ سروری ثبت نشده است",
+      "description": "میزبان‌های RDP، VNC یا SSH را برای پشتیبانی از فضاهای کاری از نوع سرور اضافه کنید."
+    },
+    "addServer": "افزودن سرور",
+    "form": {
+      "hostname": "نام میزبان",
+      "address": "نشانی",
+      "zone": "ناحیه",
+      "noZones": "ناحیه‌ای وجود ندارد — ابتدا یک ناحیه ایجاد کنید",
+      "connectionType": "نوع اتصال",
+      "maxSessions": "حداکثر نشست‌ها"
+    },
+    "toasts": {
+      "loadFailed": "بارگذاری سرورها ناموفق بود",
+      "added": "سرور اضافه شد",
+      "addFailed": "افزودن سرور ممکن نشد",
+      "removed": "سرور حذف شد",
+      "removeFailed": "حذف سرور ممکن نشد"
+    }
+  },
+  "serverPools": {
+    "title": "استخرهای سرور",
+    "description": "ایجنت‌ها یا سرورها را در استخرهایی گروه‌بندی کنید که قابلیت مقیاس خودکار دارند. هر استخر می‌تواند یک سیاست مقیاس خودکار داشته باشد که ظرفیت را افزایش یا کاهش می‌دهد.",
+    "liveOnly": "مدیریت استخرها فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "stats": {
+      "pools": "استخرها",
+      "autoscaled": "دارای مقیاس خودکار",
+      "members": "اعضا"
+    },
+    "poolsTitle": "استخرها",
+    "empty": "هنوز هیچ استخری پیکربندی نشده است.",
+    "memberCount": "{count, plural, one {# عضو} other {# عضو}}",
+    "autoscaleBadge": "مقیاس خودکار: {mode}",
+    "manual": "دستی",
+    "editAutoscale": "ویرایش مقیاس خودکار",
+    "enableAs": "فعال‌سازی مقیاس خودکار",
+    "disableAs": "غیرفعال‌سازی مقیاس خودکار",
+    "addPool": "افزودن استخر",
+    "form": {
+      "kind": "نوع",
+      "kindAgent": "ایجنت (میزبان‌های کانتینر)",
+      "kindServer": "سرور (میزبان‌های RDP/VNC)"
+    },
+    "kinds": {
+      "AGENT": "ایجنت",
+      "SERVER": "سرور"
+    },
+    "modes": {
+      "LOAD": "بر اساس بار",
+      "SCHEDULE": "زمان‌بندی",
+      "ACTIVE_DIRECTORY": "Active Directory"
+    },
+    "editor": {
+      "mode": "حالت",
+      "minStandby": "حداقل آماده‌به‌کار",
+      "maxInstances": "حداکثر نمونه‌ها",
+      "perServerLimit": "محدودیت به‌ازای هر سرور",
+      "savePolicy": "ذخیره سیاست"
+    },
+    "toasts": {
+      "loadFailed": "بارگذاری استخرها ناموفق بود",
+      "created": "استخر ایجاد شد",
+      "createFailed": "ایجاد استخر ممکن نشد",
+      "removed": "استخر حذف شد",
+      "removeFailed": "حذف استخر ممکن نشد",
+      "autoscaleEnabled": "مقیاس خودکار فعال شد",
+      "autoscaleDisabled": "مقیاس خودکار غیرفعال شد",
+      "autoscaleUpdated": "مقیاس خودکار به‌روزرسانی شد",
+      "autoscaleUpdateFailed": "به‌روزرسانی مقیاس خودکار ممکن نشد",
+      "autoscaleSaveFailed": "ذخیره مقیاس خودکار ممکن نشد"
+    }
+  },
+  "autoscale": {
+    "title": "مقیاس خودکار",
+    "description": "نمای کلی سیاست‌های مقیاس خودکار در استخرهای سرور. ظرفیت بر اساس بار، زمان‌بندی یا تقاضای AD افزایش و کاهش می‌یابد.",
+    "managePools": "مدیریت استخرها",
+    "liveOnly": "مقیاس خودکار فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "stats": {
+      "autoscaledPools": "استخرهای دارای مقیاس خودکار",
+      "maxInstances": "حداکثر نمونه‌ها",
+      "standby": "آماده‌به‌کار"
+    },
+    "activePolicies": "سیاست‌های فعال",
+    "empty": "هنوز هیچ سیاستی برای مقیاس خودکار تعریف نشده است. مقیاس خودکار را برای یک استخر از بخش <link>استخرهای سرور</link> فعال کنید.",
+    "policySummary": "آماده‌به‌کار {standby} · حداکثر {max} · {perServer}/سرور · اعلام وضعیت هر {interval} ثانیه",
+    "kinds": {
+      "AGENT": "ایجنت",
+      "SERVER": "سرور"
+    },
+    "modes": {
+      "LOAD": "بر اساس بار",
+      "SCHEDULE": "زمان‌بندی",
+      "ACTIVE_DIRECTORY": "Active Directory"
+    },
+    "toasts": {
+      "loadFailed": "بارگذاری سیاست‌های مقیاس خودکار ناموفق بود"
+    }
+  },
+  "vmProviders": {
+    "title": "ارائه‌دهندگان VM",
+    "description": "ارائه‌دهندگان ابری و هایپروایزری را متصل کنید تا پشتیبان استخرهای سرورِ دارای مقیاس خودکار باشند. درایورها: Proxmox VE، AWS EC2، Azure، GCP و VMware vSphere.",
+    "liveOnly": "مدیریت ارائه‌دهندگان VM فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "stats": {
+      "providers": "ارائه‌دهندگان",
+      "drivers": "درایورها"
+    },
+    "configuredProviders": "ارائه‌دهندگان پیکربندی‌شده",
+    "empty": "هنوز هیچ ارائه‌دهنده VM پیکربندی نشده است.",
+    "addProvider": "افزودن ارائه‌دهنده",
+    "form": {
+      "displayName": "نام نمایشی",
+      "namePlaceholder": "کلاستر {kind}"
+    },
+    "kinds": {
+      "PROXMOX": "Proxmox",
+      "AWS": "AWS",
+      "AZURE": "Azure",
+      "GCP": "GCP",
+      "VSPHERE": "vSphere",
+      "DIGITALOCEAN": "DigitalOcean",
+      "ORACLE": "Oracle OCI",
+      "OPENSTACK": "OpenStack",
+      "NUTANIX": "Nutanix",
+      "KUBEVIRT": "KubeVirt",
+      "HARVESTER": "Harvester"
+    },
+    "fields": {
+      "PROXMOX": {
+        "apiUrl": "نشانی API",
+        "node": "نود",
+        "tokenId": "شناسه توکن",
+        "tokenSecret": "رمز توکن",
+        "template": "VMID قالب"
+      },
+      "AWS": {
+        "accessKeyId": "شناسه کلید دسترسی",
+        "secretAccessKey": "کلید دسترسی محرمانه",
+        "region": "منطقه",
+        "imageId": "شناسه AMI",
+        "instanceType": "نوع نمونه"
+      },
+      "AZURE": {
+        "tenantId": "شناسه تننت",
+        "clientId": "شناسه کلاینت",
+        "clientSecret": "رمز کلاینت",
+        "subscriptionId": "شناسه اشتراک",
+        "resourceGroup": "گروه منابع",
+        "location": "مکان",
+        "vmSize": "اندازه VM"
+      },
+      "GCP": {
+        "projectId": "شناسه پروژه",
+        "zone": "ناحیه",
+        "serviceAccountEmail": "ایمیل حساب سرویس",
+        "privateKeyPem": "کلید خصوصی (PEM)",
+        "machineType": "نوع ماشین",
+        "sourceImage": "ایمیج مبدأ"
+      },
+      "VSPHERE": {
+        "vcenterUrl": "نشانی vCenter",
+        "username": "نام کاربری",
+        "password": "رمز عبور",
+        "template": "VM قالب"
+      },
+      "DIGITALOCEAN": {
+        "apiToken": "توکن API",
+        "region": "منطقه",
+        "size": "اندازه Droplet",
+        "image": "اسلاگ ایمیج"
+      },
+      "ORACLE": {
+        "endpoint": "نقطه پایانی API",
+        "tenancyOcid": "OCID تننسی",
+        "userOcid": "OCID کاربر",
+        "fingerprint": "اثر انگشت کلید",
+        "privateKeyPem": "کلید خصوصی API (PEM)",
+        "compartmentOcid": "OCID کامپارتمنت",
+        "availabilityDomain": "دامنه دسترس‌پذیری",
+        "shape": "Shape",
+        "subnetOcid": "OCID زیرشبکه",
+        "imageOcid": "OCID ایمیج"
+      },
+      "OPENSTACK": {
+        "authUrl": "نشانی احراز هویت Keystone",
+        "username": "نام کاربری",
+        "password": "رمز عبور",
+        "projectName": "نام پروژه",
+        "novaUrl": "نشانی Nova Compute",
+        "flavorRef": "شناسه Flavor",
+        "imageRef": "شناسه ایمیج",
+        "networkId": "شناسه شبکه (اختیاری)"
+      },
+      "NUTANIX": {
+        "prismCentralUrl": "نشانی Prism Central",
+        "username": "نام کاربری",
+        "password": "رمز عبور",
+        "clusterUuid": "UUID کلاستر",
+        "subnetUuid": "UUID زیرشبکه",
+        "imageUuid": "UUID ایمیج"
+      },
+      "KUBEVIRT": {
+        "apiServer": "سرور API Kubernetes",
+        "token": "توکن ServiceAccount",
+        "namespace": "فضای نام",
+        "image": "ایمیج containerDisk"
+      },
+      "HARVESTER": {
+        "apiServer": "سرور API Harvester",
+        "token": "توکن",
+        "namespace": "فضای نام",
+        "image": "ایمیج"
+      }
+    },
+    "toasts": {
+      "loadFailed": "بارگذاری ارائه‌دهندگان VM ناموفق بود",
+      "created": "ارائه‌دهنده {kind} اضافه شد",
+      "createFailed": "ایجاد ارائه‌دهنده ممکن نشد",
+      "updateFailed": "به‌روزرسانی ارائه‌دهنده ممکن نشد",
+      "removed": "ارائه‌دهنده حذف شد",
+      "removeFailed": "حذف ارائه‌دهنده ممکن نشد"
+    }
+  },
+  "dnsProviders": {
+    "title": "ارائه‌دهندگان DNS",
+    "description": "ارائه‌دهندگان DNS را ثبت کنید تا رکوردهای DNS برای سرورهای دارای مقیاس خودکار و نام‌های میزبانِ هر نشست به‌صورت خودکار ایجاد شوند.",
+    "liveOnly": "مدیریت ارائه‌دهندگان DNS فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "stats": {
+      "providers": "ارائه‌دهندگان"
+    },
+    "configuredProviders": "ارائه‌دهندگان پیکربندی‌شده",
+    "empty": "هنوز هیچ ارائه‌دهنده DNS پیکربندی نشده است.",
+    "addProvider": "افزودن ارائه‌دهنده",
+    "form": {
+      "displayName": "نام نمایشی",
+      "namePlaceholder": "DNS {kind}",
+      "zoneName": "نام ناحیه (اختیاری)"
+    },
+    "kinds": {
+      "AWS": "AWS",
+      "AZURE": "Azure",
+      "DIGITALOCEAN": "DigitalOcean",
+      "GCP": "GCP",
+      "ORACLE": "Oracle OCI"
+    },
+    "fields": {
+      "AWS": {
+        "accessKeyId": "شناسه کلید دسترسی",
+        "secretAccessKey": "کلید دسترسی محرمانه",
+        "hostedZoneId": "شناسه Hosted Zone"
+      },
+      "AZURE": {
+        "tenantId": "شناسه تننت",
+        "clientId": "شناسه کلاینت",
+        "clientSecret": "رمز کلاینت",
+        "subscriptionId": "شناسه اشتراک",
+        "resourceGroup": "گروه منابع"
+      },
+      "DIGITALOCEAN": {
+        "apiToken": "توکن API"
+      },
+      "GCP": {
+        "projectId": "شناسه پروژه",
+        "serviceAccountKey": "کلید حساب سرویس (JSON)"
+      },
+      "ORACLE": {
+        "tenancyOcid": "OCID تننسی",
+        "userOcid": "OCID کاربر",
+        "fingerprint": "اثر انگشت",
+        "privateKeyPem": "کلید خصوصی (PEM)",
+        "compartmentOcid": "OCID کامپارتمنت"
+      }
+    },
+    "toasts": {
+      "loadFailed": "بارگذاری ارائه‌دهندگان DNS ناموفق بود",
+      "created": "ارائه‌دهنده DNS {kind} اضافه شد",
+      "createFailed": "ایجاد ارائه‌دهنده ممکن نشد",
+      "updateFailed": "به‌روزرسانی ارائه‌دهنده ممکن نشد",
+      "removed": "ارائه‌دهنده حذف شد",
+      "removeFailed": "حذف ارائه‌دهنده ممکن نشد"
+    }
+  }
+}

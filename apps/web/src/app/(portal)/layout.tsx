@@ -1,6 +1,7 @@
 'use client';
 
 import { LayoutDashboard } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { AuthGate } from '@/components/auth-gate';
 import { Logo } from '@/components/brand/logo';
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/api/auth-context';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('portal');
   const { user } = useAuth();
 
   return (
@@ -22,14 +24,14 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             <Logo />
           </Link>
           <nav className="ml-6 hidden items-center gap-1 text-sm sm:flex">
-            <span className="rounded-md px-3 py-1.5 font-medium text-foreground">My Workspaces</span>
+            <span className="rounded-md px-3 py-1.5 font-medium text-foreground">{t('header.myWorkspaces')}</span>
           </nav>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ms-auto flex items-center gap-3">
             <FavoriteQuickLaunch />
             {user?.isSystemAdmin && (
               <Button asChild variant="ghost" size="sm" className="gap-1.5">
                 <Link href="/dashboard">
-                  <LayoutDashboard className="size-4" /> Admin
+                  <LayoutDashboard className="size-4" /> {t('header.admin')}
                 </Link>
               </Button>
             )}

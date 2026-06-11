@@ -1,6 +1,7 @@
 'use client';
 
 import { Gauge, Loader2, Network, Plus, Settings2, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -20,6 +21,8 @@ import {
 import { isLive } from '@/lib/api/mode';
 
 export default function ServerPoolsPage() {
+  const t = useTranslations('infrastructure');
+  const tc = useTranslations('common');
   const [pools, setPools] = useState<ApiServerPool[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -34,7 +37,7 @@ export default function ServerPoolsPage() {
     try {
       setPools(await getPools());
     } catch {
-      toast.error('Failed to load pools');
+      toast.error(t('serverPools.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -49,11 +52,11 @@ export default function ServerPoolsPage() {
     setCreating(true);
     try {
       await createPool({ name, kind, enabled: true });
-      toast.success('Pool created');
+      toast.success(t('serverPools.toasts.created'));
       setName('');
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not create pool');
+      toast.error(e instanceof Error ? e.message : t('serverPools.toasts.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -63,10 +66,10 @@ export default function ServerPoolsPage() {
     setBusyId(id);
     try {
       await deletePool(id);
-      toast.success('Pool removed');
+      toast.success(t('serverPools.toasts.removed'));
       await refresh();
     } catch {
-      toast.error('Could not remove pool');
+      toast.error(t('serverPools.toasts.removeFailed'));
     } finally {
       setBusyId(null);
     }
@@ -77,14 +80,14 @@ export default function ServerPoolsPage() {
     try {
       if (p.autoscaleConfig) {
         await disableAutoscale(p.id);
-        toast.success('Autoscale disabled');
+        toast.success(t('serverPools.toasts.autoscaleDisabled'));
       } else {
         await upsertAutoscale(p.id, { mode: 'LOAD', minStandby: 1, maxInstances: 5, perServerSessionLimit: 4 });
-        toast.success('Autoscale enabled');
+        toast.success(t('serverPools.toasts.autoscaleEnabled'));
       }
       await refresh();
     } catch {
-      toast.error('Could not update autoscale');
+      toast.error(t('serverPools.toasts.autoscaleUpdateFailed'));
     } finally {
       setBusyId(null);
     }
@@ -93,31 +96,34 @@ export default function ServerPoolsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Server Pools"
-        description="Group agents or servers into pools that can be autoscaled. Each pool may have an autoscale policy that grows/shrinks capacity."
+        title={t('serverPools.title')}
+        description={t('serverPools.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Pool management is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('serverPools.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Pools" value={pools.length} icon={Network} primary />
-        <StatCard label="Autoscaled" value={pools.filter((p) => p.autoscaleConfig).length} icon={Gauge} />
-        <StatCard label="Members" value={pools.reduce((a, p) => a + (p._count?.members ?? 0), 0)} icon={Network} />
+        <StatCard label={t('serverPools.stats.pools')} value={pools.length} icon={Network} primary />
+        <StatCard label={t('serverPools.stats.autoscaled')} value={pools.filter((p) => p.autoscaleConfig).length} icon={Gauge} />
+        <StatCard label={t('serverPools.stats.members')} value={pools.reduce((a, p) => a + (p._count?.members ?? 0), 0)} icon={Network} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Pools</h2>
+          <h2 className="font-display text-lg font-medium">{t('serverPools.poolsTitle')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {pools.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">No pools configured yet.</p>
+            <p className="p-5 text-sm text-muted-foreground">{t('serverPools.empty')}</p>
           ) : (
             pools.map((p) => (
               <div key={p.id}>
@@ -125,21 +131,21 @@ export default function ServerPoolsPage() {
                   <Network className="size-4 text-gold-300" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{p.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{p._count?.members ?? 0} member(s)</p>
+                    <p className="truncate text-xs text-muted-foreground">{t('serverPools.memberCount', { count: p._count?.members ?? 0 })}</p>
                   </div>
-                  <Badge variant="outline">{p.kind}</Badge>
+                  <Badge variant="outline">{t(`serverPools.kinds.${p.kind}`)}</Badge>
                   {p.autoscaleConfig ? (
-                    <Badge variant="gold">Autoscale: {p.autoscaleConfig.mode}</Badge>
+                    <Badge variant="gold">{t('serverPools.autoscaleBadge', { mode: t(`serverPools.modes.${p.autoscaleConfig.mode}`) })}</Badge>
                   ) : (
-                    <Badge variant="outline">Manual</Badge>
+                    <Badge variant="outline">{t('serverPools.manual')}</Badge>
                   )}
                   {p.autoscaleConfig && (
-                    <Button variant="ghost" size="icon-sm" title="Edit autoscale" onClick={() => setEditing(editing === p.id ? null : p.id)}>
+                    <Button variant="ghost" size="icon-sm" title={t('serverPools.editAutoscale')} onClick={() => setEditing(editing === p.id ? null : p.id)}>
                       <Settings2 className={`size-4 ${editing === p.id ? 'text-gold-300' : ''}`} />
                     </Button>
                   )}
                   <Button variant="secondary" size="sm" disabled={busyId === p.id} onClick={() => void onToggleAutoscale(p)}>
-                    {p.autoscaleConfig ? 'Disable AS' : 'Enable AS'}
+                    {p.autoscaleConfig ? t('serverPools.disableAs') : t('serverPools.enableAs')}
                   </Button>
                   <Button variant="ghost" size="icon-sm" disabled={busyId === p.id} onClick={() => void onDelete(p.id)}>
                     <Trash2 className="size-4 text-destructive" />
@@ -157,27 +163,27 @@ export default function ServerPoolsPage() {
       </Card>
 
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add pool</h2>
+        <h2 className="font-display text-lg font-medium">{t('serverPools.addPool')}</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <Label>Name</Label>
+            <Label>{tc('labels.name')}</Label>
             <Input placeholder="gpu-render-pool" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Kind</Label>
+            <Label>{t('serverPools.form.kind')}</Label>
             <select
               value={kind}
               onChange={(e) => setKind(e.target.value as 'AGENT' | 'SERVER')}
               className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
             >
-              <option value="AGENT">Agent (container hosts)</option>
-              <option value="SERVER">Server (RDP/VNC hosts)</option>
+              <option value="AGENT">{t('serverPools.form.kindAgent')}</option>
+              <option value="SERVER">{t('serverPools.form.kindServer')}</option>
             </select>
           </div>
         </div>
         <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !name || creating}>
           {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-          Add pool
+          {t('serverPools.addPool')}
         </Button>
       </Card>
     </div>
@@ -185,6 +191,7 @@ export default function ServerPoolsPage() {
 }
 
 function AutoscaleEditor({ pool, onSaved }: { pool: ApiServerPool; onSaved: () => void }) {
+  const t = useTranslations('infrastructure');
   const cfg = pool.autoscaleConfig!;
   const [mode, setMode] = useState(cfg.mode);
   const [minStandby, setMinStandby] = useState(cfg.minStandby);
@@ -201,10 +208,10 @@ function AutoscaleEditor({ pool, onSaved }: { pool: ApiServerPool; onSaved: () =
         maxInstances,
         perServerSessionLimit: perServer,
       });
-      toast.success('Autoscale updated');
+      toast.success(t('serverPools.toasts.autoscaleUpdated'));
       onSaved();
     } catch {
-      toast.error('Could not save autoscale');
+      toast.error(t('serverPools.toasts.autoscaleSaveFailed'));
     } finally {
       setSaving(false);
     }
@@ -214,33 +221,33 @@ function AutoscaleEditor({ pool, onSaved }: { pool: ApiServerPool; onSaved: () =
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
-          <Label className="text-xs">Mode</Label>
+          <Label className="text-xs">{t('serverPools.editor.mode')}</Label>
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value as typeof mode)}
             className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
           >
-            <option value="LOAD">Load</option>
-            <option value="SCHEDULE">Schedule</option>
-            <option value="ACTIVE_DIRECTORY">Active Directory</option>
+            <option value="LOAD">{t('serverPools.modes.LOAD')}</option>
+            <option value="SCHEDULE">{t('serverPools.modes.SCHEDULE')}</option>
+            <option value="ACTIVE_DIRECTORY">{t('serverPools.modes.ACTIVE_DIRECTORY')}</option>
           </select>
         </div>
         <div>
-          <Label className="text-xs">Min standby</Label>
+          <Label className="text-xs">{t('serverPools.editor.minStandby')}</Label>
           <Input type="number" min={0} value={minStandby} onChange={(e) => setMinStandby(Number(e.target.value))} />
         </div>
         <div>
-          <Label className="text-xs">Max instances</Label>
+          <Label className="text-xs">{t('serverPools.editor.maxInstances')}</Label>
           <Input type="number" min={1} value={maxInstances} onChange={(e) => setMaxInstances(Number(e.target.value))} />
         </div>
         <div>
-          <Label className="text-xs">Per-server limit</Label>
+          <Label className="text-xs">{t('serverPools.editor.perServerLimit')}</Label>
           <Input type="number" min={1} value={perServer} onChange={(e) => setPerServer(Number(e.target.value))} />
         </div>
       </div>
       <Button size="sm" onClick={() => void save()} disabled={saving}>
         {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Gauge className="size-3.5" />}
-        Save policy
+        {t('serverPools.editor.savePolicy')}
       </Button>
     </div>
   );

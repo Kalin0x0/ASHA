@@ -1,6 +1,7 @@
 'use client';
 
 import { Users as UsersIcon, UsersRound } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { EmptyState } from '@/components/composite/empty-state';
 import { PageHeader } from '@/components/composite/page-header';
@@ -10,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useUsers } from '@/lib/hooks';
 
 export default function GroupsPage() {
+  const t = useTranslations('access');
   const users = useUsers();
 
   const groups = useMemo(() => {
@@ -25,13 +27,13 @@ export default function GroupsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Groups"
-        description="Membership groups, derived from current user assignments — used to scope workspace access and roles."
+        title={t('groups.title')}
+        description={t('groups.description')}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="Groups" value={groups.length} icon={UsersRound} primary />
-        <StatCard label="Memberships" value={assignments} icon={UsersIcon} />
+        <StatCard label={t('groups.stats.groups')} value={groups.length} icon={UsersRound} primary />
+        <StatCard label={t('groups.stats.memberships')} value={assignments} icon={UsersIcon} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -45,7 +47,7 @@ export default function GroupsPage() {
                 <div>
                   <p className="font-medium">{g.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {g.members} member{g.members === 1 ? '' : 's'}
+                    {t('groups.memberCount', { count: g.members })}
                   </p>
                 </div>
               </div>
@@ -57,7 +59,7 @@ export default function GroupsPage() {
         ))}
         {groups.length === 0 && (
           <div className="col-span-full">
-            <EmptyState icon={UsersRound} title="No groups yet" description="Groups are derived from user memberships. Add users and assign them to groups." />
+            <EmptyState icon={UsersRound} title={t('groups.empty.title')} description={t('groups.empty.description')} />
           </div>
         )}
       </div>

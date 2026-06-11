@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import type { LucideIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/card';
 
 export function ComingSoon({
@@ -13,6 +14,7 @@ export function ComingSoon({
   icon: LucideIcon;
   section?: string;
 }) {
+  const t = useTranslations('shell.comingSoon');
   return (
     <Card elevation={1} className="relative overflow-hidden">
       {/* Aurora inner glow */}
@@ -43,8 +45,7 @@ export function ComingSoon({
           )}
           <h2 className="font-display text-2xl font-medium">{title}</h2>
           <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-            {description ??
-              'Connect your live data source and this section will populate automatically. Everything is ready when you are.'}
+            {description ?? t('fallbackDescription')}
           </p>
         </div>
       </div>

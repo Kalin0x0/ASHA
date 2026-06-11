@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2, RefreshCw, ScrollText, Search } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/composite/empty-state';
@@ -13,6 +14,9 @@ import { type ApiAuditEntry, getAuditLog } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 
 export default function AuditLogPage() {
+  const t = useTranslations('observability');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const [entries, setEntries] = useState<ApiAuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('');
@@ -23,7 +27,7 @@ export default function AuditLogPage() {
     try {
       setEntries(await getAuditLog(200, filter.trim() || undefined));
     } catch {
-      toast.error('Failed to load audit log');
+      toast.error(t('auditLog.loadError'));
     } finally {
       setLoading(false);
     }
@@ -36,19 +40,19 @@ export default function AuditLogPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Audit Log"
-        description="Immutable record of administrative and security-relevant actions across the organization."
+        title={t('auditLog.title')}
+        description={t('auditLog.description')}
         actions={
           <Button variant="secondary" size="sm" onClick={() => void refresh()} disabled={!isLive || loading}>
             {loading ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-            Refresh
+            {tCommon('actions.refresh')}
           </Button>
         }
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          The audit log is live-backend only. Run with{' '}
+          {t('auditLog.liveOnlyNotice')}{' '}
           <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
         </Card>
       )}
@@ -57,7 +61,7 @@ export default function AuditLogPage() {
         <div className="flex items-center gap-2 border-b border-border-subtle p-4">
           <Search className="size-4 text-muted-foreground" />
           <Input
-            placeholder="Filter by action (e.g. session, apikey, vmprovider)…"
+            placeholder={t('auditLog.filterPlaceholder')}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="max-w-md"
@@ -67,8 +71,8 @@ export default function AuditLogPage() {
           {entries.length === 0 ? (
             <EmptyState
               icon={ScrollText}
-              title={isLive ? 'No audit entries match' : 'Backend not connected'}
-              description={isLive ? 'Try a different filter term.' : 'Run with NEXT_PUBLIC_API_MODE=live to view the audit log.'}
+              title={isLive ? t('auditLog.noEntriesTitle') : t('auditLog.backendNotConnectedTitle')}
+              description={isLive ? t('auditLog.noEntriesDescription') : t('auditLog.backendNotConnectedDescription')}
             />
           ) : (
             entries.map((e) => (
@@ -85,7 +89,7 @@ export default function AuditLogPage() {
                 </div>
                 {e.ip && <span className="hidden font-mono text-[11px] text-muted-foreground sm:inline">{e.ip}</span>}
                 <span className="shrink-0 text-xs text-muted-foreground tnum">
-                  {new Date(e.createdAt).toLocaleString()}
+                  {new Date(e.createdAt).toLocaleString(locale)}
                 </span>
               </div>
             ))

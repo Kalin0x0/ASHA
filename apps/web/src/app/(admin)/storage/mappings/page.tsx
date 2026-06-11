@@ -1,6 +1,7 @@
 'use client';
 
 import { FolderTree, Loader2, Lock, Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -19,28 +20,29 @@ import {
 } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 
-const KINDS: { key: StorageKind; label: string; fields: { key: string; label: string; secret?: boolean }[] }[] = [
+const KINDS: { key: StorageKind; fields: { key: string; labelKey: string; secret?: boolean }[] }[] = [
   {
     key: 'S3',
-    label: 'S3',
     fields: [
-      { key: 'bucket', label: 'Bucket' },
-      { key: 'region', label: 'Region' },
-      { key: 'accessKeyId', label: 'Access Key ID' },
-      { key: 'secretAccessKey', label: 'Secret Access Key', secret: true },
-      { key: 'endpoint', label: 'Endpoint (optional)' },
+      { key: 'bucket', labelKey: 'bucket' },
+      { key: 'region', labelKey: 'region' },
+      { key: 'accessKeyId', labelKey: 'accessKeyId' },
+      { key: 'secretAccessKey', labelKey: 'secretAccessKey', secret: true },
+      { key: 'endpoint', labelKey: 'endpoint' },
     ],
   },
-  { key: 'NEXTCLOUD', label: 'NextCloud', fields: [{ key: 'url', label: 'WebDAV URL' }, { key: 'username', label: 'Username' }, { key: 'password', label: 'Password', secret: true }] },
-  { key: 'GDRIVE', label: 'Google Drive', fields: [{ key: 'clientId', label: 'Client ID' }, { key: 'clientSecret', label: 'Client Secret', secret: true }, { key: 'refreshToken', label: 'Refresh Token', secret: true }] },
-  { key: 'ONEDRIVE', label: 'OneDrive', fields: [{ key: 'clientId', label: 'Client ID' }, { key: 'clientSecret', label: 'Client Secret', secret: true }, { key: 'refreshToken', label: 'Refresh Token', secret: true }] },
-  { key: 'DROPBOX', label: 'Dropbox', fields: [{ key: 'accessToken', label: 'Access Token', secret: true }] },
-  { key: 'CUSTOM', label: 'Custom (rclone)', fields: [{ key: 'remote', label: 'rclone remote spec' }] },
+  { key: 'NEXTCLOUD', fields: [{ key: 'url', labelKey: 'webdavUrl' }, { key: 'username', labelKey: 'username' }, { key: 'password', labelKey: 'password', secret: true }] },
+  { key: 'GDRIVE', fields: [{ key: 'clientId', labelKey: 'clientId' }, { key: 'clientSecret', labelKey: 'clientSecret', secret: true }, { key: 'refreshToken', labelKey: 'refreshToken', secret: true }] },
+  { key: 'ONEDRIVE', fields: [{ key: 'clientId', labelKey: 'clientId' }, { key: 'clientSecret', labelKey: 'clientSecret', secret: true }, { key: 'refreshToken', labelKey: 'refreshToken', secret: true }] },
+  { key: 'DROPBOX', fields: [{ key: 'accessToken', labelKey: 'accessToken', secret: true }] },
+  { key: 'CUSTOM', fields: [{ key: 'remote', labelKey: 'rcloneRemote' }] },
 ];
 
 const SCOPES = ['USER', 'GROUP', 'WORKSPACE'] as const;
 
 export default function StorageMappingsPage() {
+  const t = useTranslations('storage');
+  const tc = useTranslations('common');
   const [mappings, setMappings] = useState<ApiStorageMapping[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -58,11 +60,11 @@ export default function StorageMappingsPage() {
     try {
       setMappings(await getStorageMappings());
     } catch {
-      toast.error('Failed to load storage mappings');
+      toast.error(t('mappings.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -73,12 +75,12 @@ export default function StorageMappingsPage() {
     setCreating(true);
     try {
       await createStorageMapping({ name, kind, mountPath, scope, readOnly, config, enabled: true });
-      toast.success('Storage mapping created');
+      toast.success(t('mappings.toasts.created'));
       setName('');
       setConfig({});
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not create mapping');
+      toast.error(e instanceof Error ? e.message : t('mappings.toasts.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -90,7 +92,7 @@ export default function StorageMappingsPage() {
       await updateStorageMapping(m.id, { enabled: !m.enabled });
       await refresh();
     } catch {
-      toast.error('Could not update mapping');
+      toast.error(t('mappings.toasts.updateFailed'));
     } finally {
       setBusyId(null);
     }
@@ -100,10 +102,10 @@ export default function StorageMappingsPage() {
     setBusyId(id);
     try {
       await deleteStorageMapping(id);
-      toast.success('Mapping removed');
+      toast.success(t('mappings.toasts.removed'));
       await refresh();
     } catch {
-      toast.error('Could not remove mapping');
+      toast.error(t('mappings.toasts.removeFailed'));
     } finally {
       setBusyId(null);
     }
@@ -114,30 +116,33 @@ export default function StorageMappingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Storage Mappings"
-        description="Mount network and cloud storage (S3, NextCloud, Google Drive, OneDrive, Dropbox) into sessions, scoped by user, group, or workspace."
+        title={t('mappings.title')}
+        description={t('mappings.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Storage mappings are live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('mappings.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="Mappings" value={mappings.length} icon={FolderTree} primary />
-        <StatCard label="Enabled" value={mappings.filter((m) => m.enabled).length} icon={FolderTree} />
+        <StatCard label={t('mappings.stats.mappings')} value={mappings.length} icon={FolderTree} primary />
+        <StatCard label={tc('labels.enabled')} value={mappings.filter((m) => m.enabled).length} icon={FolderTree} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Configured mappings</h2>
+          <h2 className="font-display text-lg font-medium">{t('mappings.configuredTitle')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {mappings.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">No storage mappings configured yet.</p>
+            <p className="p-5 text-sm text-muted-foreground">{t('mappings.empty')}</p>
           ) : (
             mappings.map((m) => (
               <div key={m.id} className="flex items-center gap-3 px-5 py-3 text-sm">
@@ -146,12 +151,12 @@ export default function StorageMappingsPage() {
                   <p className="truncate font-medium">{m.name}</p>
                   <p className="truncate font-mono text-xs text-muted-foreground">{m.mountPath}</p>
                 </div>
-                <Badge variant="gold">{m.kind}</Badge>
-                <Badge variant="outline">{m.scope}</Badge>
+                <Badge variant="gold">{t(`mappings.kinds.${m.kind}`)}</Badge>
+                <Badge variant="outline">{t(`mappings.scopes.${m.scope}`)}</Badge>
                 {m.readOnly && <Lock className="size-3.5 text-muted-foreground" />}
-                <Badge variant={m.enabled ? 'success' : 'outline'}>{m.enabled ? 'Enabled' : 'Disabled'}</Badge>
+                <Badge variant={m.enabled ? 'success' : 'outline'}>{m.enabled ? tc('labels.enabled') : tc('labels.disabled')}</Badge>
                 <Button variant="secondary" size="sm" disabled={busyId === m.id} onClick={() => void onToggle(m)}>
-                  {m.enabled ? 'Disable' : 'Enable'}
+                  {m.enabled ? tc('actions.disable') : tc('actions.enable')}
                 </Button>
                 <Button variant="ghost" size="icon-sm" disabled={busyId === m.id} onClick={() => void onDelete(m.id)}>
                   <Trash2 className="size-4 text-destructive" />
@@ -163,7 +168,7 @@ export default function StorageMappingsPage() {
       </Card>
 
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add mapping</h2>
+        <h2 className="font-display text-lg font-medium">{t('mappings.addTitle')}</h2>
         <div className="flex flex-wrap gap-2">
           {KINDS.map((k) => (
             <button
@@ -178,21 +183,21 @@ export default function StorageMappingsPage() {
                   : 'border-border-subtle text-muted-foreground hover:bg-secondary'
               }`}
             >
-              {k.label}
+              {t(`mappings.kinds.${k.key}`)}
             </button>
           ))}
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <Label>Name</Label>
+            <Label>{tc('labels.name')}</Label>
             <Input placeholder="team-bucket" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Mount path</Label>
+            <Label>{t('mappings.form.mountPath')}</Label>
             <Input placeholder="/mnt/storage" value={mountPath} onChange={(e) => setMountPath(e.target.value)} />
           </div>
           <div>
-            <Label>Scope</Label>
+            <Label>{t('mappings.form.scope')}</Label>
             <select
               value={scope}
               onChange={(e) => setScope(e.target.value as (typeof SCOPES)[number])}
@@ -200,7 +205,7 @@ export default function StorageMappingsPage() {
             >
               {SCOPES.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {t(`mappings.scopes.${s}`)}
                 </option>
               ))}
             </select>
@@ -208,12 +213,12 @@ export default function StorageMappingsPage() {
           <div className="flex items-end">
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={readOnly} onChange={(e) => setReadOnly(e.target.checked)} className="size-4 accent-gold-500" />
-              Read-only
+              {t('mappings.form.readOnly')}
             </label>
           </div>
           {fields.map((f) => (
             <div key={f.key}>
-              <Label>{f.label}</Label>
+              <Label>{t(`mappings.fields.${f.labelKey}`)}</Label>
               <Input
                 type={f.secret ? 'password' : 'text'}
                 value={config[f.key] ?? ''}
@@ -224,7 +229,7 @@ export default function StorageMappingsPage() {
         </div>
         <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !name || !mountPath || creating}>
           {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-          Add mapping
+          {t('mappings.addButton')}
         </Button>
       </Card>
     </div>

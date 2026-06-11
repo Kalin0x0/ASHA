@@ -1,6 +1,7 @@
 'use client';
 
 import { Search, Sparkles, Star } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -15,6 +16,8 @@ import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 
 export default function PortalHome() {
+  const t = useTranslations('portal');
+  const tc = useTranslations('common');
   const router = useRouter();
   const workspaces = useWorkspaces();
   const launch = useLaunchSession();
@@ -62,7 +65,7 @@ export default function PortalHome() {
     setLaunchingId(id);
     const session = await launch(id);
     if (!session) {
-      toast.error('Could not start the session');
+      toast.error(t('launcher.launchError'));
       setLaunchingId(null);
       return;
     }
@@ -73,10 +76,9 @@ export default function PortalHome() {
     const wasFav = favorites.isFavorite(id);
     favorites.toggle(id);
     const ws = workspaces.find((w) => w.id === id);
+    const name = ws?.friendlyName ?? t('favorites.workspaceFallback');
     toast.success(
-      wasFav
-        ? `Removed ${ws?.friendlyName ?? 'workspace'} from favorites`
-        : `Added ${ws?.friendlyName ?? 'workspace'} to favorites`,
+      wasFav ? t('favorites.removedToast', { name }) : t('favorites.addedToast', { name }),
     );
   };
 
@@ -105,32 +107,33 @@ export default function PortalHome() {
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-gold-500/20 bg-gold-500/8 px-3 py-1">
               <Sparkles className="size-3.5 text-gold-300" />
               <span className="text-[11px] font-semibold uppercase tracking-widest text-gold-300">
-                Your Workspaces
+                {t('launcher.eyebrow')}
               </span>
             </div>
             <h1 className="font-display text-[2.6rem] font-medium leading-[1.04] tracking-tight sm:text-6xl">
-              Launch a <span className="text-gradient-gold">workspace</span>
+              {t.rich('launcher.title', {
+                gradient: (chunks) => <span className="text-gradient-gold">{chunks}</span>,
+              })}
             </h1>
             <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base">
-              A secure, isolated desktop or application — streamed straight to your browser.
-              Nothing to install, nothing left behind.
+              {t('launcher.subtitle')}
             </p>
           </div>
 
           {/* Search */}
           <div className="relative mt-8 max-w-lg animate-fade-up delay-100">
-            <Search className="absolute left-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground transition-colors" />
+            <Search className="absolute start-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground transition-colors" />
             <Input
-              placeholder="Search workspaces…"
+              placeholder={t('launcher.searchPlaceholder')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-12 rounded-xl pl-11 pr-4 text-[15px] shadow-[var(--shadow-ambient)] transition-shadow duration-300 focus-visible:shadow-[var(--gold-glow)]"
+              className="h-12 rounded-xl ps-11 pe-4 text-[15px] shadow-[var(--shadow-ambient)] transition-shadow duration-300 focus-visible:shadow-[var(--gold-glow)]"
             />
           </div>
 
           {/* Category pills — mobile / tablet only (the rail handles desktop) */}
           <div className="mt-4 flex flex-wrap gap-2 animate-fade-up delay-200 lg:hidden">
-            <CategoryPill label="All" active={activeCategory === null} onClick={() => setActiveCategory(null)} />
+            <CategoryPill label={tc('labels.all')} active={activeCategory === null} onClick={() => setActiveCategory(null)} />
             {categories.map((cat) => (
               <CategoryPill
                 key={cat.name}
@@ -163,7 +166,7 @@ export default function PortalHome() {
             {filtered.length === 0 ? (
               <div className="flex flex-col items-center gap-4 py-24 text-center animate-fade-up">
                 <div className="text-4xl">🔍</div>
-                <p className="text-muted-foreground">No workspaces match your search.</p>
+                <p className="text-muted-foreground">{t('launcher.noResults')}</p>
                 <button
                   type="button"
                   onClick={() => {
@@ -172,7 +175,7 @@ export default function PortalHome() {
                   }}
                   className="text-sm font-medium text-gold-300 hover:text-gold-200 ring-gold-focus rounded-md"
                 >
-                  Clear filters
+                  {t('launcher.clearFilters')}
                 </button>
               </div>
             ) : (
@@ -182,11 +185,11 @@ export default function PortalHome() {
                   <section>
                     <div className="mb-4 flex items-center gap-2">
                       <Star className="size-[18px] fill-gold-400 text-gold-300" />
-                      <h2 className="font-display text-xl font-semibold tracking-tight">Favorites</h2>
+                      <h2 className="font-display text-xl font-semibold tracking-tight">{t('favorites.title')}</h2>
                       <span className="text-xs text-muted-foreground">({favoriteList.length})</span>
                       {favoriteList.length > 1 && (
                         <span className="ml-1 hidden text-[11px] text-muted-foreground/50 sm:inline">
-                          · drag to reorder
+                          · {t('favorites.reorderHint')}
                         </span>
                       )}
                     </div>
@@ -204,7 +207,7 @@ export default function PortalHome() {
                   <section>
                     {favoriteList.length > 0 && (
                       <h2 className="mb-4 font-display text-xl font-semibold tracking-tight">
-                        {activeCategory ?? 'All workspaces'}
+                        {activeCategory ?? t('launcher.allWorkspacesHeading')}
                       </h2>
                     )}
                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">

@@ -1,6 +1,7 @@
 'use client';
 
 import { Activity, ArrowDownRight, ArrowUpRight, Plus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { AgentHealthCard } from '@/components/composite/agent-health-card';
@@ -23,7 +24,7 @@ const ACTIVITY_TONE: Record<string, string> = {
 function useGreeting() {
   return useMemo(() => {
     const h = new Date().getHours();
-    return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    return h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
   }, []);
 }
 
@@ -51,7 +52,7 @@ function MiniStat({
         </div>
       </div>
       {series && series.length > 1 && (
-        <div className="ml-auto h-8 w-16 opacity-80">
+        <div className="ms-auto h-8 w-16 opacity-80">
           <Sparkline data={series} height={32} stroke={stroke} strokeWidth={2} />
         </div>
       )}
@@ -60,6 +61,7 @@ function MiniStat({
 }
 
 export default function DashboardPage() {
+  const t = useTranslations('dashboard');
   const router = useRouter();
   const dash = useDashboard();
   const agents = useAgents();
@@ -80,11 +82,11 @@ export default function DashboardPage() {
           {/* Hero metric */}
           <div className="flex flex-col">
             <div className="flex items-center gap-2.5">
-              <span className="eyebrow">Overview</span>
+              <span className="eyebrow">{t('hero.eyebrow')}</span>
               <span className="text-muted-foreground/40">·</span>
-              <span className="text-[11px] font-medium text-muted-foreground">{greeting}</span>
-              <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
-                <span className="size-1.5 rounded-full bg-success animate-pulse-ring" /> Live
+              <span className="text-[11px] font-medium text-muted-foreground">{t(`greeting.${greeting}`)}</span>
+              <span className="ms-auto inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
+                <span className="size-1.5 rounded-full bg-success animate-pulse-ring" /> {t('hero.live')}
               </span>
             </div>
 
@@ -102,17 +104,17 @@ export default function DashboardPage() {
                 {Math.abs(delta).toFixed(1)}%
               </span>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">Active sessions across every zone right now.</p>
+            <p className="mt-2 text-sm text-muted-foreground">{t('hero.activeSessionsCaption')}</p>
 
             <Button className="mt-7 w-fit gap-2" onClick={() => router.push('/')}>
-              <Plus className="size-4" /> Launch workspace
+              <Plus className="size-4" /> {t('hero.launchWorkspace')}
             </Button>
           </div>
 
           {/* Hero chart */}
           <div className="flex min-w-0 flex-col">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[12px] font-medium text-muted-foreground">Sessions · last hour</span>
+              <span className="text-[12px] font-medium text-muted-foreground">{t('hero.sessionsLastHour')}</span>
               <Activity className="size-4 text-muted-foreground/60" />
             </div>
             <div className="flex-1">
@@ -124,21 +126,21 @@ export default function DashboardPage() {
         {/* Stat bar */}
         <div className="relative grid grid-cols-1 divide-y divide-border-subtle border-t border-border-subtle sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <MiniStat
-            label="Online agents"
+            label={t('stats.onlineAgents')}
             value={dash.kpis.onlineAgents.value}
             suffix={`/${dash.kpis.onlineAgents.total}`}
             series={dash.kpis.onlineAgents.series}
             stroke="var(--color-info-400)"
           />
           <MiniStat
-            label="CPU"
+            label={t('stats.cpu')}
             value={dash.kpis.cpuUtilization.value}
             suffix="%"
             series={dash.kpis.cpuUtilization.series}
             stroke="var(--color-success-400)"
           />
           <MiniStat
-            label="Memory"
+            label={t('stats.memory')}
             value={dash.kpis.memUtilization.value}
             suffix="%"
             series={dash.kpis.memUtilization.series}
@@ -154,15 +156,15 @@ export default function DashboardPage() {
           <div className="grid gap-5 md:grid-cols-12">
             <Card elevation="glass" className="animate-fade-up delay-100 md:col-span-5">
               <CardHeader className="pb-2">
-                <CardTitle className="font-display text-base font-semibold">Resource utilization</CardTitle>
-                <p className="text-[12px] text-muted-foreground">Cluster-wide average</p>
+                <CardTitle className="font-display text-base font-semibold">{t('cards.resourceUtilization.title')}</CardTitle>
+                <p className="text-[12px] text-muted-foreground">{t('cards.resourceUtilization.subtitle')}</p>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 place-items-center gap-y-5 py-2">
-                  <RingGauge value={dash.utilization.cpu} label="CPU" tone="gold" />
-                  <RingGauge value={dash.utilization.mem} label="MEM" tone="info" />
-                  <RingGauge value={dash.utilization.gpu} label="GPU" tone="success" />
-                  <RingGauge value={dash.utilization.storage} label="DISK" tone="warning" />
+                  <RingGauge value={dash.utilization.cpu} label={t('gauges.cpu')} tone="gold" />
+                  <RingGauge value={dash.utilization.mem} label={t('gauges.mem')} tone="info" />
+                  <RingGauge value={dash.utilization.gpu} label={t('gauges.gpu')} tone="success" />
+                  <RingGauge value={dash.utilization.storage} label={t('gauges.disk')} tone="warning" />
                 </div>
               </CardContent>
             </Card>
@@ -170,17 +172,17 @@ export default function DashboardPage() {
             <Card elevation="glass" className="animate-fade-up delay-200 md:col-span-7">
               <CardHeader className="flex-row items-center justify-between pb-2">
                 <div>
-                  <CardTitle className="font-display text-base font-semibold">Agent fleet</CardTitle>
-                  <p className="text-[12px] text-muted-foreground">Real-time health per host</p>
+                  <CardTitle className="font-display text-base font-semibold">{t('cards.agentFleet.title')}</CardTitle>
+                  <p className="text-[12px] text-muted-foreground">{t('cards.agentFleet.subtitle')}</p>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => router.push('/infrastructure/agents')}>
-                  View all
+                  {t('cards.agentFleet.viewAll')}
                 </Button>
               </CardHeader>
               <CardContent>
                 {agents.length === 0 ? (
                   <div className="flex h-32 items-center justify-center text-sm text-muted-foreground/70">
-                    No agents enrolled
+                    {t('cards.agentFleet.empty')}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -195,8 +197,8 @@ export default function DashboardPage() {
 
           <Card elevation="glass" className="animate-fade-up delay-200">
             <CardHeader className="pb-2">
-              <CardTitle className="font-display text-base font-semibold">Top workspaces</CardTitle>
-              <p className="text-[12px] text-muted-foreground">By concurrent sessions</p>
+              <CardTitle className="font-display text-base font-semibold">{t('cards.topWorkspaces.title')}</CardTitle>
+              <p className="text-[12px] text-muted-foreground">{t('cards.topWorkspaces.subtitle')}</p>
             </CardHeader>
             <CardContent>
               <BarRank items={dash.topWorkspaces} />
@@ -207,12 +209,12 @@ export default function DashboardPage() {
         {/* Live activity rail */}
         <Card elevation="glass" className="animate-fade-up delay-300 lg:col-span-3">
           <CardHeader className="flex-row items-center justify-between pb-2">
-            <CardTitle className="font-display text-base font-semibold">Live activity</CardTitle>
+            <CardTitle className="font-display text-base font-semibold">{t('cards.liveActivity.title')}</CardTitle>
             <span className="size-1.5 rounded-full bg-success animate-pulse-ring" />
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             {activity.length === 0 ? (
-              <p className="py-10 text-center text-sm text-muted-foreground/70">No recent activity</p>
+              <p className="py-10 text-center text-sm text-muted-foreground/70">{t('cards.liveActivity.empty')}</p>
             ) : (
               activity.slice(0, 9).map((item) => (
                 <div key={item.id} className="flex items-start gap-3">

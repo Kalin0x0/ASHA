@@ -1,6 +1,7 @@
 'use client';
 
 import { Activity, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { AreaTrend } from '@/components/composite/charts';
@@ -10,21 +11,12 @@ import { type ApiMetricSeries, getMetricSeries } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 import type { KpiSeriesPoint } from '@/lib/types';
 
-const METRICS = [
-  { key: 'cpu', label: 'CPU utilization' },
-  { key: 'memory', label: 'Memory utilization' },
-  { key: 'sessions', label: 'Concurrent sessions' },
-  { key: 'load', label: 'Agent load' },
-];
+const METRIC_KEYS = ['cpu', 'memory', 'sessions', 'load'];
 
-const RANGES = [
-  { hours: 6, label: '6h' },
-  { hours: 24, label: '24h' },
-  { hours: 72, label: '3d' },
-  { hours: 168, label: '7d' },
-];
+const RANGE_HOURS = [6, 24, 72, 168];
 
 export default function MetricsPage() {
+  const t = useTranslations('observability');
   const [metric, setMetric] = useState('cpu');
   const [hours, setHours] = useState(24);
   const [series, setSeries] = useState<KpiSeriesPoint[]>([]);
@@ -37,7 +29,7 @@ export default function MetricsPage() {
       const res: ApiMetricSeries = await getMetricSeries(metric, hours);
       setSeries(res.series.map((p) => ({ t: p.hour.slice(11) + ':00', value: p.avg })));
     } catch {
-      toast.error('Failed to load metric');
+      toast.error(t('metrics.loadError'));
     } finally {
       setLoading(false);
     }
@@ -50,13 +42,13 @@ export default function MetricsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Metrics"
-        description="Time-series of platform metrics sampled from agents and the control plane."
+        title={t('metrics.title')}
+        description={t('metrics.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Metrics are live-backend only. Run with{' '}
+          {t('metrics.liveOnlyNotice')}{' '}
           <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
         </Card>
       )}
@@ -64,32 +56,32 @@ export default function MetricsPage() {
       <Card elevation={1} className="space-y-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2">
-            {METRICS.map((m) => (
+            {METRIC_KEYS.map((m) => (
               <button
-                key={m.key}
-                onClick={() => setMetric(m.key)}
+                key={m}
+                onClick={() => setMetric(m)}
                 className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${
-                  metric === m.key
+                  metric === m
                     ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
                     : 'border-border-subtle text-muted-foreground hover:bg-secondary'
                 }`}
               >
-                {m.label}
+                {t(`metrics.metricLabels.${m}`)}
               </button>
             ))}
           </div>
           <div className="flex gap-1">
-            {RANGES.map((r) => (
+            {RANGE_HOURS.map((r) => (
               <button
-                key={r.hours}
-                onClick={() => setHours(r.hours)}
+                key={r}
+                onClick={() => setHours(r)}
                 className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
-                  hours === r.hours
+                  hours === r
                     ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
                     : 'border-border-subtle text-muted-foreground hover:bg-secondary'
                 }`}
               >
-                {r.label}
+                {t(`metrics.rangeLabels.h${r}`)}
               </button>
             ))}
           </div>
@@ -104,7 +96,7 @@ export default function MetricsPage() {
         ) : (
           <p className="py-16 text-center text-sm text-muted-foreground">
             <Activity className="mx-auto mb-2 size-6 opacity-40" />
-            No samples for this metric in the selected range.
+            {t('metrics.noSamples')}
           </p>
         )}
       </Card>
