@@ -64,7 +64,7 @@
   "agentStatus": {
     "ONLINE": "Online",
     "OFFLINE": "Offline",
-    "DRAINING": "Auslaufend",
+    "DRAINING": "Wird geleert",
     "UNHEALTHY": "Fehlerhaft"
   },
   "userStatus": {

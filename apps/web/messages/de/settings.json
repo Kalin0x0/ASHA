@@ -172,9 +172,9 @@
     }
   },
   "config": {
-    "title": "Konfig Import / Export",
+    "title": "Konfig-Import/-Export",
     "description": "Exportieren Sie portables Branding und Einstellungen als JSON und importieren Sie sie in eine andere Installation. Geheimnisse und Identitäten sind niemals enthalten.",
-    "liveOnly": "Konfig Import/Export ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "liveOnly": "Der Konfig-Import/-Export ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
     "export": "Export",
     "exportHint": "Laden Sie das aktuelle Branding und die allgemeinen Einstellungen der Organisation als JSON-Datei herunter.",
     "exportConfig": "Konfig exportieren",

@@ -48,7 +48,7 @@
   },
   "status": {
     "connected": "Verbunden",
-    "connecting": "Verbinde",
+    "connecting": "Wird verbunden",
     "disconnected": "Getrennt",
     "live": "Live",
     "workspaceFallback": "Workspace",
