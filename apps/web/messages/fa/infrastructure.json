@@ -186,16 +186,16 @@
         "template": "VMID قالب"
       },
       "AWS": {
-        "accessKeyId": "شناسه کلید دسترسی",
-        "secretAccessKey": "کلید دسترسی محرمانه",
+        "accessKeyId": "Access Key ID",
+        "secretAccessKey": "Secret Access Key",
         "region": "منطقه",
         "imageId": "شناسه AMI",
         "instanceType": "نوع نمونه"
       },
       "AZURE": {
         "tenantId": "شناسه تننت",
-        "clientId": "شناسه کلاینت",
-        "clientSecret": "رمز کلاینت",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret",
         "subscriptionId": "شناسه اشتراک",
         "resourceGroup": "گروه منابع",
         "location": "مکان",
@@ -297,14 +297,14 @@
     },
     "fields": {
       "AWS": {
-        "accessKeyId": "شناسه کلید دسترسی",
-        "secretAccessKey": "کلید دسترسی محرمانه",
+        "accessKeyId": "Access Key ID",
+        "secretAccessKey": "Secret Access Key",
         "hostedZoneId": "شناسه Hosted Zone"
       },
       "AZURE": {
         "tenantId": "شناسه تننت",
-        "clientId": "شناسه کلاینت",
-        "clientSecret": "رمز کلاینت",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret",
         "subscriptionId": "شناسه اشتراک",
         "resourceGroup": "گروه منابع"
       },
