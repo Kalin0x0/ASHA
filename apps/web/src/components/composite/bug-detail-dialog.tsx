@@ -234,11 +234,11 @@ export function BugDetailDialog({ id, onClose }: { id: string | null; onClose: (
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <Label htmlFor="r-files">{tResolve('filesTouched')}</Label>
-                        <Input id="r-files" value={filesTouched} onChange={(e) => setFilesTouched(e.target.value)} placeholder="apps/api/…, apps/web/…" />
+                        <Input id="r-files" value={filesTouched} onChange={(e) => setFilesTouched(e.target.value)} placeholder={tResolve('filesTouchedPlaceholder')} />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="r-tags">{tResolve('tags')}</Label>
-                        <Input id="r-tags" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="api, null-safety" />
+                        <Input id="r-tags" value={tags} onChange={(e) => setTags(e.target.value)} placeholder={tResolve('tagsPlaceholder')} />
                       </div>
                     </div>
                     <label className="flex items-center gap-2 text-sm text-muted-foreground">
