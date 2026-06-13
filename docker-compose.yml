@@ -186,6 +186,10 @@ services:
   # protocol (GUACD_HOST/GUACD_PORT). Only needed for RDP/VNC workspaces;
   # KasmVNC sessions don't use it.
   guacd:
-    image: guacamole/guacd:1.5.5
+    # Custom build with H.264/GFX-AVC444 support (Debian FreeRDP w/ libavcodec);
+    # the official guacamole/guacd lacks it → black screen on modern Windows RDP.
+    # Build: docker build -t chista-guacd-h264:1.5.5 infra/guacd-h264
+    image: chista-guacd-h264:1.5.5
+    build: ./infra/guacd-h264
     restart: unless-stopped
     networks: [chista-core]
