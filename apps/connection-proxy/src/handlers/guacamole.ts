@@ -60,6 +60,11 @@ function resolveParam(name: string, session: SessionRecord): string {
       return 'false';
     case 'security':
       return session.security ?? (protocol === 'rdp' ? 'any' : '');
+    case 'console':
+      // Connect to the console/admin session. The physical console renders fine
+      // (visible via Proxmox screendump) while a fresh RDP session's display is
+      // black on these Win11 VMs — so attach to the console session instead.
+      return protocol === 'rdp' ? 'true' : '';
     case 'width':
       return String(DEFAULT_WIDTH);
     case 'height':
