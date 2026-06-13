@@ -113,9 +113,14 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
         const values = paramNames.map((name) => resolveParam(name, session));
 
         guacd.write(encodeInstruction('size', String(DEFAULT_WIDTH), String(DEFAULT_HEIGHT), String(DEFAULT_DPI)));
-        guacd.write(encodeInstruction('audio'));
+        // Declare the image/audio mimetypes guacamole-common-js can decode.
+        // CRITICAL: an empty `image` tells guacd the client supports NO image
+        // formats, so guacd can't encode the desktop framebuffer → black screen
+        // (only the cursor, which uses a separate channel). The browser supports
+        // PNG/JPEG/WebP, so advertise them.
+        guacd.write(encodeInstruction('audio', 'audio/L8', 'audio/L16'));
         guacd.write(encodeInstruction('video'));
-        guacd.write(encodeInstruction('image'));
+        guacd.write(encodeInstruction('image', 'image/jpeg', 'image/png', 'image/webp'));
         // The `connect` reply must echo a value for EVERY element guacd sent in
         // `args` — starting with the protocol version — or guacd rejects with
         // "Client did not return the expected number of arguments."
