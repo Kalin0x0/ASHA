@@ -63,6 +63,18 @@ codenames; surface it subtly, never cute.
   `main` tracks `origin/main`. The remote already had a `README`/`LICENSE`; merged with
   `-X ours` (kept our README, preserved their LICENSE).
 
+## Versioning (product version — follow every merge)
+
+- **Single source of truth:** `apps/web/src/lib/changelog.ts` — `CHANGELOG` (newest-first)
+  + derived `CURRENT_VERSION`. Surfaced in the admin sidebar footer and the
+  **Developer → Updates** page (`/developer/updates`).
+- **Convention:** the product version started at **1.0.9** and bumps with **every merged
+  update** — `1.0.9 → 1.1.0 → 1.1.1 → 1.1.2 → …`. For each merge, prepend a new `Release`
+  entry (version, date, `added` / `fixed` / `changed` notes) to the TOP of `CHANGELOG`.
+  Notes are localizable (`{ en, de }`, fa falls back to en) — they are content, not chrome,
+  so they live in the data file, not the message catalogs.
+- **Current head:** `1.0.9` (2026-06-14). **Next version to assign:** `1.1.0`.
+
 ## Key files to know
 
 - `packages/db/prisma/schema.prisma` — the data model (everything derives from it).

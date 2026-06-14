@@ -74,6 +74,10 @@ domains have no controller yet; RDP/SSH, recording, sharing, SSO, autoscale, VM 
   mirroring; use `ms-/me-`, `ps-/pe-`, `text-start/end`, `start-/end-` insets in new UI, never
   `ml-/pl-/text-left/left-`). Validate with `pnpm --filter @chista/web i18n:check` (key parity) and
   `node apps/web/scripts/verify-locales.mjs` against a running server (per-route lang/dir + key-leak check).
+- **Versioning:** the product version lives in `apps/web/src/lib/changelog.ts` (`CHANGELOG`
+  newest-first → derived `CURRENT_VERSION`), shown in the sidebar footer + **Developer → Updates**.
+  Bump it with **every merged update** — started at `1.0.9`, then `1.1.0 → 1.1.1 → 1.1.2 → …`;
+  prepend a `Release` entry (version, date, added/fixed/changed) per merge. See MEMORY.md → Versioning.
 - Admin seed login: `admin@chista.local` / `ChistaAdmin!2026`.
 
 ## ➡️ Where to start each session

@@ -54,6 +54,7 @@
       "metrics": "Metriken",
       "feedback": "Feedback & Fehler",
       "logForwarding": "Log-Weiterleitung",
+      "updates": "Updates",
       "apiKeys": "API-Schlüssel",
       "webhooks": "Webhooks",
       "apiDocs": "API-Doku"

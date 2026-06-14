@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { Logo } from '@/components/brand/logo';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { CURRENT_VERSION } from '@/lib/changelog';
 import { findNavItem, navGroups, type NavGroup, type NavItem } from '@/lib/nav';
 import { useUIStore } from '@/lib/ui-store';
 import { cn } from '@/lib/utils';
@@ -108,7 +109,14 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
               <span className="size-1.5 rounded-full bg-success animate-pulse-ring" />
               {tSidebar('allSystemsOperational')}
             </span>
-            <span className="text-muted-foreground/50 font-medium">Chista</span>
+            <Link
+              href="/developer/updates"
+              onClick={onNavigate}
+              className="font-medium text-muted-foreground/50 transition-colors hover:text-gold-300 ring-gold-focus rounded"
+              dir="ltr"
+            >
+              v{CURRENT_VERSION}
+            </Link>
           </div>
         </div>
       )}

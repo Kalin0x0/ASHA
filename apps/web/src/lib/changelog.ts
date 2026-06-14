@@ -1,0 +1,99 @@
+import type { Locale } from '@/i18n/locales';
+
+export type ChangeType = 'added' | 'fixed' | 'changed';
+
+/** A user-visible note: a plain string (English) or per-locale variants. */
+export type LocalizedText = string | Partial<Record<Locale, string>>;
+
+export interface ChangeItem {
+  type: ChangeType;
+  text: LocalizedText;
+}
+
+export interface Release {
+  /** Semantic-ish product version, e.g. "1.0.9". */
+  version: string;
+  /** Release date, ISO `YYYY-MM-DD`. */
+  date: string;
+  /** Optional short headline for the release. */
+  title?: LocalizedText;
+  /** Change notes, in display order. */
+  changes: ChangeItem[];
+}
+
+/** Resolve a {@link LocalizedText} for a locale, falling back to English. */
+export function localize(text: LocalizedText, locale: string): string {
+  if (typeof text === 'string') return text;
+  return text[locale as Locale] ?? text.en ?? Object.values(text)[0] ?? '';
+}
+
+/**
+ * Release history — NEWEST FIRST.
+ *
+ * Versioning convention (do not break): the product version starts at 1.0.9 and
+ * is bumped with **every merged update** — 1.0.9 → 1.1.0 → 1.1.1 → 1.1.2 → …
+ * For each merge, add a new entry at the TOP of this array with the next version
+ * and its added / fixed / changed notes. `CURRENT_VERSION` is derived from the
+ * head, so the whole UI (sidebar badge, Updates page) tracks it automatically.
+ */
+export const CHANGELOG: Release[] = [
+  {
+    version: '1.0.9',
+    date: '2026-06-14',
+    title: { en: 'Updates area + version system', de: 'Update-Bereich + Versionssystem' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Developer → Updates: an in-app changelog showing what was added, fixed and changed in every release, and the current version.',
+          de: 'Entwickler → Updates: ein In-App-Änderungsprotokoll, das zeigt, was in jeder Version hinzugefügt, behoben und geändert wurde — samt aktueller Version.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'In-app feedback & bug-report widget with a shared triage board where admins and automated agents collaborate, including screenshot uploads.',
+          de: 'In-App-Feedback- und Fehlerbericht-Widget mit gemeinsamem Triage-Board, auf dem Admins und automatische Agenten zusammenarbeiten — inklusive Screenshot-Upload.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'Running-desktop switcher with live thumbnails and Stop / Resume / Delete, so users no longer reconnect from scratch.',
+          de: 'Desktop-Umschalter mit Live-Vorschaubildern und Stoppen / Fortsetzen / Löschen — Nutzer müssen sich nicht mehr jedes Mal neu verbinden.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'Edit and delete workspaces directly from the catalog.',
+          de: 'Arbeitsbereiche direkt aus dem Katalog bearbeiten und löschen.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'App catalog icons now render correctly for every workspace.',
+          de: 'Katalog-Symbole werden jetzt für jeden Arbeitsbereich korrekt angezeigt.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Eliminated spurious 429 “too many requests” errors by trusting the reverse proxy and tuning per-client rate limits.',
+          de: 'Fehlerhafte 429-„Zu viele Anfragen“-Fehler beseitigt: Reverse-Proxy wird vertraut und Ratenlimits pro Client angepasst.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'Adopted a clean version system, starting at 1.0.9 and bumping with every update.',
+          de: 'Sauberes Versionssystem eingeführt, beginnend bei 1.0.9 und mit jedem Update erhöht.',
+        },
+      },
+    ],
+  },
+];
+
+/** The product version currently running — the head of {@link CHANGELOG}. */
+export const CURRENT_VERSION = CHANGELOG[0]!.version;

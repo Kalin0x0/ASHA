@@ -1,4 +1,16 @@
 {
+  "updates": {
+    "title": "Updates",
+    "description": "Was ist neu in Chista — was in jeder Version hinzugefügt, behoben und geändert wurde, und welche Version du verwendest.",
+    "currentVersion": "Aktuelle Version",
+    "upToDate": "Du verwendest die neueste Version",
+    "latest": "Neueste",
+    "types": {
+      "added": "Hinzugefügt",
+      "fixed": "Behoben",
+      "changed": "Geändert"
+    }
+  },
   "apiKeys": {
     "title": "API-Schlüssel",
     "description": "Programmatische Zugriffstokens für die Chista-API. Jeder Schlüssel trägt Scopes und ein optionales Ablaufdatum; das Secret wird nur einmal angezeigt.",
