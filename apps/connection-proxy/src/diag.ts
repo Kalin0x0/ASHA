@@ -26,7 +26,13 @@ export function diagHtml(token: string, kasmId: string): string {
 const TOKEN=${JSON.stringify(token)};
 const KASM=${JSON.stringify(kasmId)};
 const lines=document.getElementById('lines'),stateEl=document.getElementById('state');
-const counts={}; let imgOk=0,imgErr=0;
+const counts={}; let imgLoad=0,imgErr=0;
+// Count image decode successes/failures guacamole-common-js triggers.
+const OrigImage=window.Image;
+window.Image=function(w,h){const i=(w!==undefined)?new OrigImage(w,h):new OrigImage();i.addEventListener('load',()=>imgLoad++);i.addEventListener('error',()=>{imgErr++;});return i;};
+window.Image.prototype=OrigImage.prototype;
+const _ce=document.createElement.bind(document);
+document.createElement=function(t){const el=_ce(t);if((t+'').toLowerCase()==='img'){el.addEventListener('load',()=>imgLoad++);el.addEventListener('error',()=>{imgErr++;});}return el;};
 function log(m,c){const d=document.createElement('div');if(c)d.className=c;d.innerHTML=m;lines.appendChild(d);}
 function setState(s){stateEl.textContent='STATE: '+s;}
 window.addEventListener('error',e=>log('JS-ERROR: '+(e.message||e)+' @'+(e.filename||'')+':'+(e.lineno||''),'e'));
@@ -49,7 +55,13 @@ else {
  const N=['IDLE','CONNECTING','WAITING','CONNECTED','DISCONNECTING','DISCONNECTED'];
  client.onstatechange=function(s){setState((N[s]||s)+' ('+s+')');log('client state → '+(N[s]||s));};
  client.onerror=function(st){log('CLIENT-ERROR: '+(st&&st.message?st.message:JSON.stringify(st)),'e');};
- setInterval(function(){const el=display.getElement();const cv=el.getElementsByTagName('canvas');let dims=[];for(const c of cv)dims.push(c.width+'x'+c.height);log('— counts '+JSON.stringify(counts)+' | dispEl '+el.offsetWidth+'x'+el.offsetHeight+' | scale '+display.getScale()+' | canvases['+cv.length+'] '+dims.join(','));},4000);
+ setInterval(function(){
+   const el=display.getElement();const cv=el.getElementsByTagName('canvas');
+   let px='n/a';
+   if(cv[0]){try{const ctx=cv[0].getContext('2d');const pts=[[100,80],[640,300],[300,500],[900,160]];
+     px=pts.map(p=>{const d=ctx.getImageData(p[0],p[1],1,1).data;return d[0]+'/'+d[1]+'/'+d[2]+'/'+d[3];}).join(' ');}catch(e){px='getImageData-ERR:'+e.message;}}
+   log('— img '+JSON.stringify(counts.img||0)+'/blob'+(counts.blob||0)+'/copy'+(counts.copy||0)+' | imgLoad=<span class=g>'+imgLoad+'</span> imgErr=<span class=e>'+imgErr+'</span> | dispEl '+el.offsetWidth+'x'+el.offsetHeight+' scale '+display.getScale()+' | canvas0 '+(cv[0]?cv[0].width+'x'+cv[0].height:'none')+' | px(RGBA) '+px);
+ },3500);
  try{client.connect('token='+TOKEN);}catch(e){log('connect() warf: '+e.message,'e');}
  const mouse=new Guacamole.Mouse(display.getElement());
  mouse.onmousedown=mouse.onmouseup=mouse.onmousemove=function(st){try{client.sendMouseState(st);}catch(e){}};
