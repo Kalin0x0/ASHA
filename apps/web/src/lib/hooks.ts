@@ -19,6 +19,7 @@ export const useSessions = impl.useSessions;
 export const useSession = impl.useSession;
 export const useAgents = impl.useAgents;
 export const useZones = impl.useZones;
+export const useServers = impl.useServers;
 export const useWorkspaces = impl.useWorkspaces;
 export const useWorkspace = impl.useWorkspace;
 export const useUsers = impl.useUsers;

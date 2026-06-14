@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { store } from '@/lib/mock/store';
 import type { CreateUserInput, CreateWorkspaceInput } from '@/lib/types';
+// ServerOption is returned directly from the mock store (see useServers).
 
 function useVersion(): number {
   return useSyncExternalStore(store.subscribe, store.getVersion, store.getServerVersion);
@@ -38,6 +39,10 @@ export function useAgents() {
 
 export function useZones() {
   return useSnapshot(() => store.getData().zones);
+}
+
+export function useServers() {
+  return useSnapshot(() => store.getData().servers);
 }
 
 export function useWorkspaces() {

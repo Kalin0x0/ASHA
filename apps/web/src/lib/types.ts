@@ -11,6 +11,16 @@ export type SessionStatus =
 
 export type AgentStatus = 'ONLINE' | 'OFFLINE' | 'DRAINING' | 'UNHEALTHY';
 
+export type WorkspaceType = 'CONTAINER' | 'SERVER' | 'REMOTE_APP' | 'VM' | 'LINK';
+
+/** A registered RDP/VNC/SSH machine the create dialog can bind a workspace to. */
+export interface ServerOption {
+  id: string;
+  hostname: string;
+  connectionType: 'RDP' | 'VNC' | 'SSH';
+  zoneName: string;
+}
+
 export interface Workspace {
   id: string;
   name: string;
@@ -24,6 +34,12 @@ export interface Workspace {
   enabled: boolean;
   dockerImage: string;
   protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH';
+  /** What the workspace runs on. */
+  type: WorkspaceType;
+  /** For server-backed workspaces: the bound machine's hostname. */
+  serverName?: string;
+  /** Deployment zone name, when set (server zone or preferred zone). */
+  zoneName?: string;
   activeSessions: number;
 }
 
@@ -98,8 +114,11 @@ export interface CreateWorkspaceInput {
   friendlyName: string;
   name?: string;
   description?: string;
+  type?: WorkspaceType;
   category?: string;
   dockerImage?: string;
+  serverId?: string;
+  zoneId?: string;
   cores?: number;
   memMb?: number;
   gpu?: number;

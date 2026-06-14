@@ -43,4 +43,18 @@ describe('MockStore.createWorkspace', () => {
     store.createWorkspace({ friendlyName: 'Dup Space' });
     expect(() => store.createWorkspace({ friendlyName: 'Dup Space' })).toThrow(/already exists/i);
   });
+
+  it('creates a server-backed workspace bound to a registered server', () => {
+    const srv = store.getData().servers[0]!;
+    const ws = store.createWorkspace({ friendlyName: 'My Windows Box', type: 'SERVER', serverId: srv.id });
+    expect(ws.type).toBe('SERVER');
+    expect(ws.protocol).toBe(srv.connectionType);
+    expect(ws.serverName).toBe(srv.hostname);
+    expect(ws.zoneName).toBe(srv.zoneName);
+    expect(ws.dockerImage).toBe('');
+  });
+
+  it('rejects a server workspace with no server selected', () => {
+    expect(() => store.createWorkspace({ friendlyName: 'No Server', type: 'SERVER' })).toThrow(/server/i);
+  });
 });

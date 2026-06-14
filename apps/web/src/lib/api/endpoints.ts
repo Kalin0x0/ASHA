@@ -32,12 +32,17 @@ export interface ApiImage {
   protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH';
 }
 
+export type ApiWorkspaceType = 'CONTAINER' | 'SERVER' | 'REMOTE_APP' | 'VM' | 'LINK';
+
 export interface ApiWorkspace {
   id: string;
   name: string;
   friendlyName: string;
   description: string | null;
+  type: ApiWorkspaceType;
   imageId: string | null;
+  serverId: string | null;
+  zoneId: string | null;
   iconUrl: string | null;
   categories: string[];
   enabled: boolean;
@@ -45,6 +50,8 @@ export interface ApiWorkspace {
   memLimitMb: number | null;
   gpuCount: number;
   image: ApiImage | null;
+  server: { hostname: string; connectionType: string; zone?: { name: string } | null } | null;
+  zone: { name: string } | null;
 }
 
 export interface ApiAgent {
@@ -191,12 +198,17 @@ export interface CreateWorkspaceBody {
   name: string;
   friendlyName: string;
   description?: string;
+  type?: ApiWorkspaceType;
   categories?: string[];
   coresLimit?: number;
   memLimitMb?: number;
   gpuCount?: number;
   /** When set (and no imageId), the API creates + links a backing image. */
   dockerImage?: string;
+  /** Server-backed placement (SERVER/VM/REMOTE_APP). */
+  serverId?: string;
+  /** Preferred deployment zone. */
+  zoneId?: string;
   enabled?: boolean;
 }
 export const createWorkspace = (body: CreateWorkspaceBody) =>

@@ -28,6 +28,12 @@ export interface SessionLookups {
 }
 
 export function mapWorkspace(w: ApiWorkspace, activeSessions = 0): Workspace {
+  // Protocol comes from the backing image (containers) or the bound server
+  // (RDP/VNC/SSH machines, incl. Windows desktops).
+  const serverProto = (w.server?.connectionType ?? '').toUpperCase();
+  const protocol = (w.image?.protocol ??
+    (serverProto === 'RDP' || serverProto === 'VNC' || serverProto === 'SSH' ? serverProto : 'KASMVNC')) as
+    Workspace['protocol'];
   return {
     id: w.id,
     name: w.name,
@@ -39,8 +45,11 @@ export function mapWorkspace(w: ApiWorkspace, activeSessions = 0): Workspace {
     memMb: w.memLimitMb ?? 0,
     gpu: w.gpuCount,
     enabled: w.enabled,
-    dockerImage: w.image?.dockerImage ?? '',
-    protocol: w.image?.protocol ?? 'KASMVNC',
+    dockerImage: w.image?.dockerImage ?? w.server?.hostname ?? '',
+    protocol,
+    type: w.type ?? 'CONTAINER',
+    serverName: w.server?.hostname,
+    zoneName: w.zone?.name ?? w.server?.zone?.name,
     activeSessions,
   };
 }

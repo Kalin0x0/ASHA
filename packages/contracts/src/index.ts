@@ -91,6 +91,10 @@ export const createWorkspaceSchema = z.object({
   // creates+links a backing Image so the workspace is launchable immediately.
   dockerImage: z.string().min(1).optional(),
   enabled: z.boolean().optional(),
+  // Non-container placement: SERVER/VM/REMOTE_APP bind to a registered Server;
+  // an optional preferred deployment Zone applies to any type.
+  serverId: z.string().optional(),
+  zoneId: z.string().optional(),
   categories: z.array(z.string()).default([]),
   coresLimit: z.number().optional(),
   memLimitMb: z.number().optional(),
@@ -110,6 +114,8 @@ export const updateWorkspaceSchema = z
     description: z.string(),
     type: z.enum(['CONTAINER', 'SERVER', 'REMOTE_APP', 'VM', 'LINK']),
     imageId: z.string(),
+    serverId: z.string().nullable(),
+    zoneId: z.string().nullable(),
     categories: z.array(z.string()),
     coresLimit: z.number(),
     memLimitMb: z.number(),
