@@ -15,13 +15,13 @@ const USERS_KEY = ['users'] as const;
 // ── Base queries (shared + cached; joins compose them) ───────────────────────
 
 function useSessionsQuery() {
-  return useQuery({ queryKey: SESSIONS_KEY, queryFn: api.getSessions, refetchInterval: 5_000 });
+  return useQuery({ queryKey: SESSIONS_KEY, queryFn: api.getSessions, refetchInterval: 8_000 });
 }
 function useWorkspacesQuery() {
   return useQuery({ queryKey: WORKSPACES_KEY, queryFn: api.getWorkspaces });
 }
 function useAgentsQuery() {
-  return useQuery({ queryKey: AGENTS_KEY, queryFn: api.getAgents, refetchInterval: 8_000 });
+  return useQuery({ queryKey: AGENTS_KEY, queryFn: api.getAgents, refetchInterval: 12_000 });
 }
 function useZonesQuery() {
   return useQuery({ queryKey: ZONES_KEY, queryFn: api.getZones });
@@ -60,7 +60,7 @@ export function useSession(id: string): SessionRow | undefined {
     queryFn: () => api.getSession(id),
     enabled: Boolean(id),
     // Poll fast while provisioning, slow once the stream is live.
-    refetchInterval: (q) => (q.state.data?.status === 'RUNNING' ? 10_000 : 2_000),
+    refetchInterval: (q) => (q.state.data?.status === 'RUNNING' ? 15_000 : 4_000),
   });
   return useMemo(() => {
     if (!data) return undefined;
