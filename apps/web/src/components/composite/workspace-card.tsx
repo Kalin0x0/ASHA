@@ -1,9 +1,15 @@
 'use client';
 
-import { Clock, Cpu, Lock, MemoryStick, Play, Sparkles, Star } from 'lucide-react';
+import { Clock, Cpu, Lock, MemoryStick, MoreVertical, Pencil, Play, Sparkles, Star, Trash2 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { AppIcon } from '@/components/composite/app-icon';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import { categoryVisual } from '@/lib/workspace-visuals';
 import type { Workspace } from '@/lib/types';
@@ -25,12 +31,17 @@ export function WorkspaceCard({
   launching = false,
   favorite = false,
   onToggleFavorite,
+  onEdit,
+  onDelete,
 }: {
   workspace: Workspace;
   onLaunch?: (id: string) => void;
   launching?: boolean;
   favorite?: boolean;
   onToggleFavorite?: (id: string) => void;
+  /** Admin-only: when provided, an actions menu (Edit / Delete) is shown. */
+  onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   const t = useTranslations('portal');
   const format = useFormatter();
@@ -135,6 +146,34 @@ export function WorkspaceCard({
           <Badge variant="gold" className="absolute start-3 top-3 gap-1 z-10">
             <Sparkles className="size-3" /> {t('card.gpu')}
           </Badge>
+        )}
+
+        {/* Admin actions — edit / delete (shown only when handlers are provided) */}
+        {(onEdit || onDelete) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                onClick={(e) => e.stopPropagation()}
+                aria-label={t('card.actions')}
+                className="absolute end-2.5 top-2.5 z-30 flex size-8 items-center justify-center rounded-lg bg-anthracite-950/40 text-muted-foreground opacity-0 backdrop-blur transition-all hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 ring-gold-focus"
+              >
+                <MoreVertical className="size-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              {onEdit && (
+                <DropdownMenuItem onSelect={() => onEdit(workspace.id)}>
+                  <Pencil className="size-4" /> {t('card.edit')}
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <DropdownMenuItem destructive onSelect={() => onDelete(workspace.id)}>
+                  <Trash2 className="size-4" /> {t('card.delete')}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
 
         {/* Favorite toggle */}

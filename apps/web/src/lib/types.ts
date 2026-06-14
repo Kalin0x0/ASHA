@@ -21,6 +21,17 @@ export interface ServerOption {
   zoneName: string;
 }
 
+export interface UpdateWorkspaceInput {
+  friendlyName?: string;
+  description?: string;
+  category?: string;
+  iconUrl?: string;
+  cores?: number;
+  memMb?: number;
+  gpu?: number;
+  enabled?: boolean;
+}
+
 export interface Workspace {
   id: string;
   name: string;

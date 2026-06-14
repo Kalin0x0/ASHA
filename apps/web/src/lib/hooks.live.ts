@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import * as api from '@/lib/api/endpoints';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
-import type { ActivityItem, Agent, CreateUserInput, CreateWorkspaceInput, RecordingRow, ServerOption, SessionRow, UserRow, Workspace, Zone } from '@/lib/types';
+import type { ActivityItem, Agent, CreateUserInput, CreateWorkspaceInput, RecordingRow, ServerOption, SessionRow, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
 
 const SESSIONS_KEY = ['sessions'] as const;
 const WORKSPACES_KEY = ['workspaces'] as const;
@@ -180,6 +180,44 @@ export function useCreateWorkspace() {
   });
   return useCallback(
     async (input: CreateWorkspaceInput): Promise<Workspace> => mapWorkspace(await mutateAsync(input)),
+    [mutateAsync],
+  );
+}
+
+export function useUpdateWorkspace() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateWorkspaceInput }) =>
+      api.updateWorkspace(id, {
+        friendlyName: patch.friendlyName?.trim(),
+        description: patch.description?.trim(),
+        iconUrl: patch.iconUrl?.trim(),
+        categories: patch.category?.trim() ? [patch.category.trim()] : undefined,
+        coresLimit: patch.cores,
+        memLimitMb: patch.memMb,
+        gpuCount: patch.gpu,
+        enabled: patch.enabled,
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: WORKSPACES_KEY }),
+  });
+  return useCallback(
+    async (id: string, patch: UpdateWorkspaceInput) => {
+      await mutateAsync({ id, patch });
+    },
+    [mutateAsync],
+  );
+}
+
+export function useDeleteWorkspace() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.deleteWorkspace,
+    onSuccess: () => qc.invalidateQueries({ queryKey: WORKSPACES_KEY }),
+  });
+  return useCallback(
+    async (id: string) => {
+      await mutateAsync(id);
+    },
     [mutateAsync],
   );
 }
