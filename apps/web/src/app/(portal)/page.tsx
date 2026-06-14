@@ -7,11 +7,13 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { CategoryRail } from '@/components/composite/category-rail';
 import { FavoritesRail } from '@/components/composite/favorites-rail';
+import { LaunchDialog } from '@/components/composite/launch-dialog';
 import { MySessionsStrip } from '@/components/composite/my-sessions-strip';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
 import { Input } from '@/components/ui/input';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
+import type { Workspace } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export default function PortalHome() {
@@ -24,6 +26,8 @@ export default function PortalHome() {
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [launchingId, setLaunchingId] = useState<string | null>(null);
+  // RDP-capable desktops open a chooser ("Web Native" vs "RDP Client") first.
+  const [launchTarget, setLaunchTarget] = useState<Workspace | null>(null);
 
   const enabledAll = useMemo(() => workspaces.filter((w) => w.enabled), [workspaces]);
 
@@ -60,7 +64,9 @@ export default function PortalHome() {
     [filtered, favorites.ids],
   );
 
-  const onLaunch = async (id: string) => {
+  // The actual "Web Native" launch: create the session and open the in-browser
+  // viewer (RDP/VNC/SSH → /connect, containers → streaming /session).
+  const launchWebNative = async (id: string) => {
     setLaunchingId(id);
     const ws = workspaces.find((w) => w.id === id);
     const session = await launch(id);
@@ -69,11 +75,20 @@ export default function PortalHome() {
       setLaunchingId(null);
       return;
     }
-    // Server-backed workspaces (Windows desktops, etc.) connect to a fixed
-    // RDP/VNC/SSH host — open the remote-desktop viewer, just like a Static
-    // Server. Containers open the streaming (KasmVNC) viewer.
+    setLaunchTarget(null);
     if (ws && ws.type !== 'CONTAINER') router.push(`/connect/${session.kasmId}`);
     else router.push(`/session/${session.id}`);
+  };
+
+  const onLaunch = (id: string) => {
+    const ws = workspaces.find((w) => w.id === id);
+    // RDP desktops offer a choice: stream in the browser ("Web Native") or
+    // download a `.rdp` for the native client (multi-monitor, clipboard, drives).
+    if (ws && ws.type === 'SERVER' && ws.protocol === 'RDP') {
+      setLaunchTarget(ws);
+      return;
+    }
+    void launchWebNative(id);
   };
 
   const onToggleFavorite = (id: string) => {
@@ -225,6 +240,14 @@ export default function PortalHome() {
           </div>
         </div>
       </div>
+
+      <LaunchDialog
+        workspace={launchTarget}
+        open={launchTarget !== null}
+        onOpenChange={(o) => !o && setLaunchTarget(null)}
+        onWebNative={(ws) => void launchWebNative(ws.id)}
+        launching={launchingId !== null}
+      />
     </div>
   );
 }

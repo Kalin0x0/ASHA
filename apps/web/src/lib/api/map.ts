@@ -48,6 +48,7 @@ export function mapWorkspace(w: ApiWorkspace, activeSessions = 0): Workspace {
     dockerImage: w.image?.dockerImage ?? w.server?.hostname ?? '',
     protocol,
     type: w.type ?? 'CONTAINER',
+    serverId: w.serverId ?? undefined,
     serverName: w.server?.hostname,
     zoneName: w.zone?.name ?? w.server?.zone?.name,
     activeSessions,

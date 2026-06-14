@@ -67,4 +67,32 @@ describe('ServersService', () => {
     prismaMock.server.updateMany.mockResolvedValue({ count: 0 });
     await expect(svc.update('org1', 'u1', 'foreign', { maxSessions: 2 })).rejects.toThrow('not found');
   });
+
+  it('generates a .rdp file for an RDP server (multimon/clipboard/drives, no password)', async () => {
+    prismaMock.server.findFirst.mockResolvedValue({
+      id: 'srv1',
+      orgId: 'org1',
+      hostname: 'win11 desktop',
+      address: '10.0.0.9',
+      connectionType: 'RDP',
+      credentialRef: null,
+    });
+    const { filename, content } = await svc.rdpFile('org1', 'u1', 'srv1', {});
+    expect(filename).toBe('win11-desktop.rdp');
+    expect(content).toContain('full address:s:10.0.0.9:3389');
+    expect(content).toContain('use multimon:i:1');
+    expect(content).toContain('redirectclipboard:i:1');
+    expect(content).toContain('drivestoredirect:s:*');
+    expect(content).not.toMatch(/password/i);
+  });
+
+  it('refuses a .rdp file for a non-RDP server', async () => {
+    prismaMock.server.findFirst.mockResolvedValue({ id: 's', orgId: 'org1', connectionType: 'SSH' });
+    await expect(svc.rdpFile('org1', 'u1', 's', {})).rejects.toThrow(/only available for RDP/i);
+  });
+
+  it('404s a .rdp file for a server in another org', async () => {
+    prismaMock.server.findFirst.mockResolvedValue(null);
+    await expect(svc.rdpFile('org1', 'u1', 'foreign', {})).rejects.toThrow('not found');
+  });
 });

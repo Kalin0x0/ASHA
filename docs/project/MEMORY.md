@@ -73,7 +73,7 @@ codenames; surface it subtly, never cute.
   entry (version, date, `added` / `fixed` / `changed` notes) to the TOP of `CHANGELOG`.
   Notes are localizable (`{ en, de }`, fa falls back to en) — they are content, not chrome,
   so they live in the data file, not the message catalogs.
-- **Current head:** `1.0.9` (2026-06-14). **Next version to assign:** `1.1.0`.
+- **Current head:** `1.1.0` (2026-06-14). **Next version to assign:** `1.1.1`.
 
 ## Key files to know
 
