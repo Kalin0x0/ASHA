@@ -403,6 +403,27 @@
     animation: aurora-drift 36s var(--ease-in-out-soft) infinite alternate;
   }
 
+  /* Wallpaper legibility overlays — theme-aware via --background (dark tint in
+     dark mode, light tint in light mode) so text + glass chrome stay readable
+     over any wallpaper, in either theme. `scrim` is the stronger blanket for
+     photo wallpapers; `vignette` is the subtle edge-darkening for blooms. */
+  .wallpaper-scrim {
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--background) 80%, transparent),
+      color-mix(in srgb, var(--background) 46%, transparent) 24%,
+      color-mix(in srgb, var(--background) 46%, transparent) 76%,
+      color-mix(in srgb, var(--background) 84%, transparent)
+    );
+  }
+  .wallpaper-vignette {
+    background: radial-gradient(
+      120% 120% at 50% 0%,
+      transparent 40%,
+      color-mix(in srgb, var(--background) 70%, transparent) 100%
+    );
+  }
+
   .bg-grid {
     background-image:
       linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
@@ -563,6 +584,12 @@
     radial-gradient(55% 50% at 82% 26%, rgba(106, 143, 196, 0.1), transparent 62%),
     radial-gradient(50% 48% at 72% 78%, rgba(176, 127, 196, 0.08), transparent 64%),
     radial-gradient(72% 62% at 38% 108%, rgba(212, 175, 55, 0.07), transparent 72%);
+}
+
+/* Wallpaper base is dark by default; in light mode use the light background so
+   text stays readable over the colour-bloom presets. */
+.light .bg-wallpaper {
+  background-color: var(--background);
 }
 
 /* Pale gold as TEXT is unreadable on light surfaces → use the deep accent gold.

@@ -57,6 +57,8 @@
     "appliedToast": "پس‌زمینه روی {name} تنظیم شد",
     "customAppliedToast": "پس‌زمینه دلخواه اعمال شد",
     "presets": {
+      "woods": "جنگل مه‌آلود",
+      "lake": "دریاچه کوهستانی",
       "aurora": "شفق",
       "ember": "اخگر",
       "nebula": "سحابی",

@@ -92,8 +92,12 @@ export function BackgroundPicker() {
                 )}
               >
                 <span
-                  className="absolute inset-0"
-                  style={{ backgroundImage: bg.image, backgroundSize: '160% 160%', backgroundPosition: 'center' }}
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={
+                    bg.src
+                      ? { backgroundImage: `url('${bg.src}')` }
+                      : { backgroundImage: bg.image, backgroundSize: '160% 160%', backgroundPosition: 'center' }
+                  }
                 />
                 {active && (
                   <span className="absolute inset-0 flex items-center justify-center bg-anthracite-950/25">
