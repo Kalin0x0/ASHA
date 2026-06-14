@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.2',
+    date: '2026-06-14',
+    title: { en: 'One-click app updates', de: 'Ein-Klick-App-Updates' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'When a new version is deployed, the installed app shows an "Update available" prompt — one click reloads into the latest version.',
+          de: 'Wenn eine neue Version bereitgestellt wird, zeigt die installierte App einen Hinweis „Update verfügbar" — ein Klick lädt die neueste Version.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.1',
     date: '2026-06-14',
     title: { en: 'Installable app (PWA) + offline', de: 'Installierbare App (PWA) + Offline' },
