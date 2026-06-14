@@ -47,6 +47,8 @@ export interface Workspace {
   protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH';
   /** What the workspace runs on. */
   type: WorkspaceType;
+  /** For server-backed workspaces: the bound machine's id (for the RDP-client download). */
+  serverId?: string;
   /** For server-backed workspaces: the bound machine's hostname. */
   serverName?: string;
   /** Deployment zone name, when set (server zone or preferred zone). */

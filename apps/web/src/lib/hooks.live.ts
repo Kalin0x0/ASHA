@@ -3,7 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import * as api from '@/lib/api/endpoints';
+import type { RdpFileOptions } from '@/lib/api/endpoints';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
+import { downloadRdpFile } from '@/lib/rdp';
 import type { ActivityItem, Agent, CreateFeedbackInput, CreateUserInput, CreateWorkspaceInput, FeedbackItem, RecordingRow, ServerOption, SessionRow, UpdateFeedbackInput, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
 
 const SESSIONS_KEY = ['sessions'] as const;
@@ -220,6 +222,14 @@ export function useDeleteWorkspace() {
     },
     [mutateAsync],
   );
+}
+
+export function useDownloadRdp() {
+  return useCallback(async (workspace: Workspace, opts: RdpFileOptions = {}) => {
+    if (!workspace.serverId) throw new Error('This workspace has no bound RDP server');
+    const file = await api.getServerRdpFile(workspace.serverId, opts);
+    downloadRdpFile(file.filename, file.content);
+  }, []);
 }
 
 const FEEDBACK_KEY = ['feedback'] as const;

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   type CreateServerDto,
@@ -36,6 +36,30 @@ export class ServersController {
   @Post(':id/connect')
   connect(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.servers.connect(user, id);
+  }
+
+  /**
+   * Download a `.rdp` file for the native Remote Desktop client (multi-monitor,
+   * clipboard and local-drive access). Flags default to on; pass `0`/`false`
+   * to disable. Returns `{ filename, content }`.
+   */
+  @RequirePermissions('SESSION_LAUNCH')
+  @Get(':id/rdp-file')
+  rdpFile(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Query('multimon') multimon?: string,
+    @Query('clipboard') clipboard?: string,
+    @Query('drives') drives?: string,
+    @Query('printers') printers?: string,
+  ) {
+    const flag = (v: string | undefined) => (v === undefined ? undefined : v === '1' || v === 'true');
+    return this.servers.rdpFile(user.orgId, user.sub, id, {
+      multimon: flag(multimon),
+      clipboard: flag(clipboard),
+      drives: flag(drives),
+      printers: flag(printers),
+    });
   }
 
   @RequirePermissions('SERVER_MANAGE')

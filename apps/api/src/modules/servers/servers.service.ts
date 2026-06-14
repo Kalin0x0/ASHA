@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Env } from '@chista/config';
 import type { CreateServerDto, UpdateServerDto } from '@chista/contracts';
@@ -9,6 +9,7 @@ import { mergeSealedConfig, sealConfig, unsealConfig } from '../../common/config
 import type { AuthUser } from '../../common/decorators';
 import { ENV } from '../../common/env.module';
 import { RedisService } from '../../common/redis.service';
+import { buildRdpFile, type RdpFileOptions } from './rdp-file';
 
 /** Fixed-server connection type → the session's stored ConnectionType. */
 const CONN_BY_SERVER: Record<string, 'GUAC_RDP' | 'GUAC_VNC' | 'GUAC_SSH'> = {
@@ -205,5 +206,48 @@ export class ServersService {
       metadata: { sessionId: session.id },
     });
     return { sessionId: session.id, kasmId: session.kasmId, connectionUrl, connectionType };
+  }
+
+  /**
+   * Generate a downloadable `.rdp` file for the native Remote Desktop client
+   * ("Open Session In → RDP Client"). The native client connects directly to
+   * the server's RDP host, so multi-monitor, clipboard and local-drive access
+   * all work through the real client. Returns `{ filename, content }` — the web
+   * turns it into a download. No session/Redis record is created (no proxy).
+   */
+  async rdpFile(
+    orgId: string,
+    actorUserId: string,
+    id: string,
+    opts: Pick<RdpFileOptions, 'multimon' | 'clipboard' | 'drives' | 'printers'> = {},
+  ) {
+    const server = await prisma.server.findFirst({ where: { id, orgId } });
+    if (!server) throw new NotFoundException('Server not found');
+    if (server.connectionType !== 'RDP') {
+      throw new BadRequestException('RDP file download is only available for RDP servers');
+    }
+
+    const creds = server.credentialRef
+      ? (unsealConfig(server.credentialRef, this.env.SECRET_SEAL_KEY) as { username?: string })
+      : {};
+
+    const content = buildRdpFile({
+      address: server.address,
+      username: creds.username,
+      multimon: opts.multimon,
+      clipboard: opts.clipboard,
+      drives: opts.drives,
+      printers: opts.printers,
+    });
+    const filename = `${server.hostname.replace(/[^a-zA-Z0-9._-]+/g, '-') || 'remote'}.rdp`;
+
+    await this.audit.record({
+      orgId,
+      actorUserId,
+      action: 'server.rdp-file',
+      targetType: 'Server',
+      targetId: id,
+    });
+    return { filename, content };
   }
 }

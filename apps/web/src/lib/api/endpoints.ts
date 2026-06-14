@@ -556,6 +556,30 @@ export const updateServer = (
 export const deleteServer = (id: string) =>
   apiFetch<{ ok: true }>(`/servers/${id}`, { method: 'DELETE' });
 
+/** A generated `.rdp` connection file for the native Remote Desktop client. */
+export interface ApiRdpFile {
+  filename: string;
+  content: string;
+}
+export interface RdpFileOptions {
+  multimon?: boolean;
+  clipboard?: boolean;
+  drives?: boolean;
+  printers?: boolean;
+}
+export const getServerRdpFile = (id: string, o: RdpFileOptions = {}) => {
+  const q = new URLSearchParams();
+  const set = (k: string, v: boolean | undefined) => {
+    if (v !== undefined) q.set(k, v ? '1' : '0');
+  };
+  set('multimon', o.multimon);
+  set('clipboard', o.clipboard);
+  set('drives', o.drives);
+  set('printers', o.printers);
+  const qs = q.toString();
+  return apiFetch<ApiRdpFile>(`/servers/${id}/rdp-file${qs ? `?${qs}` : ''}`);
+};
+
 /** Open a browser session against a fixed server (RDP/VNC/SSH via the proxy). */
 export interface ApiServerConnect {
   sessionId: string;

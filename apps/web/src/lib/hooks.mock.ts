@@ -1,13 +1,16 @@
 'use client';
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import type { RdpFileOptions } from '@/lib/api/endpoints';
 import { store } from '@/lib/mock/store';
+import { buildMockRdpFile, downloadRdpFile } from '@/lib/rdp';
 import type {
   CreateFeedbackInput,
   CreateUserInput,
   CreateWorkspaceInput,
   UpdateFeedbackInput,
   UpdateWorkspaceInput,
+  Workspace,
 } from '@/lib/types';
 // ServerOption is returned directly from the mock store (see useServers).
 
@@ -111,6 +114,13 @@ export function useUpdateWorkspace() {
 export function useDeleteWorkspace() {
   return useCallback(async (id: string) => {
     store.deleteWorkspace(id);
+  }, []);
+}
+
+export function useDownloadRdp() {
+  return useCallback(async (workspace: Workspace, opts: RdpFileOptions = {}) => {
+    const host = workspace.serverName ?? workspace.name;
+    downloadRdpFile(`${host}.rdp`, buildMockRdpFile(host, 'Administrator', opts));
   }, []);
 }
 
