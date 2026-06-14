@@ -55,13 +55,22 @@ else {
  const N=['IDLE','CONNECTING','WAITING','CONNECTED','DISCONNECTING','DISCONNECTED'];
  client.onstatechange=function(s){setState((N[s]||s)+' ('+s+')');log('client state → '+(N[s]||s));};
  client.onerror=function(st){log('CLIENT-ERROR: '+(st&&st.message?st.message:JSON.stringify(st)),'e');};
+ let dumped=false;
  setInterval(function(){
    const el=display.getElement();const cv=el.getElementsByTagName('canvas');
+   if(cv[0] && !dumped && (counts.copy||0)>5){
+     dumped=true;
+     function info(node,name){ if(!node)return name+'=null'; const r=node.getBoundingClientRect(); const s=getComputedStyle(node);
+       return name+' rect('+(r.x|0)+','+(r.y|0)+' '+(r.width|0)+'x'+(r.height|0)+') css{disp:'+s.display+' vis:'+s.visibility+' op:'+s.opacity+' w:'+s.width+' h:'+s.height+' tf:'+s.transform+' ov:'+s.overflow+' pos:'+s.position+' z:'+s.zIndex+'}'; }
+     log('<span class=k>CANVAS0</span> attr '+cv[0].width+'x'+cv[0].height+' | '+info(cv[0],'canvas'),'g');
+     log('<span class=k>PARENT</span> '+info(cv[0].parentElement,'layerDiv'),'g');
+     log('<span class=k>DISPLAY</span> '+info(el,'dispEl'),'g');
+     log('<span class=k>MOUNT</span> '+info(el.parentElement,'#disp'),'g');
+   }
    let px='n/a';
-   if(cv[0]){try{const ctx=cv[0].getContext('2d');const pts=[[100,80],[640,300],[300,500],[900,160]];
-     px=pts.map(p=>{const d=ctx.getImageData(p[0],p[1],1,1).data;return d[0]+'/'+d[1]+'/'+d[2]+'/'+d[3];}).join(' ');}catch(e){px='getImageData-ERR:'+e.message;}}
-   log('— img '+JSON.stringify(counts.img||0)+'/blob'+(counts.blob||0)+'/copy'+(counts.copy||0)+' | imgLoad=<span class=g>'+imgLoad+'</span> imgErr=<span class=e>'+imgErr+'</span> | dispEl '+el.offsetWidth+'x'+el.offsetHeight+' scale '+display.getScale()+' | canvas0 '+(cv[0]?cv[0].width+'x'+cv[0].height:'none')+' | px(RGBA) '+px);
- },3500);
+   if(cv[0]){try{const ctx=cv[0].getContext('2d');const d=ctx.getImageData(640,300,1,1).data;px=d[0]+'/'+d[1]+'/'+d[2];}catch(e){px='ERR';}}
+   log('— copy'+(counts.copy||0)+' imgLoad='+imgLoad+' imgErr='+imgErr+' | px640/300='+px);
+ },3000);
  try{client.connect('token='+TOKEN);}catch(e){log('connect() warf: '+e.message,'e');}
  const mouse=new Guacamole.Mouse(display.getElement());
  mouse.onmousedown=mouse.onmouseup=mouse.onmousemove=function(st){try{client.sendMouseState(st);}catch(e){}};
