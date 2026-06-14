@@ -7,6 +7,7 @@ import {
   Cable,
   Cast,
   Cloud,
+  Code2,
   Container,
   Database,
   DatabaseBackup,
@@ -26,6 +27,8 @@ import {
   KeyRound,
   Layers,
   LayoutDashboard,
+  LayoutGrid,
+  Lock,
   type LucideIcon,
   MonitorPlay,
   Network,
@@ -38,6 +41,7 @@ import {
   Share2,
   ShieldCheck,
   ShieldHalf,
+  SlidersHorizontal,
   TrendingUp,
   Users,
   UsersRound,
@@ -57,16 +61,20 @@ export interface NavItem {
 
 export interface NavGroup {
   key: string;
+  /** Category-level glyph shown on the accordion header and the collapsed rail. */
+  icon: LucideIcon;
   items: NavItem[];
 }
 
 export const navGroups: NavGroup[] = [
   {
     key: 'overview',
+    icon: LayoutDashboard,
     items: [{ key: 'dashboard', href: '/dashboard', icon: LayoutDashboard }],
   },
   {
     key: 'workspaces',
+    icon: LayoutGrid,
     items: [
       { key: 'catalog', href: '/workspaces', icon: AppWindow },
       { key: 'images', href: '/workspaces/images', icon: Container },
@@ -75,6 +83,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     key: 'sessions',
+    icon: MonitorPlay,
     items: [
       { key: 'liveSessions', href: '/sessions', icon: MonitorPlay },
       { key: 'history', href: '/sessions/history', icon: History },
@@ -86,6 +95,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     key: 'access',
+    icon: Lock,
     items: [
       { key: 'users', href: '/users', icon: Users },
       { key: 'groups', href: '/groups', icon: UsersRound },
@@ -95,6 +105,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     key: 'infrastructure',
+    icon: Server,
     items: [
       { key: 'zones', href: '/infrastructure/zones', icon: Globe },
       { key: 'agents', href: '/infrastructure/agents', icon: Server },
@@ -107,6 +118,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     key: 'storage',
+    icon: HardDrive,
     items: [
       { key: 'storageMappings', href: '/storage/mappings', icon: FolderTree },
       { key: 'persistentProfiles', href: '/storage/profiles', icon: FolderCog },
@@ -116,6 +128,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     key: 'connectivity',
+    icon: Cable,
     items: [
       { key: 'connectionProxies', href: '/connectivity/proxies', icon: Cable },
       { key: 'webFiltering', href: '/connectivity/web-filtering', icon: Filter },
@@ -125,6 +138,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     key: 'settings',
+    icon: SlidersHorizontal,
     items: [
       { key: 'general', href: '/settings/general', icon: Settings2 },
       { key: 'security', href: '/settings/security', icon: Fingerprint },
@@ -137,6 +151,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     key: 'observability',
+    icon: Activity,
     items: [
       { key: 'reporting', href: '/observability/reporting', icon: TrendingUp },
       { key: 'auditLog', href: '/observability/audit-log', icon: ScrollText },
@@ -146,6 +161,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     key: 'developer',
+    icon: Code2,
     items: [
       { key: 'apiKeys', href: '/developer/api-keys', icon: KeyRound },
       { key: 'webhooks', href: '/developer/webhooks', icon: Webhook },
