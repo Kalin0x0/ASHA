@@ -50,10 +50,16 @@ import { ZonesModule } from './modules/zones/zones.module';
 @Module({
   imports: [
     ThrottlerModule.forRoot([
-      // Default: 200 requests per 60 s per IP — applied to all routes
-      { name: 'global', ttl: 60_000, limit: 200 },
-      // Tighter: 10 requests per 60 s — applied explicitly to auth endpoints
-      { name: 'auth', ttl: 60_000, limit: 10 },
+      // Per-client cap for all routes (keyed on the real client IP once the app
+      // trusts the proxy — see main.ts). Generous enough for an authenticated
+      // dashboard that polls sessions/agents. Override via CHISTA_THROTTLE_*.
+      {
+        name: 'global',
+        ttl: Number(process.env.CHISTA_THROTTLE_TTL) || 60_000,
+        limit: Number(process.env.CHISTA_THROTTLE_LIMIT) || 600,
+      },
+      // Tighter cap for auth endpoints (brute-force protection).
+      { name: 'auth', ttl: 60_000, limit: Number(process.env.CHISTA_THROTTLE_AUTH_LIMIT) || 10 },
     ]),
     // Drives the session reaper + scheduled DB backups
     ScheduleModule.forRoot(),

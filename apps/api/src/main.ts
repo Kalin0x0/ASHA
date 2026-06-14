@@ -42,6 +42,12 @@ async function bootstrap() {
       },
     }),
   );
+  // Trust the reverse proxy (Traefik) so req.ip reflects the real client via
+  // X-Forwarded-For. Without this, the rate-limiter keys every request on the
+  // proxy's single IP → all users share one bucket → spurious 429s. Trust only
+  // the first hop by default (safe behind one proxy); override with
+  // CHISTA_TRUST_PROXY (number of hops, or 0 to disable).
+  app.getHttpAdapter().getInstance().set('trust proxy', Number(process.env.CHISTA_TRUST_PROXY ?? 1));
   app.setGlobalPrefix('api/v1');
   app.enableCors({ origin: corsOrigins(env), credentials: true });
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
