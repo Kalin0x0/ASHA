@@ -271,6 +271,24 @@ export function useTerminateSession() {
   return useCallback((id: string) => mutate(id), [mutate]);
 }
 
+export function usePauseSession() {
+  const qc = useQueryClient();
+  const { mutate } = useMutation({
+    mutationFn: api.pauseSession,
+    onSuccess: () => qc.invalidateQueries({ queryKey: SESSIONS_KEY }),
+  });
+  return useCallback((id: string) => mutate(id), [mutate]);
+}
+
+export function useResumeSession() {
+  const qc = useQueryClient();
+  const { mutate } = useMutation({
+    mutationFn: api.resumeSession,
+    onSuccess: () => qc.invalidateQueries({ queryKey: SESSIONS_KEY }),
+  });
+  return useCallback((id: string) => mutate(id), [mutate]);
+}
+
 export function useLaunchSession() {
   const qc = useQueryClient();
   const { mutateAsync } = useMutation({

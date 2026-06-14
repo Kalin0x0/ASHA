@@ -141,6 +141,22 @@ class MockStore {
     return (online.reduce((sum, a) => sum + a.memUsedMb / a.memTotalMb, 0) / online.length) * 100;
   }
 
+  pauseSession(id: string) {
+    const s = this.data.sessions.find((x) => x.id === id);
+    if (s && (s.status === 'RUNNING' || s.status === 'DEGRADED')) {
+      s.status = 'PAUSED';
+      this.emit();
+    }
+  }
+
+  resumeSession(id: string) {
+    const s = this.data.sessions.find((x) => x.id === id);
+    if (s && s.status === 'PAUSED') {
+      s.status = 'RUNNING';
+      this.emit();
+    }
+  }
+
   terminateSession(id: string) {
     const target = this.data.sessions.find((s) => s.id === id);
     if (target) {

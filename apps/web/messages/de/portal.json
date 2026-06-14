@@ -37,7 +37,12 @@
     "resume": "Fortsetzen",
     "resumeAria": "{name} fortsetzen",
     "endAria": "{name} beenden",
-    "endedToast": "Sitzung beendet"
+    "endedToast": "Sitzung beendet",
+    "stop": "Stopp",
+    "stopAria": "{name} pausieren",
+    "stoppedToast": "Sitzung pausiert — Zustand bleibt erhalten",
+    "delete": "Löschen",
+    "deleteAria": "{name} löschen"
   },
   "favorites": {
     "title": "Favoriten",

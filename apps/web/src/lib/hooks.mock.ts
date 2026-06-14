@@ -78,6 +78,14 @@ export function useTerminateSession() {
   return useCallback((id: string) => store.terminateSession(id), []);
 }
 
+export function usePauseSession() {
+  return useCallback((id: string) => store.pauseSession(id), []);
+}
+
+export function useResumeSession() {
+  return useCallback((id: string) => store.resumeSession(id), []);
+}
+
 export function useLaunchSession() {
   return useCallback(async (workspaceId: string) => store.launchSession(workspaceId), []);
 }
