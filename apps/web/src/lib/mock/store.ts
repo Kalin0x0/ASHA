@@ -1,6 +1,6 @@
 import { buildInitialData, type MockData } from '@/lib/mock/data';
 import { resolveStreamUrl } from '@/lib/stream';
-import type { DashboardSnapshot, SessionRow, SessionStatus } from '@/lib/types';
+import type { CreateUserInput, DashboardSnapshot, SessionRow, SessionStatus, UserRow } from '@/lib/types';
 import { clamp } from '@/lib/utils';
 
 const SERIES_LEN = 24;
@@ -84,15 +84,24 @@ class MockStore {
         s.cpuPct = this.jitter(s.cpuPct, 11, 1, 98);
         s.memMb = clamp(s.memMb + (Math.random() - 0.5) * s.memLimitMb * 0.05, s.memLimitMb * 0.1, s.memLimitMb * 0.95);
         s.uptimeSec += 2;
-      } else if (s.status === 'PROVISIONING') {
-        if (Math.random() > 0.6) {
-          s.status = 'RUNNING';
-          s.cpuPct = 18;
-          s.memMb = s.memLimitMb * 0.3;
-          s.connectionUrl = resolveStreamUrl(s.kasmId);
+      } else {
+        // Deterministically walk a launching session through every step
+        // (REQUESTED → SCHEDULED → PROVISIONING → RUNNING) one stage per tick,
+        // so the connecting view always completes instead of stalling.
+        const next: Partial<Record<SessionStatus, SessionStatus>> = {
+          REQUESTED: 'SCHEDULED',
+          SCHEDULED: 'PROVISIONING',
+          PROVISIONING: 'RUNNING',
+        };
+        const advanced = next[s.status];
+        if (advanced) {
+          s.status = advanced;
+          if (advanced === 'RUNNING') {
+            s.cpuPct = 18;
+            s.memMb = s.memLimitMb * 0.3;
+            s.connectionUrl = resolveStreamUrl(s.kasmId);
+          }
         }
-      } else if (s.status === 'SCHEDULED') {
-        if (Math.random() > 0.7) s.status = 'PROVISIONING';
       }
     }
 
@@ -144,7 +153,9 @@ class MockStore {
       workspaceName: ws.friendlyName,
       zone: agent.zone,
       agent: agent.hostname,
-      status: 'PROVISIONING' as SessionStatus,
+      // Start at the first lifecycle step; the ticker walks it through
+      // SCHEDULED → PROVISIONING → RUNNING so every step is shown completing.
+      status: 'REQUESTED',
       cpuPct: 0,
       memMb: 0,
       memLimitMb: ws.memMb,
@@ -156,6 +167,34 @@ class MockStore {
     ws.activeSessions += 1;
     this.emit();
     return session;
+  }
+
+  /**
+   * Create a user in the in-memory store (mock mode). Mirrors the API's
+   * validation: email is required and email/username must be unique. Throws an
+   * Error whose message the dialog surfaces to the operator.
+   */
+  createUser(input: CreateUserInput): UserRow {
+    const email = input.email.trim().toLowerCase();
+    if (!email) throw new Error('Email is required');
+    const username = (input.username?.trim() || email.split('@')[0] || email).toLowerCase();
+    const clash = this.data.users.some(
+      (u) => u.email.toLowerCase() === email || u.username.toLowerCase() === username,
+    );
+    if (clash) throw new Error('A user with this email or username already exists');
+    const user: UserRow = {
+      id: `user-${Math.floor(Math.random() * 1e6)}`,
+      name: input.displayName?.trim() || username,
+      email,
+      username,
+      status: 'ACTIVE',
+      groups: input.isSystemAdmin ? ['Administrators', 'All Users'] : ['All Users'],
+      twoFactor: false,
+      lastLoginAt: null,
+    };
+    this.data.users = [user, ...this.data.users];
+    this.emit();
+    return user;
   }
 
   getDashboard(): DashboardSnapshot {

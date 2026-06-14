@@ -2,6 +2,7 @@
   "users": {
     "title": "Benutzer",
     "description": "Personen mit Zugriff auf diese Chista-Installation.",
+    "newUser": "Neuer Benutzer",
     "stats": {
       "totalUsers": "Benutzer gesamt",
       "withTwoFactor": "Mit 2FA"
@@ -12,6 +13,23 @@
       "groups": "Gruppen",
       "twoFactor": "2FA",
       "lastLogin": "Letzte Anmeldung"
+    },
+    "create": {
+      "title": "Benutzer erstellen",
+      "description": "Fügen Sie eine Person zu dieser Installation hinzu. Sie kann sich mit der von Ihnen festgelegten E-Mail und dem Passwort anmelden.",
+      "email": "E-Mail",
+      "username": "Benutzername",
+      "usernameHint": "Wird standardmäßig auf die E-Mail gesetzt, wenn leer.",
+      "displayName": "Anzeigename",
+      "password": "Passwort",
+      "passwordHint": "Mindestens 8 Zeichen. Leer lassen, um ein eingeladenes Konto ohne Passwort zu erstellen.",
+      "systemAdmin": "Systemadministrator-Rechte gewähren",
+      "submit": "Benutzer erstellen",
+      "emailRequired": "Eine E-Mail-Adresse ist erforderlich."
+    },
+    "toasts": {
+      "created": "Benutzer {email} erstellt",
+      "createFailed": "Benutzer konnte nicht erstellt werden"
     },
     "empty": {
       "title": "Keine Benutzer gefunden",

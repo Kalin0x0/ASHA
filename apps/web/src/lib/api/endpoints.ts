@@ -190,6 +190,30 @@ export const getAgents = () => apiFetch<ApiAgent[]>('/agents');
 export const getZones = () => apiFetch<ApiZone[]>('/zones');
 export const getUsers = () => apiFetch<ApiUser[]>('/users');
 
+export interface CreateUserBody {
+  email: string;
+  username?: string;
+  displayName?: string;
+  password?: string;
+  isSystemAdmin?: boolean;
+  locale?: string;
+}
+export const createUser = (body: CreateUserBody) =>
+  apiFetch<ApiUser>('/users', { method: 'POST', body });
+export const updateUser = (
+  id: string,
+  body: Partial<{
+    username: string;
+    displayName: string | null;
+    locale: string;
+    isSystemAdmin: boolean;
+    status: ApiUser['status'];
+    password: string;
+  }>,
+) => apiFetch<ApiUser>(`/users/${id}`, { method: 'PATCH', body });
+export const deleteUser = (id: string) =>
+  apiFetch<{ ok: true }>(`/users/${id}`, { method: 'DELETE' });
+
 export interface ApiGroup {
   id: string;
   name: string;

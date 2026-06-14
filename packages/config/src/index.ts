@@ -30,6 +30,13 @@ export const envSchema = z.object({
   CHISTA_PUBLIC_URL: z.string().default('https://chista.local'),
   CHISTA_SESSION_NETWORK: z.string().default('chista-sessions'),
 
+  // Public base URL the browser uses to reach a running workspace stream. Takes
+  // precedence over CHISTA_PUBLIC_URL for session connection URLs when set;
+  // point it at the reverse proxy that is actually reachable from end users
+  // (e.g. https://workspaces.example.com). A per-zone `proxyBaseUrl` still wins
+  // over this. Leave unset to fall back to CHISTA_PUBLIC_URL.
+  WORKSPACE_PUBLIC_BASE_URL: z.string().url().optional(),
+
   // Shared secret the agent presents (x-agent-token header) to the internal
   // agent endpoints. Must match the agent's CHISTA_AGENT_ENROLLMENT_TOKEN.
   CHISTA_AGENT_ENROLLMENT_TOKEN: z.string().min(8).default('dev-enrollment-token-change-me'),
@@ -61,4 +68,32 @@ export function corsOrigins(env: Env): string[] {
   return env.CORS_ORIGIN.split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+/**
+ * Resolve the public base URL a browser uses to reach a running workspace
+ * stream. Precedence: per-zone `proxyBaseUrl` → `WORKSPACE_PUBLIC_BASE_URL` →
+ * `CHISTA_PUBLIC_URL`. Centralised so the manager never hands the browser a
+ * URL built from an ad-hoc default.
+ */
+export function resolveSessionBaseUrl(
+  env: Pick<Env, 'WORKSPACE_PUBLIC_BASE_URL' | 'CHISTA_PUBLIC_URL'>,
+  zoneProxyBaseUrl?: string | null,
+): string {
+  return zoneProxyBaseUrl || env.WORKSPACE_PUBLIC_BASE_URL || env.CHISTA_PUBLIC_URL;
+}
+
+/**
+ * True when a URL's host is a non-publicly-resolvable placeholder — the default
+ * `*.local` dev domain, or a loopback address. Used to warn operators (and the
+ * UI) that the configured workspace URL likely won't resolve for real end users
+ * (the `chista.local`-DNS-failure class of bug).
+ */
+export function isPlaceholderHost(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host.endsWith('.local') || host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  } catch {
+    return false;
+  }
 }

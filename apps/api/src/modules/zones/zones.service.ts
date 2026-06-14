@@ -76,11 +76,36 @@ export class ZonesService {
   }
 
   async remove(orgId: string, actorUserId: string, id: string) {
-    const zone = await prisma.deploymentZone.findFirst({ where: { id, orgId } });
+    const zone = await prisma.deploymentZone.findFirst({
+      where: { id, orgId },
+      include: { _count: { select: { agents: true, servers: true } } },
+    });
     if (!zone) throw new NotFoundException('Zone not found');
+
+    // Only the *truly* default zone is protected — promote another first.
     if (zone.isDefault) {
-      throw new BadRequestException('Cannot delete the default zone; promote another first');
+      throw new BadRequestException(
+        'This zone is currently the default zone. Please promote another zone first.',
+      );
     }
+
+    // Refuse to orphan live workloads: block while the zone still holds active
+    // sessions, or any agents/servers are bound to it. Past sessions
+    // (DESTROYED/TERMINATING/ERROR) never block deletion.
+    const activeSessions = await prisma.session.count({
+      where: { zoneId: id, orgId, status: { notIn: ['DESTROYED', 'TERMINATING', 'ERROR'] } },
+    });
+    if (activeSessions > 0) {
+      throw new BadRequestException(
+        `This zone has ${activeSessions} active session(s). Terminate or migrate them before deleting it.`,
+      );
+    }
+    if (zone._count.agents > 0 || zone._count.servers > 0) {
+      throw new BadRequestException(
+        'This zone still has agents or servers attached. Move or remove them before deleting it.',
+      );
+    }
+
     await prisma.deploymentZone.deleteMany({ where: { id, orgId } });
     await this.audit.record({
       orgId,

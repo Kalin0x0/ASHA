@@ -399,6 +399,45 @@ export class SessionsService {
     await this.webhooks?.dispatch(session.orgId, 'session.terminated', { sessionId: session.id, reason });
   }
 
+  /**
+   * Fail a launch that never reached RUNNING within the launch timeout. Marks
+   * the session ERROR with a reason so the viewer can show a clear failure
+   * instead of spinning forever (no agent available, slow image pull on a weak
+   * link, or an agent that never reported back). Idempotent: only a session
+   * still in a pre-RUNNING state transitions. A container is only torn down if
+   * one was actually started — we never blindly destroy.
+   */
+  async failStuckLaunch(
+    session: { id: string; orgId: string; zoneId: string; containerId: string | null },
+    reason = 'launch_timeout',
+  ) {
+    const { count } = await prisma.session.updateMany({
+      where: { id: session.id, status: { in: ['REQUESTED', 'SCHEDULED', 'PROVISIONING'] } },
+      data: {
+        status: 'ERROR',
+        terminationReason: reason,
+        errorMessage: 'Launch timed out before the workspace became ready.',
+      },
+    });
+    if (count === 0) return; // already RUNNING / terminal — nothing to fail
+    if (session.containerId) {
+      const zone = await prisma.deploymentZone.findUnique({ where: { id: session.zoneId } });
+      await this.redis.publish(RedisChannels.destroy(zone?.name ?? 'default'), {
+        sessionId: session.id,
+        containerId: session.containerId,
+        reason,
+      });
+    }
+    await this.audit.record({
+      orgId: session.orgId,
+      actorUserId: 'system',
+      action: 'session.launch_timeout',
+      targetType: 'Session',
+      targetId: session.id,
+      metadata: { reason },
+    });
+  }
+
   async keepalive(id: string, user: AuthUser) {
     const session = await this.findInOrg(id, user.orgId);
     this.assertCanAccess(session, user);
@@ -415,6 +454,9 @@ export class SessionsService {
     return {
       connectionUrl: session.connectionUrl,
       status: session.status,
+      // Populated when a launch failed/timed out so the viewer can show the
+      // reason instead of a generic disconnect.
+      errorMessage: session.errorMessage ?? null,
       // The viewer reads the DLP policy back to grey out disallowed controls.
       dlp: (workspace?.dlp ?? {}) as DlpPolicy,
       // The viewer applies the stream profile client-side (KasmVNC quality/fps/clipboard).

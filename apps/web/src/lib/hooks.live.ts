@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import * as api from '@/lib/api/endpoints';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
-import type { ActivityItem, Agent, RecordingRow, SessionRow, UserRow, Workspace, Zone } from '@/lib/types';
+import type { ActivityItem, Agent, CreateUserInput, RecordingRow, SessionRow, UserRow, Workspace, Zone } from '@/lib/types';
 
 const SESSIONS_KEY = ['sessions'] as const;
 const WORKSPACES_KEY = ['workspaces'] as const;
@@ -125,6 +125,18 @@ export function useZones(): Zone[] {
 export function useUsers(): UserRow[] {
   const { data } = useUsersQuery();
   return useMemo(() => (data ?? []).map(mapUser), [data]);
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.createUser,
+    onSuccess: () => qc.invalidateQueries({ queryKey: USERS_KEY }),
+  });
+  return useCallback(
+    async (input: CreateUserInput): Promise<UserRow> => mapUser(await mutateAsync(input)),
+    [mutateAsync],
+  );
 }
 
 export function useDashboard() {

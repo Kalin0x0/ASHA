@@ -2,6 +2,7 @@
   "users": {
     "title": "Users",
     "description": "People with access to this Chista deployment.",
+    "newUser": "New user",
     "stats": {
       "totalUsers": "Total Users",
       "withTwoFactor": "With 2FA"
@@ -12,6 +13,23 @@
       "groups": "Groups",
       "twoFactor": "2FA",
       "lastLogin": "Last login"
+    },
+    "create": {
+      "title": "Create user",
+      "description": "Add a person to this deployment. They can sign in with the email and password you set.",
+      "email": "Email",
+      "username": "Username",
+      "usernameHint": "Defaults to the email if left blank.",
+      "displayName": "Display name",
+      "password": "Password",
+      "passwordHint": "Minimum 8 characters. Leave blank to create an invited account without a password.",
+      "systemAdmin": "Grant system administrator",
+      "submit": "Create user",
+      "emailRequired": "An email address is required."
+    },
+    "toasts": {
+      "created": "User {email} created",
+      "createFailed": "Could not create the user"
     },
     "empty": {
       "title": "No users found",
