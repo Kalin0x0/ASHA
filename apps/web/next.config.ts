@@ -19,6 +19,9 @@ const csp = [
   "frame-ancestors 'none'",
   "font-src 'self' data:",
   "object-src 'none'",
+  // PWA: the service worker + web app manifest are same-origin.
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
   "base-uri 'self'",
   "form-action 'self'",
   "upgrade-insecure-requests",
@@ -61,6 +64,14 @@ const nextConfig: NextConfig = {
         // Apply to all routes
         source: '/(.*)',
         headers: securityHeaders,
+      },
+      {
+        // The service worker must not be cached long, and may control the root.
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
       },
     ];
   },

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { BackgroundPicker } from '@/components/composite/background-picker';
+import { InstallButton } from '@/components/composite/install-button';
 import { LanguageSwitcher } from '@/components/composite/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -73,6 +74,8 @@ export function Topbar() {
       >
         <AppWindow className="size-4" /> {t('workstation')}
       </Button>
+
+      <InstallButton className="hidden md:inline-flex" />
 
       {/* Notifications */}
       <DropdownMenu>

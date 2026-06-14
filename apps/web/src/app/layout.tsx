@@ -19,6 +19,11 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: t('description'),
     applicationName: 'Chista',
+    appleWebApp: {
+      capable: true,
+      title: 'Chista',
+      statusBarStyle: 'black-translucent',
+    },
     icons: {
       icon: [
         { url: '/chista-logo.svg', type: 'image/svg+xml' },

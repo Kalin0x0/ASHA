@@ -1,0 +1,8 @@
+{
+  "install": "App installieren",
+  "installHint": "Chista als Desktop-App installieren",
+  "offlineBadge": "Offline — zwischengespeicherte Daten",
+  "offlineTitle": "Du bist offline",
+  "offlineBody": "Chista erreicht das Netzwerk gerade nicht. Stelle die Verbindung wieder her, um aktuelle Daten zu laden — bereits geöffnete Seiten sind ggf. weiterhin aus dem Cache verfügbar.",
+  "retry": "Erneut versuchen"
+}

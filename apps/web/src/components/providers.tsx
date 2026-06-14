@@ -6,11 +6,13 @@ import { ThemeProvider } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { Toaster } from 'sonner';
+import { OfflineIndicator } from '@/components/composite/offline-indicator';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { localeDir } from '@/i18n/locales';
 import { AuthProvider } from '@/lib/api/auth-context';
 import { isLive } from '@/lib/api/mode';
 import { store } from '@/lib/mock/store';
+import { PwaProvider } from '@/lib/pwa/pwa-context';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const locale = useLocale();
@@ -36,20 +38,23 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <TooltipProvider delayDuration={200} skipDelayDuration={300}>
-              {children}
-              <Toaster
-                position="bottom-right"
-                theme="dark"
-                toastOptions={{
-                  classNames: {
-                    toast: 'glass-strong !rounded-lg !border-border-subtle',
-                    title: '!text-foreground !font-medium',
-                    description: '!text-muted-foreground',
-                  },
-                }}
-              />
-            </TooltipProvider>
+            <PwaProvider>
+              <TooltipProvider delayDuration={200} skipDelayDuration={300}>
+                {children}
+                <OfflineIndicator />
+                <Toaster
+                  position="bottom-right"
+                  theme="dark"
+                  toastOptions={{
+                    classNames: {
+                      toast: 'glass-strong !rounded-lg !border-border-subtle',
+                      title: '!text-foreground !font-medium',
+                      description: '!text-muted-foreground',
+                    },
+                  }}
+                />
+              </TooltipProvider>
+            </PwaProvider>
           </AuthProvider>
         </QueryClientProvider>
       </ThemeProvider>
