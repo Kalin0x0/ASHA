@@ -32,6 +32,24 @@ declare module 'guacamole-common-js' {
     onkeyup: ((keysym: number) => void) | null;
   }
 
+  // Opaque stream handles for clipboard transfer.
+  export class InputStream {}
+  export class OutputStream {}
+
+  /** Reads a text stream (e.g. the remote clipboard) chunk by chunk. */
+  export class StringReader {
+    constructor(stream: InputStream);
+    ontext: ((text: string) => void) | null;
+    onend: (() => void) | null;
+  }
+
+  /** Writes text to an output stream (e.g. the remote clipboard). */
+  export class StringWriter {
+    constructor(stream: OutputStream);
+    sendText(text: string): void;
+    sendEnd(): void;
+  }
+
   export class Client {
     constructor(tunnel: WebSocketTunnel);
     getDisplay(): Display;
@@ -40,9 +58,13 @@ declare module 'guacamole-common-js' {
     sendSize(width: number, height: number): void;
     sendMouseState(state: MouseState): void;
     sendKeyEvent(pressed: number, keysym: number): void;
+    /** Open an outbound stream to set the remote clipboard. */
+    createClipboardStream(mimetype: string): OutputStream;
     onstatechange: ((state: number) => void) | null;
     onerror: ((status: { code: number; message: string }) => void) | null;
     onname: ((name: string) => void) | null;
+    /** Fired when the remote clipboard changes (remote → local). */
+    onclipboard: ((stream: InputStream, mimetype: string) => void) | null;
   }
 
   const Guacamole: {
@@ -51,6 +73,10 @@ declare module 'guacamole-common-js' {
     Mouse: typeof Mouse;
     Keyboard: typeof Keyboard;
     Client: typeof Client;
+    StringReader: typeof StringReader;
+    StringWriter: typeof StringWriter;
+    InputStream: typeof InputStream;
+    OutputStream: typeof OutputStream;
   };
   export default Guacamole;
 }
