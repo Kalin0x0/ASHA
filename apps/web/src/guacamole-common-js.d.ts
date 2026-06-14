@@ -13,6 +13,7 @@ declare module 'guacamole-common-js' {
   export class Display {
     getElement(): HTMLElement;
     scale(scale: number): void;
+    getScale(): number;
     getWidth(): number;
     getHeight(): number;
     onresize: ((width: number, height: number) => void) | null;

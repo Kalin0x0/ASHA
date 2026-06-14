@@ -45,6 +45,19 @@ export default function ConnectPage() {
     const el = display.getElement();
     screen.replaceChildren(el);
 
+    // Scale the remote desktop to fit the viewport (letterboxed); rescale when the
+    // remote resolution changes or the window resizes.
+    const rescale = () => {
+      const w = display.getWidth();
+      const h = display.getHeight();
+      if (w > 0 && h > 0 && screen.clientWidth > 0 && screen.clientHeight > 0) {
+        display.scale(Math.min(screen.clientWidth / w, screen.clientHeight / h));
+      }
+    };
+    display.onresize = rescale;
+    window.addEventListener('resize', rescale);
+    rescale();
+
     client.onstatechange = (s) => {
       if (s === 3) setState('connected'); // CONNECTED
       else if (s === 5) setState((prev) => (prev === 'error' ? 'error' : 'disconnected')); // DISCONNECTED
@@ -59,11 +72,16 @@ export default function ConnectPage() {
       }
     };
 
-    // Mouse → server (param infers as MouseState from the handler signature).
+    // Mouse → server. Coordinates come in viewport pixels; divide by the display
+    // scale so clicks land at the correct remote position.
     const mouse = new Guacamole.Mouse(el);
-    mouse.onmousedown = (s) => client.sendMouseState(s);
-    mouse.onmouseup = (s) => client.sendMouseState(s);
-    mouse.onmousemove = (s) => client.sendMouseState(s);
+    const sendMouse = (s: { x: number; y: number }) => {
+      const sc = display.getScale() || 1;
+      client.sendMouseState({ ...s, x: s.x / sc, y: s.y / sc });
+    };
+    mouse.onmousedown = sendMouse;
+    mouse.onmouseup = sendMouse;
+    mouse.onmousemove = sendMouse;
 
     // Keyboard → server (whole document so shortcuts reach the desktop).
     const keyboard = new Guacamole.Keyboard(document);
@@ -82,6 +100,8 @@ export default function ConnectPage() {
     }
 
     return () => {
+      window.removeEventListener('resize', rescale);
+      display.onresize = null;
       keyboard.onkeydown = null;
       keyboard.onkeyup = null;
       mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = null;
@@ -118,13 +138,14 @@ export default function ConnectPage() {
         </div>
       </header>
 
-      <main className="relative flex-1 overflow-auto bg-black">
+      <main className="relative flex-1 overflow-hidden bg-black">
         {/* The guacd display canvas mounts here. `isolate` (+ relative z-0) gives
             this subtree its own stacking context: guacamole-common-js ships the
             default desktop layer canvas with z-index:-1, which would otherwise
             render BEHIND the opaque <main> background (bg-black) → black screen
-            with only the cursor (a higher-z layer) visible. */}
-        <div ref={screenRef} className="relative isolate z-0 mx-auto w-fit [&_canvas]:block" />
+            with only the cursor (a higher-z layer) visible. The grid centers the
+            scaled remote display within the viewport. */}
+        <div ref={screenRef} className="relative isolate z-0 grid h-full w-full place-items-center [&_canvas]:block" />
         {state !== 'connected' && <Overlay state={state} errMsg={errMsg} onRetry={reconnect} />}
       </main>
     </div>
