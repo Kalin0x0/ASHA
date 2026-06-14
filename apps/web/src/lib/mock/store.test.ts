@@ -22,3 +22,25 @@ describe('MockStore.createUser', () => {
     expect(() => store.createUser({ email: 'dupe@chista.local' })).toThrow(/already exists/i);
   });
 });
+
+describe('MockStore.createWorkspace', () => {
+  it('creates a workspace, deriving a slug and prepending it to the catalog', () => {
+    const before = store.getData().workspaces.length;
+    const ws = store.createWorkspace({ friendlyName: 'Brave Browser', category: 'Browsers', dockerImage: 'kasmweb/brave:1.16.0' });
+    expect(ws.name).toBe('brave-browser');
+    expect(ws.friendlyName).toBe('Brave Browser');
+    expect(ws.category).toBe('Browsers');
+    expect(ws.enabled).toBe(true);
+    expect(store.getData().workspaces[0]!.id).toBe(ws.id);
+    expect(store.getData().workspaces.length).toBe(before + 1);
+  });
+
+  it('requires a name', () => {
+    expect(() => store.createWorkspace({ friendlyName: '  ' })).toThrow(/name/i);
+  });
+
+  it('rejects a duplicate slug', () => {
+    store.createWorkspace({ friendlyName: 'Dup Space' });
+    expect(() => store.createWorkspace({ friendlyName: 'Dup Space' })).toThrow(/already exists/i);
+  });
+});

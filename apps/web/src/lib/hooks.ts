@@ -29,3 +29,4 @@ export const useRecordings = impl.useRecordings;
 export const useTerminateSession = impl.useTerminateSession;
 export const useLaunchSession = impl.useLaunchSession;
 export const useCreateUser = impl.useCreateUser;
+export const useCreateWorkspace = impl.useCreateWorkspace;

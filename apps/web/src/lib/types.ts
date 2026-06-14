@@ -94,6 +94,18 @@ export interface CreateUserInput {
   locale?: string;
 }
 
+export interface CreateWorkspaceInput {
+  friendlyName: string;
+  name?: string;
+  description?: string;
+  category?: string;
+  dockerImage?: string;
+  cores?: number;
+  memMb?: number;
+  gpu?: number;
+  enabled?: boolean;
+}
+
 export interface ActivityItem {
   id: string;
   kind: 'session' | 'auth' | 'admin' | 'agent' | 'alert';

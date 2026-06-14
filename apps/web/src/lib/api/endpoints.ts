@@ -186,6 +186,21 @@ export const upsertLicense = (body: {
 
 export const getWorkspaces = () => apiFetch<ApiWorkspace[]>('/workspaces');
 export const getLaunchableWorkspaces = () => apiFetch<ApiWorkspace[]>('/workspaces/launchable');
+
+export interface CreateWorkspaceBody {
+  name: string;
+  friendlyName: string;
+  description?: string;
+  categories?: string[];
+  coresLimit?: number;
+  memLimitMb?: number;
+  gpuCount?: number;
+  /** When set (and no imageId), the API creates + links a backing image. */
+  dockerImage?: string;
+  enabled?: boolean;
+}
+export const createWorkspace = (body: CreateWorkspaceBody) =>
+  apiFetch<ApiWorkspace>('/workspaces', { method: 'POST', body });
 export const getAgents = () => apiFetch<ApiAgent[]>('/agents');
 export const getZones = () => apiFetch<ApiZone[]>('/zones');
 export const getUsers = () => apiFetch<ApiUser[]>('/users');

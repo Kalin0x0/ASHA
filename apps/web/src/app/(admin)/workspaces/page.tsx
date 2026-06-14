@@ -1,23 +1,66 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input, Label } from '@/components/ui/input';
+import { useCreateWorkspace, useLaunchSession, useWorkspaces } from '@/lib/hooks';
 
 export default function WorkspacesPage() {
   const t = useTranslations('workspaces');
   const tc = useTranslations('common');
   const workspaces = useWorkspaces();
   const launch = useLaunchSession();
+  const createWorkspace = useCreateWorkspace();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [launchingId, setLaunchingId] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const blankForm = { friendlyName: '', name: '', description: '', category: '', dockerImage: '', cores: '2', memGb: '2', gpu: '0' };
+  const [form, setForm] = useState(blankForm);
+  const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
+
+  const onCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const friendlyName = form.friendlyName.trim();
+    if (!friendlyName) {
+      toast.error(t('catalog.create.nameRequired'));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await createWorkspace({
+        friendlyName,
+        name: form.name.trim() || undefined,
+        description: form.description.trim() || undefined,
+        category: form.category.trim() || undefined,
+        dockerImage: form.dockerImage.trim() || undefined,
+        cores: Number(form.cores) || undefined,
+        memMb: form.memGb ? Math.round(Number(form.memGb) * 1024) || undefined : undefined,
+        gpu: Number(form.gpu) || 0,
+      });
+      toast.success(t('catalog.toasts.created', { name: friendlyName }));
+      setForm(blankForm);
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('catalog.toasts.createFailed'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const categories = useMemo(
     () => ['All', ...Array.from(new Set(workspaces.map((w) => w.category)))],
@@ -50,7 +93,7 @@ export default function WorkspacesPage() {
         title={t('catalog.title')}
         description={t('catalog.description')}
         actions={
-          <Button size="sm">
+          <Button size="sm" onClick={() => setOpen(true)}>
             <Plus className="size-4" /> {t('catalog.newWorkspace')}
           </Button>
         }
@@ -90,6 +133,76 @@ export default function WorkspacesPage() {
           />
         ))}
       </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="size-5 text-gold-300" /> {t('catalog.create.title')}
+            </DialogTitle>
+            <DialogDescription>{t('catalog.create.description')}</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={onCreate} className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="nw-name">{t('catalog.create.friendlyName')}</Label>
+                <Input
+                  id="nw-name"
+                  required
+                  autoFocus
+                  placeholder={t('catalog.create.friendlyNamePlaceholder')}
+                  value={form.friendlyName}
+                  onChange={(e) => set({ friendlyName: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="nw-slug">{t('catalog.create.slug')}</Label>
+                <Input id="nw-slug" dir="ltr" placeholder="brave-browser" value={form.name} onChange={(e) => set({ name: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="nw-desc">{t('catalog.create.descriptionField')}</Label>
+              <Input id="nw-desc" value={form.description} onChange={(e) => set({ description: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="nw-cat">{t('catalog.create.category')}</Label>
+                <Input id="nw-cat" placeholder={t('catalog.create.categoryPlaceholder')} value={form.category} onChange={(e) => set({ category: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="nw-image">{t('catalog.create.dockerImage')}</Label>
+                <Input id="nw-image" dir="ltr" placeholder="kasmweb/brave:1.16.0" value={form.dockerImage} onChange={(e) => set({ dockerImage: e.target.value })} />
+              </div>
+            </div>
+            <p className="-mt-1 text-[11px] text-muted-foreground">{t('catalog.create.dockerImageHint')}</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label htmlFor="nw-cpu">{t('catalog.create.vcpu')}</Label>
+                <Input id="nw-cpu" type="number" min="1" dir="ltr" value={form.cores} onChange={(e) => set({ cores: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="nw-ram">{t('catalog.create.ramGb')}</Label>
+                <Input id="nw-ram" type="number" min="1" step="0.5" dir="ltr" value={form.memGb} onChange={(e) => set({ memGb: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="nw-gpu">{t('catalog.create.gpu')}</Label>
+                <Input id="nw-gpu" type="number" min="0" dir="ltr" value={form.gpu} onChange={(e) => set({ gpu: e.target.value })} />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
+                {tc('actions.cancel')}
+              </Button>
+              <Button type="submit" size="sm" disabled={submitting}>
+                {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+                {t('catalog.create.submit')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

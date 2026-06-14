@@ -1,6 +1,14 @@
 import { buildInitialData, type MockData } from '@/lib/mock/data';
 import { resolveStreamUrl } from '@/lib/stream';
-import type { CreateUserInput, DashboardSnapshot, SessionRow, SessionStatus, UserRow } from '@/lib/types';
+import type {
+  CreateUserInput,
+  CreateWorkspaceInput,
+  DashboardSnapshot,
+  SessionRow,
+  SessionStatus,
+  UserRow,
+  Workspace,
+} from '@/lib/types';
 import { clamp } from '@/lib/utils';
 
 const SERIES_LEN = 24;
@@ -195,6 +203,42 @@ class MockStore {
     this.data.users = [user, ...this.data.users];
     this.emit();
     return user;
+  }
+
+  /**
+   * Create a workspace in the in-memory store (mock mode). Mirrors the API:
+   * a friendly name is required and the derived slug must be unique. Throws an
+   * Error whose message the dialog surfaces.
+   */
+  createWorkspace(input: CreateWorkspaceInput): Workspace {
+    const friendlyName = input.friendlyName.trim();
+    if (!friendlyName) throw new Error('A workspace name is required');
+    const slug =
+      (input.name?.trim() ||
+        friendlyName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')) || 'workspace';
+    if (this.data.workspaces.some((w) => w.name === slug)) {
+      throw new Error('A workspace with this name already exists');
+    }
+    const ws: Workspace = {
+      id: `ws-${Math.floor(Math.random() * 1e6)}`,
+      name: slug,
+      friendlyName,
+      description: input.description?.trim() || `${friendlyName} streamed in an isolated container.`,
+      category: input.category?.trim() || 'Other',
+      cores: input.cores ?? 2,
+      memMb: input.memMb ?? 2768,
+      gpu: input.gpu ?? 0,
+      enabled: input.enabled ?? true,
+      dockerImage: input.dockerImage?.trim() || 'kasmweb/core:1.16.0',
+      protocol: 'KASMVNC',
+      activeSessions: 0,
+    };
+    this.data.workspaces = [ws, ...this.data.workspaces];
+    this.emit();
+    return ws;
   }
 
   getDashboard(): DashboardSnapshot {

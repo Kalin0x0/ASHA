@@ -4,9 +4,29 @@
     "description": "The catalog of containerized desktops, browsers, and applications users can launch.",
     "newWorkspace": "New workspace",
     "searchPlaceholder": "Search workspaces…",
+    "create": {
+      "title": "Create workspace",
+      "description": "Add a containerized desktop, browser, or app to the catalog.",
+      "friendlyName": "Name",
+      "friendlyNamePlaceholder": "Brave Browser",
+      "slug": "Slug",
+      "slugHint": "URL-safe id; derived from the name if left blank.",
+      "descriptionField": "Description",
+      "category": "Category",
+      "categoryPlaceholder": "Browsers",
+      "dockerImage": "Docker image",
+      "dockerImageHint": "e.g. kasmweb/brave:1.16.0 — creates and links an image so the workspace is launchable.",
+      "vcpu": "vCPU",
+      "ramGb": "RAM (GB)",
+      "gpu": "GPU",
+      "submit": "Create workspace",
+      "nameRequired": "A workspace name is required."
+    },
     "toasts": {
       "launchTitle": "Session launching",
-      "launchDescription": "Allocating an agent and starting the container."
+      "launchDescription": "Allocating an agent and starting the container.",
+      "created": "Workspace {name} created",
+      "createFailed": "Could not create the workspace"
     }
   },
   "images": {

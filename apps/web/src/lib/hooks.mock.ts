@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { store } from '@/lib/mock/store';
-import type { CreateUserInput } from '@/lib/types';
+import type { CreateUserInput, CreateWorkspaceInput } from '@/lib/types';
 
 function useVersion(): number {
   return useSyncExternalStore(store.subscribe, store.getVersion, store.getServerVersion);
@@ -79,4 +79,8 @@ export function useLaunchSession() {
 
 export function useCreateUser() {
   return useCallback(async (input: CreateUserInput) => store.createUser(input), []);
+}
+
+export function useCreateWorkspace() {
+  return useCallback(async (input: CreateWorkspaceInput) => store.createWorkspace(input), []);
 }
