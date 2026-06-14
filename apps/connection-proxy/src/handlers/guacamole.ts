@@ -152,9 +152,11 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
       return {
         width: pick(q.get('w'), 640, 3840, DEFAULT_WIDTH),
         height: pick(q.get('h'), 480, 2160, DEFAULT_HEIGHT),
+        // perf=1 → bandwidth-saving mode (no wallpaper/theming); default = full.
+        perf: q.get('perf') === '1',
       };
     } catch {
-      return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
+      return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, perf: false };
     }
   })();
   const guacd = net.createConnection(GUACD_PORT, GUACD_HOST);
@@ -203,13 +205,20 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
         // args = [protocolVersion, ...paramNames]
         const version = args[0] ?? 'VERSION_1_0_0';
         const paramNames = args.slice(1);
-        const values = paramNames.map((name) =>
-          name === 'width'
-            ? String(reqDims.width)
-            : name === 'height'
-              ? String(reqDims.height)
-              : resolveParam(name, session),
-        );
+        // In performance mode the desktop-experience flags are turned OFF (black
+        // background, no theming) to save bandwidth; otherwise ON (full visuals).
+        const exp = reqDims.perf ? 'false' : 'true';
+        const overrides: Record<string, string> = {
+          width: String(reqDims.width),
+          height: String(reqDims.height),
+          'enable-wallpaper': exp,
+          'enable-theming': exp,
+          'enable-font-smoothing': exp,
+          'enable-full-window-drag': exp,
+          'enable-desktop-composition': exp,
+          'enable-menu-animations': exp,
+        };
+        const values = paramNames.map((name) => overrides[name] ?? resolveParam(name, session));
 
         guacd.write(
           encodeInstruction('size', String(reqDims.width), String(reqDims.height), String(DEFAULT_DPI)),

@@ -1,7 +1,7 @@
 'use client';
 
 import Guacamole, { type Client as GuacClient } from 'guacamole-common-js';
-import { ArrowLeft, Loader2, MonitorX, RefreshCw, Wifi } from 'lucide-react';
+import { ArrowLeft, Loader2, MonitorX, RefreshCw, Settings, Wifi } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,11 @@ export default function ConnectPage() {
   const [state, setState] = useState<ViewState>('connecting');
   const [errMsg, setErrMsg] = useState('');
   const [attempt, setAttempt] = useState(0);
+  // Performance mode = the "Windows optimization": wallpaper/effects OFF to save
+  // bandwidth. Persisted; toggling it reconnects with the new RDP experience.
+  const [perfMode, setPerfMode] = useState(
+    () => typeof window !== 'undefined' && window.localStorage.getItem('chista-rdp-perf') === '1',
+  );
 
   useEffect(() => {
     const token = getAccessToken();
@@ -41,7 +46,7 @@ export default function ConnectPage() {
     const reqH = clampEven(screen.clientHeight || 720, 480, 2160);
     const url = `${scheme}://${window.location.host}/proxy/session/${encodeURIComponent(
       kasmId,
-    )}?token=${encodeURIComponent(token)}&w=${reqW}&h=${reqH}`;
+    )}?token=${encodeURIComponent(token)}&w=${reqW}&h=${reqH}&perf=${perfMode ? 1 : 0}`;
 
     const tunnel = new Guacamole.WebSocketTunnel(url);
     const client = new Guacamole.Client(tunnel);
@@ -136,7 +141,19 @@ export default function ConnectPage() {
       }
       clientRef.current = null;
     };
-  }, [kasmId, attempt]);
+  }, [kasmId, attempt, perfMode]);
+
+  const togglePerf = useCallback(() => {
+    setPerfMode((p) => {
+      const next = !p;
+      try {
+        window.localStorage.setItem('chista-rdp-perf', next ? '1' : '0');
+      } catch {
+        /* storage unavailable */
+      }
+      return next;
+    });
+  }, []);
 
   const reconnect = useCallback(() => {
     setErrMsg('');
@@ -153,6 +170,7 @@ export default function ConnectPage() {
         <span className="font-display text-sm font-medium tracking-tight">Remote desktop</span>
         <StatusPill state={state} />
         <div className="ml-auto flex items-center gap-2">
+          <SettingsMenu perfMode={perfMode} onToggle={togglePerf} />
           {(state === 'disconnected' || state === 'error') && (
             <Button variant="outline" size="sm" onClick={reconnect}>
               <RefreshCw className="size-3.5" />
@@ -172,6 +190,67 @@ export default function ConnectPage() {
         <div ref={screenRef} className="relative isolate z-0 grid h-full w-full place-items-center [&_canvas]:block" />
         {state !== 'connected' && <Overlay state={state} errMsg={errMsg} onRetry={reconnect} />}
       </main>
+    </div>
+  );
+}
+
+function SettingsMenu({ perfMode, onToggle }: { perfMode: boolean; onToggle: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Anzeige-Einstellungen"
+        aria-expanded={open}
+      >
+        <Settings className="size-4" />
+      </Button>
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-hidden
+            tabIndex={-1}
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-border-subtle bg-[var(--surface-1)] p-1.5 shadow-2xl shadow-black/50">
+            <p className="px-2.5 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Anzeige
+            </p>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={perfMode}
+              onClick={() => {
+                onToggle();
+                setOpen(false);
+              }}
+              className="group flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(212,175,55,0.5)]"
+            >
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-sm font-medium">Performance-Modus</span>
+                <span className="text-xs leading-snug text-muted-foreground">
+                  Windows-Optimierung: Wallpaper &amp; Effekte aus — schneller bei langsamer Verbindung
+                </span>
+              </span>
+              <span
+                className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+                  perfMode ? 'bg-gold-500' : 'bg-secondary'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-transform ${
+                    perfMode ? 'translate-x-[18px]' : 'translate-x-0.5'
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
