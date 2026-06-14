@@ -25,6 +25,8 @@ export interface SessionRecord {
   sshPrivateKey?: string;
   rdpUser?: string;
   rdpPassword?: string;
+  /** RDP security mode for guacd (any | nla | nla-ext | tls | rdp | vmconnect). */
+  security?: string;
   /**
    * RemoteApp (RDS published application) to launch instead of a full desktop.
    * When set, guacd starts the app via the RDP `remote-app` parameters.

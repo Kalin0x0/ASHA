@@ -4,10 +4,9 @@ import { proxyEnv } from './env.js';
 export interface TokenPayload {
   sub: string;
   orgId: string;
-  role: string;
-  type: 'access' | 'refresh';
   iat: number;
   exp: number;
+  [key: string]: unknown;
 }
 
 export class AuthError extends Error {
@@ -17,11 +16,16 @@ export class AuthError extends Error {
   }
 }
 
-/** Verify a JWT access token and return its payload. Throws AuthError on failure. */
+/**
+ * Verify a Chista access token (signed by the API with JWT_ACCESS_SECRET, shared
+ * here as JWT_SECRET) and return its payload. The API's access tokens carry
+ * `sub`/`orgId` (no explicit `type` claim), so we require those rather than a
+ * token-type tag. Throws AuthError on failure.
+ */
 export function verifyToken(token: string): TokenPayload {
   try {
     const payload = jwt.verify(token, proxyEnv.jwtSecret) as TokenPayload;
-    if (payload.type !== 'access') throw new AuthError('Not an access token');
+    if (!payload.sub || !payload.orgId) throw new AuthError('Token missing sub/orgId');
     return payload;
   } catch (e) {
     if (e instanceof AuthError) throw e;

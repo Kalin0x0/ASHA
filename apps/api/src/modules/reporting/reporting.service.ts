@@ -156,14 +156,15 @@ export class ReportingService {
       take: Math.min(Math.max(limit, 1), 50),
     });
 
-    const workspaceIds = grouped.map((g) => g.workspaceId);
+    // Server-sessions carry a null workspaceId — exclude them from "top workspaces".
+    const ranked = grouped.filter((g): g is typeof g & { workspaceId: string } => g.workspaceId !== null);
     const workspaces = await prisma.workspace.findMany({
-      where: { id: { in: workspaceIds } },
+      where: { id: { in: ranked.map((g) => g.workspaceId) } },
       select: { id: true, name: true, friendlyName: true },
     });
     const nameById = new Map(workspaces.map((w) => [w.id, w.friendlyName || w.name]));
 
-    return grouped.map((g) => ({
+    return ranked.map((g) => ({
       workspaceId: g.workspaceId,
       name: nameById.get(g.workspaceId) ?? 'Unknown',
       sessions: g._count._all,
