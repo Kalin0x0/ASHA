@@ -17,7 +17,7 @@ export function diagHtml(token: string, kasmId: string): string {
  #log{position:fixed;inset:0 0 auto 0;max-height:46vh;overflow:auto;background:rgba(0,0,0,.9);padding:10px 12px;font-size:12px;line-height:1.45;z-index:10;border-bottom:2px solid #d4af37}
  #state{font-size:15px;font-weight:700;color:#d4af37;margin-bottom:6px}
  .k{color:#d4af37}.e{color:#f0616d;font-weight:700}.g{color:#34d399}
- #disp{margin-top:48vh;display:flex;justify-content:center}
+ #disp{margin-top:48vh;display:flex;justify-content:center;position:relative;z-index:0;isolation:isolate}
  #disp canvas{display:block}
 </style></head><body>
 <div id="log"><div id="state">init…</div><div id="lines"></div></div>

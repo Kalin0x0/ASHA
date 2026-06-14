@@ -119,8 +119,12 @@ export default function ConnectPage() {
       </header>
 
       <main className="relative flex-1 overflow-auto bg-black">
-        {/* The guacd display canvas mounts here. */}
-        <div ref={screenRef} className="mx-auto w-fit [&_canvas]:block" />
+        {/* The guacd display canvas mounts here. `isolate` (+ relative z-0) gives
+            this subtree its own stacking context: guacamole-common-js ships the
+            default desktop layer canvas with z-index:-1, which would otherwise
+            render BEHIND the opaque <main> background (bg-black) → black screen
+            with only the cursor (a higher-z layer) visible. */}
+        <div ref={screenRef} className="relative isolate z-0 mx-auto w-fit [&_canvas]:block" />
         {state !== 'connected' && <Overlay state={state} errMsg={errMsg} onRetry={reconnect} />}
       </main>
     </div>
