@@ -37,6 +37,7 @@ declare module 'guacamole-common-js' {
     getDisplay(): Display;
     connect(data?: string): void;
     disconnect(): void;
+    sendSize(width: number, height: number): void;
     sendMouseState(state: MouseState): void;
     sendKeyEvent(pressed: number, keysym: number): void;
     onstatechange: ((state: number) => void) | null;

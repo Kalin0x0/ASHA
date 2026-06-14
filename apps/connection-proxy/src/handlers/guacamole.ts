@@ -66,6 +66,26 @@ function resolveParam(name: string, session: SessionRecord): string {
       return String(DEFAULT_HEIGHT);
     case 'dpi':
       return String(DEFAULT_DPI);
+    // Full desktop experience. guacd DISABLES these by default as an RDP
+    // bandwidth optimization → the desktop renders a black background (no
+    // wallpaper/theme). Enable them so the real desktop wallpaper shows.
+    case 'enable-wallpaper':
+      return 'true';
+    case 'enable-theming':
+      return 'true';
+    case 'enable-font-smoothing':
+      return 'true';
+    case 'enable-full-window-drag':
+      return 'true';
+    case 'enable-desktop-composition':
+      return 'true';
+    case 'enable-menu-animations':
+      return 'true';
+    // Dynamic resolution: let the RDP session resize to match the browser window
+    // on the fly (Windows 8.1+/RDP display-update channel), so any viewport size
+    // fits with no letterbox.
+    case 'resize-method':
+      return 'display-update';
     // RemoteApp / RDS published-application launch (RDP only).
     case 'remote-app':
       return session.remoteApp ?? '';

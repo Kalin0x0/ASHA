@@ -61,7 +61,24 @@ export default function ConnectPage() {
       }
     };
     display.onresize = rescale;
-    window.addEventListener('resize', rescale);
+    // On window resize, ask the RDP session to adopt the new viewport size
+    // (dynamic resolution via resize-method=display-update); the resulting
+    // size,0 from guacd then triggers rescale. Debounced to avoid flooding.
+    let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+    const onWindowResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const w = clampEven(screen.clientWidth || reqW, 640, 3840);
+        const h = clampEven(screen.clientHeight || reqH, 480, 2160);
+        try {
+          client.sendSize(w, h);
+        } catch {
+          /* not connected yet */
+        }
+        rescale();
+      }, 250);
+    };
+    window.addEventListener('resize', onWindowResize);
     rescale();
 
     client.onstatechange = (s) => {
@@ -106,7 +123,8 @@ export default function ConnectPage() {
     }
 
     return () => {
-      window.removeEventListener('resize', rescale);
+      if (resizeTimer) clearTimeout(resizeTimer);
+      window.removeEventListener('resize', onWindowResize);
       display.onresize = null;
       keyboard.onkeydown = null;
       keyboard.onkeyup = null;
