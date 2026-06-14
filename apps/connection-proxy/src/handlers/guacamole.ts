@@ -22,6 +22,7 @@
 
 import type { IncomingMessage } from 'node:http';
 import net from 'node:net';
+import { StringDecoder } from 'node:string_decoder';
 import { createLogger } from '@chista/logger';
 import type WebSocket from 'ws';
 import type { SessionRecord } from '../session-store.js';
@@ -51,16 +52,40 @@ function resolveParam(name: string, session: SessionRecord): string {
     case 'password':
       return session.rdpPassword ?? '';
     case 'ignore-cert':
+      return 'true'; // accept Windows' self-signed RDP cert
     case 'disable-auth':
-      return 'true';
+      // MUST be false: NLA/credentialled RDP needs guacd to actually send the
+      // username/password. 'true' makes guacd skip auth → the server refuses
+      // ("wrong security type"), which looks like a security-mode problem.
+      return 'false';
     case 'security':
-      return protocol === 'rdp' ? 'any' : '';
+      return session.security ?? (protocol === 'rdp' ? 'any' : '');
     case 'width':
       return String(DEFAULT_WIDTH);
     case 'height':
       return String(DEFAULT_HEIGHT);
     case 'dpi':
       return String(DEFAULT_DPI);
+    // Full desktop experience. guacd DISABLES these by default as an RDP
+    // bandwidth optimization → the desktop renders a black background (no
+    // wallpaper/theme). Enable them so the real desktop wallpaper shows.
+    case 'enable-wallpaper':
+      return 'true';
+    case 'enable-theming':
+      return 'true';
+    case 'enable-font-smoothing':
+      return 'true';
+    case 'enable-full-window-drag':
+      return 'true';
+    case 'enable-desktop-composition':
+      return 'true';
+    case 'enable-menu-animations':
+      return 'true';
+    // Dynamic resolution: let the RDP session resize to match the browser window
+    // on the fly (Windows 8.1+/RDP display-update channel), so any viewport size
+    // fits with no letterbox.
+    case 'resize-method':
+      return 'display-update';
     // RemoteApp / RDS published-application launch (RDP only).
     case 'remote-app':
       return session.remoteApp ?? '';
@@ -73,14 +98,80 @@ function resolveParam(name: string, session: SessionRecord): string {
   }
 }
 
-export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: SessionRecord): void {
+/**
+ * Length of the leading prefix of `s` that consists ONLY of complete Guacamole
+ * instructions (each terminated by ';'). Uses the same length-prefixed scan as
+ * guacamole-common-js's own tunnel parser.
+ *
+ * Why this exists: guacamole-common-js's `WebSocketTunnel.onmessage` parses each
+ * WebSocket message independently and does NOT buffer a partial instruction
+ * across messages. If the proxy forwards one WS frame per raw guacd TCP chunk,
+ * large desktop `img`/`blob` instructions (which span several TCP segments) get
+ * split mid-instruction across frames and the browser silently drops them →
+ * black desktop, cursor-only. So we only ever emit on instruction boundaries.
+ */
+function completeInstructionsLength(s: string): number {
+  let consumed = 0;
+  let i = 0;
+  while (i < s.length) {
+    let j = i;
+    let complete = false;
+    for (;;) {
+      const dot = s.indexOf('.', j);
+      if (dot === -1) break; // length prefix not fully here yet
+      const len = Number(s.slice(j, dot));
+      if (!Number.isFinite(len)) break;
+      const valueEnd = dot + 1 + len;
+      if (s.length < valueEnd + 1) break; // value + separator not fully here yet
+      const sep = s[valueEnd];
+      j = valueEnd + 1;
+      if (sep === ';') {
+        complete = true;
+        break;
+      }
+      if (sep !== ',') break; // malformed — stop here, wait for more
+    }
+    if (!complete) break;
+    consumed = j;
+    i = j;
+  }
+  return consumed;
+}
+
+export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: SessionRecord): void {
   const protocol = session.protocol === 'RDP' ? 'rdp' : 'vnc';
+  // Desktop size requested by the browser (its viewport `?w=&h=`) so the remote
+  // fills the window with no letterbox bars. Clamped; falls back to defaults.
+  const reqDims = (() => {
+    try {
+      const q = new URLSearchParams((req.url ?? '').split('?')[1] ?? '');
+      const pick = (raw: string | null, lo: number, hi: number, def: number) => {
+        const v = Number(raw);
+        return Number.isFinite(v) && v >= lo && v <= hi ? Math.round(v) : def;
+      };
+      return {
+        width: pick(q.get('w'), 640, 3840, DEFAULT_WIDTH),
+        height: pick(q.get('h'), 480, 2160, DEFAULT_HEIGHT),
+        // perf=1 → bandwidth-saving mode (no wallpaper/theming); default = full.
+        perf: q.get('perf') === '1',
+      };
+    } catch {
+      return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, perf: false };
+    }
+  })();
   const guacd = net.createConnection(GUACD_PORT, GUACD_HOST);
   const parser = new GuacamoleParser();
+  // guacd → browser must be TEXT frames: guacamole-common-js's WebSocketTunnel
+  // calls .indexOf on every message, so binary frames throw "i.indexOf is not a
+  // function". StringDecoder reassembles UTF-8 split across TCP chunks.
+  const toBrowser = new StringDecoder('utf8');
 
   // Handshake state: until `connected`, the proxy interprets guacd's
-  // instructions; afterwards it bridges raw bytes to the browser.
+  // instructions; afterwards it bridges the stream to the browser.
   let connected = false;
+  // Decoded guacd output not yet forwarded — holds a trailing PARTIAL instruction
+  // until it completes, so every ws.send() carries only whole instructions.
+  let pendingOut = '';
 
   guacd.once('connect', () => {
     log.debug({ sessionId: session.sessionId, protocol }, 'guacd connected — starting handshake');
@@ -88,25 +179,62 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
   });
 
   guacd.on('data', (chunk: Buffer) => {
+    // StringDecoder reassembles UTF-8 that may be split across TCP chunks.
+    const text = toBrowser.write(chunk);
+
     if (connected) {
-      // Past the handshake — forward verbatim to the browser.
-      if (ws.readyState === ws.OPEN) ws.send(chunk);
+      // Past the handshake — bridge to the browser, but ONLY ever send whole
+      // Guacamole instructions per WebSocket frame. guacamole-common-js's
+      // tunnel does not buffer a partial instruction across frames, so a split
+      // large img/blob would be silently dropped (black desktop). Buffer the
+      // tail until it completes.
+      pendingOut += text;
+      const n = completeInstructionsLength(pendingOut);
+      if (n > 0) {
+        const frame = pendingOut.slice(0, n);
+        pendingOut = pendingOut.slice(n);
+        if (ws.readyState === ws.OPEN) ws.send(frame);
+      }
       return;
     }
 
     // During the handshake, parse instructions to find `args`.
-    for (const inst of parser.push(chunk.toString('utf8'))) {
+    for (const inst of parser.push(text)) {
       const [opcode, ...args] = inst;
       if (opcode === 'args') {
         // args = [protocolVersion, ...paramNames]
+        const version = args[0] ?? 'VERSION_1_0_0';
         const paramNames = args.slice(1);
-        const values = paramNames.map((name) => resolveParam(name, session));
+        // In performance mode the desktop-experience flags are turned OFF (black
+        // background, no theming) to save bandwidth; otherwise ON (full visuals).
+        const exp = reqDims.perf ? 'false' : 'true';
+        const overrides: Record<string, string> = {
+          width: String(reqDims.width),
+          height: String(reqDims.height),
+          'enable-wallpaper': exp,
+          'enable-theming': exp,
+          'enable-font-smoothing': exp,
+          'enable-full-window-drag': exp,
+          'enable-desktop-composition': exp,
+          'enable-menu-animations': exp,
+        };
+        const values = paramNames.map((name) => overrides[name] ?? resolveParam(name, session));
 
-        guacd.write(encodeInstruction('size', String(DEFAULT_WIDTH), String(DEFAULT_HEIGHT), String(DEFAULT_DPI)));
-        guacd.write(encodeInstruction('audio'));
+        guacd.write(
+          encodeInstruction('size', String(reqDims.width), String(reqDims.height), String(DEFAULT_DPI)),
+        );
+        // Declare the image/audio mimetypes guacamole-common-js can decode.
+        // CRITICAL: an empty `image` tells guacd the client supports NO image
+        // formats, so guacd can't encode the desktop framebuffer → black screen
+        // (only the cursor, which uses a separate channel). The browser supports
+        // PNG/JPEG/WebP, so advertise them.
+        guacd.write(encodeInstruction('audio', 'audio/L8', 'audio/L16'));
         guacd.write(encodeInstruction('video'));
-        guacd.write(encodeInstruction('image'));
-        guacd.write(encodeInstruction('connect', ...values));
+        guacd.write(encodeInstruction('image', 'image/jpeg', 'image/png', 'image/webp'));
+        // The `connect` reply must echo a value for EVERY element guacd sent in
+        // `args` — starting with the protocol version — or guacd rejects with
+        // "Client did not return the expected number of arguments."
+        guacd.write(encodeInstruction('connect', version, ...values));
 
         connected = true;
         log.info(
@@ -129,10 +257,12 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
     if (ws.readyState === ws.OPEN) ws.close(1000);
   });
 
-  // Browser → guacd: once connected, the browser speaks the Guacamole protocol
-  // directly (guacamole-common-js), so its frames are written through verbatim.
+  // Browser → guacd: the PROXY drives the guacd handshake (it injects the
+  // server-side RDP params), so we swallow the browser client's own handshake
+  // (select/size/connect) until `connected`. After that the browser's frames
+  // (key/mouse/clipboard) are written through verbatim.
   ws.on('message', (data) => {
-    if (!guacd.writable) return;
+    if (!connected || !guacd.writable) return;
     if (Buffer.isBuffer(data)) {
       guacd.write(data);
     } else if (typeof data === 'string') {

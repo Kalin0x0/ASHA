@@ -31,6 +31,13 @@ export class ServersController {
     return this.servers.create(user.orgId, user.sub, dto);
   }
 
+  /** Open a browser session against this fixed server (RDP/VNC/SSH via the proxy). */
+  @RequirePermissions('SESSION_LAUNCH')
+  @Post(':id/connect')
+  connect(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.servers.connect(user, id);
+  }
+
   @RequirePermissions('SERVER_MANAGE')
   @Patch(':id')
   update(

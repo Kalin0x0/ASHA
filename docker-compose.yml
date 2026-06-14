@@ -163,7 +163,9 @@ services:
       PROXY_PORT: "4100"
       REDIS_URL: redis://redis:6379
       CHISTA_API_URL: http://api:4000
-      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      # Must equal the API's JWT_ACCESS_SECRET — the proxy verifies the user's
+      # access token before bridging RDP/VNC/SSH sessions.
+      JWT_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me-please-32++chars}
       # Set GUACD_HOST to the guacamole/guacd container once you enable RDP/VNC
       GUACD_HOST: ${GUACD_HOST:-guacd}
       GUACD_PORT: ${GUACD_PORT:-4822}
@@ -184,6 +186,10 @@ services:
   # protocol (GUACD_HOST/GUACD_PORT). Only needed for RDP/VNC workspaces;
   # KasmVNC sessions don't use it.
   guacd:
-    image: guacamole/guacd:1.5.5
+    # Custom build with H.264/GFX-AVC444 support (Debian FreeRDP w/ libavcodec);
+    # the official guacamole/guacd lacks it → black screen on modern Windows RDP.
+    # Build: docker build -t chista-guacd-h264:1.5.5 infra/guacd-h264
+    image: chista-guacd-h264:1.5.5
+    build: ./infra/guacd-h264
     restart: unless-stopped
     networks: [chista-core]
