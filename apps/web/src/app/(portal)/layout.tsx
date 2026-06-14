@@ -8,7 +8,7 @@ import { Logo } from '@/components/brand/logo';
 import { BackgroundPicker } from '@/components/composite/background-picker';
 import { FavoriteQuickLaunch } from '@/components/composite/favorite-quick-launch';
 import { MockThumbnailSeeder } from '@/components/composite/mock-thumbnail-seeder';
-import { PortalBackground } from '@/components/decor/portal-background';
+import { AppBackground } from '@/components/decor/app-background';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   return (
     <AuthGate>
       <div className="relative flex min-h-screen flex-col">
-        <PortalBackground />
+        <AppBackground />
         <header className="sticky top-0 z-30 flex h-[var(--spacing-topbar)] items-center gap-4 border-b border-border-subtle glass-rail px-4 lg:px-8">
           <Link href="/" className="flex items-center ring-gold-focus rounded-md">
             <Logo />

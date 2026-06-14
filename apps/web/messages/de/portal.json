@@ -57,6 +57,8 @@
     "appliedToast": "Hintergrund auf {name} gesetzt",
     "customAppliedToast": "Eigener Hintergrund angewendet",
     "presets": {
+      "woods": "Nebelwald",
+      "lake": "Bergsee",
       "aurora": "Aurora",
       "ember": "Glut",
       "nebula": "Nebel",

@@ -1,27 +1,34 @@
 /**
- * Launcher wallpaper catalog — a Kasm-style "change your background" feature.
+ * Wallpaper catalog — a Kasm-style "change your background" feature, used across
+ * the whole app (portal + admin).
  *
- * Each preset is a set of coloured radial blooms layered over the anthracite
- * base (the `.bg-wallpaper` utility supplies the base colour + gentle drift).
- * Keeping them as pure CSS means no image assets to ship, instant theme
- * switching, and a cohesive anthracite + gold palette ("gold is ink, not
- * paint" — the blooms stay translucent so they never become a flat fill).
+ * Two kinds of preset:
+ *  - photo  → a bundled nature photo (`src`, served from /public). The default.
+ *  - bloom  → coloured radial blooms (`image`) over the theme background
+ *             (`.bg-wallpaper`), staying in the anthracite + gold system.
  *
- * The same `image` string drives both the full-screen background and the small
- * swatch previews in the picker, so what you preview is exactly what you get.
+ * Readability is handled in CSS: `.bg-wallpaper` and the scrims are theme-aware
+ * (dark tint in dark mode, light tint in light mode), so text stays legible over
+ * any wallpaper in either theme.
  */
 export interface BackgroundPreset {
-  /** Stable id; the display name resolves via `portal.appearance.presets.<id>`. */
+  /** Stable id; display name resolves via `portal.appearance.presets.<id>`. */
   id: string;
-  /** Comma-separated radial blooms layered over the anthracite base. */
-  image: string;
-  /** Whether to overlay the faint reference grid on top of the blooms. */
+  /** Photo wallpaper asset (public path). When set, this is a photo preset. */
+  src?: string;
+  /** Radial blooms (CSS background-image) for bloom presets + swatch tint. */
+  image?: string;
+  /** Overlay the faint reference grid (bloom presets only). */
   grid: boolean;
 }
 
-export const DEFAULT_BACKGROUND_ID = 'aurora';
+export const DEFAULT_BACKGROUND_ID = 'woods';
 
 export const BACKGROUNDS: readonly BackgroundPreset[] = [
+  // ── Nature photos (bundled) ────────────────────────────────────────────────
+  { id: 'woods', src: '/backgrounds/nature-forest.jpg', grid: false },
+  { id: 'lake', src: '/backgrounds/nature-lake.jpg', grid: false },
+  // ── Colour blooms ──────────────────────────────────────────────────────────
   {
     id: 'aurora',
     image:

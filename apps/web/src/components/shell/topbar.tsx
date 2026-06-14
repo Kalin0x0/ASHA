@@ -4,6 +4,7 @@ import { AppWindow, Bell, ChevronRight, LogOut, Menu, Search, Settings, User } f
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { BackgroundPicker } from '@/components/composite/background-picker';
 import { LanguageSwitcher } from '@/components/composite/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -97,6 +98,7 @@ export function Topbar() {
         </DropdownMenuContent>
       </DropdownMenu>
 
+      <BackgroundPicker />
       <LanguageSwitcher />
       <ThemeToggle />
 

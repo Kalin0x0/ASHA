@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AppBackground } from '@/components/decor/app-background';
 import { CommandPalette } from '@/components/shell/command-palette';
 import { SidebarContent } from '@/components/shell/sidebar';
 import { Topbar } from '@/components/shell/topbar';
@@ -16,10 +17,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const collapsed = mounted ? sidebarCollapsed : false;
 
   return (
-    <div className="relative flex h-screen overflow-hidden bg-aurora">
+    <div className="relative flex h-screen overflow-hidden">
+      <AppBackground />
       <aside
         className={cn(
-          'hidden shrink-0 border-e border-border-subtle transition-[width] duration-200 ease-out lg:block',
+          'relative z-10 hidden shrink-0 border-e border-border-subtle transition-[width] duration-200 ease-out lg:block',
           collapsed ? 'w-[76px]' : 'w-[264px]',
         )}
       >
@@ -38,7 +40,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <Topbar />
         <main className="relative flex-1 overflow-y-auto">
           <div aria-hidden className="pointer-events-none absolute inset-0 z-0 bg-grid opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_60%)]" />

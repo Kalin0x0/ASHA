@@ -96,13 +96,9 @@ export default function PortalHome() {
   return (
     <div>
       {/* ── Hero band ──────────────────────────────────────────────── */}
+      {/* Transparent so the app wallpaper (with its theme-aware scrim) shows
+          through; the floating orbs add depth without hurting legibility. */}
       <div className="relative overflow-hidden border-b border-border-subtle">
-        {/* The launcher wallpaper shows through the hero; this soft scrim only
-            keeps the heading and search legible over any chosen background. */}
-        <div
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(14,14,26,0.28),transparent_45%,rgba(14,14,26,0.4))]"
-          aria-hidden
-        />
         <div className="pointer-events-none absolute right-[10%] top-[15%] size-64 rounded-full bg-gold-500/8 blur-[80px] animate-float" aria-hidden />
         <div className="pointer-events-none absolute left-[5%] bottom-0 size-48 rounded-full bg-info-500/6 blur-[60px] animate-float delay-300" aria-hidden />
 

@@ -57,6 +57,8 @@
     "appliedToast": "Background set to {name}",
     "customAppliedToast": "Custom background applied",
     "presets": {
+      "woods": "Misty Forest",
+      "lake": "Mountain Lake",
       "aurora": "Aurora",
       "ember": "Ember",
       "nebula": "Nebula",
