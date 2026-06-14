@@ -45,5 +45,26 @@
     "addedToast": "{name} به علاقه‌مندی‌ها افزوده شد",
     "removedToast": "{name} از علاقه‌مندی‌ها حذف شد",
     "workspaceFallback": "فضای کاری"
+  },
+  "appearance": {
+    "trigger": "تغییر پس‌زمینه",
+    "title": "پس‌زمینه",
+    "subtitle": "اجراکننده خود را شخصی‌سازی کنید",
+    "reset": "بازنشانی",
+    "apply": "اعمال",
+    "customLabel": "نشانی تصویر دلخواه",
+    "removeCustom": "حذف تصویر دلخواه",
+    "appliedToast": "پس‌زمینه روی {name} تنظیم شد",
+    "customAppliedToast": "پس‌زمینه دلخواه اعمال شد",
+    "presets": {
+      "aurora": "شفق",
+      "ember": "اخگر",
+      "nebula": "سحابی",
+      "ocean": "اقیانوس",
+      "forest": "جنگل",
+      "crimson": "زرشکی",
+      "graphite": "گرافیت",
+      "void": "خلأ"
+    }
   }
 }

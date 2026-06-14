@@ -9,7 +9,6 @@ import { CategoryRail } from '@/components/composite/category-rail';
 import { FavoritesRail } from '@/components/composite/favorites-rail';
 import { MySessionsStrip } from '@/components/composite/my-sessions-strip';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
-import { AuroraBackground } from '@/components/decor/aurora-background';
 import { Input } from '@/components/ui/input';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
@@ -98,7 +97,12 @@ export default function PortalHome() {
     <div>
       {/* ── Hero band ──────────────────────────────────────────────── */}
       <div className="relative overflow-hidden border-b border-border-subtle">
-        <AuroraBackground className="opacity-50" />
+        {/* The launcher wallpaper shows through the hero; this soft scrim only
+            keeps the heading and search legible over any chosen background. */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(14,14,26,0.28),transparent_45%,rgba(14,14,26,0.4))]"
+          aria-hidden
+        />
         <div className="pointer-events-none absolute right-[10%] top-[15%] size-64 rounded-full bg-gold-500/8 blur-[80px] animate-float" aria-hidden />
         <div className="pointer-events-none absolute left-[5%] bottom-0 size-48 rounded-full bg-info-500/6 blur-[60px] animate-float delay-300" aria-hidden />
 

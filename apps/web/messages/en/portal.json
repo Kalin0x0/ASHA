@@ -45,5 +45,26 @@
     "addedToast": "Added {name} to favorites",
     "removedToast": "Removed {name} from favorites",
     "workspaceFallback": "workspace"
+  },
+  "appearance": {
+    "trigger": "Change background",
+    "title": "Background",
+    "subtitle": "Personalize your launcher",
+    "reset": "Reset",
+    "apply": "Apply",
+    "customLabel": "Custom image URL",
+    "removeCustom": "Remove custom image",
+    "appliedToast": "Background set to {name}",
+    "customAppliedToast": "Custom background applied",
+    "presets": {
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "nebula": "Nebula",
+      "ocean": "Ocean",
+      "forest": "Forest",
+      "crimson": "Crimson",
+      "graphite": "Graphite",
+      "void": "Void"
+    }
   }
 }

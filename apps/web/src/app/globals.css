@@ -394,6 +394,15 @@
     animation: aurora-drift 32s var(--ease-in-out-soft) infinite alternate;
   }
 
+  /* User-selectable launcher wallpaper. Shares the aurora's gentle drift; the
+     coloured blooms are supplied inline per preset (see lib/backgrounds.ts) so
+     the catalog stays data-driven while the motion stays in the design system. */
+  .bg-wallpaper {
+    background-color: var(--color-anthracite-950);
+    background-size: 200% 200%;
+    animation: aurora-drift 36s var(--ease-in-out-soft) infinite alternate;
+  }
+
   .bg-grid {
     background-image:
       linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
@@ -528,6 +537,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .bg-aurora,
+  .bg-wallpaper,
   .animate-shimmer,
   .animate-pulse-ring,
   .animate-rise,
