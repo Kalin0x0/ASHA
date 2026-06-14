@@ -22,6 +22,8 @@
       "category": "Category",
       "categoryPlaceholder": "Choose a category…",
       "newCategory": "+ New category…",
+      "iconUrl": "Icon",
+      "iconUrlHint": "Auto-detected from the app. Paste an image URL to override.",
       "dockerImage": "Docker image",
       "dockerImageHint": "e.g. kasmweb/brave:1.16.0 — creates and links an image so the workspace is launchable.",
       "vcpu": "vCPU",

@@ -198,6 +198,7 @@ export interface CreateWorkspaceBody {
   name: string;
   friendlyName: string;
   description?: string;
+  iconUrl?: string;
   type?: ApiWorkspaceType;
   categories?: string[];
   coresLimit?: number;

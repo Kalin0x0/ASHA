@@ -4,6 +4,7 @@ import { Container, Loader2, Plus, Server } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { AppIcon } from '@/components/composite/app-icon';
 import { PageHeader } from '@/components/composite/page-header';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ export default function WorkspacesPage() {
     name: '',
     description: '',
     category: '',
+    iconUrl: '',
     dockerImage: '',
     serverId: '',
     zoneId: '',
@@ -78,6 +80,7 @@ export default function WorkspacesPage() {
         friendlyName,
         name: form.name.trim() || undefined,
         description: form.description.trim() || undefined,
+        iconUrl: form.iconUrl.trim() || undefined,
         type: form.type,
         category: form.category.trim() || undefined,
         dockerImage: isContainer ? form.dockerImage.trim() || undefined : undefined,
@@ -280,6 +283,29 @@ export default function WorkspacesPage() {
                   </select>
                 )}
               </div>
+            </div>
+
+            {/* Icon (auto-detected from the app, or a custom URL) */}
+            <div>
+              <Label htmlFor="nw-icon">{t('catalog.create.iconUrl')}</Label>
+              <div className="flex items-center gap-2.5">
+                <AppIcon
+                  name={form.friendlyName || 'New'}
+                  dockerImage={form.dockerImage}
+                  category={form.category}
+                  iconUrl={form.iconUrl.trim() || undefined}
+                  rounded="rounded-lg"
+                  className="size-9 shrink-0 text-xs"
+                />
+                <Input
+                  id="nw-icon"
+                  dir="ltr"
+                  placeholder="https://…/logo.svg"
+                  value={form.iconUrl}
+                  onChange={(e) => set({ iconUrl: e.target.value })}
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">{t('catalog.create.iconUrlHint')}</p>
             </div>
 
             {/* Container-only fields */}

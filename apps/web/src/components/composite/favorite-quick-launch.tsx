@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Monogram } from '@/components/composite/monogram';
+import { AppIcon } from '@/components/composite/app-icon';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
 
@@ -64,7 +64,14 @@ export function FavoriteQuickLaunch({ limit = 4 }: { limit?: number }) {
               title={t('favorites.launchTitle', { name: ws.friendlyName })}
               className="group flex items-center gap-1.5 rounded-full border border-border-subtle bg-[var(--surface-2)]/60 py-1 pl-1 pr-2.5 text-xs transition-all duration-200 hover:border-[rgba(212,175,55,0.35)] hover:bg-[var(--surface-2)] hover:shadow-[0_0_0_1px_rgba(212,175,55,0.15)] disabled:opacity-60 ring-gold-focus"
             >
-              <Monogram name={ws.friendlyName} className="size-5 rounded-full text-[9px]" />
+              <AppIcon
+                name={ws.friendlyName}
+                dockerImage={ws.dockerImage}
+                category={ws.category}
+                iconUrl={ws.iconUrl}
+                rounded="rounded-full"
+                className="size-5 text-[9px]"
+              />
               <span className="max-w-[110px] truncate font-medium text-foreground">{ws.friendlyName}</span>
               {busy ? (
                 <Loader2 className="size-3 animate-spin text-gold-300" />

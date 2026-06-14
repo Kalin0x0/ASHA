@@ -85,6 +85,7 @@ export const createWorkspaceSchema = z.object({
   name: z.string().min(1),
   friendlyName: z.string().min(1),
   description: z.string().optional(),
+  iconUrl: z.string().optional(),
   type: z.enum(['CONTAINER', 'SERVER', 'REMOTE_APP', 'VM', 'LINK']).default('CONTAINER'),
   imageId: z.string().optional(),
   // Convenience: when no imageId is given but a dockerImage is, the manager

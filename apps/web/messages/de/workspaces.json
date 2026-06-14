@@ -22,6 +22,8 @@
       "category": "Kategorie",
       "categoryPlaceholder": "Kategorie wählen…",
       "newCategory": "+ Neue Kategorie…",
+      "iconUrl": "Symbol",
+      "iconUrlHint": "Wird automatisch erkannt. Eigene Bild-URL einfügen, um es zu überschreiben.",
       "dockerImage": "Docker-Image",
       "dockerImageHint": "z. B. kasmweb/brave:1.16.0 — erstellt und verknüpft ein Image, damit der Workspace startbar ist.",
       "vcpu": "vCPU",

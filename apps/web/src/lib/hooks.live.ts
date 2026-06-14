@@ -168,6 +168,7 @@ export function useCreateWorkspace() {
           'workspace',
         friendlyName: input.friendlyName.trim(),
         description: input.description?.trim() || undefined,
+        iconUrl: input.iconUrl?.trim() || undefined,
         categories: input.category?.trim() ? [input.category.trim()] : [],
         coresLimit: input.cores,
         memLimitMb: input.memMb,
