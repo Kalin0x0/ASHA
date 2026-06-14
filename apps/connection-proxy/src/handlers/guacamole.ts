@@ -78,6 +78,46 @@ function resolveParam(name: string, session: SessionRecord): string {
   }
 }
 
+/**
+ * Length of the leading prefix of `s` that consists ONLY of complete Guacamole
+ * instructions (each terminated by ';'). Uses the same length-prefixed scan as
+ * guacamole-common-js's own tunnel parser.
+ *
+ * Why this exists: guacamole-common-js's `WebSocketTunnel.onmessage` parses each
+ * WebSocket message independently and does NOT buffer a partial instruction
+ * across messages. If the proxy forwards one WS frame per raw guacd TCP chunk,
+ * large desktop `img`/`blob` instructions (which span several TCP segments) get
+ * split mid-instruction across frames and the browser silently drops them →
+ * black desktop, cursor-only. So we only ever emit on instruction boundaries.
+ */
+function completeInstructionsLength(s: string): number {
+  let consumed = 0;
+  let i = 0;
+  while (i < s.length) {
+    let j = i;
+    let complete = false;
+    for (;;) {
+      const dot = s.indexOf('.', j);
+      if (dot === -1) break; // length prefix not fully here yet
+      const len = Number(s.slice(j, dot));
+      if (!Number.isFinite(len)) break;
+      const valueEnd = dot + 1 + len;
+      if (s.length < valueEnd + 1) break; // value + separator not fully here yet
+      const sep = s[valueEnd];
+      j = valueEnd + 1;
+      if (sep === ';') {
+        complete = true;
+        break;
+      }
+      if (sep !== ',') break; // malformed — stop here, wait for more
+    }
+    if (!complete) break;
+    consumed = j;
+    i = j;
+  }
+  return consumed;
+}
+
 export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: SessionRecord): void {
   const protocol = session.protocol === 'RDP' ? 'rdp' : 'vnc';
   const guacd = net.createConnection(GUACD_PORT, GUACD_HOST);
@@ -90,6 +130,9 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
   // Handshake state: until `connected`, the proxy interprets guacd's
   // instructions; afterwards it bridges the stream to the browser.
   let connected = false;
+  // Decoded guacd output not yet forwarded — holds a trailing PARTIAL instruction
+  // until it completes, so every ws.send() carries only whole instructions.
+  let pendingOut = '';
 
   guacd.once('connect', () => {
     log.debug({ sessionId: session.sessionId, protocol }, 'guacd connected — starting handshake');
@@ -97,14 +140,27 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
   });
 
   guacd.on('data', (chunk: Buffer) => {
+    // StringDecoder reassembles UTF-8 that may be split across TCP chunks.
+    const text = toBrowser.write(chunk);
+
     if (connected) {
-      // Past the handshake — forward to the browser as a text frame.
-      if (ws.readyState === ws.OPEN) ws.send(toBrowser.write(chunk));
+      // Past the handshake — bridge to the browser, but ONLY ever send whole
+      // Guacamole instructions per WebSocket frame. guacamole-common-js's
+      // tunnel does not buffer a partial instruction across frames, so a split
+      // large img/blob would be silently dropped (black desktop). Buffer the
+      // tail until it completes.
+      pendingOut += text;
+      const n = completeInstructionsLength(pendingOut);
+      if (n > 0) {
+        const frame = pendingOut.slice(0, n);
+        pendingOut = pendingOut.slice(n);
+        if (ws.readyState === ws.OPEN) ws.send(frame);
+      }
       return;
     }
 
     // During the handshake, parse instructions to find `args`.
-    for (const inst of parser.push(chunk.toString('utf8'))) {
+    for (const inst of parser.push(text)) {
       const [opcode, ...args] = inst;
       if (opcode === 'args') {
         // args = [protocolVersion, ...paramNames]
