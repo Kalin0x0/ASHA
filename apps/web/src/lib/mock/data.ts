@@ -4,6 +4,7 @@ import type {
   HistoryRow,
   ImageRow,
   RecordingRow,
+  ServerOption,
   SessionEndReason,
   SessionRow,
   SessionStatus,
@@ -16,20 +17,30 @@ import { mulberry32 } from '@/lib/utils';
 const SEED = 20260601;
 
 const WORKSPACE_DEFS: Array<Omit<Workspace, 'activeSessions'>> = [
-  { id: 'ws-firefox', name: 'firefox', friendlyName: 'Firefox', description: 'Isolated Firefox browser session.', category: 'Browsers', cores: 2, memMb: 2768, gpu: 0, enabled: true, dockerImage: 'kasmweb/firefox:1.16.0', protocol: 'KASMVNC' },
-  { id: 'ws-chrome', name: 'chrome', friendlyName: 'Google Chrome', description: 'Isolated Chrome browser session.', category: 'Browsers', cores: 2, memMb: 2768, gpu: 0, enabled: true, dockerImage: 'kasmweb/chrome:1.16.0', protocol: 'KASMVNC' },
-  { id: 'ws-tor', name: 'tor', friendlyName: 'Tor Browser', description: 'Non-attributable research browsing.', category: 'Browsers', cores: 2, memMb: 2048, gpu: 0, enabled: true, dockerImage: 'kasmweb/tor-browser:1.16.0', protocol: 'KASMVNC' },
-  { id: 'ws-desktop', name: 'ubuntu-desktop', friendlyName: 'Ubuntu Desktop', description: 'Full Ubuntu XFCE desktop environment.', category: 'Desktops', cores: 4, memMb: 4096, gpu: 0, enabled: true, dockerImage: 'kasmweb/desktop:1.16.0', protocol: 'KASMVNC' },
-  { id: 'ws-vscode', name: 'vs-code', friendlyName: 'VS Code', description: 'Cloud development environment.', category: 'Development', cores: 4, memMb: 4096, gpu: 0, enabled: true, dockerImage: 'kasmweb/vs-code:1.16.0', protocol: 'KASMVNC' },
-  { id: 'ws-terminal', name: 'terminal', friendlyName: 'Terminal', description: 'Hardened Ubuntu terminal.', category: 'Development', cores: 1, memMb: 1024, gpu: 0, enabled: true, dockerImage: 'kasmweb/terminal:1.16.0', protocol: 'KASMVNC' },
-  { id: 'ws-kali', name: 'kali', friendlyName: 'Kali Linux', description: 'Security testing desktop.', category: 'Security', cores: 4, memMb: 6144, gpu: 0, enabled: true, dockerImage: 'kasmweb/kali-rolling-desktop:1.16.0', protocol: 'KASMVNC' },
-  { id: 'ws-gimp', name: 'gimp', friendlyName: 'GIMP', description: 'Image editing workspace.', category: 'Creative', cores: 2, memMb: 3072, gpu: 0, enabled: true, dockerImage: 'kasmweb/gimp:1.16.0', protocol: 'KASMVNC' },
-  { id: 'ws-blender', name: 'blender', friendlyName: 'Blender', description: 'GPU-accelerated 3D suite.', category: 'Creative', cores: 6, memMb: 8192, gpu: 1, enabled: true, dockerImage: 'kasmweb/blender:1.16.0', protocol: 'KASMVNC' },
-  { id: 'ws-libreoffice', name: 'libreoffice', friendlyName: 'LibreOffice', description: 'Office productivity suite.', category: 'Productivity', cores: 2, memMb: 2768, gpu: 0, enabled: true, dockerImage: 'kasmweb/libre-office:1.16.0', protocol: 'KASMVNC' },
-  { id: 'ws-rdp', name: 'windows-11', friendlyName: 'Windows 11', description: 'Windows 11 desktop streamed over RDP.', category: 'Desktops', cores: 4, memMb: 8192, gpu: 0, enabled: true, dockerImage: 'native/rdp', protocol: 'RDP' },
-  { id: 'ws-win10', name: 'windows-10', friendlyName: 'Windows 10', description: 'Windows 10 desktop streamed over RDP.', category: 'Desktops', cores: 4, memMb: 6144, gpu: 0, enabled: true, dockerImage: 'native/rdp', protocol: 'RDP' },
-  { id: 'ws-winsrv', name: 'windows-server-2022', friendlyName: 'Windows Server 2022', description: 'Windows Server 2022 desktop over RDP.', category: 'Desktops', cores: 6, memMb: 8192, gpu: 0, enabled: true, dockerImage: 'native/rdp', protocol: 'RDP' },
-  { id: 'ws-postman', name: 'postman', friendlyName: 'Postman', description: 'API development workspace.', category: 'Development', cores: 2, memMb: 2048, gpu: 0, enabled: true, dockerImage: 'kasmweb/postman:1.16.0', protocol: 'KASMVNC' },
+  { id: 'ws-firefox', name: 'firefox', friendlyName: 'Firefox', description: 'Isolated Firefox browser session.', category: 'Browsers', cores: 2, memMb: 2768, gpu: 0, enabled: true, dockerImage: 'kasmweb/firefox:1.16.0', protocol: 'KASMVNC', type: 'CONTAINER' },
+  { id: 'ws-chrome', name: 'chrome', friendlyName: 'Google Chrome', description: 'Isolated Chrome browser session.', category: 'Browsers', cores: 2, memMb: 2768, gpu: 0, enabled: true, dockerImage: 'kasmweb/chrome:1.16.0', protocol: 'KASMVNC', type: 'CONTAINER' },
+  { id: 'ws-tor', name: 'tor', friendlyName: 'Tor Browser', description: 'Non-attributable research browsing.', category: 'Browsers', cores: 2, memMb: 2048, gpu: 0, enabled: true, dockerImage: 'kasmweb/tor-browser:1.16.0', protocol: 'KASMVNC', type: 'CONTAINER' },
+  { id: 'ws-desktop', name: 'ubuntu-desktop', friendlyName: 'Ubuntu Desktop', description: 'Full Ubuntu XFCE desktop environment.', category: 'Desktops', cores: 4, memMb: 4096, gpu: 0, enabled: true, dockerImage: 'kasmweb/desktop:1.16.0', protocol: 'KASMVNC', type: 'CONTAINER' },
+  { id: 'ws-vscode', name: 'vs-code', friendlyName: 'VS Code', description: 'Cloud development environment.', category: 'Development', cores: 4, memMb: 4096, gpu: 0, enabled: true, dockerImage: 'kasmweb/vs-code:1.16.0', protocol: 'KASMVNC', type: 'CONTAINER' },
+  { id: 'ws-terminal', name: 'terminal', friendlyName: 'Terminal', description: 'Hardened Ubuntu terminal.', category: 'Development', cores: 1, memMb: 1024, gpu: 0, enabled: true, dockerImage: 'kasmweb/terminal:1.16.0', protocol: 'KASMVNC', type: 'CONTAINER' },
+  { id: 'ws-kali', name: 'kali', friendlyName: 'Kali Linux', description: 'Security testing desktop.', category: 'Security', cores: 4, memMb: 6144, gpu: 0, enabled: true, dockerImage: 'kasmweb/kali-rolling-desktop:1.16.0', protocol: 'KASMVNC', type: 'CONTAINER' },
+  { id: 'ws-gimp', name: 'gimp', friendlyName: 'GIMP', description: 'Image editing workspace.', category: 'Creative', cores: 2, memMb: 3072, gpu: 0, enabled: true, dockerImage: 'kasmweb/gimp:1.16.0', protocol: 'KASMVNC', type: 'CONTAINER' },
+  { id: 'ws-blender', name: 'blender', friendlyName: 'Blender', description: 'GPU-accelerated 3D suite.', category: 'Creative', cores: 6, memMb: 8192, gpu: 1, enabled: true, dockerImage: 'kasmweb/blender:1.16.0', protocol: 'KASMVNC', type: 'CONTAINER' },
+  { id: 'ws-libreoffice', name: 'libreoffice', friendlyName: 'LibreOffice', description: 'Office productivity suite.', category: 'Productivity', cores: 2, memMb: 2768, gpu: 0, enabled: true, dockerImage: 'kasmweb/libre-office:1.16.0', protocol: 'KASMVNC', type: 'CONTAINER' },
+  { id: 'ws-rdp', name: 'windows-11', friendlyName: 'Windows 11', description: 'Windows 11 desktop over RDP.', category: 'Desktops', cores: 4, memMb: 8192, gpu: 0, enabled: true, dockerImage: '', protocol: 'RDP', type: 'SERVER', serverName: 'win11-desktop-01', zoneName: 'homelab' },
+  { id: 'ws-win10', name: 'windows-10', friendlyName: 'Windows 10', description: 'Windows 10 desktop over RDP.', category: 'Desktops', cores: 4, memMb: 6144, gpu: 0, enabled: true, dockerImage: '', protocol: 'RDP', type: 'SERVER', serverName: 'win10-desktop-01', zoneName: 'homelab' },
+  { id: 'ws-winsrv', name: 'windows-server-2022', friendlyName: 'Windows Server 2022', description: 'Windows Server 2022 over RDP.', category: 'Servers', cores: 6, memMb: 8192, gpu: 0, enabled: true, dockerImage: '', protocol: 'RDP', type: 'SERVER', serverName: 'win-server-2022', zoneName: 'homelab' },
+  { id: 'ws-postman', name: 'postman', friendlyName: 'Postman', description: 'API development workspace.', category: 'Development', cores: 2, memMb: 2048, gpu: 0, enabled: true, dockerImage: 'kasmweb/postman:1.16.0', protocol: 'KASMVNC', type: 'CONTAINER' },
+];
+
+// Registered RDP/VNC/SSH machines (incl. Windows desktops) — the pool the
+// "New workspace" dialog's server picker draws from in mock mode.
+const SERVER_DEFS: ServerOption[] = [
+  { id: 'srv-win11', hostname: 'win11-desktop-01', connectionType: 'RDP', zoneName: 'homelab' },
+  { id: 'srv-win10', hostname: 'win10-desktop-01', connectionType: 'RDP', zoneName: 'homelab' },
+  { id: 'srv-winsrv', hostname: 'win-server-2022', connectionType: 'RDP', zoneName: 'homelab' },
+  { id: 'srv-ubuntu', hostname: 'ubuntu-host-01', connectionType: 'VNC', zoneName: 'eu-frankfurt' },
+  { id: 'srv-bastion', hostname: 'bastion-01', connectionType: 'SSH', zoneName: 'us-east' },
 ];
 
 const ZONE_DEFS: Array<Pick<Zone, 'id' | 'name' | 'region'>> = [
@@ -52,6 +63,7 @@ const STATUS_POOL: SessionStatus[] = [
 export interface MockData {
   workspaces: Workspace[];
   zones: Zone[];
+  servers: ServerOption[];
   agents: Agent[];
   sessions: SessionRow[];
   users: UserRow[];
@@ -235,5 +247,5 @@ export function buildInitialData(): MockData {
   // until a real session is recorded against an S3-configured deployment.
   const recordings: RecordingRow[] = [];
 
-  return { workspaces, zones, agents, sessions, users, activity, history, images, recordings };
+  return { workspaces, zones, servers: SERVER_DEFS, agents, sessions, users, activity, history, images, recordings };
 }

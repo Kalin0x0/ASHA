@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Plus } from 'lucide-react';
+import { Container, Loader2, Plus, Server } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -16,12 +16,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input, Label } from '@/components/ui/input';
-import { useCreateWorkspace, useLaunchSession, useWorkspaces } from '@/lib/hooks';
+import { useCreateWorkspace, useLaunchSession, useServers, useWorkspaces, useZones } from '@/lib/hooks';
+import type { WorkspaceType } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+const FIELD =
+  'h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2.5 text-sm outline-none ring-gold-focus';
 
 export default function WorkspacesPage() {
   const t = useTranslations('workspaces');
   const tc = useTranslations('common');
   const workspaces = useWorkspaces();
+  const servers = useServers();
+  const zones = useZones();
   const launch = useLaunchSession();
   const createWorkspace = useCreateWorkspace();
   const [query, setQuery] = useState('');
@@ -29,9 +36,22 @@ export default function WorkspacesPage() {
   const [launchingId, setLaunchingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const blankForm = { friendlyName: '', name: '', description: '', category: '', dockerImage: '', cores: '2', memGb: '2', gpu: '0' };
+  const blankForm = {
+    type: 'CONTAINER' as WorkspaceType,
+    friendlyName: '',
+    name: '',
+    description: '',
+    category: '',
+    dockerImage: '',
+    serverId: '',
+    zoneId: '',
+    cores: '2',
+    memGb: '2',
+    gpu: '0',
+  };
   const [form, setForm] = useState(blankForm);
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
+  const selectedServer = servers.find((s) => s.id === form.serverId);
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,17 +60,25 @@ export default function WorkspacesPage() {
       toast.error(t('catalog.create.nameRequired'));
       return;
     }
+    if (form.type === 'SERVER' && !form.serverId) {
+      toast.error(t('catalog.create.serverRequired'));
+      return;
+    }
     setSubmitting(true);
     try {
+      const isContainer = form.type === 'CONTAINER';
       await createWorkspace({
         friendlyName,
         name: form.name.trim() || undefined,
         description: form.description.trim() || undefined,
+        type: form.type,
         category: form.category.trim() || undefined,
-        dockerImage: form.dockerImage.trim() || undefined,
-        cores: Number(form.cores) || undefined,
-        memMb: form.memGb ? Math.round(Number(form.memGb) * 1024) || undefined : undefined,
-        gpu: Number(form.gpu) || 0,
+        dockerImage: isContainer ? form.dockerImage.trim() || undefined : undefined,
+        serverId: form.type === 'SERVER' ? form.serverId || undefined : undefined,
+        zoneId: form.zoneId || undefined,
+        cores: isContainer ? Number(form.cores) || undefined : undefined,
+        memMb: isContainer && form.memGb ? Math.round(Number(form.memGb) * 1024) || undefined : undefined,
+        gpu: isContainer ? Number(form.gpu) || 0 : 0,
       });
       toast.success(t('catalog.toasts.created', { name: friendlyName }));
       setForm(blankForm);
@@ -144,6 +172,37 @@ export default function WorkspacesPage() {
           </DialogHeader>
 
           <form onSubmit={onCreate} className="space-y-3">
+            {/* Machine type */}
+            <div>
+              <Label>{t('catalog.create.machineType')}</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    { v: 'CONTAINER' as const, icon: Container, label: t('catalog.create.types.container'), hint: t('catalog.create.types.containerHint') },
+                    { v: 'SERVER' as const, icon: Server, label: t('catalog.create.types.server'), hint: t('catalog.create.types.serverHint') },
+                  ]
+                ).map(({ v, icon: Icon, label, hint }) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => set({ type: v })}
+                    className={cn(
+                      'flex items-start gap-2.5 rounded-lg border p-3 text-start transition-colors ring-gold-focus',
+                      form.type === v
+                        ? 'border-gold-500/60 bg-gold-500/10'
+                        : 'border-border-subtle hover:border-white/25',
+                    )}
+                  >
+                    <Icon className={cn('mt-0.5 size-4 shrink-0', form.type === v ? 'text-gold-300' : 'text-muted-foreground')} />
+                    <span>
+                      <span className="block text-sm font-medium">{label}</span>
+                      <span className="block text-[11px] text-muted-foreground">{hint}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <Label htmlFor="nw-name">{t('catalog.create.friendlyName')}</Label>
@@ -158,38 +217,85 @@ export default function WorkspacesPage() {
               </div>
               <div>
                 <Label htmlFor="nw-slug">{t('catalog.create.slug')}</Label>
-                <Input id="nw-slug" dir="ltr" placeholder="brave-browser" value={form.name} onChange={(e) => set({ name: e.target.value })} />
+                <Input id="nw-slug" dir="ltr" placeholder="windows-11" value={form.name} onChange={(e) => set({ name: e.target.value })} />
               </div>
             </div>
-            <div>
-              <Label htmlFor="nw-desc">{t('catalog.create.descriptionField')}</Label>
-              <Input id="nw-desc" value={form.description} onChange={(e) => set({ description: e.target.value })} />
-            </div>
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="nw-desc">{t('catalog.create.descriptionField')}</Label>
+                <Input id="nw-desc" value={form.description} onChange={(e) => set({ description: e.target.value })} />
+              </div>
               <div>
                 <Label htmlFor="nw-cat">{t('catalog.create.category')}</Label>
                 <Input id="nw-cat" placeholder={t('catalog.create.categoryPlaceholder')} value={form.category} onChange={(e) => set({ category: e.target.value })} />
               </div>
-              <div>
-                <Label htmlFor="nw-image">{t('catalog.create.dockerImage')}</Label>
-                <Input id="nw-image" dir="ltr" placeholder="kasmweb/brave:1.16.0" value={form.dockerImage} onChange={(e) => set({ dockerImage: e.target.value })} />
-              </div>
             </div>
-            <p className="-mt-1 text-[11px] text-muted-foreground">{t('catalog.create.dockerImageHint')}</p>
-            <div className="grid grid-cols-3 gap-3">
+
+            {/* Container-only fields */}
+            {form.type === 'CONTAINER' && (
+              <>
+                <div>
+                  <Label htmlFor="nw-image">{t('catalog.create.dockerImage')}</Label>
+                  <Input id="nw-image" dir="ltr" placeholder="kasmweb/brave:1.16.0" value={form.dockerImage} onChange={(e) => set({ dockerImage: e.target.value })} />
+                  <p className="mt-1 text-[11px] text-muted-foreground">{t('catalog.create.dockerImageHint')}</p>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label htmlFor="nw-cpu">{t('catalog.create.vcpu')}</Label>
+                    <Input id="nw-cpu" type="number" min="1" dir="ltr" value={form.cores} onChange={(e) => set({ cores: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label htmlFor="nw-ram">{t('catalog.create.ramGb')}</Label>
+                    <Input id="nw-ram" type="number" min="1" step="0.5" dir="ltr" value={form.memGb} onChange={(e) => set({ memGb: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label htmlFor="nw-gpu">{t('catalog.create.gpu')}</Label>
+                    <Input id="nw-gpu" type="number" min="0" dir="ltr" value={form.gpu} onChange={(e) => set({ gpu: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="nw-zone">{t('catalog.create.zone')}</Label>
+                  <select id="nw-zone" className={FIELD} value={form.zoneId} onChange={(e) => set({ zoneId: e.target.value })}>
+                    <option value="">{t('catalog.create.defaultZone')}</option>
+                    {zones.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.name}
+                        {z.region ? ` · ${z.region}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            {/* Server-only fields */}
+            {form.type === 'SERVER' && (
               <div>
-                <Label htmlFor="nw-cpu">{t('catalog.create.vcpu')}</Label>
-                <Input id="nw-cpu" type="number" min="1" dir="ltr" value={form.cores} onChange={(e) => set({ cores: e.target.value })} />
+                <Label htmlFor="nw-server">{t('catalog.create.server')}</Label>
+                {servers.length === 0 ? (
+                  <p className="rounded-md border border-border-subtle bg-anthracite-950/40 px-3 py-2 text-[12px] text-muted-foreground">
+                    {t('catalog.create.noServers')}
+                  </p>
+                ) : (
+                  <>
+                    <select id="nw-server" className={FIELD} value={form.serverId} onChange={(e) => set({ serverId: e.target.value })}>
+                      <option value="">{t('catalog.create.selectServer')}</option>
+                      {servers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.hostname} · {s.connectionType} · {s.zoneName}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {selectedServer
+                        ? t('catalog.create.serverZone', { protocol: selectedServer.connectionType, zone: selectedServer.zoneName })
+                        : t('catalog.create.serverHintLong')}
+                    </p>
+                  </>
+                )}
               </div>
-              <div>
-                <Label htmlFor="nw-ram">{t('catalog.create.ramGb')}</Label>
-                <Input id="nw-ram" type="number" min="1" step="0.5" dir="ltr" value={form.memGb} onChange={(e) => set({ memGb: e.target.value })} />
-              </div>
-              <div>
-                <Label htmlFor="nw-gpu">{t('catalog.create.gpu')}</Label>
-                <Input id="nw-gpu" type="number" min="0" dir="ltr" value={form.gpu} onChange={(e) => set({ gpu: e.target.value })} />
-              </div>
-            </div>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>

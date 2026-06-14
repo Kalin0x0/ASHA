@@ -280,6 +280,7 @@ model DeploymentZone {
   agents   Agent[]
   servers  Server[]
   sessions Session[]
+  workspaces Workspace[]
 
   @@unique([orgId, name])
   @@index([orgId])
@@ -564,6 +565,10 @@ model Workspace {
   description   String?
   type          WorkspaceType @default(CONTAINER)
   imageId       String?
+  // Non-container placement: SERVER/VM/REMOTE_APP workspaces bind to a registered
+  // Server; an optional preferred deployment Zone applies to every type.
+  serverId      String?
+  zoneId        String?
   iconUrl       String?
   categories    String[]      @default([])
   enabled       Boolean       @default(true)
@@ -589,6 +594,8 @@ model Workspace {
   updatedAt     DateTime      @updatedAt
 
   image            Image?                  @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  server           Server?                 @relation(fields: [serverId], references: [id], onDelete: SetNull)
+  zone             DeploymentZone?         @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   webFilter        WebFilterConfig?        @relation(fields: [webFilterId], references: [id], onDelete: SetNull)
   egressGateway    EgressGateway?          @relation(fields: [egressGatewayId], references: [id], onDelete: SetNull)
   browserIsolation BrowserIsolationConfig? @relation(fields: [browserIsolationId], references: [id], onDelete: SetNull)
@@ -603,6 +610,8 @@ model Workspace {
   @@unique([orgId, name])
   @@index([orgId])
   @@index([imageId])
+  @@index([serverId])
+  @@index([zoneId])
 }
 
 model Image {
@@ -980,6 +989,7 @@ model Server {
   updatedAt      DateTime             @updatedAt
 
   zone DeploymentZone @relation(fields: [zoneId], references: [id])
+  workspaces Workspace[]
 
   @@unique([orgId, hostname])
   @@index([orgId])

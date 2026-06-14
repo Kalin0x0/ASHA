@@ -55,9 +55,23 @@ export class SessionsService {
     });
     if (!workspace || !workspace.enabled) throw new NotFoundException('Workspace not available');
 
+    // Container launch is wired end-to-end. Server/VM/remote-app workspaces are
+    // created + manageable, but bridging their live session through the
+    // connection-proxy (RDP/VNC/SSH) is a separate step — fail clearly rather
+    // than mis-provisioning a container for them. (A missing type is legacy =
+    // container.)
+    if (workspace.type && workspace.type !== 'CONTAINER') {
+      throw new BadRequestException(
+        `Launching ${workspace.type} workspaces from here is not supported yet.`,
+      );
+    }
+
+    // Zone precedence: explicit request → the workspace's preferred zone → the
+    // org default → any zone.
+    const zonePref = dto.zoneId ?? workspace.zoneId ?? null;
     const zone =
-      (dto.zoneId
-        ? await prisma.deploymentZone.findUnique({ where: { id: dto.zoneId } })
+      (zonePref
+        ? await prisma.deploymentZone.findUnique({ where: { id: zonePref } })
         : await prisma.deploymentZone.findFirst({ where: { isDefault: true } })) ??
       (await prisma.deploymentZone.findFirst({}));
     if (!zone) throw new BadRequestException('No deployment zone available');

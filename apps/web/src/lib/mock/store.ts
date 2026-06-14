@@ -222,18 +222,31 @@ class MockStore {
     if (this.data.workspaces.some((w) => w.name === slug)) {
       throw new Error('A workspace with this name already exists');
     }
+
+    const type = input.type ?? 'CONTAINER';
+    const server = input.serverId ? this.data.servers.find((s) => s.id === input.serverId) : undefined;
+    if (type === 'SERVER' && !server) {
+      throw new Error('Choose a server for a server-backed workspace');
+    }
+    const zone = input.zoneId ? this.data.zones.find((z) => z.id === input.zoneId) : undefined;
+
     const ws: Workspace = {
       id: `ws-${Math.floor(Math.random() * 1e6)}`,
       name: slug,
       friendlyName,
-      description: input.description?.trim() || `${friendlyName} streamed in an isolated container.`,
-      category: input.category?.trim() || 'Other',
+      description:
+        input.description?.trim() ||
+        (server ? `${friendlyName} over ${server.connectionType}.` : `${friendlyName} streamed in an isolated container.`),
+      category: input.category?.trim() || (type === 'SERVER' ? 'Servers' : 'Other'),
       cores: input.cores ?? 2,
       memMb: input.memMb ?? 2768,
       gpu: input.gpu ?? 0,
       enabled: input.enabled ?? true,
-      dockerImage: input.dockerImage?.trim() || 'kasmweb/core:1.16.0',
-      protocol: 'KASMVNC',
+      dockerImage: server ? '' : input.dockerImage?.trim() || 'kasmweb/core:1.16.0',
+      protocol: server ? server.connectionType : 'KASMVNC',
+      type,
+      serverName: server?.hostname,
+      zoneName: zone?.name ?? server?.zoneName,
       activeSessions: 0,
     };
     this.data.workspaces = [ws, ...this.data.workspaces];

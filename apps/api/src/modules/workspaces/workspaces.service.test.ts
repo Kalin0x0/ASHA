@@ -5,6 +5,8 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     workspace: { findFirst: vi.fn(), create: vi.fn() },
     image: { create: vi.fn() },
+    server: { findFirst: vi.fn() },
+    deploymentZone: { findFirst: vi.fn() },
   },
 }));
 
@@ -64,6 +66,28 @@ describe('WorkspacesService.create', () => {
     ).rejects.toThrow(/already exists/i);
 
     expect(prismaMock.image.create).not.toHaveBeenCalled();
+    expect(prismaMock.workspace.create).not.toHaveBeenCalled();
+  });
+
+  it('binds a SERVER workspace to a server and defaults the zone to the server zone', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue(null);
+    prismaMock.server.findFirst.mockResolvedValue({ id: 'srv1', orgId: 'org1', zoneId: 'zone-eu' });
+    prismaMock.workspace.create.mockImplementation(async (a: { data: Record<string, unknown> }) => ({ id: 'ws-srv', ...a.data }));
+
+    await svc.create('org1', { ...base, name: 'win11', friendlyName: 'Windows 11', type: 'SERVER', serverId: 'srv1' } as never);
+
+    expect(prismaMock.image.create).not.toHaveBeenCalled();
+    const wsArg = prismaMock.workspace.create.mock.calls[0]![0] as { data: Record<string, unknown> };
+    expect(wsArg.data.serverId).toBe('srv1');
+    expect(wsArg.data.zoneId).toBe('zone-eu'); // inherited from the server
+    expect(wsArg.data.type).toBe('SERVER');
+  });
+
+  it('rejects a SERVER workspace with no server selected', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue(null);
+    await expect(
+      svc.create('org1', { ...base, name: 'win11', friendlyName: 'Windows 11', type: 'SERVER' } as never),
+    ).rejects.toThrow(/server/i);
     expect(prismaMock.workspace.create).not.toHaveBeenCalled();
   });
 });
