@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isStreamConfigured, resolveStreamUrl } from './stream';
+import { isLikelyUnreachableUrl, isStreamConfigured, resolveStreamUrl } from './stream';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -46,5 +46,23 @@ describe('resolveStreamUrl', () => {
   it('returns undefined for a malformed URL', () => {
     vi.stubEnv('NEXT_PUBLIC_DEMO_STREAM_URL', 'not a url');
     expect(resolveStreamUrl('abc')).toBeUndefined();
+  });
+});
+
+describe('isLikelyUnreachableUrl', () => {
+  it('flags a .local stream host when the browser is elsewhere', () => {
+    expect(isLikelyUnreachableUrl('https://chista.local/session/abc/', 'app.example.com')).toBe(true);
+  });
+
+  it('does not flag when the browser is served from that same .local host', () => {
+    expect(isLikelyUnreachableUrl('https://chista.local/session/abc/', 'chista.local')).toBe(false);
+  });
+
+  it('does not flag a real public host', () => {
+    expect(isLikelyUnreachableUrl('https://workspaces.example.com/session/abc/', 'app.example.com')).toBe(false);
+  });
+
+  it('does not flag (so the iframe still tries) when the URL is unparseable', () => {
+    expect(isLikelyUnreachableUrl('::::', 'app.example.com')).toBe(false);
   });
 });

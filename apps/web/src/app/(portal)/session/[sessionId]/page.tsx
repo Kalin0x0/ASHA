@@ -41,7 +41,13 @@ import {
 } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 import { useSession, useTerminateSession } from '@/lib/hooks';
+import { isLikelyUnreachableUrl } from '@/lib/stream';
 import { cn } from '@/lib/utils';
+
+// How long to wait for a launch to reach RUNNING before showing a clear
+// "taking too long" state with a retry — so a stuck launch (no agent, slow
+// image pull, weak connection) never spins forever.
+const LAUNCH_TIMEOUT_MS = 90_000;
 
 type Dlp = NonNullable<ApiSessionConnection['dlp']>;
 
@@ -66,7 +72,7 @@ function stepForStatus(status: string | undefined): number {
     case 'SCHEDULED':
       return 1;
     case 'PROVISIONING':
-      return 3;
+      return 2;
     default:
       return 0;
   }
@@ -95,6 +101,7 @@ export default function StreamingViewerPage() {
   const [resMenuOpen, setResMenuOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [dlp, setDlp] = useState<Dlp>({});
+  const [timedOut, setTimedOut] = useState(false);
 
   const workspaceName = session?.workspaceName ?? t('status.workspaceFallback');
   const status = session?.status;
@@ -102,6 +109,14 @@ export default function StreamingViewerPage() {
   const isRunning = status === 'RUNNING' || status === 'DEGRADED';
   const isError = status === 'ERROR' || status === 'DESTROYED' || status === 'TERMINATING';
   const connectionUrl = session?.connectionUrl;
+  // The stream URL may point at a host the browser can't resolve (e.g. the
+  // default chista.local). Detect it so we can show a clear error rather than
+  // letting the <iframe> fail with a raw browser DNS error.
+  const unreachable =
+    isRunning &&
+    !!connectionUrl &&
+    typeof window !== 'undefined' &&
+    isLikelyUnreachableUrl(connectionUrl, window.location.hostname);
   const isWebRtc = session?.connectionType === 'NEKO_WEBRTC';
   const protocolLabel = isWebRtc ? 'WebRTC/H.264' : (session?.connectionType ?? 'KasmVNC');
   // Connected = the session is live AND its embedded client has finished loading
@@ -120,6 +135,18 @@ export default function StreamingViewerPage() {
   useEffect(() => {
     setFrameReady(false);
   }, [connectionUrl]);
+
+  // Launch watchdog: if the session hasn't reached RUNNING (or ERROR) within the
+  // timeout, surface a clear "taking too long" state with a retry instead of an
+  // endless spinner. Cleared the moment the session is live or has failed.
+  useEffect(() => {
+    if (isRunning || isError) {
+      setTimedOut(false);
+      return;
+    }
+    const id = setTimeout(() => setTimedOut(true), LAUNCH_TIMEOUT_MS);
+    return () => clearTimeout(id);
+  }, [isRunning, isError, session?.id]);
 
   // Pull the DLP policy so the toolbar can grey out disallowed controls.
   useEffect(() => {
@@ -366,18 +393,31 @@ export default function StreamingViewerPage() {
       >
         {isError ? (
           <Disconnected workspaceName={workspaceName} onRetry={() => router.refresh()} onBack={disconnect} />
-        ) : !isRunning ? (
-          <Provisioning status={status} workspaceName={workspaceName} />
-        ) : connectionUrl ? (
-          <LiveStream
-            url={connectionUrl}
+        ) : isRunning ? (
+          unreachable ? (
+            <UnreachableHost url={connectionUrl!} onBack={disconnect} />
+          ) : connectionUrl ? (
+            <LiveStream
+              url={connectionUrl}
+              workspaceName={workspaceName}
+              isWebRtc={isWebRtc}
+              ready={frameReady}
+              onReady={() => setFrameReady(true)}
+            />
+          ) : (
+            <PlaceholderStream workspaceName={workspaceName} clock={clock} />
+          )
+        ) : timedOut ? (
+          <LaunchTimedOut
             workspaceName={workspaceName}
-            isWebRtc={isWebRtc}
-            ready={frameReady}
-            onReady={() => setFrameReady(true)}
+            onRetry={() => {
+              setTimedOut(false);
+              router.refresh();
+            }}
+            onBack={disconnect}
           />
         ) : (
-          <PlaceholderStream workspaceName={workspaceName} clock={clock} />
+          <Provisioning status={status} workspaceName={workspaceName} />
         )}
 
         {/* Identity watermark — always on while the stream is live (screenshot /
@@ -629,6 +669,86 @@ function Disconnected({
         <h2 className="font-display text-2xl font-medium">{t('status.disconnectedTitle')}</h2>
         <p className="mt-1 max-w-sm text-sm text-muted-foreground">
           {t('status.disconnectedDescription', { name: workspaceName })}
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onRetry}
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-border-subtle px-4 text-sm transition-colors hover:bg-secondary ring-gold-focus"
+        >
+          <RotateCw className="size-4" /> {tc('actions.retry')}
+        </button>
+        <button
+          onClick={onBack}
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-gold-500/90 px-4 text-sm font-medium text-anthracite-950 transition-colors hover:bg-gold-500 ring-gold-focus"
+        >
+          {t('status.backToWorkspaces')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The session is RUNNING but its stream URL points at a host the browser can't
+ * resolve (typically the default chista.local). Shown instead of letting the
+ * <iframe> fail with a raw "server IP address could not be found" DNS error.
+ */
+function UnreachableHost({ url, onBack }: { url: string; onBack: () => void }) {
+  const t = useTranslations('viewer');
+  let host = url;
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    /* keep raw url */
+  }
+  const safeUrl = url.split('?')[0]; // drop the session token from display
+
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-aurora">
+      <AlertTriangle className="size-12 rounded-full bg-warning/15 p-2.5 text-warning" />
+      <div className="max-w-md text-center">
+        <h2 className="font-display text-2xl font-medium">{t('status.unreachableTitle')}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t('status.unreachableDescription', { host })}
+        </p>
+        <pre dir="ltr" className="mt-3 overflow-x-auto rounded-md border border-border-subtle bg-anthracite-950/80 px-3 py-2 text-start text-[11px] text-muted-foreground">
+          {safeUrl}
+        </pre>
+      </div>
+      <button
+        onClick={onBack}
+        className="inline-flex h-9 items-center gap-2 rounded-md bg-gold-500/90 px-4 text-sm font-medium text-anthracite-950 transition-colors hover:bg-gold-500 ring-gold-focus"
+      >
+        {t('status.backToWorkspaces')}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * The launch has not reached RUNNING within LAUNCH_TIMEOUT_MS — e.g. no agent
+ * was available, a slow image pull, or a weak connection. Offers a retry and an
+ * exit instead of spinning forever.
+ */
+function LaunchTimedOut({
+  workspaceName,
+  onRetry,
+  onBack,
+}: {
+  workspaceName: string;
+  onRetry: () => void;
+  onBack: () => void;
+}) {
+  const t = useTranslations('viewer');
+  const tc = useTranslations('common');
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-aurora">
+      <AlertTriangle className="size-12 rounded-full bg-warning/15 p-2.5 text-warning" />
+      <div className="max-w-sm text-center">
+        <h2 className="font-display text-2xl font-medium">{t('status.launchTimeoutTitle')}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t('status.launchTimeoutDescription', { name: workspaceName })}
         </p>
       </div>
       <div className="flex items-center gap-3">

@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { AgentHeartbeatDto, AgentRegisterDto, SessionStatsDto, SessionStatusDto } from '@chista/contracts';
 import { prisma, runUnscoped } from '@chista/db';
 import { sessionConnectionUrl } from '@chista/proxy-labels';
-import type { Env } from '@chista/config';
+import { type Env, isPlaceholderHost, resolveSessionBaseUrl } from '@chista/config';
 import { ENV } from '../../common/env.module';
 import { RedisService } from '../../common/redis.service';
 import { SessionsGateway } from '../sessions/sessions.gateway';
@@ -134,13 +134,28 @@ export class AgentsService {
           { sid: session.id, kasmId: session.kasmId },
           { secret: this.env.SESSION_TOKEN_SECRET, expiresIn: this.env.SESSION_TOKEN_TTL },
         );
+        const baseUrl = resolveSessionBaseUrl(this.env, zone?.proxyBaseUrl);
         const connectionUrl = sessionConnectionUrl({
           kasmId: session.kasmId,
-          proxyBaseUrl: zone?.proxyBaseUrl ?? this.env.CHISTA_PUBLIC_URL,
+          proxyBaseUrl: baseUrl,
           token,
         });
         data.connectionUrl = connectionUrl;
         data.startedAt = session.startedAt ?? new Date();
+
+        // Log the FINAL resolved workspace URL (without the session token) so
+        // operators can confirm it before the browser is sent there — and warn
+        // loudly when the host won't resolve for real users (the chista.local
+        // DNS-failure class of bug).
+        this.logger.log(
+          `session ${session.id} ready → ${connectionUrl.split('?')[0]} (zone=${zone?.name ?? 'default'})`,
+        );
+        if (isPlaceholderHost(baseUrl)) {
+          this.logger.warn(
+            `session ${session.id} stream host "${new URL(baseUrl).hostname}" is not publicly resolvable; ` +
+              'set WORKSPACE_PUBLIC_BASE_URL (or the zone proxyBaseUrl) to a host reachable by end users.',
+          );
+        }
 
         // A1: if the workspace publishes a RemoteApp, the proxy launches it via
         // guacd's remote-app params instead of a full desktop.

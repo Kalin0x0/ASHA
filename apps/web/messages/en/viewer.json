@@ -74,7 +74,11 @@
     "backToWorkspaces": "Back to workspaces",
     "placeholderLive": "Session is live",
     "placeholderDescription": "No stream endpoint is configured, so this is a placeholder. To embed the real {name} client here, run a KasmVNC container and point the viewer at it:",
-    "start": "Start"
+    "start": "Start",
+    "unreachableTitle": "Workspace not reachable",
+    "unreachableDescription": "Your browser can't resolve {host}. The workspace stream URL isn't reachable from here — ask your administrator to set a public workspace URL (WORKSPACE_PUBLIC_BASE_URL or the zone's proxy base URL).",
+    "launchTimeoutTitle": "Launch is taking too long",
+    "launchTimeoutDescription": "{name} hasn't finished starting. This can happen on a slow image pull or a weak connection. You can retry or go back."
   },
   "dlp": {
     "clipboardDisabledHint": "Clipboard sync is disabled by the workspace DLP policy.",

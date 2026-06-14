@@ -87,6 +87,10 @@ export const createWorkspaceSchema = z.object({
   description: z.string().optional(),
   type: z.enum(['CONTAINER', 'SERVER', 'REMOTE_APP', 'VM', 'LINK']).default('CONTAINER'),
   imageId: z.string().optional(),
+  // Convenience: when no imageId is given but a dockerImage is, the manager
+  // creates+links a backing Image so the workspace is launchable immediately.
+  dockerImage: z.string().min(1).optional(),
+  enabled: z.boolean().optional(),
   categories: z.array(z.string()).default([]),
   coresLimit: z.number().optional(),
   memLimitMb: z.number().optional(),

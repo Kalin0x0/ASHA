@@ -4,9 +4,29 @@
     "description": "کاتالوگ دسکتاپ‌ها، مرورگرها و برنامه‌های کانتینری که کاربران می‌توانند اجرا کنند.",
     "newWorkspace": "فضای کاری جدید",
     "searchPlaceholder": "جستجوی فضاهای کاری…",
+    "create": {
+      "title": "ایجاد فضای کاری",
+      "description": "یک دسکتاپ، مرورگر یا برنامه کانتینری به کاتالوگ اضافه کنید.",
+      "friendlyName": "نام",
+      "friendlyNamePlaceholder": "Brave Browser",
+      "slug": "اسلاگ",
+      "slugHint": "شناسه ایمن برای URL؛ در صورت خالی بودن از نام ساخته می‌شود.",
+      "descriptionField": "توضیحات",
+      "category": "دسته‌بندی",
+      "categoryPlaceholder": "Browsers",
+      "dockerImage": "ایمیج Docker",
+      "dockerImageHint": "مثلاً kasmweb/brave:1.16.0 — یک ایمیج می‌سازد و پیوند می‌دهد تا فضای کاری قابل اجرا باشد.",
+      "vcpu": "vCPU",
+      "ramGb": "RAM (گیگابایت)",
+      "gpu": "GPU",
+      "submit": "ایجاد فضای کاری",
+      "nameRequired": "نام فضای کاری الزامی است."
+    },
     "toasts": {
       "launchTitle": "نشست در حال اجراست",
-      "launchDescription": "در حال تخصیص ایجنت و راه‌اندازی کانتینر."
+      "launchDescription": "در حال تخصیص ایجنت و راه‌اندازی کانتینر.",
+      "created": "فضای کاری {name} ایجاد شد",
+      "createFailed": "ایجاد فضای کاری ممکن نشد"
     }
   },
   "images": {

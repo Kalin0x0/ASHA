@@ -85,6 +85,27 @@ export interface UserRow {
   lastLoginAt: string | null;
 }
 
+export interface CreateUserInput {
+  email: string;
+  username?: string;
+  displayName?: string;
+  password?: string;
+  isSystemAdmin?: boolean;
+  locale?: string;
+}
+
+export interface CreateWorkspaceInput {
+  friendlyName: string;
+  name?: string;
+  description?: string;
+  category?: string;
+  dockerImage?: string;
+  cores?: number;
+  memMb?: number;
+  gpu?: number;
+  enabled?: boolean;
+}
+
 export interface ActivityItem {
   id: string;
   kind: 'session' | 'auth' | 'admin' | 'agent' | 'alert';

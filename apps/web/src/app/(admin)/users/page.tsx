@@ -1,16 +1,26 @@
 'use client';
 
-import { Search, Shield, UserCheck, Users as UsersIcon } from 'lucide-react';
+import { Loader2, Plus, Search, Shield, UserCheck, UserPlus, Users as UsersIcon } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { EmptyState } from '@/components/composite/empty-state';
 import { Monogram } from '@/components/composite/monogram';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { useUsers } from '@/lib/hooks';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input, Label } from '@/components/ui/input';
+import { useCreateUser, useUsers } from '@/lib/hooks';
 import type { UserRow } from '@/lib/types';
 
 const STATUS_VARIANT: Record<UserRow['status'], 'success' | 'outline' | 'info' | 'destructive'> = {
@@ -33,7 +43,39 @@ export default function UsersPage() {
   const tc = useTranslations('common');
   const locale = useLocale();
   const users = useUsers();
+  const createUser = useCreateUser();
   const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const blankForm = { email: '', username: '', displayName: '', password: '', isSystemAdmin: false };
+  const [form, setForm] = useState(blankForm);
+  const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = form.email.trim();
+    if (!email) {
+      toast.error(t('users.create.emailRequired'));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await createUser({
+        email,
+        username: form.username.trim() || undefined,
+        displayName: form.displayName.trim() || undefined,
+        password: form.password || undefined,
+        isSystemAdmin: form.isSystemAdmin,
+      });
+      toast.success(t('users.toasts.created', { email }));
+      setForm(blankForm);
+      setOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('users.toasts.createFailed'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     if (!query) return users;
@@ -51,7 +93,15 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t('users.title')} description={t('users.description')} />
+      <PageHeader
+        title={t('users.title')}
+        description={t('users.description')}
+        actions={
+          <Button size="sm" onClick={() => setOpen(true)}>
+            <Plus className="size-3.5" /> {t('users.newUser')}
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label={t('users.stats.totalUsers')} value={users.length} icon={UsersIcon} primary />
@@ -141,6 +191,77 @@ export default function UsersPage() {
           </table>
         </div>
       </Card>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="size-5 text-gold-300" /> {t('users.create.title')}
+            </DialogTitle>
+            <DialogDescription>{t('users.create.description')}</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={onSubmit} className="space-y-3">
+            <div>
+              <Label htmlFor="nu-email">{t('users.create.email')}</Label>
+              <Input
+                id="nu-email"
+                type="email"
+                required
+                autoFocus
+                dir="ltr"
+                placeholder="jane@chista.local"
+                value={form.email}
+                onChange={(e) => set({ email: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="nu-username">{t('users.create.username')}</Label>
+                <Input id="nu-username" dir="ltr" value={form.username} onChange={(e) => set({ username: e.target.value })} />
+              </div>
+              <div>
+                <Label htmlFor="nu-display">{t('users.create.displayName')}</Label>
+                <Input id="nu-display" value={form.displayName} onChange={(e) => set({ displayName: e.target.value })} />
+              </div>
+            </div>
+            <p className="-mt-1 text-[11px] text-muted-foreground">{t('users.create.usernameHint')}</p>
+            <div>
+              <Label htmlFor="nu-pass">{t('users.create.password')}</Label>
+              <Input
+                id="nu-pass"
+                type="password"
+                dir="ltr"
+                autoComplete="new-password"
+                value={form.password}
+                onChange={(e) => set({ password: e.target.value })}
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">{t('users.create.passwordHint')}</p>
+            </div>
+            <label className="flex items-center gap-2.5 rounded-lg border border-border-subtle px-3 py-2.5 text-sm">
+              <input
+                type="checkbox"
+                checked={form.isSystemAdmin}
+                onChange={(e) => set({ isSystemAdmin: e.target.checked })}
+                className="size-4 accent-gold-500"
+              />
+              <span className="inline-flex items-center gap-1.5">
+                <Shield className="size-3.5 text-gold-300" /> {t('users.create.systemAdmin')}
+              </span>
+            </label>
+
+            <DialogFooter>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
+                {tc('actions.cancel')}
+              </Button>
+              <Button type="submit" size="sm" disabled={submitting}>
+                {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <UserPlus className="size-3.5" />}
+                {t('users.create.submit')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

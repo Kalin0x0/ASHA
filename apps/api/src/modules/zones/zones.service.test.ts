@@ -14,6 +14,7 @@ const { prismaMock, txMock } = vi.hoisted(() => {
         updateMany: vi.fn(),
         deleteMany: vi.fn(),
       },
+      session: { count: vi.fn() },
       $transaction: vi.fn(async (fn: (tx: typeof txMock) => unknown) => fn(txMock)),
     },
   };
@@ -51,8 +52,37 @@ describe('ZonesService', () => {
   });
 
   it('refuses to delete the default zone', async () => {
-    prismaMock.deploymentZone.findFirst.mockResolvedValue({ id: 'z1', orgId: 'org1', isDefault: true });
+    prismaMock.deploymentZone.findFirst.mockResolvedValue({
+      id: 'z1', orgId: 'org1', isDefault: true, _count: { agents: 0, servers: 0 },
+    });
     await expect(svc.remove('org1', 'u1', 'z1')).rejects.toThrow('default zone');
+    expect(prismaMock.deploymentZone.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('deletes a non-default zone with no active sessions, agents or servers', async () => {
+    prismaMock.deploymentZone.findFirst.mockResolvedValue({
+      id: 'z2', orgId: 'org1', isDefault: false, _count: { agents: 0, servers: 0 },
+    });
+    prismaMock.session.count.mockResolvedValue(0);
+    await expect(svc.remove('org1', 'u1', 'z2')).resolves.toEqual({ ok: true });
+    expect(prismaMock.deploymentZone.deleteMany).toHaveBeenCalledWith({ where: { id: 'z2', orgId: 'org1' } });
+  });
+
+  it('refuses to delete a non-default zone that still has active sessions', async () => {
+    prismaMock.deploymentZone.findFirst.mockResolvedValue({
+      id: 'z2', orgId: 'org1', isDefault: false, _count: { agents: 0, servers: 0 },
+    });
+    prismaMock.session.count.mockResolvedValue(3);
+    await expect(svc.remove('org1', 'u1', 'z2')).rejects.toThrow('active session');
+    expect(prismaMock.deploymentZone.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses to delete a non-default zone that still has agents or servers', async () => {
+    prismaMock.deploymentZone.findFirst.mockResolvedValue({
+      id: 'z2', orgId: 'org1', isDefault: false, _count: { agents: 2, servers: 0 },
+    });
+    prismaMock.session.count.mockResolvedValue(0);
+    await expect(svc.remove('org1', 'u1', 'z2')).rejects.toThrow('agents or servers');
     expect(prismaMock.deploymentZone.deleteMany).not.toHaveBeenCalled();
   });
 

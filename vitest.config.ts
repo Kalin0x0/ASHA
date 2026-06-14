@@ -23,6 +23,10 @@ export default defineConfig({
       '@chista/logger': pkg('logger'),
       '@chista/proxy-labels': pkg('proxy-labels'),
       '@chista/rbac': pkg('rbac'),
+      // Web app path alias ('@/x' → apps/web/src/x). Safe: the alias matcher only
+      // matches '@' when followed by '/', so the '@chista/*' entries above are
+      // unaffected.
+      '@': resolve(root, 'apps/web/src'),
     },
   },
   // The API/agent classes use legacy NestJS decorators; tests instantiate them

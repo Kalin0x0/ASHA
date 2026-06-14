@@ -50,3 +50,23 @@ export function resolveStreamUrl(kasmId?: string): string | undefined {
   }
   return base;
 }
+
+/**
+ * Heuristic: will this stream URL fail to resolve from the user's browser?
+ * Returns true when the host is the non-public default `*.local` dev domain AND
+ * the browser is not already being served from that host. The viewer uses this
+ * to show a clear, actionable error instead of a raw browser DNS failure
+ * ("<host>'s server IP address could not be found"). Unparseable URLs return
+ * false so the iframe is still attempted rather than pre-emptively blocked.
+ */
+export function isLikelyUnreachableUrl(url: string, currentHost?: string): boolean {
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  const current = (currentHost ?? '').toLowerCase();
+  if (current && host === current) return false; // served from this host → it resolves
+  return host.endsWith('.local');
+}

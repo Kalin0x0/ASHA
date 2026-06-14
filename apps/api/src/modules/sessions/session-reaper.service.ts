@@ -27,6 +27,34 @@ export class SessionReaperService {
   }
 
   /**
+   * Fail launches that never reached RUNNING within the launch timeout
+   * (`CHISTA_LAUNCH_TIMEOUT_SECONDS`, default 300s). Without this a session with
+   * no available agent — or whose agent never reports back (slow image pull /
+   * weak connection) — would sit in REQUESTED/SCHEDULED/PROVISIONING forever and
+   * the viewer would spin indefinitely. Runs more often than the hourly caps.
+   */
+  @Interval('session-launch-reaper', 30_000)
+  async reapStuckLaunches(): Promise<number> {
+    const secs = Number(process.env.CHISTA_LAUNCH_TIMEOUT_SECONDS ?? 300);
+    if (!Number.isFinite(secs) || secs <= 0) return 0;
+    const cutoff = new Date(Date.now() - secs * 1000);
+    const stuck = await prisma.session.findMany({
+      where: {
+        status: { in: ['REQUESTED', 'SCHEDULED', 'PROVISIONING'] },
+        createdAt: { lt: cutoff },
+      },
+      select: { id: true, orgId: true, zoneId: true, containerId: true },
+    });
+    for (const s of stuck) {
+      await this.sessions.failStuckLaunch(s, 'launch_timeout');
+    }
+    if (stuck.length > 0) {
+      this.logger.warn(`Failed ${stuck.length} launch(es) stuck past ${secs}s`);
+    }
+    return stuck.length;
+  }
+
+  /**
    * Terminate sessions that have been PAUSED longer than the configured cap
    * (`CHISTA_MAX_PAUSED_MINUTES`). A paused container retains disk + RAM state
    * but still holds host resources, so deployments can bound how long that

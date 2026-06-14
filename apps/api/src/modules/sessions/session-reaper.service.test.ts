@@ -14,11 +14,14 @@ import { SessionReaperService } from './session-reaper.service';
 
 describe('SessionReaperService', () => {
   let svc: SessionReaperService;
-  let sessions: { destroy: ReturnType<typeof vi.fn> };
+  let sessions: { destroy: ReturnType<typeof vi.fn>; failStuckLaunch: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    sessions = { destroy: vi.fn().mockResolvedValue(undefined) };
+    sessions = {
+      destroy: vi.fn().mockResolvedValue(undefined),
+      failStuckLaunch: vi.fn().mockResolvedValue(undefined),
+    };
     svc = new SessionReaperService(sessions as never);
   });
 
@@ -106,5 +109,36 @@ describe('SessionReaperService', () => {
 
     expect(n).toBe(0);
     expect(prismaMock.session.findMany).not.toHaveBeenCalled();
+  });
+
+  it('fails launches stuck in a pre-RUNNING state past the launch timeout', async () => {
+    process.env.CHISTA_LAUNCH_TIMEOUT_SECONDS = '300';
+    prismaMock.session.findMany.mockResolvedValueOnce([
+      { id: 'stuck1', orgId: 'o1', zoneId: 'z1', containerId: null },
+      { id: 'stuck2', orgId: 'o1', zoneId: 'z1', containerId: 'c2' },
+    ]);
+
+    const n = await svc.reapStuckLaunches();
+
+    expect(n).toBe(2);
+    expect(sessions.failStuckLaunch).toHaveBeenCalledWith(expect.objectContaining({ id: 'stuck1' }), 'launch_timeout');
+    expect(sessions.failStuckLaunch).toHaveBeenCalledWith(expect.objectContaining({ id: 'stuck2' }), 'launch_timeout');
+    expect(prismaMock.session.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: ['REQUESTED', 'SCHEDULED', 'PROVISIONING'] },
+          createdAt: { lt: expect.any(Date) },
+        }),
+      }),
+    );
+    delete process.env.CHISTA_LAUNCH_TIMEOUT_SECONDS;
+  });
+
+  it('skips stuck-launch reaping when the timeout is disabled (<= 0)', async () => {
+    process.env.CHISTA_LAUNCH_TIMEOUT_SECONDS = '0';
+    const n = await svc.reapStuckLaunches();
+    expect(n).toBe(0);
+    expect(prismaMock.session.findMany).not.toHaveBeenCalled();
+    delete process.env.CHISTA_LAUNCH_TIMEOUT_SECONDS;
   });
 });
