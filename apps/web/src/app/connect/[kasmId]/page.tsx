@@ -1,12 +1,26 @@
 'use client';
 
 import Guacamole, { type Client as GuacClient } from 'guacamole-common-js';
-import { ArrowLeft, ClipboardPaste, Loader2, Maximize2, MonitorX, Power, RefreshCw, Settings, Wifi } from 'lucide-react';
+import {
+  ArrowLeft,
+  ClipboardPaste,
+  Command,
+  Gauge,
+  LayoutGrid,
+  Loader2,
+  Maximize2,
+  MonitorX,
+  Power,
+  RefreshCw,
+  Wifi,
+  X,
+} from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getAccessToken } from '@/lib/api/auth-store';
+import { cn } from '@/lib/utils';
 
 // X11 keysyms for the control-menu shortcuts.
 const KEYSYM = { CTRL: 0xffe3, ALT: 0xffe9, DEL: 0xffff, V: 0x0076 } as const;
@@ -23,6 +37,7 @@ export default function ConnectPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<GuacClient | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
   // Set while connected: pushes a string to the remote clipboard (local → remote).
   const sendClipboardRef = useRef<((text: string) => void) | null>(null);
   const [state, setState] = useState<ViewState>('connecting');
@@ -272,41 +287,19 @@ export default function ConnectPage() {
         <span className="hidden font-display text-sm font-medium tracking-tight sm:inline">Remote desktop</span>
         <StatusPill state={state} />
         <div className="ml-auto flex items-center gap-1.5">
-          {state === 'connected' && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => void pasteToRemote()}
-                title="Paste local clipboard to the remote (Ctrl+V)"
-                aria-label="Paste to remote"
-              >
-                <ClipboardPaste className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={sendCtrlAltDel}
-                title="Send Ctrl+Alt+Del to the remote"
-                className="font-mono text-[11px]"
-              >
-                Ctrl+Alt+Del
-              </Button>
-              <Button variant="ghost" size="icon-sm" onClick={toggleFullscreen} title="Fullscreen" aria-label="Fullscreen">
-                <Maximize2 className="size-4" />
-              </Button>
-            </>
-          )}
-          <SettingsMenu perfMode={perfMode} onToggle={togglePerf} />
           {(state === 'disconnected' || state === 'error') && (
             <Button variant="outline" size="sm" onClick={reconnect}>
               <RefreshCw className="size-3.5" />
-              Reconnect
+              Neu verbinden
             </Button>
           )}
-          <Button variant="destructive" size="sm" onClick={disconnect} title="Disconnect">
+          <Button variant="ghost" size="sm" onClick={() => setPanelOpen((o) => !o)} aria-expanded={panelOpen}>
+            <LayoutGrid className="size-4" />
+            <span className="hidden sm:inline">Control Panel</span>
+          </Button>
+          <Button variant="destructive" size="sm" onClick={disconnect} title="Sitzung beenden">
             <Power className="size-3.5" />
-            <span className="hidden sm:inline">End</span>
+            <span className="hidden sm:inline">Beenden</span>
           </Button>
         </div>
       </header>
@@ -321,68 +314,200 @@ export default function ConnectPage() {
         <div ref={screenRef} className="relative isolate z-0 grid h-full w-full place-items-center [&_canvas]:block" />
         {state !== 'connected' && <Overlay state={state} errMsg={errMsg} onRetry={reconnect} />}
       </main>
+
+      <ControlPanel
+        open={panelOpen}
+        onOpen={() => setPanelOpen(true)}
+        onClose={() => setPanelOpen(false)}
+        connected={state === 'connected'}
+        perfMode={perfMode}
+        onPaste={() => void pasteToRemote()}
+        onCtrlAltDel={sendCtrlAltDel}
+        onFullscreen={toggleFullscreen}
+        onTogglePerf={togglePerf}
+        onReconnect={reconnect}
+        onWorkspaces={() => router.push('/')}
+        onEnd={disconnect}
+      />
     </div>
   );
 }
 
-function SettingsMenu({ perfMode, onToggle }: { perfMode: boolean; onToggle: () => void }) {
-  const [open, setOpen] = useState(false);
+/**
+ * Kasm-style slide-out Control Panel for the remote-desktop viewer. A right-edge
+ * tab opens a panel of controls that all act on the live guacamole client, so
+ * every button works: clipboard paste, Ctrl+Alt+Del, fullscreen, streaming
+ * quality (performance mode), reconnect, back to workspaces, and end session.
+ */
+function ControlPanel({
+  open,
+  onOpen,
+  onClose,
+  connected,
+  perfMode,
+  onPaste,
+  onCtrlAltDel,
+  onFullscreen,
+  onTogglePerf,
+  onReconnect,
+  onWorkspaces,
+  onEnd,
+}: {
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  connected: boolean;
+  perfMode: boolean;
+  onPaste: () => void;
+  onCtrlAltDel: () => void;
+  onFullscreen: () => void;
+  onTogglePerf: () => void;
+  onReconnect: () => void;
+  onWorkspaces: () => void;
+  onEnd: () => void;
+}) {
   return (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Anzeige-Einstellungen"
-        aria-expanded={open}
+    <>
+      {/* Collapsed right-edge tab (always reachable) */}
+      {!open && (
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label="Control Panel öffnen"
+          className="absolute end-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-2 rounded-s-xl border border-e-0 border-border-subtle bg-[var(--surface-1)] px-2 py-3 text-muted-foreground shadow-[var(--shadow-lifted)] transition-colors hover:text-foreground ring-gold-focus"
+        >
+          <LayoutGrid className="size-4 text-gold-300" />
+          <span className="rotate-180 text-[10px] font-medium uppercase tracking-wider [writing-mode:vertical-rl]">
+            Control Panel
+          </span>
+        </button>
+      )}
+
+      {/* Slide-out panel */}
+      <aside
+        aria-hidden={!open}
+        className={cn(
+          'absolute end-0 top-0 z-50 flex h-full w-[300px] max-w-[85vw] flex-col border-s border-border-subtle bg-[var(--surface-1)] shadow-[var(--shadow-lifted)] transition-transform duration-300 ease-out',
+          open ? 'translate-x-0' : 'translate-x-full',
+        )}
       >
-        <Settings className="size-4" />
-      </Button>
-      {open && (
-        <>
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border-subtle px-4">
+          <span className="font-display text-base font-semibold">Control Panel</span>
           <button
             type="button"
-            aria-hidden
-            tabIndex={-1}
-            className="fixed inset-0 z-40 cursor-default"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-border-subtle bg-[var(--surface-1)] p-1.5 shadow-2xl shadow-black/50">
-            <p className="px-2.5 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Anzeige
-            </p>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={perfMode}
-              onClick={() => {
-                onToggle();
-                setOpen(false);
-              }}
-              className="group flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(212,175,55,0.5)]"
-            >
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-sm font-medium">Performance-Modus</span>
-                <span className="text-xs leading-snug text-muted-foreground">
-                  Windows-Optimierung: Wallpaper &amp; Effekte aus — schneller bei langsamer Verbindung
-                </span>
-              </span>
-              <span
-                className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
-                  perfMode ? 'bg-gold-500' : 'bg-secondary'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-transform ${
-                    perfMode ? 'translate-x-[18px]' : 'translate-x-0.5'
-                  }`}
-                />
-              </span>
-            </button>
+            onClick={onClose}
+            aria-label="Schließen"
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground ring-gold-focus"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3">
+          <div className="grid grid-cols-3 gap-2">
+            <QuickTile icon={ClipboardPaste} label="Einfügen" onClick={onPaste} disabled={!connected} />
+            <QuickTile icon={Command} label="Strg+Alt+Entf" onClick={onCtrlAltDel} disabled={!connected} />
+            <QuickTile icon={Maximize2} label="Vollbild" onClick={onFullscreen} />
           </div>
-        </>
+
+          <div className="mt-3 space-y-1.5">
+            <PanelRow
+              icon={Gauge}
+              title="Streaming-Qualität"
+              subtitle={perfMode ? 'Performance-Modus: an' : 'Volle Qualität'}
+              onClick={onTogglePerf}
+              toggle={perfMode}
+            />
+            <PanelRow icon={RefreshCw} title="Neu verbinden" subtitle="Sitzung neu aufbauen" onClick={onReconnect} />
+            <PanelRow icon={LayoutGrid} title="Arbeitsbereich" subtitle="Diese Sitzung verlassen" onClick={onWorkspaces} />
+            <PanelRow
+              icon={Power}
+              title="Sitzung beenden"
+              subtitle="Verbindung trennen"
+              onClick={onEnd}
+              destructive
+            />
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function QuickTile({
+  icon: Icon,
+  label,
+  onClick,
+  disabled = false,
+}: {
+  icon: typeof ClipboardPaste;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'flex flex-col items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-[var(--surface-2)] px-2 py-3 text-center transition-colors ring-gold-focus',
+        disabled ? 'cursor-not-allowed opacity-40' : 'hover:border-[rgba(212,175,55,0.4)] hover:text-foreground',
       )}
-    </div>
+    >
+      <Icon className="size-5 text-gold-300" />
+      <span className="text-[10px] font-medium leading-tight">{label}</span>
+    </button>
+  );
+}
+
+function PanelRow({
+  icon: Icon,
+  title,
+  subtitle,
+  onClick,
+  toggle,
+  destructive = false,
+}: {
+  icon: typeof ClipboardPaste;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+  toggle?: boolean;
+  destructive?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center gap-3 rounded-lg border border-border-subtle bg-[var(--surface-2)] px-3 py-2.5 text-start transition-colors ring-gold-focus',
+        destructive ? 'hover:border-destructive/50' : 'hover:border-[rgba(212,175,55,0.4)]',
+      )}
+    >
+      <span
+        className={cn(
+          'flex size-9 shrink-0 items-center justify-center rounded-md',
+          destructive ? 'bg-destructive/15 text-destructive' : 'bg-gold-500/10 text-gold-300',
+        )}
+      >
+        <Icon className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">{title}</span>
+        <span className="block truncate text-[11px] text-muted-foreground">{subtitle}</span>
+      </span>
+      {toggle !== undefined && (
+        <span className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors', toggle ? 'bg-gold-500' : 'bg-secondary')}>
+          <span
+            className={cn(
+              'absolute top-0.5 size-4 rounded-full bg-white shadow transition-transform',
+              toggle ? 'translate-x-[18px]' : 'translate-x-0.5',
+            )}
+          />
+        </span>
+      )}
+    </button>
   );
 }
 
