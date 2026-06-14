@@ -4,5 +4,8 @@
   "offlineBadge": "Offline — showing cached data",
   "offlineTitle": "You're offline",
   "offlineBody": "Chista can't reach the network right now. Reconnect to load fresh data — pages you've already opened may still be available from the cache.",
-  "retry": "Try again"
+  "retry": "Try again",
+  "updateTitle": "Update available",
+  "updateBody": "A new version of Chista is ready.",
+  "reload": "Reload"
 }

@@ -8,9 +8,10 @@
  *     it happens to be cached. We never proactively cache API responses, so no
  *     authenticated data is written to disk.
  *
- * Bump VERSION to roll the caches on a new release.
+ * Bump VERSION on a release to roll the caches and trigger the in-app
+ * "update available" prompt for installed users.
  */
-const VERSION = 'chista-v1';
+const VERSION = 'chista-v2';
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = '/offline';
