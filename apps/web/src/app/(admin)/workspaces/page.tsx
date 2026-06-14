@@ -1,6 +1,6 @@
 'use client';
 
-import { Container, Loader2, Plus, Server } from 'lucide-react';
+import { Container, Loader2, Pencil, Plus, Server, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -17,12 +17,36 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input, Label } from '@/components/ui/input';
-import { useCreateWorkspace, useLaunchSession, useServers, useWorkspaces, useZones } from '@/lib/hooks';
-import type { WorkspaceType } from '@/lib/types';
+import {
+  useCreateWorkspace,
+  useDeleteWorkspace,
+  useLaunchSession,
+  useServers,
+  useUpdateWorkspace,
+  useWorkspaces,
+  useZones,
+} from '@/lib/hooks';
+import type { Workspace, WorkspaceType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const FIELD =
   'h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2.5 text-sm outline-none ring-gold-focus';
+
+const blankForm = {
+  type: 'CONTAINER' as WorkspaceType,
+  friendlyName: '',
+  name: '',
+  description: '',
+  category: '',
+  iconUrl: '',
+  dockerImage: '',
+  serverId: '',
+  zoneId: '',
+  cores: '2',
+  memGb: '2',
+  gpu: '0',
+  enabled: true,
+};
 
 export default function WorkspacesPage() {
   const t = useTranslations('workspaces');
@@ -32,71 +56,128 @@ export default function WorkspacesPage() {
   const zones = useZones();
   const launch = useLaunchSession();
   const createWorkspace = useCreateWorkspace();
+  const updateWorkspace = useUpdateWorkspace();
+  const deleteWorkspace = useDeleteWorkspace();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [launchingId, setLaunchingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const blankForm = {
-    type: 'CONTAINER' as WorkspaceType,
-    friendlyName: '',
-    name: '',
-    description: '',
-    category: '',
-    iconUrl: '',
-    dockerImage: '',
-    serverId: '',
-    zoneId: '',
-    cores: '2',
-    memGb: '2',
-    gpu: '0',
-  };
+  const [deleting, setDeleting] = useState<Workspace | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [form, setForm] = useState(blankForm);
   const [customCat, setCustomCat] = useState(false);
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
   const selectedServer = servers.find((s) => s.id === form.serverId);
-  // Existing categories to choose from (instead of free-typing); "New…" reveals
-  // a text field for an unseen category.
+  const editing = editingId !== null;
+
   const categoryOptions = useMemo(
     () => Array.from(new Set(workspaces.map((w) => w.category).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
     [workspaces],
   );
 
-  const onCreate = async (e: React.FormEvent) => {
+  const closeDialog = (next: boolean) => {
+    setOpen(next);
+    if (!next) {
+      setEditingId(null);
+      setForm(blankForm);
+      setCustomCat(false);
+    }
+  };
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(blankForm);
+    setCustomCat(false);
+    setOpen(true);
+  };
+
+  const openEdit = (id: string) => {
+    const ws = workspaces.find((w) => w.id === id);
+    if (!ws) return;
+    setEditingId(ws.id);
+    setForm({
+      type: ws.type,
+      friendlyName: ws.friendlyName,
+      name: ws.name,
+      description: ws.description,
+      category: ws.category,
+      iconUrl: ws.iconUrl ?? '',
+      dockerImage: ws.dockerImage,
+      serverId: '',
+      zoneId: '',
+      cores: String(ws.cores || 2),
+      memGb: String(ws.memMb ? ws.memMb / 1024 : 2),
+      gpu: String(ws.gpu ?? 0),
+      enabled: ws.enabled,
+    });
+    setCustomCat(false);
+    setOpen(true);
+  };
+
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const friendlyName = form.friendlyName.trim();
     if (!friendlyName) {
       toast.error(t('catalog.create.nameRequired'));
       return;
     }
-    if (form.type === 'SERVER' && !form.serverId) {
+    if (!editing && form.type === 'SERVER' && !form.serverId) {
       toast.error(t('catalog.create.serverRequired'));
       return;
     }
     setSubmitting(true);
     try {
-      const isContainer = form.type === 'CONTAINER';
-      await createWorkspace({
-        friendlyName,
-        name: form.name.trim() || undefined,
-        description: form.description.trim() || undefined,
-        iconUrl: form.iconUrl.trim() || undefined,
-        type: form.type,
-        category: form.category.trim() || undefined,
-        dockerImage: isContainer ? form.dockerImage.trim() || undefined : undefined,
-        serverId: form.type === 'SERVER' ? form.serverId || undefined : undefined,
-        zoneId: form.zoneId || undefined,
-        cores: isContainer ? Number(form.cores) || undefined : undefined,
-        memMb: isContainer && form.memGb ? Math.round(Number(form.memGb) * 1024) || undefined : undefined,
-        gpu: isContainer ? Number(form.gpu) || 0 : 0,
-      });
-      toast.success(t('catalog.toasts.created', { name: friendlyName }));
-      setForm(blankForm);
-      setOpen(false);
+      if (editing) {
+        await updateWorkspace(editingId!, {
+          friendlyName,
+          description: form.description,
+          category: form.category.trim() || undefined,
+          iconUrl: form.iconUrl,
+          cores: Number(form.cores) || undefined,
+          memMb: form.memGb ? Math.round(Number(form.memGb) * 1024) || undefined : undefined,
+          gpu: Number(form.gpu) || 0,
+          enabled: form.enabled,
+        });
+        toast.success(t('catalog.toasts.updated', { name: friendlyName }));
+      } else {
+        const isContainer = form.type === 'CONTAINER';
+        await createWorkspace({
+          friendlyName,
+          name: form.name.trim() || undefined,
+          description: form.description.trim() || undefined,
+          iconUrl: form.iconUrl.trim() || undefined,
+          type: form.type,
+          category: form.category.trim() || undefined,
+          dockerImage: isContainer ? form.dockerImage.trim() || undefined : undefined,
+          serverId: form.type === 'SERVER' ? form.serverId || undefined : undefined,
+          zoneId: form.zoneId || undefined,
+          cores: isContainer ? Number(form.cores) || undefined : undefined,
+          memMb: isContainer && form.memGb ? Math.round(Number(form.memGb) * 1024) || undefined : undefined,
+          gpu: isContainer ? Number(form.gpu) || 0 : 0,
+        });
+        toast.success(t('catalog.toasts.created', { name: friendlyName }));
+      }
+      closeDialog(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('catalog.toasts.createFailed'));
+      toast.error(err instanceof Error ? err.message : t(editing ? 'catalog.toasts.updateFailed' : 'catalog.toasts.createFailed'));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    try {
+      await deleteWorkspace(deleting.id);
+      toast.success(t('catalog.toasts.deleted', { name: deleting.friendlyName }));
+      setDeleting(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('catalog.toasts.deleteFailed'));
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -131,7 +212,7 @@ export default function WorkspacesPage() {
         title={t('catalog.title')}
         description={t('catalog.description')}
         actions={
-          <Button size="sm" onClick={() => setOpen(true)}>
+          <Button size="sm" onClick={openCreate}>
             <Plus className="size-4" /> {t('catalog.newWorkspace')}
           </Button>
         }
@@ -168,50 +249,54 @@ export default function WorkspacesPage() {
             workspace={ws}
             onLaunch={onLaunch}
             launching={launchingId === ws.id}
+            onEdit={openEdit}
+            onDelete={(id) => setDeleting(workspaces.find((w) => w.id === id) ?? null)}
           />
         ))}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* Create / Edit dialog */}
+      <Dialog open={open} onOpenChange={closeDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="size-5 text-gold-300" /> {t('catalog.create.title')}
+              {editing ? <Pencil className="size-5 text-gold-300" /> : <Plus className="size-5 text-gold-300" />}
+              {editing ? t('catalog.edit.title') : t('catalog.create.title')}
             </DialogTitle>
-            <DialogDescription>{t('catalog.create.description')}</DialogDescription>
+            <DialogDescription>{editing ? t('catalog.edit.description') : t('catalog.create.description')}</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={onCreate} className="space-y-3">
-            {/* Machine type */}
-            <div>
-              <Label>{t('catalog.create.machineType')}</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {(
-                  [
-                    { v: 'CONTAINER' as const, icon: Container, label: t('catalog.create.types.container'), hint: t('catalog.create.types.containerHint') },
-                    { v: 'SERVER' as const, icon: Server, label: t('catalog.create.types.server'), hint: t('catalog.create.types.serverHint') },
-                  ]
-                ).map(({ v, icon: Icon, label, hint }) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => set({ type: v })}
-                    className={cn(
-                      'flex items-start gap-2.5 rounded-lg border p-3 text-start transition-colors ring-gold-focus',
-                      form.type === v
-                        ? 'border-gold-500/60 bg-gold-500/10'
-                        : 'border-border-subtle hover:border-white/25',
-                    )}
-                  >
-                    <Icon className={cn('mt-0.5 size-4 shrink-0', form.type === v ? 'text-gold-300' : 'text-muted-foreground')} />
-                    <span>
-                      <span className="block text-sm font-medium">{label}</span>
-                      <span className="block text-[11px] text-muted-foreground">{hint}</span>
-                    </span>
-                  </button>
-                ))}
+          <form onSubmit={onSubmit} className="space-y-3">
+            {/* Machine type — only when creating (type is fixed after creation) */}
+            {!editing && (
+              <div>
+                <Label>{t('catalog.create.machineType')}</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      { v: 'CONTAINER' as const, icon: Container, label: t('catalog.create.types.container'), hint: t('catalog.create.types.containerHint') },
+                      { v: 'SERVER' as const, icon: Server, label: t('catalog.create.types.server'), hint: t('catalog.create.types.serverHint') },
+                    ]
+                  ).map(({ v, icon: Icon, label, hint }) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => set({ type: v })}
+                      className={cn(
+                        'flex items-start gap-2.5 rounded-lg border p-3 text-start transition-colors ring-gold-focus',
+                        form.type === v ? 'border-gold-500/60 bg-gold-500/10' : 'border-border-subtle hover:border-white/25',
+                      )}
+                    >
+                      <Icon className={cn('mt-0.5 size-4 shrink-0', form.type === v ? 'text-gold-300' : 'text-muted-foreground')} />
+                      <span>
+                        <span className="block text-sm font-medium">{label}</span>
+                        <span className="block text-[11px] text-muted-foreground">{hint}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
@@ -225,10 +310,12 @@ export default function WorkspacesPage() {
                   onChange={(e) => set({ friendlyName: e.target.value })}
                 />
               </div>
-              <div>
-                <Label htmlFor="nw-slug">{t('catalog.create.slug')}</Label>
-                <Input id="nw-slug" dir="ltr" placeholder="windows-11" value={form.name} onChange={(e) => set({ name: e.target.value })} />
-              </div>
+              {!editing && (
+                <div>
+                  <Label htmlFor="nw-slug">{t('catalog.create.slug')}</Label>
+                  <Input id="nw-slug" dir="ltr" placeholder="windows-11" value={form.name} onChange={(e) => set({ name: e.target.value })} />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -247,15 +334,7 @@ export default function WorkspacesPage() {
                       value={form.category}
                       onChange={(e) => set({ category: e.target.value })}
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setCustomCat(false);
-                        set({ category: '' });
-                      }}
-                    >
+                    <Button type="button" variant="ghost" size="sm" onClick={() => { setCustomCat(false); set({ category: '' }); }}>
                       {tc('actions.cancel')}
                     </Button>
                   </div>
@@ -297,38 +376,18 @@ export default function WorkspacesPage() {
                   rounded="rounded-lg"
                   className="size-9 shrink-0 text-xs"
                 />
-                <Input
-                  id="nw-icon"
-                  dir="ltr"
-                  placeholder="https://…/logo.svg"
-                  value={form.iconUrl}
-                  onChange={(e) => set({ iconUrl: e.target.value })}
-                />
+                <Input id="nw-icon" dir="ltr" placeholder="https://…/logo.svg" value={form.iconUrl} onChange={(e) => set({ iconUrl: e.target.value })} />
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">{t('catalog.create.iconUrlHint')}</p>
             </div>
 
-            {/* Container-only fields */}
-            {form.type === 'CONTAINER' && (
+            {/* Docker image + zone — create-time, container only */}
+            {!editing && form.type === 'CONTAINER' && (
               <>
                 <div>
                   <Label htmlFor="nw-image">{t('catalog.create.dockerImage')}</Label>
                   <Input id="nw-image" dir="ltr" placeholder="kasmweb/brave:1.16.0" value={form.dockerImage} onChange={(e) => set({ dockerImage: e.target.value })} />
                   <p className="mt-1 text-[11px] text-muted-foreground">{t('catalog.create.dockerImageHint')}</p>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label htmlFor="nw-cpu">{t('catalog.create.vcpu')}</Label>
-                    <Input id="nw-cpu" type="number" min="1" dir="ltr" value={form.cores} onChange={(e) => set({ cores: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="nw-ram">{t('catalog.create.ramGb')}</Label>
-                    <Input id="nw-ram" type="number" min="1" step="0.5" dir="ltr" value={form.memGb} onChange={(e) => set({ memGb: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label htmlFor="nw-gpu">{t('catalog.create.gpu')}</Label>
-                    <Input id="nw-gpu" type="number" min="0" dir="ltr" value={form.gpu} onChange={(e) => set({ gpu: e.target.value })} />
-                  </div>
                 </div>
                 <div>
                   <Label htmlFor="nw-zone">{t('catalog.create.zone')}</Label>
@@ -345,8 +404,26 @@ export default function WorkspacesPage() {
               </>
             )}
 
-            {/* Server-only fields */}
-            {form.type === 'SERVER' && (
+            {/* Resources — shown for containers (create) and any workspace (edit) */}
+            {(editing || form.type === 'CONTAINER') && (
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label htmlFor="nw-cpu">{t('catalog.create.vcpu')}</Label>
+                  <Input id="nw-cpu" type="number" min="1" dir="ltr" value={form.cores} onChange={(e) => set({ cores: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="nw-ram">{t('catalog.create.ramGb')}</Label>
+                  <Input id="nw-ram" type="number" min="1" step="0.5" dir="ltr" value={form.memGb} onChange={(e) => set({ memGb: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="nw-gpu">{t('catalog.create.gpu')}</Label>
+                  <Input id="nw-gpu" type="number" min="0" dir="ltr" value={form.gpu} onChange={(e) => set({ gpu: e.target.value })} />
+                </div>
+              </div>
+            )}
+
+            {/* Server — create-time, server type only */}
+            {!editing && form.type === 'SERVER' && (
               <div>
                 <Label htmlFor="nw-server">{t('catalog.create.server')}</Label>
                 {servers.length === 0 ? (
@@ -373,16 +450,48 @@ export default function WorkspacesPage() {
               </div>
             )}
 
+            {/* Enabled toggle — edit only */}
+            {editing && (
+              <label className="flex items-center gap-2.5 rounded-lg border border-border-subtle px-3 py-2.5 text-sm">
+                <input type="checkbox" checked={form.enabled} onChange={(e) => set({ enabled: e.target.checked })} className="size-4 accent-gold-500" />
+                <span>
+                  <span className="block font-medium">{t('catalog.edit.enabled')}</span>
+                  <span className="block text-[11px] text-muted-foreground">{t('catalog.edit.enabledHint')}</span>
+                </span>
+              </label>
+            )}
+
             <DialogFooter>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              <Button type="button" variant="ghost" size="sm" onClick={() => closeDialog(false)}>
                 {tc('actions.cancel')}
               </Button>
               <Button type="submit" size="sm" disabled={submitting}>
-                {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-                {t('catalog.create.submit')}
+                {submitting ? <Loader2 className="size-3.5 animate-spin" /> : editing ? <Pencil className="size-3.5" /> : <Plus className="size-3.5" />}
+                {editing ? t('catalog.edit.submit') : t('catalog.create.submit')}
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <Dialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="size-5 text-destructive" /> {t('catalog.delete.title')}
+            </DialogTitle>
+            <DialogDescription>{t('catalog.delete.description', { name: deleting?.friendlyName ?? '' })}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setDeleting(null)}>
+              {tc('actions.cancel')}
+            </Button>
+            <Button type="button" variant="destructive" size="sm" onClick={() => void confirmDelete()} disabled={deleteBusy}>
+              {deleteBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+              {t('catalog.delete.confirm')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

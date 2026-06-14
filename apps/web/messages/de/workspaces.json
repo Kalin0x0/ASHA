@@ -40,11 +40,27 @@
       "submit": "Workspace erstellen",
       "nameRequired": "Ein Workspace-Name ist erforderlich."
     },
+    "edit": {
+      "title": "Workspace bearbeiten",
+      "description": "Name, Beschreibung, Kategorie, Symbol und Ressourcen aktualisieren.",
+      "submit": "Änderungen speichern",
+      "enabled": "Aktiviert",
+      "enabledHint": "Deaktivierte Workspaces bleiben im Katalog, können aber nicht gestartet werden."
+    },
+    "delete": {
+      "title": "Workspace löschen?",
+      "description": "{name} wird aus dem Katalog entfernt. Das kann nicht rückgängig gemacht werden.",
+      "confirm": "Löschen"
+    },
     "toasts": {
       "launchTitle": "Sitzung wird gestartet",
       "launchDescription": "Agent wird zugewiesen und Container wird gestartet.",
       "created": "Workspace {name} erstellt",
-      "createFailed": "Workspace konnte nicht erstellt werden"
+      "createFailed": "Workspace konnte nicht erstellt werden",
+      "updated": "Workspace {name} aktualisiert",
+      "updateFailed": "Workspace konnte nicht aktualisiert werden",
+      "deleted": "Workspace {name} gelöscht",
+      "deleteFailed": "Workspace konnte nicht gelöscht werden"
     }
   },
   "images": {

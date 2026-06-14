@@ -214,6 +214,16 @@ export interface CreateWorkspaceBody {
 }
 export const createWorkspace = (body: CreateWorkspaceBody) =>
   apiFetch<ApiWorkspace>('/workspaces', { method: 'POST', body });
+export type UpdateWorkspaceBody = Partial<
+  Pick<CreateWorkspaceBody, 'friendlyName' | 'description' | 'iconUrl' | 'coresLimit' | 'memLimitMb' | 'gpuCount'> & {
+    categories: string[];
+    enabled: boolean;
+  }
+>;
+export const updateWorkspace = (id: string, body: UpdateWorkspaceBody) =>
+  apiFetch<ApiWorkspace>(`/workspaces/${id}`, { method: 'PATCH', body });
+export const deleteWorkspace = (id: string) =>
+  apiFetch<{ ok: true }>(`/workspaces/${id}`, { method: 'DELETE' });
 export const getAgents = () => apiFetch<ApiAgent[]>('/agents');
 export const getZones = () => apiFetch<ApiZone[]>('/zones');
 export const getUsers = () => apiFetch<ApiUser[]>('/users');

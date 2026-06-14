@@ -31,3 +31,5 @@ export const useTerminateSession = impl.useTerminateSession;
 export const useLaunchSession = impl.useLaunchSession;
 export const useCreateUser = impl.useCreateUser;
 export const useCreateWorkspace = impl.useCreateWorkspace;
+export const useUpdateWorkspace = impl.useUpdateWorkspace;
+export const useDeleteWorkspace = impl.useDeleteWorkspace;

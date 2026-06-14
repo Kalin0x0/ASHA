@@ -40,11 +40,27 @@
       "submit": "Create workspace",
       "nameRequired": "A workspace name is required."
     },
+    "edit": {
+      "title": "Edit workspace",
+      "description": "Update the name, description, category, icon and resources.",
+      "submit": "Save changes",
+      "enabled": "Enabled",
+      "enabledHint": "Disabled workspaces stay in the catalog but can't be launched."
+    },
+    "delete": {
+      "title": "Delete workspace?",
+      "description": "“{name}” will be removed from the catalog. This can't be undone.",
+      "confirm": "Delete"
+    },
     "toasts": {
       "launchTitle": "Session launching",
       "launchDescription": "Allocating an agent and starting the container.",
       "created": "Workspace {name} created",
-      "createFailed": "Could not create the workspace"
+      "createFailed": "Could not create the workspace",
+      "updated": "Workspace {name} updated",
+      "updateFailed": "Could not update the workspace",
+      "deleted": "Workspace {name} deleted",
+      "deleteFailed": "Could not delete the workspace"
     }
   },
   "images": {

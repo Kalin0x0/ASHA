@@ -4,12 +4,13 @@ import { cn } from '@/lib/utils';
 
 /**
  * App identity tile for the launcher. Priority:
- *  1. a custom `iconUrl` (uploaded / pasted by an admin) → shown as-is,
- *  2. a matched brand glyph (Firefox, Windows, Ubuntu, …) → white on a
- *     brand-coloured tile (CSS mask),
+ *  1. a custom `iconUrl` (admin-provided),
+ *  2. a matched brand logo (Firefox, Windows, Ubuntu, …),
  *  3. the initials monogram (fallback).
  *
- * `className` controls size + rounding (e.g. "size-16 rounded-2xl").
+ * The logo is a real colour SVG/image rendered on a light tile (so any logo —
+ * light or dark — stays visible on the dark card hero). `className` controls
+ * size + rounding (e.g. "size-16 rounded-2xl").
  */
 export function AppIcon({
   name,
@@ -26,41 +27,22 @@ export function AppIcon({
   className?: string;
   rounded?: string;
 }) {
-  if (iconUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={iconUrl}
-        alt=""
-        aria-hidden
-        className={cn('object-contain', rounded, className)}
-      />
-    );
-  }
+  const resolved = resolveAppIcon(name, dockerImage, category);
+  const src = iconUrl?.trim() || resolved?.src;
 
-  const icon = resolveAppIcon(name, dockerImage, category);
-  if (!icon) return <Monogram name={name} className={className} rounded={rounded} />;
+  if (!src) return <Monogram name={name} className={className} rounded={rounded} />;
 
   return (
     <span
       aria-hidden
-      className={cn('inline-flex shrink-0 items-center justify-center', rounded, className)}
-      style={{ backgroundColor: icon.color }}
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center overflow-hidden bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_8px_24px_-8px_rgba(0,0,0,0.55)]',
+        rounded,
+        className,
+      )}
     >
-      <span
-        className="block size-[56%]"
-        style={{
-          backgroundColor: '#fff',
-          WebkitMaskImage: `url('${icon.src}')`,
-          maskImage: `url('${icon.src}')`,
-          WebkitMaskRepeat: 'no-repeat',
-          maskRepeat: 'no-repeat',
-          WebkitMaskPosition: 'center',
-          maskPosition: 'center',
-          WebkitMaskSize: 'contain',
-          maskSize: 'contain',
-        }}
-      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" aria-hidden className="size-[62%] object-contain" />
     </span>
   );
 }

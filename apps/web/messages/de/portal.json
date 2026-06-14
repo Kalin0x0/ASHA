@@ -26,7 +26,10 @@
     "launchAria": "{name} starten",
     "unavailableAria": "{name} (nicht verfügbar)",
     "addFavorite": "Zu Favoriten hinzufügen",
-    "removeFavorite": "Aus Favoriten entfernen"
+    "removeFavorite": "Aus Favoriten entfernen",
+    "actions": "Aktionen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen"
   },
   "mySessions": {
     "title": "Meine Sitzungen",

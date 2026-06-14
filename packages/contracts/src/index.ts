@@ -113,6 +113,7 @@ export const updateWorkspaceSchema = z
     name: z.string().min(1),
     friendlyName: z.string().min(1),
     description: z.string(),
+    iconUrl: z.string(),
     type: z.enum(['CONTAINER', 'SERVER', 'REMOTE_APP', 'VM', 'LINK']),
     imageId: z.string(),
     serverId: z.string().nullable(),

@@ -6,6 +6,7 @@ import type {
   DashboardSnapshot,
   SessionRow,
   SessionStatus,
+  UpdateWorkspaceInput,
   UserRow,
   Workspace,
 } from '@/lib/types';
@@ -253,6 +254,26 @@ class MockStore {
     this.data.workspaces = [ws, ...this.data.workspaces];
     this.emit();
     return ws;
+  }
+
+  updateWorkspace(id: string, patch: UpdateWorkspaceInput): Workspace {
+    const ws = this.data.workspaces.find((w) => w.id === id);
+    if (!ws) throw new Error('Workspace not found');
+    if (patch.friendlyName !== undefined) ws.friendlyName = patch.friendlyName.trim() || ws.friendlyName;
+    if (patch.description !== undefined) ws.description = patch.description;
+    if (patch.category !== undefined) ws.category = patch.category.trim() || ws.category;
+    if (patch.iconUrl !== undefined) ws.iconUrl = patch.iconUrl.trim() || undefined;
+    if (patch.cores !== undefined) ws.cores = patch.cores;
+    if (patch.memMb !== undefined) ws.memMb = patch.memMb;
+    if (patch.gpu !== undefined) ws.gpu = patch.gpu;
+    if (patch.enabled !== undefined) ws.enabled = patch.enabled;
+    this.emit();
+    return ws;
+  }
+
+  deleteWorkspace(id: string): void {
+    this.data.workspaces = this.data.workspaces.filter((w) => w.id !== id);
+    this.emit();
   }
 
   getDashboard(): DashboardSnapshot {

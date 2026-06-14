@@ -26,7 +26,10 @@
     "launchAria": "اجرای {name}",
     "unavailableAria": "{name} (در دسترس نیست)",
     "addFavorite": "افزودن به علاقه‌مندی‌ها",
-    "removeFavorite": "حذف از علاقه‌مندی‌ها"
+    "removeFavorite": "حذف از علاقه‌مندی‌ها",
+    "actions": "اقدامات",
+    "edit": "ویرایش",
+    "delete": "حذف"
   },
   "mySessions": {
     "title": "نشست‌های من",
