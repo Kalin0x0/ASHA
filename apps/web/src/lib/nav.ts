@@ -34,6 +34,7 @@ import {
   MonitorPlay,
   Network,
   Palette,
+  Rocket,
   Route,
   ScrollText,
   Send,
@@ -165,6 +166,7 @@ export const navGroups: NavGroup[] = [
     key: 'developer',
     icon: Code2,
     items: [
+      { key: 'updates', href: '/developer/updates', icon: Rocket },
       { key: 'apiKeys', href: '/developer/api-keys', icon: KeyRound },
       { key: 'webhooks', href: '/developer/webhooks', icon: Webhook },
       { key: 'apiDocs', href: '/developer/api-docs', icon: BookOpen },
