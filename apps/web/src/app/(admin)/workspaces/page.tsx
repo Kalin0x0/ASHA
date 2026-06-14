@@ -50,8 +50,15 @@ export default function WorkspacesPage() {
     gpu: '0',
   };
   const [form, setForm] = useState(blankForm);
+  const [customCat, setCustomCat] = useState(false);
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
   const selectedServer = servers.find((s) => s.id === form.serverId);
+  // Existing categories to choose from (instead of free-typing); "New…" reveals
+  // a text field for an unseen category.
+  const categoryOptions = useMemo(
+    () => Array.from(new Set(workspaces.map((w) => w.category).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
+    [workspaces],
+  );
 
   const onCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,7 +235,50 @@ export default function WorkspacesPage() {
               </div>
               <div>
                 <Label htmlFor="nw-cat">{t('catalog.create.category')}</Label>
-                <Input id="nw-cat" placeholder={t('catalog.create.categoryPlaceholder')} value={form.category} onChange={(e) => set({ category: e.target.value })} />
+                {customCat ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="nw-cat"
+                      autoFocus
+                      placeholder={t('catalog.create.categoryPlaceholder')}
+                      value={form.category}
+                      onChange={(e) => set({ category: e.target.value })}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCustomCat(false);
+                        set({ category: '' });
+                      }}
+                    >
+                      {tc('actions.cancel')}
+                    </Button>
+                  </div>
+                ) : (
+                  <select
+                    id="nw-cat"
+                    className={FIELD}
+                    value={form.category}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') {
+                        setCustomCat(true);
+                        set({ category: '' });
+                      } else {
+                        set({ category: e.target.value });
+                      }
+                    }}
+                  >
+                    <option value="">{t('catalog.create.categoryPlaceholder')}</option>
+                    {categoryOptions.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                    <option value="__new__">{t('catalog.create.newCategory')}</option>
+                  </select>
+                )}
               </div>
             </div>
 

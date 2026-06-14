@@ -71,6 +71,42 @@ describe('SessionsService.create', () => {
     prismaMock.session.count.mockResolvedValue(0);
   });
 
+  it('delegates a server-backed workspace to the server connect path (no container)', async () => {
+    const serversMock = {
+      connect: vi.fn().mockResolvedValue({
+        sessionId: 'srv-sess',
+        kasmId: 'k2',
+        connectionUrl: 'https://x/session/k2/',
+        connectionType: 'GUAC_RDP',
+      }),
+    };
+    // servers is the last (8th) optional constructor arg.
+    svc = new SessionsService(
+      scheduler as never,
+      redis as never,
+      audit as never,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      serversMock as never,
+    );
+    prismaMock.workspace.findUnique.mockResolvedValue({
+      ...WORKSPACE,
+      id: 'ws-win',
+      type: 'SERVER',
+      serverId: 'srv1',
+      image: null,
+    });
+    prismaMock.session.findUnique.mockResolvedValue({ id: 'srv-sess', kasmId: 'k2', connectionType: 'GUAC_RDP' });
+
+    const result = await svc.create(USER, { workspaceId: 'ws-win' });
+
+    expect(serversMock.connect).toHaveBeenCalledWith(USER, 'srv1');
+    expect(scheduler.pickAgent).not.toHaveBeenCalled(); // never scheduled as a container
+    expect(result).toMatchObject({ id: 'srv-sess' });
+  });
+
   it('creates → schedules → dispatches provision on the zone channel when an agent is free', async () => {
     scheduler.pickAgent.mockResolvedValue({ id: 'agent1' });
 

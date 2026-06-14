@@ -17,6 +17,7 @@ import { RedisService } from '../../common/redis.service';
 import { resolveTokens, type TokenContext } from '../../common/tokens';
 import { ConnectivityRenderService } from '../connectivity/connectivity-render.service';
 import { LicensingService } from '../licensing/licensing.service';
+import { ServersService } from '../servers/servers.service';
 import { StorageService } from '../storage/storage.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { SchedulerService } from './scheduler.service';
@@ -40,6 +41,9 @@ export class SessionsService {
     @Optional() private readonly licensing?: LicensingService,
     // Optional: when present, enabled cloud StorageMappings mount via rclone sidecars.
     @Optional() private readonly storage?: StorageService,
+    // Optional: opens server-backed (RDP/VNC/SSH) sessions for non-container
+    // workspaces by reusing the fixed-server connect path.
+    @Optional() private readonly servers?: ServersService,
   ) {}
 
   async create(user: AuthUser, dto: CreateSessionDto) {
@@ -55,15 +59,22 @@ export class SessionsService {
     });
     if (!workspace || !workspace.enabled) throw new NotFoundException('Workspace not available');
 
-    // Container launch is wired end-to-end. Server/VM/remote-app workspaces are
-    // created + manageable, but bridging their live session through the
-    // connection-proxy (RDP/VNC/SSH) is a separate step — fail clearly rather
-    // than mis-provisioning a container for them. (A missing type is legacy =
-    // container.)
+    // Server-backed workspaces (Windows desktops, etc.) connect to a fixed
+    // RDP/VNC/SSH host via the connection-proxy — NOT a container. Reuse the
+    // server connect path so "launch from My Workspace" behaves like a Static
+    // Server. (A missing type is legacy = container.)
     if (workspace.type && workspace.type !== 'CONTAINER') {
-      throw new BadRequestException(
-        `Launching ${workspace.type} workspaces from here is not supported yet.`,
-      );
+      if (!workspace.serverId) {
+        throw new BadRequestException('This workspace has no server configured. Edit it and choose a server.');
+      }
+      if (!this.servers) throw new BadRequestException('Server connections are unavailable.');
+      const conn = await this.servers.connect(user, workspace.serverId);
+      await this.webhooks?.dispatch(user.orgId, 'session.created', {
+        sessionId: conn.sessionId,
+        workspaceId: workspace.id,
+        userId: user.sub,
+      });
+      return prisma.session.findUnique({ where: { id: conn.sessionId } });
     }
 
     // Zone precedence: explicit request → the workspace's preferred zone → the
