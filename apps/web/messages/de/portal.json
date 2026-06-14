@@ -45,5 +45,26 @@
     "addedToast": "{name} zu Favoriten hinzugefügt",
     "removedToast": "{name} aus Favoriten entfernt",
     "workspaceFallback": "Workspace"
+  },
+  "appearance": {
+    "trigger": "Hintergrund ändern",
+    "title": "Hintergrund",
+    "subtitle": "Personalisieren Sie Ihren Launcher",
+    "reset": "Zurücksetzen",
+    "apply": "Anwenden",
+    "customLabel": "Eigene Bild-URL",
+    "removeCustom": "Eigenes Bild entfernen",
+    "appliedToast": "Hintergrund auf {name} gesetzt",
+    "customAppliedToast": "Eigener Hintergrund angewendet",
+    "presets": {
+      "aurora": "Aurora",
+      "ember": "Glut",
+      "nebula": "Nebel",
+      "ocean": "Ozean",
+      "forest": "Wald",
+      "crimson": "Karmesin",
+      "graphite": "Graphit",
+      "void": "Leere"
+    }
   }
 }

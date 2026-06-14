@@ -26,7 +26,9 @@ const WORKSPACE_DEFS: Array<Omit<Workspace, 'activeSessions'>> = [
   { id: 'ws-gimp', name: 'gimp', friendlyName: 'GIMP', description: 'Image editing workspace.', category: 'Creative', cores: 2, memMb: 3072, gpu: 0, enabled: true, dockerImage: 'kasmweb/gimp:1.16.0', protocol: 'KASMVNC' },
   { id: 'ws-blender', name: 'blender', friendlyName: 'Blender', description: 'GPU-accelerated 3D suite.', category: 'Creative', cores: 6, memMb: 8192, gpu: 1, enabled: true, dockerImage: 'kasmweb/blender:1.16.0', protocol: 'KASMVNC' },
   { id: 'ws-libreoffice', name: 'libreoffice', friendlyName: 'LibreOffice', description: 'Office productivity suite.', category: 'Productivity', cores: 2, memMb: 2768, gpu: 0, enabled: true, dockerImage: 'kasmweb/libre-office:1.16.0', protocol: 'KASMVNC' },
-  { id: 'ws-rdp', name: 'win-rdp', friendlyName: 'Windows 11 (RDP)', description: 'Windows desktop via RDP gateway.', category: 'Desktops', cores: 4, memMb: 8192, gpu: 0, enabled: false, dockerImage: 'native/rdp', protocol: 'RDP' },
+  { id: 'ws-rdp', name: 'windows-11', friendlyName: 'Windows 11', description: 'Windows 11 desktop streamed over RDP.', category: 'Desktops', cores: 4, memMb: 8192, gpu: 0, enabled: true, dockerImage: 'native/rdp', protocol: 'RDP' },
+  { id: 'ws-win10', name: 'windows-10', friendlyName: 'Windows 10', description: 'Windows 10 desktop streamed over RDP.', category: 'Desktops', cores: 4, memMb: 6144, gpu: 0, enabled: true, dockerImage: 'native/rdp', protocol: 'RDP' },
+  { id: 'ws-winsrv', name: 'windows-server-2022', friendlyName: 'Windows Server 2022', description: 'Windows Server 2022 desktop over RDP.', category: 'Desktops', cores: 6, memMb: 8192, gpu: 0, enabled: true, dockerImage: 'native/rdp', protocol: 'RDP' },
   { id: 'ws-postman', name: 'postman', friendlyName: 'Postman', description: 'API development workspace.', category: 'Development', cores: 2, memMb: 2048, gpu: 0, enabled: true, dockerImage: 'kasmweb/postman:1.16.0', protocol: 'KASMVNC' },
 ];
 
@@ -203,7 +205,8 @@ export function buildInitialData(): MockData {
   const imageMap = new Map<string, ImageRow>();
   for (const ws of WORKSPACE_DEFS) {
     const img = ws.dockerImage;
-    if (img === 'native/rdp') continue;
+    // Native protocols (RDP/SSH to external hosts) have no container image.
+    if (img.startsWith('native/')) continue;
     const [nameAndReg = img, tag = 'latest'] = img.split(':') as [string, string?];
     const segments = nameAndReg.split('/');
     const imageName = segments[segments.length - 1] ?? nameAndReg;
