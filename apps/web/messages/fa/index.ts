@@ -13,6 +13,7 @@ import feedback from './feedback.json';
 import infrastructure from './infrastructure.json';
 import observability from './observability.json';
 import portal from './portal.json';
+import pwa from './pwa.json';
 import sessions from './sessions.json';
 import settings from './settings.json';
 import shell from './shell.json';
@@ -31,6 +32,7 @@ const messages = {
   infrastructure,
   observability,
   portal,
+  pwa,
   sessions,
   settings,
   shell,

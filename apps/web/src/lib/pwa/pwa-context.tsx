@@ -1,0 +1,90 @@
+'use client';
+
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+
+/** The non-standard install-prompt event (Chromium). */
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+interface PwaContextValue {
+  /** A deferred install prompt is available and the app isn't installed yet. */
+  canInstall: boolean;
+  /** Running as an installed standalone app. */
+  installed: boolean;
+  /** The browser reports no network connection. */
+  offline: boolean;
+  /** Show the native install prompt (no-op if unavailable). */
+  promptInstall: () => Promise<void>;
+}
+
+const FALLBACK: PwaContextValue = {
+  canInstall: false,
+  installed: false,
+  offline: false,
+  promptInstall: async () => {},
+};
+
+const PwaContext = createContext<PwaContextValue | null>(null);
+
+export function PwaProvider({ children }: { children: React.ReactNode }) {
+  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
+  const [offline, setOffline] = useState(false);
+
+  useEffect(() => {
+    // Register the service worker (production only — a SW in dev fights HMR).
+    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    setInstalled(standalone);
+    setOffline(!navigator.onLine);
+
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferred(e as BeforeInstallPromptEvent);
+    };
+    const onInstalled = () => {
+      setInstalled(true);
+      setDeferred(null);
+    };
+    const onOnline = () => setOffline(false);
+    const onOffline = () => setOffline(true);
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    window.addEventListener('appinstalled', onInstalled);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+      window.removeEventListener('appinstalled', onInstalled);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
+  const promptInstall = useCallback(async () => {
+    if (!deferred) return;
+    await deferred.prompt();
+    try {
+      await deferred.userChoice;
+    } finally {
+      setDeferred(null);
+    }
+  }, [deferred]);
+
+  return (
+    <PwaContext.Provider value={{ canInstall: Boolean(deferred) && !installed, installed, offline, promptInstall }}>
+      {children}
+    </PwaContext.Provider>
+  );
+}
+
+export function usePwa(): PwaContextValue {
+  return useContext(PwaContext) ?? FALLBACK;
+}

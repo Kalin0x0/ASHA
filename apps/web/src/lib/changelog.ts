@@ -38,6 +38,34 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.1',
+    date: '2026-06-14',
+    title: { en: 'Installable app (PWA) + offline', de: 'Installierbare App (PWA) + Offline' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Install Chista as a desktop app — an "Install app" button appears in supported browsers, and it launches in its own window.',
+          de: 'Chista als Desktop-App installieren — in unterstützten Browsern erscheint eine Schaltfläche „App installieren", und Chista startet in einem eigenen Fenster.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'Offline support: the app shell is cached so Chista keeps loading without a connection, with an offline indicator and a friendly offline page.',
+          de: 'Offline-Unterstützung: die App-Hülle wird zwischengespeichert, sodass Chista auch ohne Verbindung lädt — mit Offline-Anzeige und einer freundlichen Offline-Seite.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'Web app manifest, maskable icons and service worker — installable and launchable from the desktop / start menu.',
+          de: 'Web-App-Manifest, maskierbare Symbole und Service Worker — installierbar und vom Desktop / Startmenü aus startbar.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.0',
     date: '2026-06-14',
     title: { en: 'Native RDP client + multi-monitor', de: 'Nativer RDP-Client + Mehrere Monitore' },
