@@ -118,8 +118,25 @@ function completeInstructionsLength(s: string): number {
   return consumed;
 }
 
-export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: SessionRecord): void {
+export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: SessionRecord): void {
   const protocol = session.protocol === 'RDP' ? 'rdp' : 'vnc';
+  // Desktop size requested by the browser (its viewport `?w=&h=`) so the remote
+  // fills the window with no letterbox bars. Clamped; falls back to defaults.
+  const reqDims = (() => {
+    try {
+      const q = new URLSearchParams((req.url ?? '').split('?')[1] ?? '');
+      const pick = (raw: string | null, lo: number, hi: number, def: number) => {
+        const v = Number(raw);
+        return Number.isFinite(v) && v >= lo && v <= hi ? Math.round(v) : def;
+      };
+      return {
+        width: pick(q.get('w'), 640, 3840, DEFAULT_WIDTH),
+        height: pick(q.get('h'), 480, 2160, DEFAULT_HEIGHT),
+      };
+    } catch {
+      return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
+    }
+  })();
   const guacd = net.createConnection(GUACD_PORT, GUACD_HOST);
   const parser = new GuacamoleParser();
   // guacd → browser must be TEXT frames: guacamole-common-js's WebSocketTunnel
@@ -166,9 +183,17 @@ export function handleGuacamole(ws: WebSocket, _req: IncomingMessage, session: S
         // args = [protocolVersion, ...paramNames]
         const version = args[0] ?? 'VERSION_1_0_0';
         const paramNames = args.slice(1);
-        const values = paramNames.map((name) => resolveParam(name, session));
+        const values = paramNames.map((name) =>
+          name === 'width'
+            ? String(reqDims.width)
+            : name === 'height'
+              ? String(reqDims.height)
+              : resolveParam(name, session),
+        );
 
-        guacd.write(encodeInstruction('size', String(DEFAULT_WIDTH), String(DEFAULT_HEIGHT), String(DEFAULT_DPI)));
+        guacd.write(
+          encodeInstruction('size', String(reqDims.width), String(reqDims.height), String(DEFAULT_DPI)),
+        );
         // Declare the image/audio mimetypes guacamole-common-js can decode.
         // CRITICAL: an empty `image` tells guacd the client supports NO image
         // formats, so guacd can't encode the desktop framebuffer → black screen

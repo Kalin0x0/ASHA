@@ -33,9 +33,15 @@ export default function ConnectPage() {
     if (!kasmId || !screen) return;
 
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    // Request the remote desktop at the current viewport size so it fills the
+    // window with no letterbox bars (clamped + rounded to even pixels).
+    const clampEven = (v: number, lo: number, hi: number) =>
+      Math.max(lo, Math.min(hi, Math.round(v / 2) * 2));
+    const reqW = clampEven(screen.clientWidth || 1280, 640, 3840);
+    const reqH = clampEven(screen.clientHeight || 720, 480, 2160);
     const url = `${scheme}://${window.location.host}/proxy/session/${encodeURIComponent(
       kasmId,
-    )}?token=${encodeURIComponent(token)}`;
+    )}?token=${encodeURIComponent(token)}&w=${reqW}&h=${reqH}`;
 
     const tunnel = new Guacamole.WebSocketTunnel(url);
     const client = new Guacamole.Client(tunnel);
@@ -138,7 +144,7 @@ export default function ConnectPage() {
         </div>
       </header>
 
-      <main className="relative flex-1 overflow-hidden bg-black">
+      <main className="relative flex-1 overflow-hidden bg-anthracite-950">
         {/* The guacd display canvas mounts here. `isolate` (+ relative z-0) gives
             this subtree its own stacking context: guacamole-common-js ships the
             default desktop layer canvas with z-index:-1, which would otherwise
