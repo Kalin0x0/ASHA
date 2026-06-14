@@ -1,6 +1,8 @@
 import http from 'node:http';
 import { createLogger } from '@chista/logger';
+import jwt from 'jsonwebtoken';
 import { WebSocketServer } from 'ws';
+import { diagHtml } from './diag.js';
 import { proxyEnv } from './env.js';
 import { handleUpgrade } from './proxy.js';
 import { SessionStore } from './session-store.js';
@@ -24,6 +26,13 @@ async function main(): Promise<void> {
     if (req.url === '/') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ name: '@chista/connection-proxy', version: '0.1.0' }));
+      return;
+    }
+    // Temporary render-diagnostic page (served at https://<host>/proxy/diag).
+    if (req.url?.startsWith('/diag')) {
+      const token = jwt.sign({ sub: 'diaguser', orgId: 'htestorg' }, proxyEnv.jwtSecret, { expiresIn: '30m' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(diagHtml(token, 'htestkasm1'));
       return;
     }
     res.writeHead(404).end();
