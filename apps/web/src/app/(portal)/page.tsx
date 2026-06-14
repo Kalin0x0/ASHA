@@ -62,13 +62,18 @@ export default function PortalHome() {
 
   const onLaunch = async (id: string) => {
     setLaunchingId(id);
+    const ws = workspaces.find((w) => w.id === id);
     const session = await launch(id);
     if (!session) {
       toast.error(t('launcher.launchError'));
       setLaunchingId(null);
       return;
     }
-    router.push(`/session/${session.id}`);
+    // Server-backed workspaces (Windows desktops, etc.) connect to a fixed
+    // RDP/VNC/SSH host — open the remote-desktop viewer, just like a Static
+    // Server. Containers open the streaming (KasmVNC) viewer.
+    if (ws && ws.type !== 'CONTAINER') router.push(`/connect/${session.kasmId}`);
+    else router.push(`/session/${session.id}`);
   };
 
   const onToggleFavorite = (id: string) => {
