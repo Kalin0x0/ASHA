@@ -1,6 +1,7 @@
 import type {
   Agent,
   ActivityItem,
+  FeedbackItem,
   HistoryRow,
   ImageRow,
   RecordingRow,
@@ -71,7 +72,55 @@ export interface MockData {
   history: HistoryRow[];
   images: ImageRow[];
   recordings: RecordingRow[];
+  feedback: FeedbackItem[];
 }
+
+// Seed a few reports so the triage "memory" demonstrates the collaboration
+// thread (users file reports; admins + automated agents reply and flip status).
+const hoursAgo = (h: number) => new Date(Date.now() - h * 3600 * 1000).toISOString();
+const FEEDBACK_SEED: FeedbackItem[] = [
+  {
+    id: 'fb-1',
+    userId: 'user-3',
+    kind: 'BUG',
+    message: 'Copy/paste from my local machine into the Windows 11 desktop does not work.',
+    pageUrl: '/connect/win11-desktop-01',
+    screenshot: null,
+    status: 'FIXED',
+    notes: [
+      { author: 'agent:triage', body: 'Reproduced — RDP clipboard channel was not bridged in the viewer.', at: hoursAgo(20) },
+      { author: 'user-1', body: 'Clipboard bridge shipped; verified both directions.', at: hoursAgo(6) },
+    ],
+    createdAt: hoursAgo(26),
+    updatedAt: hoursAgo(6),
+  },
+  {
+    id: 'fb-2',
+    userId: 'user-5',
+    kind: 'FEEDBACK',
+    message: 'Love the new desktop switcher. Could the thumbnails refresh a bit more often?',
+    pageUrl: '/',
+    screenshot: null,
+    status: 'IN_PROGRESS',
+    notes: [
+      { author: 'agent:triage', body: 'Thumbnail cadence is configurable — evaluating a 15s default.', at: hoursAgo(3) },
+    ],
+    createdAt: hoursAgo(9),
+    updatedAt: hoursAgo(3),
+  },
+  {
+    id: 'fb-3',
+    userId: 'user-8',
+    kind: 'BUG',
+    message: 'The wallpaper picker only shows solid colors, I expected a photo option.',
+    pageUrl: '/',
+    screenshot: null,
+    status: 'OPEN',
+    notes: [],
+    createdAt: hoursAgo(2),
+    updatedAt: hoursAgo(2),
+  },
+];
 
 export function buildInitialData(): MockData {
   const rng = mulberry32(SEED);
@@ -247,5 +296,17 @@ export function buildInitialData(): MockData {
   // until a real session is recorded against an S3-configured deployment.
   const recordings: RecordingRow[] = [];
 
-  return { workspaces, zones, servers: SERVER_DEFS, agents, sessions, users, activity, history, images, recordings };
+  return {
+    workspaces,
+    zones,
+    servers: SERVER_DEFS,
+    agents,
+    sessions,
+    users,
+    activity,
+    history,
+    images,
+    recordings,
+    feedback: FEEDBACK_SEED.map((f) => ({ ...f, notes: [...f.notes] })),
+  };
 }

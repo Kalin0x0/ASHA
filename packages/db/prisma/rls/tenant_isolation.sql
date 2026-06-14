@@ -78,7 +78,8 @@ DECLARE
     'WebFilterConfig', 'BrowserIsolationConfig',
     'StorageMapping', 'FileMapping', 'PersistentProfile', 'VolumeMapping',
     'BannerWatermarkConfig', 'Webhook',
-    'MetricSample', 'LogForwarderConfig', 'ConfigExportBundle'
+    'MetricSample', 'LogForwarderConfig', 'ConfigExportBundle',
+    'Feedback'
   ];
 BEGIN
   FOREACH tbl IN ARRAY tables LOOP

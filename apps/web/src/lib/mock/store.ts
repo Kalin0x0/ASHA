@@ -1,11 +1,14 @@
 import { buildInitialData, type MockData } from '@/lib/mock/data';
 import { resolveStreamUrl } from '@/lib/stream';
 import type {
+  CreateFeedbackInput,
   CreateUserInput,
   CreateWorkspaceInput,
   DashboardSnapshot,
+  FeedbackItem,
   SessionRow,
   SessionStatus,
+  UpdateFeedbackInput,
   UpdateWorkspaceInput,
   UserRow,
   Workspace,
@@ -290,6 +293,45 @@ class MockStore {
   deleteWorkspace(id: string): void {
     this.data.workspaces = this.data.workspaces.filter((w) => w.id !== id);
     this.emit();
+  }
+
+  // ── Feedback / bug reports + the shared triage memory ───────────────────────
+
+  getFeedback(status?: string): FeedbackItem[] {
+    const all = this.data.feedback;
+    return status ? all.filter((f) => f.status === status) : all;
+  }
+
+  createFeedback(input: CreateFeedbackInput): FeedbackItem {
+    const message = input.message.trim();
+    if (!message) throw new Error('A message is required');
+    const item: FeedbackItem = {
+      id: `fb-${Math.floor(Math.random() * 1e6)}`,
+      userId: 'user-1',
+      kind: input.kind,
+      message,
+      pageUrl: input.pageUrl ?? null,
+      screenshot: input.screenshot ?? null,
+      status: 'OPEN',
+      notes: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.data.feedback = [item, ...this.data.feedback];
+    this.emit();
+    return item;
+  }
+
+  updateFeedback(id: string, patch: UpdateFeedbackInput): FeedbackItem {
+    const item = this.data.feedback.find((f) => f.id === id);
+    if (!item) throw new Error('Feedback not found');
+    if (patch.note?.trim()) {
+      item.notes = [...item.notes, { author: 'user-1', body: patch.note.trim(), at: new Date().toISOString() }];
+    }
+    if (patch.status) item.status = patch.status;
+    item.updatedAt = new Date().toISOString();
+    this.emit();
+    return item;
   }
 
   getDashboard(): DashboardSnapshot {

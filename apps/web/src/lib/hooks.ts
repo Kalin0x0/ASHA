@@ -35,3 +35,6 @@ export const useCreateUser = impl.useCreateUser;
 export const useCreateWorkspace = impl.useCreateWorkspace;
 export const useUpdateWorkspace = impl.useUpdateWorkspace;
 export const useDeleteWorkspace = impl.useDeleteWorkspace;
+export const useFeedback = impl.useFeedback;
+export const useCreateFeedback = impl.useCreateFeedback;
+export const useUpdateFeedback = impl.useUpdateFeedback;

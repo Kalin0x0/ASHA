@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import * as api from '@/lib/api/endpoints';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
-import type { ActivityItem, Agent, CreateUserInput, CreateWorkspaceInput, RecordingRow, ServerOption, SessionRow, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
+import type { ActivityItem, Agent, CreateFeedbackInput, CreateUserInput, CreateWorkspaceInput, FeedbackItem, RecordingRow, ServerOption, SessionRow, UpdateFeedbackInput, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
 
 const SESSIONS_KEY = ['sessions'] as const;
 const WORKSPACES_KEY = ['workspaces'] as const;
@@ -217,6 +217,55 @@ export function useDeleteWorkspace() {
   return useCallback(
     async (id: string) => {
       await mutateAsync(id);
+    },
+    [mutateAsync],
+  );
+}
+
+const FEEDBACK_KEY = ['feedback'] as const;
+
+export function useFeedback(status?: string): FeedbackItem[] {
+  const { data } = useQuery({
+    queryKey: [...FEEDBACK_KEY, status ?? 'all'],
+    queryFn: () => api.getFeedback(status),
+  });
+  return useMemo(
+    () =>
+      (data ?? []).map((f) => ({
+        id: f.id,
+        userId: f.userId,
+        kind: f.kind,
+        message: f.message,
+        pageUrl: f.pageUrl,
+        screenshot: f.screenshot,
+        status: f.status,
+        notes: Array.isArray(f.notes) ? f.notes : [],
+        createdAt: f.createdAt,
+        updatedAt: f.updatedAt,
+      })),
+    [data],
+  );
+}
+
+export function useCreateFeedback() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.createFeedback,
+    onSuccess: () => qc.invalidateQueries({ queryKey: FEEDBACK_KEY }),
+  });
+  return useCallback(async (input: CreateFeedbackInput) => mutateAsync(input), [mutateAsync]);
+}
+
+export function useUpdateFeedback() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateFeedbackInput }) =>
+      api.updateFeedback(id, patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: FEEDBACK_KEY }),
+  });
+  return useCallback(
+    async (id: string, patch: UpdateFeedbackInput) => {
+      await mutateAsync({ id, patch });
     },
     [mutateAsync],
   );

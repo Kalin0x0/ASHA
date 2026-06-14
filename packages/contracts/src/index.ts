@@ -724,3 +724,22 @@ export const importConfigSchema = z.object({
   settings: z.array(z.object({ key: z.string().min(1).max(120), value: z.unknown() })).max(100).optional(),
 });
 export type ImportConfigDto = z.infer<typeof importConfigSchema>;
+
+// ── Feedback / bug reports ───────────────────────────────────────────────────
+export const createFeedbackSchema = z.object({
+  kind: z.enum(['BUG', 'FEEDBACK']).default('FEEDBACK'),
+  message: z.string().min(1).max(5000),
+  pageUrl: z.string().max(2000).optional(),
+  // Optional screenshot as a data URL (client compresses/resizes first).
+  screenshot: z.string().max(8_000_000).optional(),
+});
+export type CreateFeedbackDto = z.infer<typeof createFeedbackSchema>;
+
+export const updateFeedbackSchema = z
+  .object({
+    status: z.enum(['OPEN', 'IN_PROGRESS', 'FIXED', 'WONTFIX']).optional(),
+    // Appends to the collaboration thread (admins/agents triaging the item).
+    note: z.string().min(1).max(5000).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+export type UpdateFeedbackDto = z.infer<typeof updateFeedbackSchema>;

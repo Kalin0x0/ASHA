@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { FeedbackWidget } from '@/components/composite/feedback-widget';
 import { AppBackground } from '@/components/decor/app-background';
 import { CommandPalette } from '@/components/shell/command-palette';
 import { SidebarContent } from '@/components/shell/sidebar';
@@ -49,6 +50,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <CommandPalette />
+      <FeedbackWidget />
     </div>
   );
 }
