@@ -30,6 +30,7 @@ import { UsersModule } from './modules/users/users.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { GroupsModule } from './modules/groups/groups.module';
 import { DevApiModule } from './modules/dev-api/dev-api.module';
+import { FeedbackModule } from './modules/feedback/feedback.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
 import { ServersModule } from './modules/servers/servers.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
@@ -85,6 +86,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     SharingModule,
     RecordingsModule,
     AuthProvidersModule,
+    FeedbackModule,
     ZonesModule,
     StagingModule,
     CastingModule,

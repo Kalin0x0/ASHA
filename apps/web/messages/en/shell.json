@@ -52,6 +52,7 @@
       "reporting": "Reporting",
       "auditLog": "Audit Log",
       "metrics": "Metrics",
+      "feedback": "Feedback & Bugs",
       "logForwarding": "Log Forwarding",
       "apiKeys": "API Keys",
       "webhooks": "Webhooks",

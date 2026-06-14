@@ -7,6 +7,7 @@ import { AuthGate } from '@/components/auth-gate';
 import { Logo } from '@/components/brand/logo';
 import { BackgroundPicker } from '@/components/composite/background-picker';
 import { FavoriteQuickLaunch } from '@/components/composite/favorite-quick-launch';
+import { FeedbackWidget } from '@/components/composite/feedback-widget';
 import { MockThumbnailSeeder } from '@/components/composite/mock-thumbnail-seeder';
 import { AppBackground } from '@/components/decor/app-background';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -47,6 +48,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         </header>
         <MockThumbnailSeeder />
         <main className="relative z-10 flex-1">{children}</main>
+        <FeedbackWidget />
       </div>
     </AuthGate>
   );

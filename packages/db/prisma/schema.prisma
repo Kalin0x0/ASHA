@@ -1452,3 +1452,36 @@ model DbBackupRecord {
   status    String   @default("completed")
   createdAt DateTime @default(now())
 }
+
+enum FeedbackKind {
+  BUG
+  FEEDBACK
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_PROGRESS
+  FIXED
+  WONTFIX
+}
+
+/// User bug reports + feedback, and the shared "memory" admins/agents use to
+/// triage them: a `status` plus a `notes` collaboration thread. `screenshot` is
+/// an optional data URL captured with a bug report.
+model Feedback {
+  id         String         @id @default(cuid())
+  orgId      String
+  userId     String?
+  kind       FeedbackKind   @default(FEEDBACK)
+  message    String
+  pageUrl    String?
+  screenshot String? // optional data URL
+  status     FeedbackStatus @default(OPEN)
+  // Collaboration thread: [{ author, body, at }]
+  notes      Json           @default("[]")
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([orgId])
+  @@index([status])
+}

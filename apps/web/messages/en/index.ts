@@ -9,6 +9,7 @@ import common from './common.json';
 import connectivity from './connectivity.json';
 import dashboard from './dashboard.json';
 import developer from './developer.json';
+import feedback from './feedback.json';
 import infrastructure from './infrastructure.json';
 import observability from './observability.json';
 import portal from './portal.json';
@@ -26,6 +27,7 @@ const messages = {
   connectivity,
   dashboard,
   developer,
+  feedback,
   infrastructure,
   observability,
   portal,

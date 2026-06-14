@@ -947,6 +947,42 @@ export const upsertBanner = (body: {
 export const deleteBanner = (id: string) =>
   apiFetch<{ ok: true }>(`/watermarks/${id}`, { method: 'DELETE' });
 
+// ── Feedback / bug reports + the shared triage "memory" ───────────────────────
+
+export interface ApiFeedbackNote {
+  author: string;
+  body: string;
+  at: string;
+}
+export interface ApiFeedback {
+  id: string;
+  orgId: string;
+  userId: string | null;
+  kind: 'BUG' | 'FEEDBACK';
+  message: string;
+  pageUrl: string | null;
+  screenshot: string | null;
+  status: 'OPEN' | 'IN_PROGRESS' | 'FIXED' | 'WONTFIX';
+  notes: ApiFeedbackNote[];
+  createdAt: string;
+  updatedAt: string;
+}
+/** Create echoes back only the lightweight fields (no screenshot). */
+export const createFeedback = (body: {
+  kind: 'BUG' | 'FEEDBACK';
+  message: string;
+  pageUrl?: string;
+  screenshot?: string;
+}) =>
+  apiFetch<{ id: string; kind: string; status: string; createdAt: string }>('/feedback', {
+    method: 'POST',
+    body,
+  });
+export const getFeedback = (status?: string) =>
+  apiFetch<ApiFeedback[]>(`/feedback${status ? `?status=${encodeURIComponent(status)}` : ''}`);
+export const updateFeedback = (id: string, body: { status?: string; note?: string }) =>
+  apiFetch<ApiFeedback>(`/feedback/${id}`, { method: 'PATCH', body });
+
 // ── WebAuthn / passkeys ───────────────────────────────────────────────────────
 
 export interface ApiPasskey {

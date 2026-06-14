@@ -1,0 +1,45 @@
+{
+  "kind": {
+    "BUG": "Fehler",
+    "FEEDBACK": "Feedback"
+  },
+  "status": {
+    "OPEN": "Offen",
+    "IN_PROGRESS": "In Bearbeitung",
+    "FIXED": "Behoben",
+    "WONTFIX": "Wird nicht behoben"
+  },
+  "widget": {
+    "open": "Fehler melden oder Feedback senden",
+    "title": "Fehler melden oder Feedback senden",
+    "description": "Hilf uns, Chista zu verbessern. Deine Meldung landet direkt auf dem Triage-Board des Teams.",
+    "bugHint": "Etwas funktioniert nicht",
+    "feedbackHint": "Eine Idee oder ein Kommentar",
+    "message": "Was ist passiert?",
+    "bugPlaceholder": "Beschreibe das Problem und die Schritte zur Reproduktion…",
+    "feedbackPlaceholder": "Sag uns, was du denkst oder was du dir wünschst…",
+    "screenshot": "Screenshot",
+    "attach": "Screenshot anhängen",
+    "pasteHint": "Tipp: Du kannst auch ein Bild einfügen (⌘/Strg+V).",
+    "messageRequired": "Bitte beschreibe zuerst das Problem.",
+    "imageTooLarge": "Das Bild ist zu groß — versuche einen kleineren Screenshot.",
+    "imageFailed": "Das Bild konnte nicht gelesen werden.",
+    "sent": "Danke — deine Meldung wurde gesendet.",
+    "sentHint": "Das Team kann auf dem Triage-Board nachfassen.",
+    "failed": "Meldung konnte nicht gesendet werden. Bitte erneut versuchen.",
+    "submit": "Senden"
+  },
+  "triage": {
+    "title": "Feedback & Fehlermeldungen",
+    "description": "Der gemeinsame Triage-Speicher — Nutzer, Admins und automatische Agenten arbeiten zusammen daran, was behoben werden soll und was behoben wurde.",
+    "memoryNote": "Das ist der gemeinsame Speicher: Jede Meldung hat einen Kollaborations-Verlauf, sodass Menschen und automatische Agenten am selben Datensatz arbeiten — sie notieren, was zu beheben ist, und bestätigen, was behoben wurde.",
+    "filterAll": "Alle",
+    "emptyTitle": "Noch nichts vorhanden",
+    "emptyDescription": "Meldungen und Feedback aus dem In-App-Widget erscheinen hier.",
+    "screenshot": "Screenshot",
+    "viewScreenshot": "Screenshot ansehen",
+    "notePlaceholder": "Notiz zum Verlauf hinzufügen…",
+    "saved": "Aktualisiert.",
+    "saveFailed": "Aktualisierung konnte nicht gespeichert werden."
+  }
+}

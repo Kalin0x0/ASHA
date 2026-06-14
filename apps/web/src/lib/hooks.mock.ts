@@ -2,7 +2,13 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { store } from '@/lib/mock/store';
-import type { CreateUserInput, CreateWorkspaceInput, UpdateWorkspaceInput } from '@/lib/types';
+import type {
+  CreateFeedbackInput,
+  CreateUserInput,
+  CreateWorkspaceInput,
+  UpdateFeedbackInput,
+  UpdateWorkspaceInput,
+} from '@/lib/types';
 // ServerOption is returned directly from the mock store (see useServers).
 
 function useVersion(): number {
@@ -106,4 +112,19 @@ export function useDeleteWorkspace() {
   return useCallback(async (id: string) => {
     store.deleteWorkspace(id);
   }, []);
+}
+
+export function useFeedback(status?: string) {
+  return useSnapshot(() => store.getFeedback(status), [status]);
+}
+
+export function useCreateFeedback() {
+  return useCallback(async (input: CreateFeedbackInput) => store.createFeedback(input), []);
+}
+
+export function useUpdateFeedback() {
+  return useCallback(
+    async (id: string, patch: UpdateFeedbackInput) => store.updateFeedback(id, patch),
+    [],
+  );
 }

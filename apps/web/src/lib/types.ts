@@ -189,6 +189,44 @@ export interface KpiSeriesPoint {
   value: number;
 }
 
+// ── Feedback / bug reports (and the shared triage "memory") ──────────────────
+
+export type FeedbackKind = 'BUG' | 'FEEDBACK';
+export type FeedbackStatus = 'OPEN' | 'IN_PROGRESS' | 'FIXED' | 'WONTFIX';
+
+/** One entry in the collaboration thread admins/agents use to triage an item. */
+export interface FeedbackNote {
+  author: string;
+  body: string;
+  at: string;
+}
+
+export interface FeedbackItem {
+  id: string;
+  userId: string | null;
+  kind: FeedbackKind;
+  message: string;
+  pageUrl: string | null;
+  /** Optional screenshot captured with a bug report (data URL). */
+  screenshot: string | null;
+  status: FeedbackStatus;
+  notes: FeedbackNote[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateFeedbackInput {
+  kind: FeedbackKind;
+  message: string;
+  pageUrl?: string;
+  screenshot?: string;
+}
+
+export interface UpdateFeedbackInput {
+  status?: FeedbackStatus;
+  note?: string;
+}
+
 export interface DashboardSnapshot {
   kpis: {
     activeSessions: { value: number; deltaPct: number; series: number[] };
