@@ -1,6 +1,7 @@
 'use client';
 
 import { Copy, DoorOpen, Loader2, Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -22,6 +23,8 @@ import { isLive } from '@/lib/api/mode';
 const PROVIDERS = ['wireguard', 'http_proxy', 'socks5'];
 
 export default function EgressPage() {
+  const t = useTranslations('connectivity');
+  const tc = useTranslations('common');
   const [gateways, setGateways] = useState<ApiEgressGateway[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -36,11 +39,11 @@ export default function EgressPage() {
     try {
       setGateways(await getEgressGateways());
     } catch {
-      toast.error('Failed to load egress gateways');
+      toast.error(t('egress.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -56,12 +59,12 @@ export default function EgressPage() {
         config: endpoint ? { endpoint } : {},
         enabled: false,
       });
-      toast.success('Egress gateway added', { description: 'Disabled by default — enable after review.' });
+      toast.success(t('egress.toasts.created'), { description: t('egress.toasts.createdDescription') });
       setName('');
       setEndpoint('');
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not add gateway');
+      toast.error(e instanceof Error ? e.message : t('egress.toasts.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -73,7 +76,7 @@ export default function EgressPage() {
       await updateEgressGateway(g.id, { enabled: !g.enabled });
       await refresh();
     } catch {
-      toast.error('Could not update gateway');
+      toast.error(t('egress.toasts.updateFailed'));
     } finally {
       setBusyId(null);
     }
@@ -84,9 +87,9 @@ export default function EgressPage() {
     try {
       const { content } = await getWireguardConfig(id);
       await navigator.clipboard.writeText(content);
-      toast.success('WireGuard config copied');
+      toast.success(t('egress.toasts.configCopied'));
     } catch {
-      toast.error('Could not fetch WireGuard config');
+      toast.error(t('egress.toasts.configCopyFailed'));
     } finally {
       setBusyId(null);
     }
@@ -96,10 +99,10 @@ export default function EgressPage() {
     setBusyId(id);
     try {
       await deleteEgressGateway(id);
-      toast.success('Gateway removed');
+      toast.success(t('egress.toasts.removed'));
       await refresh();
     } catch {
-      toast.error('Could not remove gateway');
+      toast.error(t('egress.toasts.removeFailed'));
     } finally {
       setBusyId(null);
     }
@@ -108,30 +111,33 @@ export default function EgressPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Egress"
-        description="Route session outbound traffic through dedicated gateways (WireGuard tunnels or forward proxies) for fixed source IPs and compliance."
+        title={t('egress.title')}
+        description={t('egress.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Egress management is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('egress.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="Gateways" value={gateways.length} icon={DoorOpen} primary />
-        <StatCard label="Enabled" value={gateways.filter((g) => g.enabled).length} icon={DoorOpen} />
+        <StatCard label={t('egress.stats.gateways')} value={gateways.length} icon={DoorOpen} primary />
+        <StatCard label={tc('labels.enabled')} value={gateways.filter((g) => g.enabled).length} icon={DoorOpen} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Gateways</h2>
+          <h2 className="font-display text-lg font-medium">{t('egress.gatewaysTitle')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {gateways.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">No egress gateways configured yet.</p>
+            <p className="p-5 text-sm text-muted-foreground">{t('egress.empty')}</p>
           ) : (
             gateways.map((g) => (
               <div key={g.id} className="flex items-center gap-3 px-5 py-3 text-sm">
@@ -142,15 +148,15 @@ export default function EgressPage() {
                     {String((g.config as Record<string, unknown>).endpoint ?? '—')}
                   </p>
                 </div>
-                <Badge variant="gold">{g.provider}</Badge>
-                <Badge variant={g.enabled ? 'success' : 'outline'}>{g.enabled ? 'Enabled' : 'Disabled'}</Badge>
+                <Badge variant="gold">{PROVIDERS.includes(g.provider) ? t(`egress.providers.${g.provider}`) : g.provider}</Badge>
+                <Badge variant={g.enabled ? 'success' : 'outline'}>{g.enabled ? tc('labels.enabled') : tc('labels.disabled')}</Badge>
                 {g.provider === 'wireguard' && (
-                  <Button variant="ghost" size="icon-sm" title="Copy WireGuard config" disabled={busyId === g.id} onClick={() => void onCopyConfig(g.id)}>
+                  <Button variant="ghost" size="icon-sm" title={t('egress.copyConfig')} disabled={busyId === g.id} onClick={() => void onCopyConfig(g.id)}>
                     <Copy className="size-4" />
                   </Button>
                 )}
                 <Button variant="secondary" size="sm" disabled={busyId === g.id} onClick={() => void onToggle(g)}>
-                  {g.enabled ? 'Disable' : 'Enable'}
+                  {g.enabled ? tc('actions.disable') : tc('actions.enable')}
                 </Button>
                 <Button variant="ghost" size="icon-sm" disabled={busyId === g.id} onClick={() => void onDelete(g.id)}>
                   <Trash2 className="size-4 text-destructive" />
@@ -162,7 +168,7 @@ export default function EgressPage() {
       </Card>
 
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add gateway</h2>
+        <h2 className="font-display text-lg font-medium">{t('egress.addTitle')}</h2>
         <div className="flex flex-wrap gap-2">
           {PROVIDERS.map((p) => (
             <button
@@ -174,23 +180,23 @@ export default function EgressPage() {
                   : 'border-border-subtle text-muted-foreground hover:bg-secondary'
               }`}
             >
-              {p}
+              {t(`egress.providers.${p}`)}
             </button>
           ))}
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <Label>Name</Label>
+            <Label>{tc('labels.name')}</Label>
             <Input placeholder="egress-eu" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Endpoint (optional)</Label>
+            <Label>{t('egress.form.endpoint')}</Label>
             <Input placeholder="vpn.example.com:51820" value={endpoint} onChange={(e) => setEndpoint(e.target.value)} />
           </div>
         </div>
         <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !name || creating}>
           {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-          Add gateway
+          {t('egress.addButton')}
         </Button>
       </Card>
     </div>

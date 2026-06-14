@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useEffect, useId, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { KpiSeriesPoint } from '@/lib/types';
@@ -15,6 +16,7 @@ const TONE = {
 } as const;
 
 export function AreaTrend({ data, height = 260 }: { data: KpiSeriesPoint[]; height?: number }) {
+  const t = useTranslations('dashboard');
   const id = useId().replace(/:/g, '');
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -58,7 +60,7 @@ export function AreaTrend({ data, height = 260 }: { data: KpiSeriesPoint[]; heig
           }}
           labelStyle={{ color: 'var(--color-anthracite-200)' }}
           itemStyle={{ color: 'var(--color-gold-300)' }}
-          labelFormatter={() => 'Sessions'}
+          labelFormatter={() => t('charts.sessionsTooltip')}
         />
         <Area
           type="monotone"
@@ -89,6 +91,7 @@ export function RingGauge({
   size?: number;
   tone?: keyof typeof TONE;
 }) {
+  const t = useTranslations('dashboard');
   const id = useId().replace(/:/g, '');
   const [bright, deep] = TONE[tone];
   const sw = 9;
@@ -110,7 +113,7 @@ export function RingGauge({
       className="relative inline-flex items-center justify-center"
       style={{ width: size, height: size }}
       role="img"
-      aria-label={`${label ?? 'Value'}: ${Math.round(pct)} percent`}
+      aria-label={t('charts.gaugeAria', { label: label ?? t('charts.value'), value: Math.round(pct) })}
     >
       <svg width={size} height={size} className="-rotate-90 overflow-visible">
         <defs>
@@ -164,13 +167,14 @@ export function BarRank({
   items: { name: string; sessions: number }[];
   className?: string;
 }) {
+  const t = useTranslations('dashboard');
   const max = Math.max(1, ...items.map((i) => i.sessions));
   const ramp = [TONE.gold, TONE.info, TONE.success, TONE.warning, TONE.destructive];
 
   if (items.length === 0) {
     return (
       <div className={cn('flex h-24 items-center justify-center text-sm text-muted-foreground/70', className)}>
-        No workspace activity yet
+        {t('charts.noWorkspaceActivity')}
       </div>
     );
   }
@@ -181,7 +185,7 @@ export function BarRank({
         const [bright, deep] = ramp[i % ramp.length] ?? TONE.gold;
         return (
           <div key={item.name} className="group flex items-center gap-3">
-            <span className="w-4 shrink-0 text-right text-[11px] font-semibold tnum text-muted-foreground/50">
+            <span className="w-4 shrink-0 text-end text-[11px] font-semibold tnum text-muted-foreground/50">
               {i + 1}
             </span>
             <span className="w-28 shrink-0 truncate text-[13px] text-foreground/90">{item.name}</span>
@@ -195,7 +199,7 @@ export function BarRank({
                 }}
               />
             </div>
-            <span className="w-8 shrink-0 text-right text-sm font-semibold tnum text-foreground">{item.sessions}</span>
+            <span className="w-8 shrink-0 text-end text-sm font-semibold tnum text-foreground">{item.sessions}</span>
           </div>
         );
       })}

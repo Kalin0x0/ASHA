@@ -1,0 +1,175 @@
+{
+  "mappings": {
+    "title": "نگاشت‌های ذخیره‌سازی",
+    "description": "فضای ذخیره‌سازی شبکه‌ای و ابری (S3، NextCloud، Google Drive، OneDrive، Dropbox) را در نشست‌ها مونت کنید، با دامنه‌بندی بر اساس کاربر، گروه یا فضای کاری.",
+    "liveOnly": "نگاشت‌های ذخیره‌سازی فقط با بک‌اند زنده در دسترس هستند. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "stats": {
+      "mappings": "نگاشت‌ها"
+    },
+    "configuredTitle": "نگاشت‌های پیکربندی‌شده",
+    "empty": "هنوز هیچ نگاشت ذخیره‌سازی پیکربندی نشده است.",
+    "kinds": {
+      "S3": "S3",
+      "NEXTCLOUD": "NextCloud",
+      "GDRIVE": "Google Drive",
+      "ONEDRIVE": "OneDrive",
+      "DROPBOX": "Dropbox",
+      "CUSTOM": "سفارشی (rclone)"
+    },
+    "scopes": {
+      "USER": "کاربر",
+      "GROUP": "گروه",
+      "WORKSPACE": "فضای کاری"
+    },
+    "fields": {
+      "bucket": "Bucket",
+      "region": "Region",
+      "accessKeyId": "Access Key ID",
+      "secretAccessKey": "Secret Access Key",
+      "endpoint": "Endpoint (اختیاری)",
+      "webdavUrl": "WebDAV URL",
+      "username": "نام کاربری",
+      "password": "گذرواژه",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "refreshToken": "Refresh Token",
+      "accessToken": "Access Token",
+      "rcloneRemote": "مشخصات remote در rclone"
+    },
+    "addTitle": "افزودن نگاشت",
+    "addButton": "افزودن نگاشت",
+    "form": {
+      "mountPath": "مسیر مونت",
+      "scope": "دامنه",
+      "readOnly": "فقط‌خواندنی"
+    },
+    "toasts": {
+      "loadFailed": "بارگذاری نگاشت‌های ذخیره‌سازی ناموفق بود",
+      "created": "نگاشت ذخیره‌سازی ایجاد شد",
+      "createFailed": "ایجاد نگاشت ممکن نشد",
+      "updateFailed": "به‌روزرسانی نگاشت ممکن نشد",
+      "removed": "نگاشت حذف شد",
+      "removeFailed": "حذف نگاشت ممکن نشد"
+    }
+  },
+  "profiles": {
+    "title": "پروفایل‌های ماندگار",
+    "description": "پوشه‌های خانگی کاربران و داده‌های برنامه‌ها که بین نشست‌ها باقی می‌مانند. هر پروفایل بر پایهٔ یک Docker volume یا یک ذخیره‌ساز شیء سازگار با S3 پشتیبانی می‌شود.",
+    "stats": {
+      "profiles": "پروفایل‌ها",
+      "withUser": "دارای کاربر اختصاص‌یافته",
+      "allocated": "اختصاص‌یافته (GB)"
+    },
+    "configuredTitle": "پروفایل‌های پیکربندی‌شده",
+    "empty": {
+      "title": "هیچ پروفایل ماندگاری وجود ندارد",
+      "description": "پروفایل‌ها با استفاده از Docker volume یا S3 داده‌های کاربر را بین نشست‌ها حفظ می‌کنند."
+    },
+    "unassigned": "اختصاص‌نیافته",
+    "lastUsed": "آخرین استفاده {time}",
+    "time": {
+      "never": "هرگز",
+      "justNow": "همین حالا",
+      "hoursAgo": "{hours} ساعت پیش",
+      "daysAgo": "{days} روز پیش"
+    },
+    "sizeGb": "{size} GB",
+    "unlimited": "نامحدود",
+    "backends": {
+      "DOCKER_VOLUME": "Docker volume",
+      "S3": "S3"
+    },
+    "addTitle": "افزودن پروفایل ماندگار",
+    "addButton": "افزودن پروفایل",
+    "form": {
+      "volumeName": "نام Volume",
+      "sizeLimit": "محدودیت حجم (MB، اختیاری)",
+      "userId": "شناسهٔ کاربر (اختیاری)",
+      "workspaceId": "شناسهٔ فضای کاری (اختیاری)"
+    },
+    "footnote": "پروفایل‌ها معمولاً نخستین باری که کاربر یک فضای کاری را با ماندگاری فعال راه‌اندازی می‌کند، به‌صورت خودکار ایجاد می‌شوند. برای تخصیص از پیش یا تثبیت یک بک‌اند، از اینجا یکی ایجاد کنید.",
+    "toasts": {
+      "created": "پروفایل ماندگار ایجاد شد",
+      "createFailed": "ایجاد پروفایل ممکن نشد",
+      "removed": "پروفایل حذف شد",
+      "removeFailed": "حذف پروفایل ممکن نشد"
+    }
+  },
+  "volumes": {
+    "title": "نگاشت‌های Volume",
+    "description": "Volume‌های نام‌دار Docker یا مونت‌های مسیر میزبان که هنگام راه‌اندازی به کانتینرهای فضای کاری تزریق می‌شوند. از آن‌ها برای اشتراک‌گذاری مجموعه‌داده‌ها، مخازن کد یا دارایی‌های مشترک میان نشست‌ها استفاده کنید.",
+    "stats": {
+      "volumeMappings": "نگاشت‌های Volume",
+      "readOnly": "فقط‌خواندنی",
+      "readWrite": "خواندن/نوشتن"
+    },
+    "configuredTitle": "Volume‌های پیکربندی‌شده",
+    "empty": {
+      "title": "هیچ Volume‌ای پیکربندی نشده است",
+      "description": "برای ماندگاری داده‌ها بین نشست‌ها، یک نگاشت Volume اضافه کنید."
+    },
+    "badges": {
+      "readOnly": "فقط‌خواندنی",
+      "readWrite": "خواندن/نوشتن"
+    },
+    "addTitle": "افزودن نگاشت Volume",
+    "addButton": "افزودن Volume",
+    "form": {
+      "hostPath": "مسیر میزبان یا نام Volume",
+      "destPath": "مسیر مقصد (داخل کانتینر)",
+      "readOnly": "فقط‌خواندنی"
+    },
+    "footnote": "هم مسیرهای میزبان و هم Volume‌های نام‌دار Docker پشتیبانی می‌شوند. برای مجموعه‌داده‌های مشترک و مخازن مدل، مونت‌های فقط‌خواندنی توصیه می‌شود.",
+    "toasts": {
+      "created": "نگاشت Volume ایجاد شد",
+      "createFailed": "ایجاد نگاشت ممکن نشد",
+      "removed": "نگاشت حذف شد",
+      "removeFailed": "حذف نگاشت ممکن نشد"
+    }
+  },
+  "fileMappings": {
+    "title": "نگاشت‌های فایل",
+    "description": "فایل‌های منفردی که هنگام راه‌اندازی به نشست‌های کانتینری تزریق می‌شوند — فایل‌های پیکربندی، کلیدهای SSH، گواهی‌ها یا مخازن اعتماد سازمانی. از مالکیت POSIX و بیت‌های مجوز (mode) پشتیبانی می‌کند.",
+    "stats": {
+      "fileMappings": "نگاشت‌های فایل",
+      "homeProfileFiles": "فایل‌های پروفایل خانگی",
+      "restricted": "محدودشده (0600)"
+    },
+    "configuredTitle": "فایل‌های پیکربندی‌شده",
+    "empty": {
+      "title": "هیچ نگاشت فایلی پیکربندی نشده است",
+      "description": "فایل‌های میزبان را برای پیکربندی مشترک یا اطلاعات محرمانه به کانتینرهای نشست نگاشت کنید."
+    },
+    "badges": {
+      "home": "خانگی"
+    },
+    "targets": {
+      "CONTAINER": "کانتینر",
+      "WINDOWS": "ویندوز"
+    },
+    "scopes": {
+      "USER": "کاربر",
+      "GROUP": "گروه",
+      "WORKSPACE": "فضای کاری"
+    },
+    "addTitle": "افزودن نگاشت فایل",
+    "addButton": "افزودن نگاشت فایل",
+    "form": {
+      "scope": "دامنه",
+      "sourcePath": "مسیر منبع",
+      "destPath": "مسیر مقصد (داخل کانتینر)",
+      "owner": "مالک (اختیاری)",
+      "group": "گروه (اختیاری)",
+      "mode": "مجوز دسترسی (اکتال)",
+      "homeProfile": "تزریق در پروفایل خانگی"
+    },
+    "footnote": "فایل‌ها در زمان شروع کانتینر با مالک، گروه و مجوز دسترسی پیکربندی‌شده نوشته می‌شوند — بدون آنکه اطلاعات محرمانه در ایمیج قرار گیرد.",
+    "toasts": {
+      "modeInvalid": "مجوز دسترسی باید اکتال باشد، مثلاً 0644",
+      "created": "نگاشت فایل ایجاد شد",
+      "createFailed": "ایجاد نگاشت ممکن نشد",
+      "removed": "نگاشت حذف شد",
+      "removeFailed": "حذف نگاشت ممکن نشد"
+    }
+  }
+}

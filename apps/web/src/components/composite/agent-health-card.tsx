@@ -1,12 +1,15 @@
 'use client';
 
 import { Server } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { RingGauge } from '@/components/composite/charts';
 import { AgentStatusPill } from '@/components/ui/status-pill';
 import { Card } from '@/components/ui/card';
 import type { Agent } from '@/lib/types';
 
 export function AgentHealthCard({ agent }: { agent: Agent }) {
+  const t = useTranslations('dashboard');
+  const tc = useTranslations('common');
   const memPct = (agent.memUsedMb / agent.memTotalMb) * 100;
   const cpuTone = agent.cpuPct > 85 ? 'destructive' : agent.cpuPct > 65 ? 'warning' : 'gold';
   const memTone = memPct > 85 ? 'destructive' : memPct > 65 ? 'warning' : 'info';
@@ -32,18 +35,18 @@ export function AgentHealthCard({ agent }: { agent: Agent }) {
 
       {/* Gauges */}
       <div className="mt-5 flex items-center justify-around">
-        <RingGauge value={agent.cpuPct} label="CPU" size={80} tone={cpuTone} />
-        <RingGauge value={memPct} label="MEM" size={80} tone={memTone} />
+        <RingGauge value={agent.cpuPct} label={t('gauges.cpu')} size={80} tone={cpuTone} />
+        <RingGauge value={memPct} label={t('gauges.mem')} size={80} tone={memTone} />
         {agent.gpuPct !== null && (
-          <RingGauge value={agent.gpuPct} label="GPU" size={80} tone="success" />
+          <RingGauge value={agent.gpuPct} label={t('gauges.gpu')} size={80} tone="success" />
         )}
       </div>
 
       {/* Footer */}
       <div className="mt-4 flex items-center justify-between border-t border-border-subtle pt-3 text-[11px] text-muted-foreground">
-        <span>{agent.cpuCores} cores · {(agent.memTotalMb / 1024).toFixed(0)} GB</span>
+        <span>{t('agentCard.specs', { cores: agent.cpuCores, gb: (agent.memTotalMb / 1024).toFixed(0) })}</span>
         <span className="tnum font-medium">
-          <span className="text-foreground">{agent.sessions}</span>/{agent.maxSessions} sessions
+          <span className="text-foreground">{agent.sessions}</span>/{agent.maxSessions} {tc('units.sessions')}
         </span>
       </div>
 

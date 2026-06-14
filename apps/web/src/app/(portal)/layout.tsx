@@ -1,38 +1,44 @@
 'use client';
 
 import { LayoutDashboard } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { AuthGate } from '@/components/auth-gate';
 import { Logo } from '@/components/brand/logo';
+import { BackgroundPicker } from '@/components/composite/background-picker';
 import { FavoriteQuickLaunch } from '@/components/composite/favorite-quick-launch';
 import { MockThumbnailSeeder } from '@/components/composite/mock-thumbnail-seeder';
+import { PortalBackground } from '@/components/decor/portal-background';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/api/auth-context';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations('portal');
   const { user } = useAuth();
 
   return (
     <AuthGate>
-      <div className="relative flex min-h-screen flex-col bg-aurora">
+      <div className="relative flex min-h-screen flex-col">
+        <PortalBackground />
         <header className="sticky top-0 z-30 flex h-[var(--spacing-topbar)] items-center gap-4 border-b border-border-subtle glass-rail px-4 lg:px-8">
           <Link href="/" className="flex items-center ring-gold-focus rounded-md">
             <Logo />
           </Link>
           <nav className="ml-6 hidden items-center gap-1 text-sm sm:flex">
-            <span className="rounded-md px-3 py-1.5 font-medium text-foreground">My Workspaces</span>
+            <span className="rounded-md px-3 py-1.5 font-medium text-foreground">{t('header.myWorkspaces')}</span>
           </nav>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ms-auto flex items-center gap-3">
             <FavoriteQuickLaunch />
             {user?.isSystemAdmin && (
               <Button asChild variant="ghost" size="sm" className="gap-1.5">
                 <Link href="/dashboard">
-                  <LayoutDashboard className="size-4" /> Admin
+                  <LayoutDashboard className="size-4" /> {t('header.admin')}
                 </Link>
               </Button>
             )}
+            <BackgroundPicker />
             <ThemeToggle />
             <Avatar className="size-8">
               <AvatarFallback>SN</AvatarFallback>
@@ -40,7 +46,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </div>
         </header>
         <MockThumbnailSeeder />
-        <main className="relative flex-1">{children}</main>
+        <main className="relative z-10 flex-1">{children}</main>
       </div>
     </AuthGate>
   );

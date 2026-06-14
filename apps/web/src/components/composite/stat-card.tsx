@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowDownRight, ArrowUpRight, type LucideIcon } from 'lucide-react';
+import { useLocale } from 'next-intl';
 import { Sparkline } from '@/components/composite/sparkline';
 import { Card } from '@/components/ui/card';
 import { useCountUp } from '@/lib/use-count-up';
@@ -25,7 +26,7 @@ export function StatCard({
   goodWhenUp = true,
   primary = false,
   tone,
-  format = (v: number) => Math.round(v).toLocaleString('en-US'),
+  format,
 }: {
   label: string;
   value: number;
@@ -38,10 +39,12 @@ export function StatCard({
   tone?: Tone;
   format?: (v: number) => string;
 }) {
+  const locale = useLocale();
   const animated = useCountUp(value);
   const positive = (deltaPct ?? 0) >= 0;
   const good = positive === goodWhenUp;
   const t = TONE[tone ?? (primary ? 'gold' : 'info')];
+  const fmt = format ?? ((v: number) => Math.round(v).toLocaleString(locale));
 
   return (
     <Card
@@ -74,13 +77,13 @@ export function StatCard({
         {/* Value + delta */}
         <div className="flex items-end gap-2">
           <span className={cn('font-display text-4xl font-medium leading-none tnum', primary ? t.value : 'text-foreground')}>
-            {format(animated)}
+            {fmt(animated)}
           </span>
           {suffix && <span className="mb-0.5 text-sm text-muted-foreground">{suffix}</span>}
           {deltaPct !== undefined && (
             <span
               className={cn(
-                'mb-1 ml-auto inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold tnum',
+                'mb-1 ms-auto inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold tnum',
                 good ? 'bg-success-500/12 text-success-400' : 'bg-error-500/12 text-error-400',
               )}
             >

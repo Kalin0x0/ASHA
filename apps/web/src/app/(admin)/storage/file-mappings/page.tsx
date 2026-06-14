@@ -1,6 +1,7 @@
 'use client';
 
 import { FileCog, Home, Loader2, Package, Plus, Shield, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/composite/empty-state';
@@ -20,6 +21,8 @@ const TARGETS = ['CONTAINER', 'WINDOWS'] as const;
 const SCOPES = ['USER', 'GROUP', 'WORKSPACE'] as const;
 
 export default function FileMappingsPage() {
+  const t = useTranslations('storage');
+  const tc = useTranslations('common');
   const { data: files = [], isLoading } = useFileMappings();
   const create = useCreateFileMapping();
   const remove = useDeleteFileMapping();
@@ -38,7 +41,7 @@ export default function FileMappingsPage() {
   const onCreate = async () => {
     if (!name || !sourcePath || !destPath) return;
     if (mode && !/^[0-7]{3,4}$/.test(mode)) {
-      toast.error('Mode must be octal, e.g. 0644');
+      toast.error(t('fileMappings.toasts.modeInvalid'));
       return;
     }
     try {
@@ -53,7 +56,7 @@ export default function FileMappingsPage() {
         isHomeProfile,
         scope,
       });
-      toast.success('File mapping created');
+      toast.success(t('fileMappings.toasts.created'));
       setName('');
       setSourcePath('');
       setDestPath('');
@@ -62,7 +65,7 @@ export default function FileMappingsPage() {
       setMode('0644');
       setIsHomeProfile(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not create mapping');
+      toast.error(e instanceof Error ? e.message : t('fileMappings.toasts.createFailed'));
     }
   };
 
@@ -70,9 +73,9 @@ export default function FileMappingsPage() {
     setBusyId(id);
     try {
       await remove.mutateAsync(id);
-      toast.success('Mapping removed');
+      toast.success(t('fileMappings.toasts.removed'));
     } catch {
-      toast.error('Could not remove mapping');
+      toast.error(t('fileMappings.toasts.removeFailed'));
     } finally {
       setBusyId(null);
     }
@@ -81,24 +84,24 @@ export default function FileMappingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="File Mappings"
-        description="Individual files injected into container sessions at launch — config files, SSH keys, certificates, or corporate trust stores. Supports POSIX ownership and mode bits."
+        title={t('fileMappings.title')}
+        description={t('fileMappings.description')}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="File mappings" value={files.length} icon={FileCog} primary />
-        <StatCard label="Home-profile files" value={files.filter((f) => f.isHomeProfile).length} icon={Home} />
-        <StatCard label="Restricted (0600)" value={files.filter((f) => f.mode === '0600').length} icon={Shield} />
+        <StatCard label={t('fileMappings.stats.fileMappings')} value={files.length} icon={FileCog} primary />
+        <StatCard label={t('fileMappings.stats.homeProfileFiles')} value={files.filter((f) => f.isHomeProfile).length} icon={Home} />
+        <StatCard label={t('fileMappings.stats.restricted')} value={files.filter((f) => f.mode === '0600').length} icon={Shield} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Configured files</h2>
+          <h2 className="font-display text-lg font-medium">{t('fileMappings.configuredTitle')}</h2>
           {isLoading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {files.length === 0 ? (
-            <EmptyState icon={FileCog} title="No file mappings configured" description="Map host files into session containers for shared config or secrets." />
+            <EmptyState icon={FileCog} title={t('fileMappings.empty.title')} description={t('fileMappings.empty.description')} />
           ) : (
             files.map((f) => (
               <div key={f.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
@@ -112,11 +115,11 @@ export default function FileMappingsPage() {
                 {f.mode && <Badge variant="outline">{f.mode}</Badge>}
                 {f.isHomeProfile && (
                   <Badge variant="gold">
-                    <Home className="size-3" /> home
+                    <Home className="size-3" /> {t('fileMappings.badges.home')}
                   </Badge>
                 )}
-                <Badge variant="outline">{f.target}</Badge>
-                <Badge variant="outline">{f.scope}</Badge>
+                <Badge variant="outline">{t(`fileMappings.targets.${f.target}`)}</Badge>
+                <Badge variant="outline">{t(`fileMappings.scopes.${f.scope}`)}</Badge>
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -136,29 +139,29 @@ export default function FileMappingsPage() {
       </Card>
 
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add file mapping</h2>
+        <h2 className="font-display text-lg font-medium">{t('fileMappings.addTitle')}</h2>
         <div className="flex flex-wrap gap-2">
-          {TARGETS.map((t) => (
+          {TARGETS.map((tgt) => (
             <button
-              key={t}
-              onClick={() => setTarget(t)}
+              key={tgt}
+              onClick={() => setTarget(tgt)}
               className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${
-                target === t
+                target === tgt
                   ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
                   : 'border-border-subtle text-muted-foreground hover:bg-secondary'
               }`}
             >
-              {t}
+              {t(`fileMappings.targets.${tgt}`)}
             </button>
           ))}
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <Label>Name</Label>
+            <Label>{tc('labels.name')}</Label>
             <Input placeholder="corp-root-ca" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Scope</Label>
+            <Label>{t('fileMappings.form.scope')}</Label>
             <select
               value={scope}
               onChange={(e) => setScope(e.target.value as (typeof SCOPES)[number])}
@@ -166,29 +169,29 @@ export default function FileMappingsPage() {
             >
               {SCOPES.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {t(`fileMappings.scopes.${s}`)}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <Label>Source path</Label>
+            <Label>{t('fileMappings.form.sourcePath')}</Label>
             <Input placeholder="secrets://pki/corp-root-ca.crt" value={sourcePath} onChange={(e) => setSourcePath(e.target.value)} />
           </div>
           <div>
-            <Label>Destination path (in container)</Label>
+            <Label>{t('fileMappings.form.destPath')}</Label>
             <Input placeholder="/usr/local/share/ca-certificates/corp.crt" value={destPath} onChange={(e) => setDestPath(e.target.value)} />
           </div>
           <div>
-            <Label>Owner (optional)</Label>
+            <Label>{t('fileMappings.form.owner')}</Label>
             <Input placeholder="root" value={owner} onChange={(e) => setOwner(e.target.value)} />
           </div>
           <div>
-            <Label>Group (optional)</Label>
+            <Label>{t('fileMappings.form.group')}</Label>
             <Input placeholder="root" value={group} onChange={(e) => setGroup(e.target.value)} />
           </div>
           <div>
-            <Label>Mode (octal)</Label>
+            <Label>{t('fileMappings.form.mode')}</Label>
             <Input placeholder="0644" value={mode} onChange={(e) => setMode(e.target.value)} />
           </div>
           <div className="flex items-end">
@@ -199,7 +202,7 @@ export default function FileMappingsPage() {
                 onChange={(e) => setIsHomeProfile(e.target.checked)}
                 className="size-4 accent-gold-500"
               />
-              Inject into home profile
+              {t('fileMappings.form.homeProfile')}
             </label>
           </div>
         </div>
@@ -209,11 +212,10 @@ export default function FileMappingsPage() {
           disabled={!name || !sourcePath || !destPath || create.isPending}
         >
           {create.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-          Add file mapping
+          {t('fileMappings.addButton')}
         </Button>
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Package className="size-3.5" /> Files are written at container start with the configured owner,
-          group, and mode — without baking secrets into the image.
+          <Package className="size-3.5" /> {t('fileMappings.footnote')}
         </p>
       </Card>
     </div>

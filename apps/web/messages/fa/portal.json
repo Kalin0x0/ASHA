@@ -1,0 +1,70 @@
+{
+  "header": {
+    "myWorkspaces": "فضاهای کاری من",
+    "admin": "مدیریت"
+  },
+  "launcher": {
+    "eyebrow": "فضاهای کاری شما",
+    "title": "یک <gradient>فضای کاری</gradient> اجرا کنید",
+    "subtitle": "دسکتاپ یا برنامه‌ای امن و ایزوله — مستقیم به مرورگر شما استریم می‌شود. نه چیزی نصب می‌شود، نه چیزی باقی می‌ماند.",
+    "searchPlaceholder": "جستجوی فضاهای کاری…",
+    "categoriesNavAria": "دسته‌بندی‌های فضای کاری",
+    "categories": "دسته‌بندی‌ها",
+    "allWorkspaces": "همه فضاهای کاری",
+    "allWorkspacesHeading": "همه فضاهای کاری",
+    "noResults": "هیچ فضای کاری با جستجوی شما مطابقت ندارد.",
+    "clearFilters": "پاک کردن فیلترها",
+    "launchError": "شروع نشست ممکن نشد"
+  },
+  "card": {
+    "launch": "اجرا",
+    "starting": "در حال شروع…",
+    "unavailable": "در دسترس نیست",
+    "gpu": "GPU",
+    "vcpu": "{count} vCPU",
+    "gb": "{value} GB",
+    "launchAria": "اجرای {name}",
+    "unavailableAria": "{name} (در دسترس نیست)",
+    "addFavorite": "افزودن به علاقه‌مندی‌ها",
+    "removeFavorite": "حذف از علاقه‌مندی‌ها"
+  },
+  "mySessions": {
+    "title": "نشست‌های من",
+    "starting": "در حال شروع",
+    "resume": "ازسرگیری",
+    "resumeAria": "ازسرگیری {name}",
+    "endAria": "پایان دادن به {name}",
+    "endedToast": "نشست پایان یافت"
+  },
+  "favorites": {
+    "title": "علاقه‌مندی‌ها",
+    "reorderHint": "برای تغییر ترتیب بکشید",
+    "dragToReorder": "برای تغییر ترتیب بکشید",
+    "launchTitle": "اجرای {name}",
+    "seeAll": "مشاهده همه علاقه‌مندی‌ها",
+    "addedToast": "{name} به علاقه‌مندی‌ها افزوده شد",
+    "removedToast": "{name} از علاقه‌مندی‌ها حذف شد",
+    "workspaceFallback": "فضای کاری"
+  },
+  "appearance": {
+    "trigger": "تغییر پس‌زمینه",
+    "title": "پس‌زمینه",
+    "subtitle": "اجراکننده خود را شخصی‌سازی کنید",
+    "reset": "بازنشانی",
+    "apply": "اعمال",
+    "customLabel": "نشانی تصویر دلخواه",
+    "removeCustom": "حذف تصویر دلخواه",
+    "appliedToast": "پس‌زمینه روی {name} تنظیم شد",
+    "customAppliedToast": "پس‌زمینه دلخواه اعمال شد",
+    "presets": {
+      "aurora": "شفق",
+      "ember": "اخگر",
+      "nebula": "سحابی",
+      "ocean": "اقیانوس",
+      "forest": "جنگل",
+      "crimson": "زرشکی",
+      "graphite": "گرافیت",
+      "void": "خلأ"
+    }
+  }
+}

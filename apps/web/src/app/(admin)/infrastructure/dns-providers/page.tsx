@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2, Plus, Route, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -19,38 +20,41 @@ import {
 } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 
-type ConfigField = { key: string; label: string; placeholder?: string; secret?: boolean };
+type ConfigField = { key: string; placeholder?: string; secret?: boolean };
 
+// Field labels resolve at render via i18n (`infrastructure.dnsProviders.fields.<KIND>.<key>`).
 const CONFIG_FIELDS: Record<DNSProviderKind, ConfigField[]> = {
   AWS: [
-    { key: 'accessKeyId', label: 'Access Key ID' },
-    { key: 'secretAccessKey', label: 'Secret Access Key', secret: true },
-    { key: 'hostedZoneId', label: 'Hosted Zone ID' },
+    { key: 'accessKeyId' },
+    { key: 'secretAccessKey', secret: true },
+    { key: 'hostedZoneId' },
   ],
   AZURE: [
-    { key: 'tenantId', label: 'Tenant ID' },
-    { key: 'clientId', label: 'Client ID' },
-    { key: 'clientSecret', label: 'Client Secret', secret: true },
-    { key: 'subscriptionId', label: 'Subscription ID' },
-    { key: 'resourceGroup', label: 'Resource Group' },
+    { key: 'tenantId' },
+    { key: 'clientId' },
+    { key: 'clientSecret', secret: true },
+    { key: 'subscriptionId' },
+    { key: 'resourceGroup' },
   ],
-  DIGITALOCEAN: [{ key: 'apiToken', label: 'API Token', secret: true }],
+  DIGITALOCEAN: [{ key: 'apiToken', secret: true }],
   GCP: [
-    { key: 'projectId', label: 'Project ID' },
-    { key: 'serviceAccountKey', label: 'Service Account Key (JSON)', secret: true },
+    { key: 'projectId' },
+    { key: 'serviceAccountKey', secret: true },
   ],
   ORACLE: [
-    { key: 'tenancyOcid', label: 'Tenancy OCID' },
-    { key: 'userOcid', label: 'User OCID' },
-    { key: 'fingerprint', label: 'Fingerprint' },
-    { key: 'privateKeyPem', label: 'Private Key (PEM)', secret: true },
-    { key: 'compartmentOcid', label: 'Compartment OCID' },
+    { key: 'tenancyOcid' },
+    { key: 'userOcid' },
+    { key: 'fingerprint' },
+    { key: 'privateKeyPem', secret: true },
+    { key: 'compartmentOcid' },
   ],
 };
 
 const KINDS: DNSProviderKind[] = ['AWS', 'AZURE', 'DIGITALOCEAN', 'GCP', 'ORACLE'];
 
 export default function DNSProvidersPage() {
+  const t = useTranslations('infrastructure');
+  const tc = useTranslations('common');
   const [providers, setProviders] = useState<ApiDNSProvider[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -66,7 +70,7 @@ export default function DNSProvidersPage() {
     try {
       setProviders(await getDNSProviders());
     } catch {
-      toast.error('Failed to load DNS providers');
+      toast.error(t('dnsProviders.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -81,13 +85,13 @@ export default function DNSProvidersPage() {
     setCreating(true);
     try {
       await createDNSProvider({ name, provider: kind, zoneName: zoneName || undefined, config, enabled: true });
-      toast.success(`${kind} DNS provider added`);
+      toast.success(t('dnsProviders.toasts.created', { kind: t(`dnsProviders.kinds.${kind}`) }));
       setName('');
       setZoneName('');
       setConfig({});
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not create provider');
+      toast.error(e instanceof Error ? e.message : t('dnsProviders.toasts.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -99,7 +103,7 @@ export default function DNSProvidersPage() {
       await updateDNSProvider(p.id, { enabled: !p.enabled });
       await refresh();
     } catch {
-      toast.error('Could not update provider');
+      toast.error(t('dnsProviders.toasts.updateFailed'));
     } finally {
       setBusyId(null);
     }
@@ -109,10 +113,10 @@ export default function DNSProvidersPage() {
     setBusyId(id);
     try {
       await deleteDNSProvider(id);
-      toast.success('Provider removed');
+      toast.success(t('dnsProviders.toasts.removed'));
       await refresh();
     } catch {
-      toast.error('Could not remove provider');
+      toast.error(t('dnsProviders.toasts.removeFailed'));
     } finally {
       setBusyId(null);
     }
@@ -121,30 +125,33 @@ export default function DNSProvidersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="DNS Providers"
-        description="Register DNS providers so autoscaled servers and per-session hostnames get DNS records created automatically."
+        title={t('dnsProviders.title')}
+        description={t('dnsProviders.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          DNS provider management is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('dnsProviders.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="Providers" value={providers.length} icon={Route} primary />
-        <StatCard label="Enabled" value={providers.filter((p) => p.enabled).length} icon={Route} />
+        <StatCard label={t('dnsProviders.stats.providers')} value={providers.length} icon={Route} primary />
+        <StatCard label={tc('labels.enabled')} value={providers.filter((p) => p.enabled).length} icon={Route} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Configured providers</h2>
+          <h2 className="font-display text-lg font-medium">{t('dnsProviders.configuredProviders')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {providers.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">No DNS providers configured yet.</p>
+            <p className="p-5 text-sm text-muted-foreground">{t('dnsProviders.empty')}</p>
           ) : (
             providers.map((p) => (
               <div key={p.id} className="flex items-center gap-3 px-5 py-3 text-sm">
@@ -153,10 +160,10 @@ export default function DNSProvidersPage() {
                   <p className="truncate font-medium">{p.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{p.zoneName ?? '—'}</p>
                 </div>
-                <Badge variant="gold">{p.provider}</Badge>
-                <Badge variant={p.enabled ? 'success' : 'outline'}>{p.enabled ? 'Enabled' : 'Disabled'}</Badge>
+                <Badge variant="gold">{t(`dnsProviders.kinds.${p.provider}`)}</Badge>
+                <Badge variant={p.enabled ? 'success' : 'outline'}>{p.enabled ? tc('labels.enabled') : tc('labels.disabled')}</Badge>
                 <Button variant="secondary" size="sm" disabled={busyId === p.id} onClick={() => void onToggle(p)}>
-                  {p.enabled ? 'Disable' : 'Enable'}
+                  {p.enabled ? tc('actions.disable') : tc('actions.enable')}
                 </Button>
                 <Button variant="ghost" size="icon-sm" disabled={busyId === p.id} onClick={() => void onDelete(p.id)}>
                   <Trash2 className="size-4 text-destructive" />
@@ -168,7 +175,7 @@ export default function DNSProvidersPage() {
       </Card>
 
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add provider</h2>
+        <h2 className="font-display text-lg font-medium">{t('dnsProviders.addProvider')}</h2>
         <div className="flex flex-wrap gap-2">
           {KINDS.map((k) => (
             <button
@@ -183,22 +190,22 @@ export default function DNSProvidersPage() {
                   : 'border-border-subtle text-muted-foreground hover:bg-secondary'
               }`}
             >
-              {k}
+              {t(`dnsProviders.kinds.${k}`)}
             </button>
           ))}
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <Label>Display name</Label>
-            <Input placeholder={`${kind} DNS`} value={name} onChange={(e) => setName(e.target.value)} />
+            <Label>{t('dnsProviders.form.displayName')}</Label>
+            <Input placeholder={t('dnsProviders.form.namePlaceholder', { kind: t(`dnsProviders.kinds.${kind}`) })} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Zone name (optional)</Label>
+            <Label>{t('dnsProviders.form.zoneName')}</Label>
             <Input placeholder="example.com" value={zoneName} onChange={(e) => setZoneName(e.target.value)} />
           </div>
           {CONFIG_FIELDS[kind].map((f) => (
             <div key={f.key}>
-              <Label>{f.label}</Label>
+              <Label>{t(`dnsProviders.fields.${kind}.${f.key}`)}</Label>
               <Input
                 type={f.secret ? 'password' : 'text'}
                 placeholder={f.placeholder}
@@ -210,7 +217,7 @@ export default function DNSProvidersPage() {
         </div>
         <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !name || creating}>
           {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-          Add provider
+          {t('dnsProviders.addProvider')}
         </Button>
       </Card>
     </div>

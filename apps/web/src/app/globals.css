@@ -242,6 +242,22 @@
     font-feature-settings: 'ss01', 'calt';
   }
 
+  /* Persian (RTL) — Vazirmatn covers UI and display; Latin glyph features and
+     negative tracking don't apply to Arabic-script text. */
+  html[lang='fa'] body,
+  html[lang='fa'] h1,
+  html[lang='fa'] h2,
+  html[lang='fa'] h3,
+  html[lang='fa'] h4,
+  html[lang='fa'] .font-display {
+    font-family: 'Vazirmatn Variable', var(--font-sans);
+    letter-spacing: 0;
+    font-feature-settings: 'kern';
+  }
+  html[lang='fa'] body {
+    line-height: 1.8;
+  }
+
   h1,
   .font-display-xl {
     letter-spacing: -0.032em;
@@ -378,6 +394,15 @@
     animation: aurora-drift 32s var(--ease-in-out-soft) infinite alternate;
   }
 
+  /* User-selectable launcher wallpaper. Shares the aurora's gentle drift; the
+     coloured blooms are supplied inline per preset (see lib/backgrounds.ts) so
+     the catalog stays data-driven while the motion stays in the design system. */
+  .bg-wallpaper {
+    background-color: var(--color-anthracite-950);
+    background-size: 200% 200%;
+    animation: aurora-drift 36s var(--ease-in-out-soft) infinite alternate;
+  }
+
   .bg-grid {
     background-image:
       linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
@@ -512,6 +537,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .bg-aurora,
+  .bg-wallpaper,
   .animate-shimmer,
   .animate-pulse-ring,
   .animate-rise,

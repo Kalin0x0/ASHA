@@ -1,0 +1,63 @@
+{
+  "reporting": {
+    "title": "گزارش‌ها",
+    "description": "تحلیل مصرف در سطح کل پلتفرم: حجم نشست‌ها در طول زمان، فضاهای کاری برتر و ظرفیت.",
+    "loadError": "بارگذاری داده‌های گزارش ناموفق بود",
+    "liveOnlyNotice": "گزارش‌ها فقط با بک‌اند زنده در دسترس هستند. اجرا با",
+    "totalSessions": "مجموع نشست‌ها",
+    "activeNow": "هم‌اکنون فعال",
+    "agentsOnline": "ایجنت‌های آنلاین",
+    "recordings": "ضبط‌ها",
+    "sessionsTrendTitle": "نشست‌ها — {days} روز گذشته",
+    "noSessionData": "داده‌ای از نشست‌ها در این بازه وجود ندارد.",
+    "topWorkspaces": "فضاهای کاری برتر",
+    "noWorkspaceUsage": "هنوز استفاده‌ای از فضاهای کاری ثبت نشده است."
+  },
+  "auditLog": {
+    "title": "گزارش ممیزی",
+    "description": "سابقهٔ تغییرناپذیر اقدامات مدیریتی و امنیتی در سراسر سازمان.",
+    "loadError": "بارگذاری گزارش ممیزی ناموفق بود",
+    "liveOnlyNotice": "گزارش ممیزی فقط با بک‌اند زنده در دسترس است. اجرا با",
+    "filterPlaceholder": "فیلتر بر اساس عملیات (مثلاً session، apikey، vmprovider)…",
+    "noEntriesTitle": "هیچ رکورد ممیزی‌ای مطابقت ندارد",
+    "noEntriesDescription": "عبارت فیلتر دیگری را امتحان کنید.",
+    "backendNotConnectedTitle": "بک‌اند متصل نیست",
+    "backendNotConnectedDescription": "برای مشاهدهٔ گزارش ممیزی، برنامه را با NEXT_PUBLIC_API_MODE=live اجرا کنید."
+  },
+  "metrics": {
+    "title": "متریک‌ها",
+    "description": "سری زمانی متریک‌های پلتفرم که از ایجنت‌ها و کنترل‌پلین نمونه‌برداری می‌شوند.",
+    "loadError": "بارگذاری متریک ناموفق بود",
+    "liveOnlyNotice": "متریک‌ها فقط با بک‌اند زنده در دسترس هستند. اجرا با",
+    "metricLabels": {
+      "cpu": "مصرف CPU",
+      "memory": "مصرف حافظه",
+      "sessions": "نشست‌های هم‌زمان",
+      "load": "بار ایجنت"
+    },
+    "rangeLabels": {
+      "h6": "۶ ساعت",
+      "h24": "۲۴ ساعت",
+      "h72": "۳ روز",
+      "h168": "۷ روز"
+    },
+    "noSamples": "در بازهٔ انتخاب‌شده هیچ نمونه‌ای برای این متریک وجود ندارد."
+  },
+  "logForwarding": {
+    "title": "ارسال لاگ",
+    "description": "رویدادهای نشست و ممیزی را از طریق Fluent Bit به SIEM خود استریم کنید — Syslog، Splunk HEC، Elasticsearch، Loki یا HTTP عمومی.",
+    "loadError": "بارگذاری ارسال‌کننده‌های لاگ ناموفق بود",
+    "liveOnlyNotice": "ارسال لاگ فقط با بک‌اند زنده در دسترس است. اجرا با",
+    "forwarders": "ارسال‌کننده‌ها",
+    "configuredForwarders": "ارسال‌کننده‌های پیکربندی‌شده",
+    "emptyList": "هنوز هیچ ارسال‌کنندهٔ لاگی پیکربندی نشده است.",
+    "addForwarder": "افزودن ارسال‌کننده",
+    "endpointUrl": "URL مقصد",
+    "createdToast": "ارسال‌کنندهٔ لاگ افزوده شد",
+    "createdToastDescription": "به‌صورت پیش‌فرض غیرفعال است — پس از بررسی، آن را فعال کنید.",
+    "createError": "افزودن ارسال‌کننده ممکن نبود",
+    "updateError": "به‌روزرسانی ارسال‌کننده ممکن نبود",
+    "deletedToast": "ارسال‌کننده حذف شد",
+    "deleteError": "حذف ارسال‌کننده ممکن نبود"
+  }
+}

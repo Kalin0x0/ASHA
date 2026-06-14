@@ -1,0 +1,194 @@
+{
+  "general": {
+    "title": "عمومی",
+    "description": "تنظیمات کلید/مقدار در سطح سازمان — پیش‌فرض‌های نشست، گزینه‌های امنیتی و سایر پارامترهای قابل تنظیم که در سراسر پلتفرم استفاده می‌شوند.",
+    "liveOnly": "تنظیمات عمومی فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "sectionTitle": "تنظیمات",
+    "fields": {
+      "key": "کلید",
+      "value": "مقدار"
+    },
+    "placeholders": {
+      "key": "namespace.key",
+      "value": "مقدار"
+    },
+    "addSetting": "افزودن تنظیم",
+    "toasts": {
+      "loadFailed": "بارگذاری تنظیمات ناموفق بود",
+      "saved": "تنظیمات ذخیره شد",
+      "saveFailed": "ذخیرهٔ تنظیمات ممکن نشد"
+    }
+  },
+  "security": {
+    "title": "امنیت",
+    "description": "گذرکلیدها (WebAuthn) را برای ورود بدون گذرواژه و مقاوم در برابر فیشینگ به حساب خود مدیریت کنید.",
+    "liveOnly": "مدیریت گذرکلیدها فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "stats": {
+      "passkeys": "گذرکلیدها",
+      "method": "روش"
+    },
+    "yourPasskeys": "گذرکلیدهای شما",
+    "empty": "هنوز هیچ گذرکلیدی ثبت نشده است.",
+    "added": "افزوده‌شده در {date}",
+    "addPasskey": "افزودن گذرکلید",
+    "addPasskeyHint": "ابزار احراز هویت این دستگاه را ثبت کنید (Touch ID، Windows Hello، کلید امنیتی یا تلفن شما).",
+    "fields": {
+      "deviceName": "نام دستگاه (اختیاری)"
+    },
+    "placeholders": {
+      "deviceName": "MacBook Touch ID"
+    },
+    "registerPasskey": "ثبت گذرکلید",
+    "toasts": {
+      "loadFailed": "بارگذاری گذرکلیدها ناموفق بود",
+      "registered": "گذرکلید ثبت شد",
+      "registrationFailed": "ثبت گذرکلید ناموفق بود",
+      "removed": "گذرکلید حذف شد",
+      "removeFailed": "حذف گذرکلید ممکن نشد"
+    }
+  },
+  "branding": {
+    "title": "برندینگ",
+    "description": "پورتال و صفحهٔ ورود را با نام محصول، لوگو، رنگ‌ها و CSS سفارشی خود به‌صورت وایت‌لیبل برندسازی کنید.",
+    "liveOnly": "برندینگ فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "identity": "هویت",
+    "fields": {
+      "productName": "نام محصول",
+      "logoUrl": "URL لوگو",
+      "faviconUrl": "URL فاوآیکون",
+      "loginBackgroundUrl": "URL پس‌زمینهٔ صفحهٔ ورود",
+      "primaryColor": "رنگ اصلی",
+      "accentColor": "رنگ تأکیدی",
+      "customCss": "CSS سفارشی"
+    },
+    "preview": "پیش‌نمایش",
+    "logoAlt": "لوگو",
+    "signIn": "ورود",
+    "toasts": {
+      "loadFailed": "بارگذاری برندینگ ناموفق بود",
+      "saved": "برندینگ ذخیره شد",
+      "saveFailed": "ذخیرهٔ برندینگ ممکن نشد"
+    }
+  },
+  "banners": {
+    "title": "بنرها",
+    "description": "بنرهای انطباق و واترمارک‌های فارنزیک که روی نشست‌ها نمایش داده می‌شوند، با دامنه‌بندی بر اساس فضای کاری، گروه یا کاربر.",
+    "liveOnly": "بنرها فقط با بک‌اند زنده در دسترس هستند. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "stats": {
+      "configs": "پیکربندی‌ها",
+      "withWatermark": "دارای واترمارک"
+    },
+    "configured": "پیکربندی‌شده",
+    "empty": "هنوز هیچ پیکربندی بنر یا واترمارکی وجود ندارد.",
+    "emptyText": "(خالی)",
+    "scopes": {
+      "WORKSPACE": "فضای کاری",
+      "GROUP": "گروه",
+      "USER": "کاربر"
+    },
+    "badges": {
+      "banner": "بنر",
+      "watermark": "واترمارک {percent}٪"
+    },
+    "addTitle": "افزودن بنر / واترمارک",
+    "fields": {
+      "scope": "دامنه",
+      "targetId": "شناسهٔ مقصد (اختیاری — خالی = همهٔ موارد در دامنه)",
+      "bannerText": "متن بنر",
+      "bannerColor": "رنگ بنر",
+      "watermarkText": "متن واترمارک",
+      "watermarkOpacity": "شفافیت واترمارک ({percent}٪)"
+    },
+    "placeholders": {
+      "targetId": "شناسهٔ فضای کاری/گروه/کاربر",
+      "bannerText": "فقط برای استفادهٔ مجاز"
+    },
+    "toasts": {
+      "loadFailed": "بارگذاری بنرها ناموفق بود",
+      "missingText": "متن بنر یا متن واترمارک را وارد کنید",
+      "saved": "بنر / واترمارک ذخیره شد",
+      "saveFailed": "ذخیره ممکن نشد",
+      "removed": "حذف شد",
+      "removeFailed": "حذف ممکن نشد"
+    }
+  },
+  "licensing": {
+    "title": "مجوزدهی (لایسنس)",
+    "description": "محدودیت‌های نشست‌های هم‌زمان یا کاربران نامی را در سطح سازمان اعمال کنید. اعمال محدودیت هنگام راه‌اندازی نشست انجام می‌شود.",
+    "liveOnly": "مجوزدهی فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "stats": {
+      "license": "لایسنس",
+      "concurrentInUse": "هم‌زمان در حال استفاده",
+      "namedUsers": "کاربران نامی"
+    },
+    "licensed": "دارای لایسنس",
+    "community": "نسخهٔ اجتماعی",
+    "types": {
+      "CONCURRENT": "نشست‌های هم‌زمان",
+      "NAMED_USER": "کاربران نامی"
+    },
+    "utilization": "میزان استفاده",
+    "meters": {
+      "concurrent": "نشست‌های هم‌زمان",
+      "seats": "ظرفیت کاربران نامی"
+    },
+    "licenseKey": "کلید لایسنس",
+    "fields": {
+      "mode": "حالت",
+      "concurrentLimit": "سقف نشست‌های هم‌زمان",
+      "seats": "ظرفیت کاربران نامی"
+    },
+    "saveLicense": "ذخیرهٔ لایسنس",
+    "enforcedAtLaunch": "اعمال در زمان راه‌اندازی",
+    "toasts": {
+      "loadFailed": "بارگذاری لایسنس ناموفق بود",
+      "saved": "لایسنس ذخیره شد",
+      "saveFailed": "ذخیرهٔ لایسنس ممکن نشد"
+    }
+  },
+  "database": {
+    "title": "پایگاه داده",
+    "description": "پشتیبان‌گیری خودکار با pg_dump همراه با دورهٔ نگهداری. یک پشتیبان‌گیری درخواستی اجرا کنید یا تاریخچهٔ پشتیبان‌ها را مرور کنید.",
+    "liveOnly": "پشتیبان‌گیری از پایگاه داده فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "runBackupNow": "پشتیبان‌گیری هم‌اکنون",
+    "stats": {
+      "backups": "پشتیبان‌ها",
+      "latestSize": "حجم آخرین پشتیبان",
+      "lastBackup": "آخرین پشتیبان‌گیری"
+    },
+    "history": "تاریخچهٔ پشتیبان‌گیری",
+    "empty": "هنوز هیچ پشتیبانی ثبت نشده است.",
+    "status": {
+      "completed": "تکمیل‌شده",
+      "failed": "ناموفق",
+      "running": "در حال اجرا"
+    },
+    "toasts": {
+      "loadFailed": "بارگذاری پشتیبان‌ها ناموفق بود",
+      "completed": "پشتیبان‌گیری تکمیل شد",
+      "failed": "پشتیبان‌گیری ناموفق بود",
+      "failedDescription": "pg_dump کامل نشد — لاگ‌های سرور را بررسی کنید",
+      "runFailed": "اجرای پشتیبان‌گیری ممکن نشد"
+    }
+  },
+  "config": {
+    "title": "وارد کردن / خروجی گرفتن پیکربندی",
+    "description": "از برندینگ و تنظیمات قابل انتقال به‌صورت JSON خروجی بگیرید و آن‌ها را در استقرار دیگری دوباره وارد کنید. اطلاعات محرمانه و هویت‌ها هرگز گنجانده نمی‌شوند.",
+    "liveOnly": "وارد کردن/خروجی گرفتن پیکربندی فقط با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "export": "خروجی گرفتن",
+    "exportHint": "برندینگ فعلی سازمان و تنظیمات عمومی را به‌صورت یک فایل JSON دانلود کنید.",
+    "exportConfig": "خروجی گرفتن از پیکربندی",
+    "import": "وارد کردن",
+    "importHint": "یک JSON پیکربندی را جای‌گذاری کنید یا فایلی بارگذاری کنید، سپس اعمال کنید.",
+    "importConfig": "وارد کردن پیکربندی",
+    "payload": "محتوا (Payload)",
+    "toasts": {
+      "exported": "از پیکربندی خروجی گرفته شد",
+      "exportFailed": "خروجی گرفتن ناموفق بود",
+      "invalidJson": "JSON نامعتبر است",
+      "imported": "پیکربندی وارد شد",
+      "importedDescription": "برندینگ و تنظیمات اعمال شدند.",
+      "importFailed": "وارد کردن ناموفق بود"
+    }
+  }
+}

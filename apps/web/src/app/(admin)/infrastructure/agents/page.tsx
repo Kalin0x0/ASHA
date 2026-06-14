@@ -1,6 +1,7 @@
 'use client';
 
 import { Cpu, Layers, Server } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { AgentHealthCard } from '@/components/composite/agent-health-card';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
@@ -9,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAgents, useZones } from '@/lib/hooks';
 
 export default function AgentsPage() {
+  const t = useTranslations('infrastructure');
   const agents = useAgents();
   const zones = useZones();
 
@@ -20,19 +22,19 @@ export default function AgentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Agents"
-        description="Docker compute agents that provision and host session containers across your zones."
+        title={t('agents.title')}
+        description={t('agents.description')}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Online Agents" value={online} suffix={`/ ${agents.length}`} icon={Server} primary />
-        <StatCard label="Hosted Sessions" value={totalSessions} icon={Layers} />
-        <StatCard label="Avg CPU" value={Math.round(avgCpu)} suffix="%" icon={Cpu} format={(v) => `${Math.round(v)}`} />
+        <StatCard label={t('agents.stats.onlineAgents')} value={online} suffix={`/ ${agents.length}`} icon={Server} primary />
+        <StatCard label={t('agents.stats.hostedSessions')} value={totalSessions} icon={Layers} />
+        <StatCard label={t('agents.stats.avgCpu')} value={Math.round(avgCpu)} suffix="%" icon={Cpu} format={(v) => `${Math.round(v)}`} />
       </div>
 
       <Card elevation={1}>
         <CardHeader>
-          <CardTitle>Zones</CardTitle>
+          <CardTitle>{t('agents.zonesTitle')}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           {zones.map((z) => (
@@ -48,7 +50,7 @@ export default function AgentsPage() {
                 <p className="text-xs text-muted-foreground">{z.region}</p>
               </div>
               <Badge variant="outline" className="ml-2 tnum">
-                {z.agents} agents · {z.sessions} sessions
+                {t('agents.zoneLoad', { agents: z.agents, sessions: z.sessions })}
               </Badge>
             </div>
           ))}

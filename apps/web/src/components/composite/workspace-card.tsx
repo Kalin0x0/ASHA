@@ -1,12 +1,13 @@
 'use client';
 
 import { Clock, Cpu, Lock, MemoryStick, Play, Sparkles, Star } from 'lucide-react';
+import { useFormatter, useTranslations } from 'next-intl';
 import { Monogram } from '@/components/composite/monogram';
 import { Badge } from '@/components/ui/badge';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import { categoryVisual } from '@/lib/workspace-visuals';
 import type { Workspace } from '@/lib/types';
-import { cn, formatRelativeTime } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 /**
  * Image-forward workspace tile — the launcher's centrepiece. Mirrors Kasm's
@@ -31,6 +32,8 @@ export function WorkspaceCard({
   favorite?: boolean;
   onToggleFavorite?: (id: string) => void;
 }) {
+  const t = useTranslations('portal');
+  const format = useFormatter();
   const { Icon, accent } = categoryVisual(workspace.category);
   const enabled = workspace.enabled;
   const protocolLabel = workspace.protocol === 'KASMVNC' ? 'KasmVNC' : workspace.protocol;
@@ -45,7 +48,11 @@ export function WorkspaceCard({
       role="button"
       tabIndex={enabled ? 0 : -1}
       aria-disabled={!enabled}
-      aria-label={enabled ? `Launch ${workspace.friendlyName}` : `${workspace.friendlyName} (unavailable)`}
+      aria-label={
+        enabled
+          ? t('card.launchAria', { name: workspace.friendlyName })
+          : t('card.unavailableAria', { name: workspace.friendlyName })
+      }
       onClick={launch}
       onKeyDown={(e) => {
         if ((e.key === 'Enter' || e.key === ' ') && enabled) {
@@ -54,7 +61,7 @@ export function WorkspaceCard({
         }
       }}
       className={cn(
-        'group relative flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-[var(--surface-1)] text-left transition-all duration-300 ring-gold-focus',
+        'group relative flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-[var(--surface-1)] text-start transition-all duration-300 ring-gold-focus',
         enabled
           ? 'cursor-pointer hover:-translate-y-1 hover:border-[rgba(212,175,55,0.4)] hover:shadow-[0_18px_48px_-18px_rgba(0,0,0,0.7),0_0_0_1px_rgba(212,175,55,0.12)]'
           : 'cursor-not-allowed opacity-60',
@@ -96,7 +103,7 @@ export function WorkspaceCard({
         {/* Oversized category glyph watermark — fades if thumbnail exists */}
         <Icon
           className={cn(
-            'pointer-events-none absolute -right-4 -top-3 size-28 transition-all duration-500 group-hover:scale-110',
+            'pointer-events-none absolute -end-4 -top-3 size-28 transition-all duration-500 group-hover:scale-110',
             thumbEntry ? 'opacity-0' : 'opacity-[0.07]',
           )}
           style={{ color: accent }}
@@ -111,18 +118,18 @@ export function WorkspaceCard({
 
         {/* "Last session" badge — shown when thumbnail exists */}
         {thumbEntry && (
-          <div className="on-dark absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-full bg-anthracite-950/70 px-2 py-0.5 backdrop-blur-sm">
+          <div className="on-dark absolute bottom-2 start-2 z-10 flex items-center gap-1 rounded-full bg-anthracite-950/70 px-2 py-0.5 backdrop-blur-sm">
             <Clock className="size-2.5 text-gold-300" />
             <span className="text-[10px] font-medium text-gold-300 tabular-nums">
-              {formatRelativeTime(thumbEntry.capturedAt)}
+              {format.relativeTime(new Date(thumbEntry.capturedAt))}
             </span>
           </div>
         )}
 
         {/* GPU badge */}
         {workspace.gpu > 0 && (
-          <Badge variant="gold" className="absolute left-3 top-3 gap-1 z-10">
-            <Sparkles className="size-3" /> GPU
+          <Badge variant="gold" className="absolute start-3 top-3 gap-1 z-10">
+            <Sparkles className="size-3" /> {t('card.gpu')}
           </Badge>
         )}
 
@@ -134,10 +141,10 @@ export function WorkspaceCard({
               e.stopPropagation();
               onToggleFavorite(workspace.id);
             }}
-            aria-label={favorite ? 'Remove from favorites' : 'Add to favorites'}
+            aria-label={favorite ? t('card.removeFavorite') : t('card.addFavorite')}
             aria-pressed={favorite}
             className={cn(
-              'absolute right-2.5 top-2.5 z-10 flex size-8 items-center justify-center rounded-lg backdrop-blur transition-all duration-200 ring-gold-focus',
+              'absolute end-2.5 top-2.5 z-10 flex size-8 items-center justify-center rounded-lg backdrop-blur transition-all duration-200 ring-gold-focus',
               favorite
                 ? 'bg-anthracite-950/30 text-gold-300 hover:text-gold-200'
                 : 'text-muted-foreground/60 opacity-0 hover:bg-anthracite-950/30 hover:text-gold-300 focus-visible:opacity-100 group-hover:opacity-100',
@@ -159,11 +166,11 @@ export function WorkspaceCard({
               {launching ? (
                 <>
                   <span className="size-4 animate-spin rounded-full border-2 border-anthracite-950/30 border-t-anthracite-950" />
-                  Starting…
+                  {t('card.starting')}
                 </>
               ) : (
                 <>
-                  <Play className="size-4 fill-anthracite-950" /> Launch
+                  <Play className="size-4 fill-anthracite-950" /> {t('card.launch')}
                 </>
               )}
             </span>
@@ -171,7 +178,7 @@ export function WorkspaceCard({
         ) : (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-anthracite-950/45">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-anthracite-900/80 px-3 py-1 text-xs font-medium text-muted-foreground">
-              <Lock className="size-3" /> Unavailable
+              <Lock className="size-3" /> {t('card.unavailable')}
             </span>
           </div>
         )}
@@ -196,14 +203,14 @@ export function WorkspaceCard({
         <div className="mt-1 flex items-center gap-3.5 border-t border-border-subtle pt-3 text-[11px] text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <Cpu className="size-3.5 text-muted-foreground/60" />
-            {workspace.cores} vCPU
+            {t('card.vcpu', { count: workspace.cores })}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <MemoryStick className="size-3.5 text-muted-foreground/60" />
-            {(workspace.memMb / 1024).toFixed(1)} GB
+            {t('card.gb', { value: (workspace.memMb / 1024).toFixed(1) })}
           </span>
           {workspace.activeSessions > 0 && (
-            <span className="ml-auto inline-flex items-center gap-1.5 font-medium text-success">
+            <span className="ms-auto inline-flex items-center gap-1.5 font-medium text-success">
               <span className="size-1.5 rounded-full bg-success animate-pulse-ring" />
               {workspace.activeSessions}
             </span>

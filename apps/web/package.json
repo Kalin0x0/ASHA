@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "i18n:check": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
     "@chista/rbac": "workspace:*",
@@ -16,8 +17,10 @@
     "@fontsource-variable/manrope": "^5.2.8",
     "@fontsource-variable/sora": "^5.2.8",
     "@fontsource-variable/space-grotesk": "^5.2.10",
+    "@fontsource-variable/vazirmatn": "^5.2.8",
     "@radix-ui/react-avatar": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.4",
+    "@radix-ui/react-direction": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.4",
     "@radix-ui/react-label": "^2.1.1",
     "@radix-ui/react-popover": "^1.1.4",
@@ -39,6 +42,7 @@
     "guacamole-common-js": "^1.5.0",
     "lucide-react": "^0.469.0",
     "next": "^15.1.3",
+    "next-intl": "^4.13.0",
     "next-themes": "^0.4.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

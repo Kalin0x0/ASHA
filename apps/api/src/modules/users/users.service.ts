@@ -97,7 +97,14 @@ export class UsersService {
             }
           : {}),
       },
-      select: SAFE_SELECT,
+      select: {
+        ...SAFE_SELECT,
+        groups: {
+          select: {
+            group: { select: { name: true } },
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       take: 500,
     });

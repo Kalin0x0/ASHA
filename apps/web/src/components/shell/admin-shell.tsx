@@ -19,7 +19,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <div className="relative flex h-screen overflow-hidden bg-aurora">
       <aside
         className={cn(
-          'hidden shrink-0 border-r border-border-subtle transition-[width] duration-200 ease-out lg:block',
+          'hidden shrink-0 border-e border-border-subtle transition-[width] duration-200 ease-out lg:block',
           collapsed ? 'w-[76px]' : 'w-[264px]',
         )}
       >
@@ -32,7 +32,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             className="absolute inset-0 bg-anthracite-950/70 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="absolute left-0 top-0 h-full w-[272px] border-r border-border-subtle shadow-[var(--shadow-lifted)] animate-rise">
+          <aside className="absolute start-0 top-0 h-full w-[272px] border-e border-border-subtle shadow-[var(--shadow-lifted)] animate-rise">
             <SidebarContent collapsed={false} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>

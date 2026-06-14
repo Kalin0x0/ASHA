@@ -1,0 +1,70 @@
+{
+  "header": {
+    "myWorkspaces": "Meine Workspaces",
+    "admin": "Admin"
+  },
+  "launcher": {
+    "eyebrow": "Ihre Workspaces",
+    "title": "Starten Sie einen <gradient>Workspace</gradient>",
+    "subtitle": "Ein sicherer, isolierter Desktop oder eine Anwendung — direkt in Ihren Browser gestreamt. Nichts zu installieren, nichts bleibt zurück.",
+    "searchPlaceholder": "Workspaces durchsuchen…",
+    "categoriesNavAria": "Workspace-Kategorien",
+    "categories": "Kategorien",
+    "allWorkspaces": "Alle Workspaces",
+    "allWorkspacesHeading": "Alle Workspaces",
+    "noResults": "Keine Workspaces entsprechen Ihrer Suche.",
+    "clearFilters": "Filter zurücksetzen",
+    "launchError": "Sitzung konnte nicht gestartet werden"
+  },
+  "card": {
+    "launch": "Starten",
+    "starting": "Startet…",
+    "unavailable": "Nicht verfügbar",
+    "gpu": "GPU",
+    "vcpu": "{count} vCPU",
+    "gb": "{value} GB",
+    "launchAria": "{name} starten",
+    "unavailableAria": "{name} (nicht verfügbar)",
+    "addFavorite": "Zu Favoriten hinzufügen",
+    "removeFavorite": "Aus Favoriten entfernen"
+  },
+  "mySessions": {
+    "title": "Meine Sitzungen",
+    "starting": "Startet",
+    "resume": "Fortsetzen",
+    "resumeAria": "{name} fortsetzen",
+    "endAria": "{name} beenden",
+    "endedToast": "Sitzung beendet"
+  },
+  "favorites": {
+    "title": "Favoriten",
+    "reorderHint": "zum Sortieren ziehen",
+    "dragToReorder": "Zum Sortieren ziehen",
+    "launchTitle": "{name} starten",
+    "seeAll": "Alle Favoriten anzeigen",
+    "addedToast": "{name} zu Favoriten hinzugefügt",
+    "removedToast": "{name} aus Favoriten entfernt",
+    "workspaceFallback": "Workspace"
+  },
+  "appearance": {
+    "trigger": "Hintergrund ändern",
+    "title": "Hintergrund",
+    "subtitle": "Personalisieren Sie Ihren Launcher",
+    "reset": "Zurücksetzen",
+    "apply": "Anwenden",
+    "customLabel": "Eigene Bild-URL",
+    "removeCustom": "Eigenes Bild entfernen",
+    "appliedToast": "Hintergrund auf {name} gesetzt",
+    "customAppliedToast": "Eigener Hintergrund angewendet",
+    "presets": {
+      "aurora": "Aurora",
+      "ember": "Glut",
+      "nebula": "Nebel",
+      "ocean": "Ozean",
+      "forest": "Wald",
+      "crimson": "Karmesin",
+      "graphite": "Graphit",
+      "void": "Leere"
+    }
+  }
+}

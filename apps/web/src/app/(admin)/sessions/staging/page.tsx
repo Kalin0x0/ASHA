@@ -1,6 +1,7 @@
 'use client';
 
 import { Layers, Loader2, Minus, Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/composite/page-header';
@@ -23,6 +24,8 @@ import {
 import { isLive } from '@/lib/api/mode';
 
 export default function StagingPage() {
+  const t = useTranslations('sessions');
+  const tc = useTranslations('common');
   const [staging, setStaging] = useState<ApiStaging[]>([]);
   const [workspaces, setWorkspaces] = useState<ApiWorkspace[]>([]);
   const [zones, setZones] = useState<ApiZone[]>([]);
@@ -44,7 +47,7 @@ export default function StagingPage() {
       if (!workspaceId && ws.length > 0) setWorkspaceId(ws[0]!.id);
       if (!zoneId && zs.length > 0) setZoneId(zs[0]!.id);
     } catch {
-      toast.error('Failed to load staging pools');
+      toast.error(t('staging.toastLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -60,10 +63,10 @@ export default function StagingPage() {
     setCreating(true);
     try {
       await createStaging({ workspaceId, zoneId, desiredSessions: desired, enabled: true });
-      toast.success('Staging pool created');
+      toast.success(t('staging.toastCreated'));
       await refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Could not create staging pool');
+      toast.error(e instanceof Error ? e.message : t('staging.toastCreateFailed'));
     } finally {
       setCreating(false);
     }
@@ -75,7 +78,7 @@ export default function StagingPage() {
       await updateStaging(s.id, { desiredSessions: Math.max(0, s.desiredSessions + delta) });
       await refresh();
     } catch {
-      toast.error('Could not adjust pool');
+      toast.error(t('staging.toastAdjustFailed'));
     } finally {
       setBusyId(null);
     }
@@ -87,7 +90,7 @@ export default function StagingPage() {
       await updateStaging(s.id, { enabled: !s.enabled });
       await refresh();
     } catch {
-      toast.error('Could not update pool');
+      toast.error(t('staging.toastUpdateFailed'));
     } finally {
       setBusyId(null);
     }
@@ -97,10 +100,10 @@ export default function StagingPage() {
     setBusyId(id);
     try {
       await deleteStaging(id);
-      toast.success('Staging pool removed');
+      toast.success(t('staging.toastRemoved'));
       await refresh();
     } catch {
-      toast.error('Could not remove pool');
+      toast.error(t('staging.toastRemoveFailed'));
     } finally {
       setBusyId(null);
     }
@@ -112,30 +115,33 @@ export default function StagingPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Staging"
-        description="Pre-warm sessions so users connect instantly. The platform keeps the desired number of ready sessions per workspace and zone."
+        title={t('staging.title')}
+        description={t('staging.description')}
       />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Staging is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('staging.liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <StatCard label="Staging pools" value={staging.length} icon={Layers} primary />
-        <StatCard label="Pre-warmed" value={staging.reduce((a, s) => a + s.desiredSessions, 0)} icon={Layers} />
+        <StatCard label={t('staging.stats.pools')} value={staging.length} icon={Layers} primary />
+        <StatCard label={t('staging.stats.preWarmed')} value={staging.reduce((a, s) => a + s.desiredSessions, 0)} icon={Layers} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Pools</h2>
+          <h2 className="font-display text-lg font-medium">{t('staging.poolsTitle')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {staging.length === 0 ? (
-            <p className="p-5 text-sm text-muted-foreground">No staging pools configured yet.</p>
+            <p className="p-5 text-sm text-muted-foreground">{t('staging.empty')}</p>
           ) : (
             staging.map((s) => (
               <div key={s.id} className="flex items-center gap-3 px-5 py-3 text-sm">
@@ -153,9 +159,9 @@ export default function StagingPage() {
                     <Plus className="size-4" />
                   </Button>
                 </div>
-                <Badge variant={s.enabled ? 'success' : 'outline'}>{s.enabled ? 'Active' : 'Paused'}</Badge>
+                <Badge variant={s.enabled ? 'success' : 'outline'}>{s.enabled ? tc('labels.active') : t('staging.paused')}</Badge>
                 <Button variant="secondary" size="sm" disabled={busyId === s.id} onClick={() => void onToggle(s)}>
-                  {s.enabled ? 'Pause' : 'Resume'}
+                  {s.enabled ? t('staging.pause') : t('staging.resume')}
                 </Button>
                 <Button variant="ghost" size="icon-sm" disabled={busyId === s.id} onClick={() => void onDelete(s.id)}>
                   <Trash2 className="size-4 text-destructive" />
@@ -167,16 +173,16 @@ export default function StagingPage() {
       </Card>
 
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add staging pool</h2>
+        <h2 className="font-display text-lg font-medium">{t('staging.addTitle')}</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div>
-            <Label>Workspace</Label>
+            <Label>{t('staging.workspace')}</Label>
             <select
               value={workspaceId}
               onChange={(e) => setWorkspaceId(e.target.value)}
               className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
             >
-              {workspaces.length === 0 && <option value="">No workspaces</option>}
+              {workspaces.length === 0 && <option value="">{t('staging.noWorkspaces')}</option>}
               {workspaces.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.friendlyName || w.name}
@@ -185,13 +191,13 @@ export default function StagingPage() {
             </select>
           </div>
           <div>
-            <Label>Zone</Label>
+            <Label>{t('staging.zone')}</Label>
             <select
               value={zoneId}
               onChange={(e) => setZoneId(e.target.value)}
               className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
             >
-              {zones.length === 0 && <option value="">No zones</option>}
+              {zones.length === 0 && <option value="">{t('staging.noZones')}</option>}
               {zones.map((z) => (
                 <option key={z.id} value={z.id}>
                   {z.name}
@@ -200,13 +206,13 @@ export default function StagingPage() {
             </select>
           </div>
           <div>
-            <Label>Desired ready sessions</Label>
+            <Label>{t('staging.desiredSessions')}</Label>
             <Input type="number" min={0} value={desired} onChange={(e) => setDesired(Number(e.target.value))} />
           </div>
         </div>
         <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !workspaceId || !zoneId || creating}>
           {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
-          Add pool
+          {t('staging.addPool')}
         </Button>
       </Card>
     </div>

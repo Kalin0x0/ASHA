@@ -1,0 +1,107 @@
+{
+  "nav": {
+    "groups": {
+      "overview": "نمای کلی",
+      "workspaces": "فضاهای کاری",
+      "sessions": "نشست‌ها",
+      "access": "دسترسی",
+      "infrastructure": "زیرساخت",
+      "storage": "ذخیره‌سازی",
+      "connectivity": "اتصالات",
+      "settings": "تنظیمات",
+      "observability": "مشاهده‌پذیری",
+      "developer": "توسعه‌دهنده"
+    },
+    "items": {
+      "dashboard": "داشبورد",
+      "catalog": "کاتالوگ",
+      "images": "ایمیج‌ها",
+      "registry": "رجیستری",
+      "liveSessions": "نشست‌های زنده",
+      "history": "تاریخچه",
+      "recordings": "ضبط‌ها",
+      "staging": "استیجینگ",
+      "casting": "کستینگ",
+      "sharing": "اشتراک‌گذاری",
+      "users": "کاربران",
+      "groups": "گروه‌ها",
+      "roles": "نقش‌ها",
+      "authentication": "احراز هویت",
+      "zones": "نواحی",
+      "agents": "ایجنت‌ها",
+      "servers": "سرورها",
+      "serverPools": "استخرهای سرور",
+      "autoscale": "AutoScale",
+      "vmProviders": "ارائه‌دهندگان VM",
+      "dnsProviders": "ارائه‌دهندگان DNS",
+      "storageMappings": "نگاشت‌های ذخیره‌سازی",
+      "persistentProfiles": "پروفایل‌های ماندگار",
+      "volumeMappings": "نگاشت‌های Volume",
+      "fileMappings": "نگاشت‌های فایل",
+      "connectionProxies": "پروکسی‌های اتصال",
+      "webFiltering": "فیلترینگ وب",
+      "browserIsolation": "جداسازی مرورگر",
+      "egress": "ترافیک خروجی",
+      "general": "عمومی",
+      "security": "امنیت",
+      "branding": "برندینگ",
+      "banners": "بنرها",
+      "licensing": "لایسنس",
+      "database": "پایگاه داده",
+      "configImportExport": "درون‌ریزی/برون‌بری پیکربندی",
+      "reporting": "گزارش‌گیری",
+      "auditLog": "لاگ ممیزی",
+      "metrics": "متریک‌ها",
+      "logForwarding": "ارسال لاگ",
+      "apiKeys": "کلیدهای API",
+      "webhooks": "وب‌هوک‌ها",
+      "apiDocs": "مستندات API"
+    }
+  },
+  "topbar": {
+    "openMenu": "باز کردن منو",
+    "search": "جستجو…",
+    "workstation": "ایستگاه کاری",
+    "notifications": "اعلان‌ها",
+    "notificationsNew": "{count} جدید",
+    "account": "حساب کاربری",
+    "settings": "تنظیمات",
+    "profile": "پروفایل",
+    "signOut": "خروج",
+    "language": "زبان",
+    "demoNotifications": {
+      "agentUnhealthy": "ایجنت us-east-agent-02 وضعیت ناسالم گزارش کرد",
+      "cpuHigh": "مصرف CPU روی homelab-agent-01 از ۸۵٪ فراتر رفت",
+      "licenseRenewed": "لایسنس تمدید شد — ۲۵ کاربر هم‌زمان"
+    }
+  },
+  "sidebar": {
+    "collapse": "جمع کردن نوار کناری",
+    "expand": "باز کردن نوار کناری",
+    "allSystemsOperational": "تمام سیستم‌ها عملیاتی هستند"
+  },
+  "themeToggle": "تغییر تم",
+  "palette": {
+    "title": "پالت فرمان",
+    "placeholder": "جستجوی صفحات و عملیات…",
+    "noResults": "نتیجه‌ای یافت نشد.",
+    "favorites": "علاقه‌مندی‌ها",
+    "quickActions": "عملیات سریع",
+    "launchWorkspace": "اجرای {name}",
+    "launchAWorkspace": "اجرای یک فضای کاری",
+    "viewLiveSessions": "مشاهده نشست‌های زنده",
+    "toggleTheme": "تغییر تم",
+    "toSelect": "برای انتخاب",
+    "brand": "Chista Command",
+    "launchError": "شروع نشست ممکن نشد"
+  },
+  "comingSoon": {
+    "module": "ماژول",
+    "fallbackDescription": "منبع دادهٔ زندهٔ خود را متصل کنید تا این بخش به‌صورت خودکار تکمیل شود. هر زمان شما آماده باشید، همه‌چیز آماده است."
+  },
+  "notFound": {
+    "title": "صفحه پیدا نشد",
+    "description": "این مسیر در استقرار Chista شما وجود ندارد.",
+    "backToDashboard": "بازگشت به داشبورد"
+  }
+}
