@@ -1,11 +1,15 @@
 'use client';
 
 import Guacamole, { type Client as GuacClient } from 'guacamole-common-js';
-import { ArrowLeft, Loader2, MonitorX, RefreshCw, Settings, Wifi } from 'lucide-react';
+import { ArrowLeft, ClipboardPaste, Loader2, Maximize2, MonitorX, Power, RefreshCw, Settings, Wifi } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getAccessToken } from '@/lib/api/auth-store';
+
+// X11 keysyms for the control-menu shortcuts.
+const KEYSYM = { CTRL: 0xffe3, ALT: 0xffe9, DEL: 0xffff, V: 0x0076 } as const;
 
 type ViewState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -16,8 +20,11 @@ export default function ConnectPage() {
   const router = useRouter();
   const kasmId = params?.kasmId ?? '';
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<GuacClient | null>(null);
+  // Set while connected: pushes a string to the remote clipboard (local → remote).
+  const sendClipboardRef = useRef<((text: string) => void) | null>(null);
   const [state, setState] = useState<ViewState>('connecting');
   const [errMsg, setErrMsg] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -118,6 +125,47 @@ export default function ConnectPage() {
     };
     keyboard.onkeyup = (keysym) => client.sendKeyEvent(0, keysym);
 
+    // Clipboard: remote → local. When the remote clipboard changes, mirror it
+    // into the OS clipboard so "copy on the desktop → paste locally" works.
+    client.onclipboard = (stream, mimetype) => {
+      if (!mimetype.startsWith('text/')) return;
+      const reader = new Guacamole.StringReader(stream);
+      let data = '';
+      reader.ontext = (t) => {
+        data += t;
+      };
+      reader.onend = () => {
+        navigator.clipboard.writeText(data).catch(() => {
+          /* clipboard write denied — ignore */
+        });
+      };
+    };
+    // Clipboard: local → remote. Used by the toolbar "Paste" button and the
+    // best-effort focus sync below.
+    sendClipboardRef.current = (text: string) => {
+      try {
+        const out = client.createClipboardStream('text/plain');
+        const writer = new Guacamole.StringWriter(out);
+        writer.sendText(text);
+        writer.sendEnd();
+      } catch {
+        /* not connected */
+      }
+    };
+    // When the window regains focus, push the local clipboard to the remote so a
+    // plain Ctrl+V inside the desktop works too (best-effort; may be blocked).
+    const onFocus = () => {
+      navigator.clipboard
+        .readText()
+        .then((t) => {
+          if (t) sendClipboardRef.current?.(t);
+        })
+        .catch(() => {
+          /* clipboard read denied — the toolbar Paste button still works */
+        });
+    };
+    window.addEventListener('focus', onFocus);
+
     setState('connecting');
     setErrMsg('');
     try {
@@ -130,10 +178,13 @@ export default function ConnectPage() {
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer);
       window.removeEventListener('resize', onWindowResize);
+      window.removeEventListener('focus', onFocus);
       display.onresize = null;
       keyboard.onkeydown = null;
       keyboard.onkeyup = null;
       mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = null;
+      client.onclipboard = null;
+      sendClipboardRef.current = null;
       try {
         client.disconnect();
       } catch {
@@ -161,15 +212,91 @@ export default function ConnectPage() {
     setAttempt((a) => a + 1);
   }, []);
 
+  /** Send Ctrl+Alt+Del — essential for the Windows lock/login screen. */
+  const sendCtrlAltDel = useCallback(() => {
+    const c = clientRef.current;
+    if (!c) return;
+    c.sendKeyEvent(1, KEYSYM.CTRL);
+    c.sendKeyEvent(1, KEYSYM.ALT);
+    c.sendKeyEvent(1, KEYSYM.DEL);
+    c.sendKeyEvent(0, KEYSYM.DEL);
+    c.sendKeyEvent(0, KEYSYM.ALT);
+    c.sendKeyEvent(0, KEYSYM.CTRL);
+  }, []);
+
+  /** Copy the local clipboard into the remote, then issue Ctrl+V to paste it. */
+  const pasteToRemote = useCallback(async () => {
+    const c = clientRef.current;
+    if (!c || !sendClipboardRef.current) return;
+    let text = '';
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      toast.error('Clipboard access was blocked by the browser.');
+      return;
+    }
+    if (!text) return;
+    sendClipboardRef.current(text);
+    // Give guacd a beat to apply the clipboard before pasting into the focused app.
+    setTimeout(() => {
+      c.sendKeyEvent(1, KEYSYM.CTRL);
+      c.sendKeyEvent(1, KEYSYM.V);
+      c.sendKeyEvent(0, KEYSYM.V);
+      c.sendKeyEvent(0, KEYSYM.CTRL);
+    }, 80);
+    toast.success('Pasted to the remote desktop');
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    else void el.requestFullscreen().catch(() => {});
+  }, []);
+
+  const disconnect = useCallback(() => {
+    try {
+      clientRef.current?.disconnect();
+    } catch {
+      /* already closed */
+    }
+    router.back();
+  }, [router]);
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-anthracite-950 text-foreground">
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border-subtle bg-[var(--surface-1)] px-3 sm:px-4">
+    <div ref={containerRef} className="fixed inset-0 z-50 flex flex-col bg-anthracite-950 text-foreground">
+      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border-subtle bg-[var(--surface-1)] px-3 sm:px-4">
         <Button variant="ghost" size="icon-sm" onClick={() => router.back()} aria-label="Back to servers">
           <ArrowLeft className="size-4" />
         </Button>
-        <span className="font-display text-sm font-medium tracking-tight">Remote desktop</span>
+        <span className="hidden font-display text-sm font-medium tracking-tight sm:inline">Remote desktop</span>
         <StatusPill state={state} />
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-1.5">
+          {state === 'connected' && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => void pasteToRemote()}
+                title="Paste local clipboard to the remote (Ctrl+V)"
+                aria-label="Paste to remote"
+              >
+                <ClipboardPaste className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={sendCtrlAltDel}
+                title="Send Ctrl+Alt+Del to the remote"
+                className="font-mono text-[11px]"
+              >
+                Ctrl+Alt+Del
+              </Button>
+              <Button variant="ghost" size="icon-sm" onClick={toggleFullscreen} title="Fullscreen" aria-label="Fullscreen">
+                <Maximize2 className="size-4" />
+              </Button>
+            </>
+          )}
           <SettingsMenu perfMode={perfMode} onToggle={togglePerf} />
           {(state === 'disconnected' || state === 'error') && (
             <Button variant="outline" size="sm" onClick={reconnect}>
@@ -177,6 +304,10 @@ export default function ConnectPage() {
               Reconnect
             </Button>
           )}
+          <Button variant="destructive" size="sm" onClick={disconnect} title="Disconnect">
+            <Power className="size-3.5" />
+            <span className="hidden sm:inline">End</span>
+          </Button>
         </div>
       </header>
 
