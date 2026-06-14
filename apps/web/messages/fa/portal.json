@@ -37,7 +37,12 @@
     "resume": "ازسرگیری",
     "resumeAria": "ازسرگیری {name}",
     "endAria": "پایان دادن به {name}",
-    "endedToast": "نشست پایان یافت"
+    "endedToast": "نشست پایان یافت",
+    "stop": "توقف",
+    "stopAria": "توقف {name}",
+    "stoppedToast": "نشست متوقف شد — وضعیت حفظ می‌شود",
+    "delete": "حذف",
+    "deleteAria": "حذف {name}"
   },
   "favorites": {
     "title": "علاقه‌مندی‌ها",

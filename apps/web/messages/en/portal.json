@@ -37,7 +37,12 @@
     "resume": "Resume",
     "resumeAria": "Resume {name}",
     "endAria": "End {name}",
-    "endedToast": "Session ended"
+    "endedToast": "Session ended",
+    "stop": "Stop",
+    "stopAria": "Pause {name}",
+    "stoppedToast": "Session paused — state is kept",
+    "delete": "Delete",
+    "deleteAria": "Delete {name}"
   },
   "favorites": {
     "title": "Favorites",
