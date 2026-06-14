@@ -74,6 +74,7 @@ export class WorkspacesService {
         name: dto.name,
         friendlyName: dto.friendlyName,
         description: dto.description,
+        iconUrl: dto.iconUrl,
         type: dto.type,
         imageId,
         serverId,

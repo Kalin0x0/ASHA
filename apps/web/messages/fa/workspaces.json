@@ -22,6 +22,8 @@
       "category": "دسته‌بندی",
       "categoryPlaceholder": "یک دسته‌بندی انتخاب کنید…",
       "newCategory": "+ دسته‌بندی جدید…",
+      "iconUrl": "نماد",
+      "iconUrlHint": "به‌طور خودکار از برنامه تشخیص داده می‌شود. برای جایگزینی، نشانی تصویر وارد کنید.",
       "dockerImage": "ایمیج Docker",
       "dockerImageHint": "مثلاً kasmweb/brave:1.16.0 — یک ایمیج می‌سازد و پیوند می‌دهد تا فضای کاری قابل اجرا باشد.",
       "vcpu": "vCPU",

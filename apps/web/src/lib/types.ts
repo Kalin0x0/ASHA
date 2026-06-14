@@ -114,6 +114,7 @@ export interface CreateWorkspaceInput {
   friendlyName: string;
   name?: string;
   description?: string;
+  iconUrl?: string;
   type?: WorkspaceType;
   category?: string;
   dockerImage?: string;

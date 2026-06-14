@@ -2,7 +2,7 @@
 
 import { Clock, Cpu, Lock, MemoryStick, Play, Sparkles, Star } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { Monogram } from '@/components/composite/monogram';
+import { AppIcon } from '@/components/composite/app-icon';
 import { Badge } from '@/components/ui/badge';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import { categoryVisual } from '@/lib/workspace-visuals';
@@ -110,10 +110,14 @@ export function WorkspaceCard({
           aria-hidden
         />
 
-        {/* App monogram (always visible, scales on hover) */}
-        <Monogram
+        {/* App icon — real brand logo when known, else initials (always visible) */}
+        <AppIcon
           name={workspace.friendlyName}
-          className="relative z-10 size-16 rounded-2xl text-lg shadow-[0_8px_24px_-8px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-105"
+          dockerImage={workspace.dockerImage}
+          category={workspace.category}
+          iconUrl={workspace.iconUrl}
+          rounded="rounded-2xl"
+          className="relative z-10 size-16 text-lg shadow-[0_8px_24px_-8px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-105"
         />
 
         {/* "Last session" badge — shown when thumbnail exists */}

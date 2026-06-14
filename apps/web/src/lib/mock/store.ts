@@ -237,6 +237,7 @@ class MockStore {
       description:
         input.description?.trim() ||
         (server ? `${friendlyName} over ${server.connectionType}.` : `${friendlyName} streamed in an isolated container.`),
+      iconUrl: input.iconUrl?.trim() || undefined,
       category: input.category?.trim() || (type === 'SERVER' ? 'Servers' : 'Other'),
       cores: input.cores ?? 2,
       memMb: input.memMb ?? 2768,
