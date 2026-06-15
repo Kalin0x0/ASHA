@@ -1,0 +1,78 @@
+{{- if .Values.agent.enabled }}
+# ── Chista Agent — ServiceAccount + RBAC ─────────────────────────────────────
+# When CHISTA_DRIVER=kubernetes the agent creates/deletes Pods, Services, and
+# Ingresses in the session namespace. The Role here grants exactly those verbs
+# and nothing more (principle of least privilege).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chista-agent
+  labels:
+    {{- include "chista.labels" . | nindent 4 }}
+---
+# ClusterRole: lets the agent read node/zone info (used for heartbeat reporting)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: chista-agent-node-reader
+  labels:
+    {{- include "chista.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [nodes]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: chista-agent-node-reader
+  labels:
+    {{- include "chista.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: chista-agent-node-reader
+subjects:
+  - kind: ServiceAccount
+    name: chista-agent
+    namespace: {{ .Release.Namespace }}
+---
+# Namespaced Role: full control over session Pods/Services/Ingresses
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: chista-agent-session-manager
+  namespace: {{ .Values.agent.k8sSessionNs | default "chista-sessions" }}
+  labels:
+    {{- include "chista.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [pods, services]
+    verbs: [create, get, list, watch, delete]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [create, get, delete]
+  # Metrics API — optional; collectStats falls back gracefully if RBAC is missing
+  - apiGroups: [metrics.k8s.io]
+    resources: [pods]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chista-agent-session-manager
+  namespace: {{ .Values.agent.k8sSessionNs | default "chista-sessions" }}
+  labels:
+    {{- include "chista.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: chista-agent-session-manager
+subjects:
+  - kind: ServiceAccount
+    name: chista-agent
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -1,0 +1,155 @@
+{
+  "catalog": {
+    "title": "فضاهای کاری",
+    "description": "کاتالوگ دسکتاپ‌ها، مرورگرها و برنامه‌های کانتینری که کاربران می‌توانند اجرا کنند.",
+    "newWorkspace": "فضای کاری جدید",
+    "searchPlaceholder": "جستجوی فضاهای کاری…",
+    "create": {
+      "title": "ایجاد فضای کاری",
+      "description": "یک برنامه/دسکتاپ Docker یا یک ماشین مبتنی بر سرور (RDP/VNC/SSH) اضافه کنید — دسکتاپ‌های ویندوز، سرورها و موارد دیگر.",
+      "machineType": "نوع ماشین",
+      "types": {
+        "container": "کانتینر Docker",
+        "containerHint": "ایمیج برنامه/دسکتاپ استریم‌شده",
+        "server": "سرور / VM",
+        "serverHint": "ماشین RDP/VNC/SSH (ویندوز و غیره)"
+      },
+      "friendlyName": "نام",
+      "friendlyNamePlaceholder": "Windows 11",
+      "slug": "اسلاگ",
+      "slugHint": "شناسه ایمن برای URL؛ در صورت خالی بودن از نام ساخته می‌شود.",
+      "descriptionField": "توضیحات",
+      "category": "دسته‌بندی",
+      "categoryPlaceholder": "یک دسته‌بندی انتخاب کنید…",
+      "newCategory": "+ دسته‌بندی جدید…",
+      "iconUrl": "نماد",
+      "iconUrlHint": "به‌طور خودکار از برنامه تشخیص داده می‌شود. برای جایگزینی، نشانی تصویر وارد کنید.",
+      "dockerImage": "ایمیج Docker",
+      "dockerImageHint": "مثلاً kasmweb/brave:1.16.0 — یک ایمیج می‌سازد و پیوند می‌دهد تا فضای کاری قابل اجرا باشد.",
+      "vcpu": "vCPU",
+      "ramGb": "RAM (گیگابایت)",
+      "gpu": "GPU",
+      "zone": "زون",
+      "defaultZone": "زون پیش‌فرض",
+      "server": "سرور",
+      "selectServer": "یک سرور انتخاب کنید…",
+      "noServers": "هنوز سروری ثبت نشده است. یکی را در زیرساخت → سرورها اضافه کنید.",
+      "serverZone": "{protocol} · زون {zone}",
+      "serverHintLong": "یک ماشین ثبت‌شده RDP/VNC/SSH انتخاب کنید — زون آن به‌طور خودکار استفاده می‌شود.",
+      "serverRequired": "برای فضای کاری مبتنی بر سرور، یک سرور انتخاب کنید.",
+      "submit": "ایجاد فضای کاری",
+      "nameRequired": "نام فضای کاری الزامی است."
+    },
+    "edit": {
+      "title": "ویرایش فضای کاری",
+      "description": "نام، توضیحات، دسته‌بندی، نماد و منابع را به‌روزرسانی کنید.",
+      "submit": "ذخیره تغییرات",
+      "enabled": "فعال",
+      "enabledHint": "فضاهای کاری غیرفعال در کاتالوگ می‌مانند اما قابل اجرا نیستند."
+    },
+    "delete": {
+      "title": "حذف فضای کاری؟",
+      "description": "«{name}» از کاتالوگ حذف می‌شود. این عمل قابل بازگشت نیست.",
+      "confirm": "حذف"
+    },
+    "toasts": {
+      "launchTitle": "نشست در حال اجراست",
+      "launchDescription": "در حال تخصیص ایجنت و راه‌اندازی کانتینر.",
+      "created": "فضای کاری {name} ایجاد شد",
+      "createFailed": "ایجاد فضای کاری ممکن نشد",
+      "updated": "فضای کاری {name} به‌روزرسانی شد",
+      "updateFailed": "به‌روزرسانی فضای کاری ممکن نشد",
+      "deleted": "فضای کاری {name} حذف شد",
+      "deleteFailed": "حذف فضای کاری ممکن نشد"
+    }
+  },
+  "images": {
+    "title": "ایمیج‌های فضای کاری",
+    "description": "ایمیج‌های کانتینری که روی ایجنت‌ها Pull و کش می‌شوند. ایمیج‌های جدید در نخستین اجرای هر فضای کاری به‌صورت خودکار Pull می‌شوند.",
+    "stats": {
+      "images": "ایمیج‌ها",
+      "cachedSize": "حجم کش‌شده (GB)",
+      "workspacesCovered": "فضاهای کاری تحت پوشش"
+    },
+    "searchPlaceholder": "جستجو بر اساس نام، رجیستری یا تگ…",
+    "table": {
+      "image": "ایمیج",
+      "registry": "رجیستری",
+      "tag": "تگ",
+      "usedBy": "استفاده‌شده توسط",
+      "size": "حجم",
+      "pulled": "زمان Pull"
+    },
+    "status": {
+      "available": "در دسترس",
+      "pulling": "در حال Pull",
+      "error": "خطا"
+    },
+    "age": {
+      "today": "امروز",
+      "yesterday": "دیروز",
+      "daysAgo": "{days} روز پیش"
+    },
+    "empty": "هیچ ایمیجی با جستجوی شما مطابقت ندارد."
+  },
+  "registry": {
+    "title": "رجیستری ایمیج",
+    "description": "رجیستری‌های فضای کاری با قالب باز را متصل کنید، کاتالوگ آن‌ها را همگام‌سازی کنید و فضاهای کاری را از مارکت‌پلیس نصب کنید.",
+    "liveOnly": "مدیریت رجیستری فقط با بک‌اند زنده در دسترس است. برای اتصال به API، برنامه را با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
+    "stats": {
+      "registries": "رجیستری‌ها",
+      "marketplaceApps": "برنامه‌های مارکت‌پلیس",
+      "installed": "نصب‌شده",
+      "available": "در دسترس",
+      "catalogSize": "حجم کاتالوگ"
+    },
+    "form": {
+      "namePlaceholder": "Chista Community",
+      "urlLabel": "URL ایندکس (JSON)"
+    },
+    "empty": "هنوز هیچ رجیستری‌ای پیکربندی نشده است.",
+    "type": {
+      "FIRST_PARTY": "رسمی",
+      "THIRD_PARTY": "شخص ثالث"
+    },
+    "appCount": "{count, plural, one {# برنامه} other {# برنامه}}",
+    "marketplace": {
+      "title": "مارکت‌پلیس",
+      "searchPlaceholder": "جستجوی برنامه‌ها…",
+      "noDescription": "بدون توضیحات.",
+      "install": "نصب",
+      "installed": "نصب‌شده",
+      "emptyLive": "هیچ برنامه‌ای در مارکت‌پلیس نیست. یک رجیستری اضافه کنید و آن را همگام‌سازی کنید.",
+      "emptyMock": "برای مرور مارکت‌پلیس، بک‌اند زنده را متصل کنید."
+    },
+    "toasts": {
+      "loadFailed": "بارگذاری رجیستری‌ها ناموفق بود",
+      "added": "رجیستری افزوده شد — در حال همگام‌سازی…",
+      "addFailed": "افزودن رجیستری ممکن نبود",
+      "synced": "{count, plural, one {# فضای کاری همگام‌سازی شد} other {# فضای کاری همگام‌سازی شد}}",
+      "syncFailed": "همگام‌سازی ناموفق بود",
+      "installedTitle": "{name} نصب شد",
+      "installedDescription": "ایمیج + فضای کاری ایجاد شد.",
+      "installFailed": "نصب ناموفق بود",
+      "removed": "رجیستری حذف شد",
+      "removeFailed": "حذف رجیستری ممکن نبود"
+    },
+    "tabs": {
+      "available": "در دسترس",
+      "installed": "نصب‌شده",
+      "registries": "ثبت‌ها"
+    },
+    "allCategories": "همه",
+    "availableEmpty": "هیچ ایمیجی با جست‌وجوی شما مطابقت ندارد.",
+    "installedEmpty": "هنوز ایمیجی نصب نشده — یکی را از زبانهٔ «در دسترس» نصب کنید.",
+    "card": {
+      "source": "منبع"
+    },
+    "sources": {
+      "addTitle": "افزودن منبع ثبت",
+      "addHint": "چیستا را به هر فهرست ثبت فضای کاری با قالب باز (JSON) متصل کنید. هر تعداد منبع که می‌خواهید اضافه کنید.",
+      "syncedAt": "همگام‌سازی {time}",
+      "never": "هرگز همگام نشده"
+    }
+  }
+}

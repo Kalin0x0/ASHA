@@ -1,0 +1,109 @@
+{
+  "nav": {
+    "groups": {
+      "overview": "Overview",
+      "workspaces": "Workspaces",
+      "sessions": "Sessions",
+      "access": "Access",
+      "infrastructure": "Infrastructure",
+      "storage": "Storage",
+      "connectivity": "Connectivity",
+      "settings": "Settings",
+      "observability": "Observability",
+      "developer": "Developer"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "catalog": "Catalog",
+      "images": "Images",
+      "registry": "Registry",
+      "liveSessions": "Live Sessions",
+      "history": "History",
+      "recordings": "Recordings",
+      "staging": "Staging",
+      "casting": "Casting",
+      "sharing": "Sharing",
+      "users": "Users",
+      "groups": "Groups",
+      "roles": "Roles",
+      "authentication": "Authentication",
+      "zones": "Zones",
+      "agents": "Agents",
+      "servers": "Servers",
+      "serverPools": "Server Pools",
+      "autoscale": "AutoScale",
+      "vmProviders": "VM Providers",
+      "dnsProviders": "DNS Providers",
+      "storageMappings": "Storage Mappings",
+      "persistentProfiles": "Persistent Profiles",
+      "volumeMappings": "Volume Mappings",
+      "fileMappings": "File Mappings",
+      "connectionProxies": "Connection Proxies",
+      "webFiltering": "Web Filtering",
+      "browserIsolation": "Browser Isolation",
+      "egress": "Egress",
+      "general": "General",
+      "security": "Security",
+      "branding": "Branding",
+      "banners": "Banners",
+      "licensing": "Licensing",
+      "database": "Database",
+      "configImportExport": "Config Import/Export",
+      "reporting": "Reporting",
+      "auditLog": "Audit Log",
+      "metrics": "Metrics",
+      "feedback": "Feedback & Bugs",
+      "logForwarding": "Log Forwarding",
+      "updates": "Updates",
+      "apiKeys": "API Keys",
+      "webhooks": "Webhooks",
+      "apiDocs": "API Docs"
+    }
+  },
+  "topbar": {
+    "openMenu": "Open menu",
+    "search": "Search…",
+    "workstation": "Workstation",
+    "notifications": "Notifications",
+    "notificationsNew": "{count} new",
+    "account": "Account",
+    "settings": "Settings",
+    "profile": "Profile",
+    "signOut": "Sign out",
+    "language": "Language",
+    "demoNotifications": {
+      "agentUnhealthy": "Agent us-east-agent-02 reported unhealthy",
+      "cpuHigh": "CPU on homelab-agent-01 exceeded 85%",
+      "licenseRenewed": "License renewed — 25 concurrent seats"
+    }
+  },
+  "sidebar": {
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "allSystemsOperational": "All systems operational"
+  },
+  "themeToggle": "Toggle theme",
+  "palette": {
+    "title": "Command palette",
+    "placeholder": "Search pages and actions…",
+    "noResults": "No results found.",
+    "favorites": "Favorites",
+    "quickActions": "Quick actions",
+    "launchWorkspace": "Launch {name}",
+    "launchAWorkspace": "Launch a workspace",
+    "viewLiveSessions": "View live sessions",
+    "toggleTheme": "Toggle theme",
+    "toSelect": "to select",
+    "brand": "Chista Command",
+    "launchError": "Could not start the session"
+  },
+  "comingSoon": {
+    "module": "Module",
+    "fallbackDescription": "Connect your live data source and this section will populate automatically. Everything is ready when you are."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This route doesn't exist in your Chista deployment.",
+    "backToDashboard": "Back to dashboard"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "kind": {
+    "BUG": "Bug",
+    "FEEDBACK": "Feedback"
+  },
+  "status": {
+    "OPEN": "Open",
+    "IN_PROGRESS": "In progress",
+    "FIXED": "Fixed",
+    "WONTFIX": "Won't fix"
+  },
+  "widget": {
+    "open": "Report a bug or send feedback",
+    "title": "Report a bug or send feedback",
+    "description": "Help us improve Chista. Your report goes straight to the team's triage board.",
+    "bugHint": "Something is broken",
+    "feedbackHint": "An idea or comment",
+    "message": "What happened?",
+    "bugPlaceholder": "Describe the problem and the steps to reproduce it…",
+    "feedbackPlaceholder": "Tell us what you think or what you'd like to see…",
+    "screenshot": "Screenshot",
+    "attach": "Attach a screenshot",
+    "pasteHint": "Tip: you can also paste an image (⌘/Ctrl+V).",
+    "messageRequired": "Please describe the issue first.",
+    "imageTooLarge": "That image is too large — try a smaller screenshot.",
+    "imageFailed": "Couldn't read that image.",
+    "sent": "Thanks — your report was sent.",
+    "sentHint": "The team can follow up on the triage board.",
+    "failed": "Couldn't send your report. Please try again.",
+    "submit": "Send"
+  },
+  "triage": {
+    "title": "Feedback & bug reports",
+    "description": "The shared triage memory — users, admins and automated agents collaborate on what to fix and what's fixed.",
+    "memoryNote": "This is the shared memory: every report keeps a collaboration thread, so people and automated agents work the same record — noting what to fix, and confirming what's fixed.",
+    "filterAll": "All",
+    "emptyTitle": "Nothing here yet",
+    "emptyDescription": "Reports and feedback filed from the in-app widget show up here.",
+    "screenshot": "Screenshot",
+    "viewScreenshot": "View screenshot",
+    "notePlaceholder": "Add a note to the thread…",
+    "saved": "Updated.",
+    "saveFailed": "Couldn't save the update."
+  }
+}

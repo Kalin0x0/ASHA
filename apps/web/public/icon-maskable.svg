@@ -1,0 +1,47 @@
+<svg width="1200" height="1200" viewBox="0 0 1200 1200" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Chista">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%">
+      <stop offset="0%" stop-color="#24243A"/>
+      <stop offset="55%" stop-color="#161625"/>
+      <stop offset="100%" stop-color="#0B0B12"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="280" y1="220" x2="930" y2="960" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F4D77A"/>
+      <stop offset="38%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#8F6F18"/>
+    </linearGradient>
+    <linearGradient id="goldSoft" x1="340" y1="310" x2="845" y2="850" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFE8A3" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#C8A64B" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Full-bleed background (no rounded corners) — the platform applies its own
+       maskable shape; the mark below sits inside the 80% safe zone. -->
+  <rect width="1200" height="1200" fill="url(#bg)"/>
+
+  <g opacity="0.12">
+    <path d="M220 390H980" stroke="#D4AF37" stroke-width="2"/>
+    <path d="M220 600H980" stroke="#D4AF37" stroke-width="2"/>
+    <path d="M220 810H980" stroke="#D4AF37" stroke-width="2"/>
+    <path d="M390 220V980" stroke="#D4AF37" stroke-width="2"/>
+    <path d="M600 220V980" stroke="#D4AF37" stroke-width="2"/>
+    <path d="M810 220V980" stroke="#D4AF37" stroke-width="2"/>
+  </g>
+
+  <path d="M600 184L945 383V781L600 980L255 781V383L600 184Z" fill="#11111C" stroke="url(#gold)" stroke-width="28" stroke-linejoin="round"/>
+  <path d="M600 286L856 434V730L600 878L344 730V434L600 286Z" fill="#181827" stroke="url(#goldSoft)" stroke-width="10" stroke-linejoin="round"/>
+
+  <path d="M415 470C455 394 530 349 620 349C719 349 796 408 827 494H733C709 454 669 431 619 431C547 431 493 482 493 560C493 638 547 690 619 690C670 690 711 667 735 626H827C796 714 719 773 620 773C530 773 455 728 415 652C385 668 365 699 365 735C365 787 407 829 459 829H740C800 829 849 780 849 720C849 687 835 657 813 637" stroke="url(#gold)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="502" y="516" width="196" height="118" rx="18" fill="#0B0B12" stroke="#D4AF37" stroke-width="16"/>
+  <path d="M548 682H652" stroke="#D4AF37" stroke-width="18" stroke-linecap="round"/>
+  <path d="M600 634V682" stroke="#D4AF37" stroke-width="18" stroke-linecap="round"/>
+  <path d="M548 552H652" stroke="#F4D77A" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <path d="M548 584H624" stroke="#D4AF37" stroke-width="10" stroke-linecap="round" opacity="0.65"/>
+
+  <circle cx="377" cy="457" r="18" fill="#D4AF37"/>
+  <circle cx="823" cy="457" r="18" fill="#D4AF37"/>
+  <circle cx="377" cy="746" r="18" fill="#D4AF37"/>
+  <circle cx="823" cy="746" r="18" fill="#D4AF37"/>
+</svg>

@@ -1,0 +1,109 @@
+{
+  "nav": {
+    "groups": {
+      "overview": "Übersicht",
+      "workspaces": "Workspaces",
+      "sessions": "Sitzungen",
+      "access": "Zugriff",
+      "infrastructure": "Infrastruktur",
+      "storage": "Speicher",
+      "connectivity": "Konnektivität",
+      "settings": "Einstellungen",
+      "observability": "Observability",
+      "developer": "Entwickler"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "catalog": "Katalog",
+      "images": "Images",
+      "registry": "Registry",
+      "liveSessions": "Live-Sitzungen",
+      "history": "Verlauf",
+      "recordings": "Aufzeichnungen",
+      "staging": "Staging",
+      "casting": "Casting",
+      "sharing": "Freigabe",
+      "users": "Benutzer",
+      "groups": "Gruppen",
+      "roles": "Rollen",
+      "authentication": "Authentifizierung",
+      "zones": "Zonen",
+      "agents": "Agents",
+      "servers": "Server",
+      "serverPools": "Server-Pools",
+      "autoscale": "AutoScale",
+      "vmProviders": "VM-Provider",
+      "dnsProviders": "DNS-Provider",
+      "storageMappings": "Speicher-Mappings",
+      "persistentProfiles": "Persistente Profile",
+      "volumeMappings": "Volume-Mappings",
+      "fileMappings": "Datei-Mappings",
+      "connectionProxies": "Verbindungs-Proxys",
+      "webFiltering": "Web-Filterung",
+      "browserIsolation": "Browser-Isolation",
+      "egress": "Egress",
+      "general": "Allgemein",
+      "security": "Sicherheit",
+      "branding": "Branding",
+      "banners": "Banner",
+      "licensing": "Lizenzierung",
+      "database": "Datenbank",
+      "configImportExport": "Konfig Import/Export",
+      "reporting": "Berichte",
+      "auditLog": "Audit-Log",
+      "metrics": "Metriken",
+      "feedback": "Feedback & Fehler",
+      "logForwarding": "Log-Weiterleitung",
+      "updates": "Updates",
+      "apiKeys": "API-Schlüssel",
+      "webhooks": "Webhooks",
+      "apiDocs": "API-Doku"
+    }
+  },
+  "topbar": {
+    "openMenu": "Menü öffnen",
+    "search": "Suchen…",
+    "workstation": "Workstation",
+    "notifications": "Benachrichtigungen",
+    "notificationsNew": "{count} neu",
+    "account": "Konto",
+    "settings": "Einstellungen",
+    "profile": "Profil",
+    "signOut": "Abmelden",
+    "language": "Sprache",
+    "demoNotifications": {
+      "agentUnhealthy": "Agent us-east-agent-02 meldet fehlerhaften Zustand",
+      "cpuHigh": "CPU-Auslastung auf homelab-agent-01 über 85 %",
+      "licenseRenewed": "Lizenz verlängert — 25 gleichzeitige Plätze"
+    }
+  },
+  "sidebar": {
+    "collapse": "Seitenleiste einklappen",
+    "expand": "Seitenleiste ausklappen",
+    "allSystemsOperational": "Alle Systeme betriebsbereit"
+  },
+  "themeToggle": "Design umschalten",
+  "palette": {
+    "title": "Befehlspalette",
+    "placeholder": "Seiten und Aktionen suchen…",
+    "noResults": "Keine Ergebnisse gefunden.",
+    "favorites": "Favoriten",
+    "quickActions": "Schnellaktionen",
+    "launchWorkspace": "{name} starten",
+    "launchAWorkspace": "Workspace starten",
+    "viewLiveSessions": "Live-Sitzungen anzeigen",
+    "toggleTheme": "Design umschalten",
+    "toSelect": "zum Auswählen",
+    "brand": "Chista Command",
+    "launchError": "Sitzung konnte nicht gestartet werden"
+  },
+  "comingSoon": {
+    "module": "Modul",
+    "fallbackDescription": "Verbinden Sie Ihre Live-Datenquelle und dieser Bereich füllt sich automatisch. Alles ist bereit, wenn Sie es sind."
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "description": "Diese Route existiert in Ihrer Chista-Installation nicht.",
+    "backToDashboard": "Zurück zum Dashboard"
+  }
+}

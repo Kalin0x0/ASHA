@@ -1,0 +1,194 @@
+{
+  "users": {
+    "title": "Users",
+    "description": "People with access to this Chista deployment.",
+    "newUser": "New user",
+    "stats": {
+      "totalUsers": "Total Users",
+      "withTwoFactor": "With 2FA"
+    },
+    "searchPlaceholder": "Search users…",
+    "table": {
+      "user": "User",
+      "groups": "Groups",
+      "twoFactor": "2FA",
+      "lastLogin": "Last login"
+    },
+    "create": {
+      "title": "Create user",
+      "description": "Add a person to this deployment. They can sign in with the email and password you set.",
+      "email": "Email",
+      "username": "Username",
+      "usernameHint": "Defaults to the email if left blank.",
+      "displayName": "Display name",
+      "password": "Password",
+      "passwordHint": "Minimum 8 characters. Leave blank to create an invited account without a password.",
+      "systemAdmin": "Grant system administrator",
+      "submit": "Create user",
+      "emailRequired": "An email address is required."
+    },
+    "toasts": {
+      "created": "User {email} created",
+      "createFailed": "Could not create the user"
+    },
+    "empty": {
+      "title": "No users found",
+      "searchDescription": "Try a different search term.",
+      "noUsersDescription": "No users have been added yet."
+    }
+  },
+  "groups": {
+    "title": "Groups",
+    "description": "Membership groups, derived from current user assignments — used to scope workspace access and roles.",
+    "stats": {
+      "groups": "Groups",
+      "memberships": "Memberships"
+    },
+    "memberCount": "{count, plural, one {# member} other {# members}}",
+    "empty": {
+      "title": "No groups yet",
+      "description": "Groups are derived from user memberships. Add users and assign them to groups."
+    }
+  },
+  "roles": {
+    "title": "Roles & Permissions",
+    "description": "The built-in system roles and the permissions each grants. Custom roles arrive in a later phase.",
+    "table": {
+      "permission": "Permission"
+    },
+    "roleNames": {
+      "Super Admin": "Super Admin",
+      "Administrator": "Administrator",
+      "Operator": "Operator",
+      "User": "User"
+    },
+    "categories": {
+      "Sessions": "Sessions",
+      "Workspaces": "Workspaces",
+      "Access": "Access",
+      "Infrastructure": "Infrastructure",
+      "Storage": "Storage",
+      "Connectivity": "Connectivity",
+      "Settings": "Settings",
+      "Observability": "Observability",
+      "Developer": "Developer"
+    },
+    "permissions": {
+      "SESSION_VIEW": "View own sessions",
+      "SESSION_VIEW_ANY": "View all sessions",
+      "SESSION_LAUNCH": "Launch workspaces",
+      "SESSION_TERMINATE_OWN": "Terminate own sessions",
+      "SESSION_TERMINATE_ANY": "Terminate any session",
+      "SESSION_CONTROL_ANY": "Take control of any session",
+      "SESSION_SHARE": "Share sessions",
+      "RECORDING_VIEW": "View session recordings",
+      "WORKSPACE_VIEW": "View workspaces",
+      "WORKSPACE_CREATE": "Create workspaces",
+      "WORKSPACE_EDIT": "Edit workspaces",
+      "WORKSPACE_DELETE": "Delete workspaces",
+      "REGISTRY_MANAGE": "Manage registries",
+      "IMAGE_MANAGE": "Manage images",
+      "USER_VIEW": "View users",
+      "USER_CREATE": "Create users",
+      "USER_EDIT": "Edit users",
+      "USER_DELETE": "Delete users",
+      "GROUP_MANAGE": "Manage groups",
+      "ROLE_MANAGE": "Manage roles & permissions",
+      "AUTH_MANAGE": "Manage authentication providers",
+      "ZONE_MANAGE": "Manage deployment zones",
+      "AGENT_VIEW": "View agents",
+      "AGENT_MANAGE": "Manage agents",
+      "SERVER_MANAGE": "Manage servers",
+      "POOL_MANAGE": "Manage server pools",
+      "AUTOSCALE_MANAGE": "Manage autoscale configs",
+      "PROVIDER_MANAGE": "Manage VM/DNS providers",
+      "STORAGE_MANAGE": "Manage storage & file mappings",
+      "CONNECTIVITY_MANAGE": "Manage proxies/egress/filtering",
+      "SETTINGS_MANAGE": "Manage global settings",
+      "BRANDING_MANAGE": "Manage branding",
+      "LICENSE_MANAGE": "Manage licensing",
+      "AUDIT_VIEW": "View audit logs",
+      "REPORTING_VIEW": "View reports & metrics",
+      "WEBHOOK_MANAGE": "Manage webhooks",
+      "APIKEY_MANAGE": "Manage API keys"
+    }
+  },
+  "authentication": {
+    "title": "Authentication",
+    "description": "Configure external identity providers (OIDC, SAML 2.0, LDAP/AD), SSO group mappings, and SCIM 2.0 provisioning.",
+    "liveOnlyNotice": "Authentication management is live-backend only. Run with",
+    "stats": {
+      "providers": "Providers",
+      "scim": "SCIM"
+    },
+    "providerType": {
+      "LOCAL": "Local",
+      "OIDC": "OIDC",
+      "SAML": "SAML 2.0",
+      "LDAP": "LDAP / AD"
+    },
+    "configFields": {
+      "OIDC": {
+        "issuer": "Issuer URL",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret",
+        "redirectUri": "Redirect URI (optional)"
+      },
+      "SAML": {
+        "entryPoint": "IdP SSO URL",
+        "issuer": "SP Entity ID",
+        "cert": "IdP Signing Certificate (PEM)"
+      },
+      "LDAP": {
+        "url": "LDAP URL",
+        "bindDN": "Bind DN",
+        "bindCredentials": "Bind Password",
+        "searchBase": "Search Base",
+        "searchFilter": "Search Filter"
+      }
+    },
+    "identityProviders": {
+      "title": "Identity providers",
+      "empty": "No external providers configured yet.",
+      "testLdap": "Test LDAP bind"
+    },
+    "addProvider": {
+      "title": "Add provider",
+      "displayName": "Display name",
+      "displayNamePlaceholder": "{type} login",
+      "createdDisabledNote": "Created disabled — enable after a successful test"
+    },
+    "scim": {
+      "title": "SCIM 2.0 provisioning",
+      "description": "Issue a bearer token for your IdP (Okta, Azure AD, OneLogin) to automatically provision and deprovision users and groups via the SCIM endpoint at",
+      "issueToken": "Issue SCIM token"
+    },
+    "mappings": {
+      "title": "Group mappings",
+      "empty": "No mappings yet — users authenticate but join no groups automatically.",
+      "attribute": "Attribute",
+      "value": "Value",
+      "chistaGroup": "Chista group",
+      "selectGroup": "Select group…"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load auth providers",
+      "providerAdded": "{type} provider added",
+      "providerAddedDescription": "Disabled by default — enable after testing.",
+      "createFailed": "Could not create provider",
+      "updateFailed": "Could not update provider",
+      "providerRemoved": "Provider removed",
+      "removeFailed": "Could not remove provider",
+      "ldapTestSucceeded": "LDAP bind succeeded",
+      "ldapTestFailed": "LDAP test failed",
+      "scimTokenIssued": "SCIM token issued",
+      "scimTokenIssuedDescription": "Copy it now — it is shown only once.",
+      "scimTokenFailed": "Could not issue SCIM token",
+      "copied": "Copied to clipboard",
+      "mappingsLoadFailed": "Failed to load mappings",
+      "mappingAdded": "Mapping added",
+      "mappingAddFailed": "Could not add mapping",
+      "mappingRemoveFailed": "Could not remove mapping"
+    }
+  }
+}

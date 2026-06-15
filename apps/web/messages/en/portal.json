@@ -1,0 +1,103 @@
+{
+  "header": {
+    "myWorkspaces": "My Workspaces",
+    "admin": "Admin"
+  },
+  "openIn": {
+    "title": "Launch {name}",
+    "label": "Open session in",
+    "webNative": "Web Native",
+    "webNativeHint": "Stream the desktop in your browser — nothing to install.",
+    "rdpClient": "RDP Client",
+    "rdpClientHint": "Download an .rdp file and open it in the native Remote Desktop client.",
+    "options": "Remote Desktop options",
+    "multimon": "Multi-monitor",
+    "multimonHint": "Use all of your monitors — see the desktop across every screen.",
+    "clipboard": "Clipboard",
+    "clipboardHint": "Copy and paste between your computer and the desktop.",
+    "drives": "Local drives",
+    "drivesHint": "Access your local files and folders inside the session.",
+    "printers": "Printers",
+    "printersHint": "Print to your local printers from the remote desktop.",
+    "rdpReachabilityHint": "Your computer connects directly to the desktop, so it must be reachable (LAN, VPN or public). You'll be asked for your password by the Remote Desktop client.",
+    "launch": "Launch",
+    "download": "Download .rdp",
+    "downloaded": "RDP file downloaded",
+    "downloadedHint": "Open it with the Remote Desktop client to connect.",
+    "downloadError": "Could not generate the RDP file."
+  },
+  "launcher": {
+    "eyebrow": "Your Workspaces",
+    "title": "Launch a <gradient>workspace</gradient>",
+    "subtitle": "A secure, isolated desktop or application — streamed straight to your browser. Nothing to install, nothing left behind.",
+    "searchPlaceholder": "Search workspaces…",
+    "categoriesNavAria": "Workspace categories",
+    "categories": "Categories",
+    "allWorkspaces": "All Workspaces",
+    "allWorkspacesHeading": "All workspaces",
+    "noResults": "No workspaces match your search.",
+    "clearFilters": "Clear filters",
+    "launchError": "Could not start the session"
+  },
+  "card": {
+    "launch": "Launch",
+    "starting": "Starting…",
+    "unavailable": "Unavailable",
+    "gpu": "GPU",
+    "vcpu": "{count} vCPU",
+    "gb": "{value} GB",
+    "launchAria": "Launch {name}",
+    "unavailableAria": "{name} (unavailable)",
+    "addFavorite": "Add to favorites",
+    "removeFavorite": "Remove from favorites",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "mySessions": {
+    "title": "My Sessions",
+    "starting": "Starting",
+    "resume": "Resume",
+    "resumeAria": "Resume {name}",
+    "endAria": "End {name}",
+    "endedToast": "Session ended",
+    "stop": "Stop",
+    "stopAria": "Pause {name}",
+    "stoppedToast": "Session paused — state is kept",
+    "delete": "Delete",
+    "deleteAria": "Delete {name}"
+  },
+  "favorites": {
+    "title": "Favorites",
+    "reorderHint": "drag to reorder",
+    "dragToReorder": "Drag to reorder",
+    "launchTitle": "Launch {name}",
+    "seeAll": "See all favorites",
+    "addedToast": "Added {name} to favorites",
+    "removedToast": "Removed {name} from favorites",
+    "workspaceFallback": "workspace"
+  },
+  "appearance": {
+    "trigger": "Change background",
+    "title": "Background",
+    "subtitle": "Personalize your launcher",
+    "reset": "Reset",
+    "apply": "Apply",
+    "customLabel": "Custom image URL",
+    "removeCustom": "Remove custom image",
+    "appliedToast": "Background set to {name}",
+    "customAppliedToast": "Custom background applied",
+    "presets": {
+      "woods": "Misty Forest",
+      "lake": "Mountain Lake",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "nebula": "Nebula",
+      "ocean": "Ocean",
+      "forest": "Forest",
+      "crimson": "Crimson",
+      "graphite": "Graphite",
+      "void": "Void"
+    }
+  }
+}

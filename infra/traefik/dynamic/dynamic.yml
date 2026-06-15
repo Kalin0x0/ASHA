@@ -1,0 +1,21 @@
+# Traefik file provider — static dynamic config (watched).
+http:
+  serversTransports:
+    # KasmVNC serves HTTPS with a self-signed cert inside the container; allow it.
+    chista-insecure:
+      insecureSkipVerify: true
+
+  middlewares:
+    # Forward-auth gate for session streams. The manager validates the per-session
+    # short-lived JWT before Traefik proxies the websocket.
+    # Phase 1: points at a always-200 health endpoint so the slice works end to end.
+    # Phase 3: replace the address with the real /internal/session-auth validator.
+    sess-auth:
+      forwardAuth:
+        address: 'http://api:4000/api/v1/health/live'
+
+# With routers declaring `tls: true` and no resolver configured, Traefik serves its
+# built-in self-signed certificate (expect a browser warning on chista.local).
+tls:
+  stores:
+    default: {}

@@ -1,0 +1,77 @@
+# ── Chista Helm values ────────────────────────────────────────────────────────
+# Override with -f custom-values.yaml in production.
+
+image:
+  registry: ghcr.io/naiemi
+  pullPolicy: IfNotPresent
+  tag: '0.1.0'
+
+domain: chista.local
+
+postgres:
+  url: postgresql://chista:chista@postgres:5432/chista?schema=public
+
+redis:
+  url: redis://redis:6379
+
+# ── API ────────────────────────────────────────────────────────────────────────
+api:
+  replicas: 1
+  port: 4000
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCpuPercent: 70
+    targetMemPercent: 80
+
+# ── Web ───────────────────────────────────────────────────────────────────────
+web:
+  replicas: 1
+  port: 3000
+  apiUrl: https://chista.local/api/v1
+  wsUrl: wss://chista.local
+  apiMode: live
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCpuPercent: 70
+
+# ── Agent DaemonSet ────────────────────────────────────────────────────────────
+agent:
+  # Set to true to deploy the agent as a DaemonSet alongside the control plane.
+  enabled: false
+
+  # "docker" (default, requires docker.sock access on each node) or
+  # "kubernetes" (creates ephemeral Pods in the session namespace; preferred
+  # in managed clusters where Docker is unavailable).
+  driver: docker
+
+  zone: default
+
+  # Kubernetes driver settings (only used when driver=kubernetes)
+  k8sSessionNs: chista-sessions
+  k8sIngressClass: traefik
+
+  # Session Pod resource quota for the session namespace.
+  # Uncomment and tune for your cluster capacity.
+  # sessionQuota:
+  #   maxPods: "200"
+  #   cpuRequest: "100"
+  #   cpuLimit: "200"
+  #   memRequest: "200Gi"
+  #   memLimit: "400Gi"
+
+  # Optional: restrict the DaemonSet to specific nodes.
+  # nodeSelector:
+  #   chista.io/role: session-worker
+
+  sessionNetwork: chista-sessions
+
+# ── Secrets (use sealed-secrets / external-secrets in production) ─────────────
+secrets:
+  jwtAccess: dev-access-secret-change-me-please-32++chars
+  jwtRefresh: dev-refresh-secret-change-me-please-32++chars
+  sessionToken: dev-session-token-secret-change-me-32++chars
+  agentEnrollmentToken: dev-enrollment-token-change-me

@@ -1,0 +1,87 @@
+{
+  "actions": {
+    "add": "افزودن",
+    "back": "بازگشت",
+    "cancel": "لغو",
+    "close": "بستن",
+    "confirm": "تأیید",
+    "copy": "کپی",
+    "copied": "کپی شد",
+    "create": "ایجاد",
+    "delete": "حذف",
+    "disable": "غیرفعال‌سازی",
+    "download": "دانلود",
+    "edit": "ویرایش",
+    "enable": "فعال‌سازی",
+    "launch": "اجرا",
+    "open": "باز کردن",
+    "refresh": "تازه‌سازی",
+    "remove": "برداشتن",
+    "retry": "تلاش مجدد",
+    "save": "ذخیره",
+    "search": "جستجو",
+    "terminate": "خاتمه",
+    "upload": "بارگذاری",
+    "view": "مشاهده"
+  },
+  "labels": {
+    "actions": "عملیات",
+    "active": "فعال",
+    "all": "همه",
+    "description": "توضیحات",
+    "disabled": "غیرفعال",
+    "enabled": "فعال",
+    "loading": "در حال بارگذاری…",
+    "name": "نام",
+    "no": "خیر",
+    "none": "هیچ‌کدام",
+    "off": "خاموش",
+    "on": "روشن",
+    "status": "وضعیت",
+    "total": "مجموع",
+    "type": "نوع",
+    "unknown": "نامشخص",
+    "yes": "بله"
+  },
+  "sessionStatus": {
+    "REQUESTED": "درخواست‌شده",
+    "SCHEDULED": "زمان‌بندی‌شده",
+    "PROVISIONING": "در حال آماده‌سازی",
+    "RUNNING": "در حال اجرا",
+    "DEGRADED": "تنزل‌یافته",
+    "PAUSED": "توقف موقت",
+    "TERMINATING": "در حال خاتمه",
+    "DESTROYED": "خاتمه‌یافته",
+    "ERROR": "خطا"
+  },
+  "agentStatus": {
+    "ONLINE": "آنلاین",
+    "OFFLINE": "آفلاین",
+    "DRAINING": "در حال تخلیه",
+    "UNHEALTHY": "ناسالم"
+  },
+  "userStatus": {
+    "ACTIVE": "فعال",
+    "DISABLED": "غیرفعال",
+    "INVITED": "دعوت‌شده",
+    "LOCKED": "قفل‌شده"
+  },
+  "zoneStatus": {
+    "healthy": "سالم",
+    "degraded": "تنزل‌یافته",
+    "offline": "آفلاین"
+  },
+  "time": {
+    "never": "هرگز",
+    "justNow": "لحظاتی پیش"
+  },
+  "units": {
+    "vcpu": "vCPU",
+    "gb": "GB",
+    "mb": "MB",
+    "sessions": "نشست"
+  },
+  "meta": {
+    "description": "Chista دسکتاپ‌ها، مرورگرها و برنامه‌های کانتینری را روی هر مرورگری استریم می‌کند. خودمیزبان، چندمستأجری و در سطح سازمانی."
+  }
+}

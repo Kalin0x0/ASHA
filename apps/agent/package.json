@@ -1,0 +1,27 @@
+{
+  "name": "@chista/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --clean",
+    "start": "node dist/index.js",
+    "start:dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chista/events": "workspace:*",
+    "@chista/logger": "workspace:*",
+    "@chista/proxy-labels": "workspace:*",
+    "@kubernetes/client-node": "^1.4.0",
+    "dockerode": "^4.0.2",
+    "ioredis": "^5.4.2"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^3.3.31",
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,242 @@
+export type SessionStatus =
+  | 'REQUESTED'
+  | 'SCHEDULED'
+  | 'PROVISIONING'
+  | 'RUNNING'
+  | 'DEGRADED'
+  | 'PAUSED'
+  | 'TERMINATING'
+  | 'DESTROYED'
+  | 'ERROR';
+
+export type AgentStatus = 'ONLINE' | 'OFFLINE' | 'DRAINING' | 'UNHEALTHY';
+
+export type WorkspaceType = 'CONTAINER' | 'SERVER' | 'REMOTE_APP' | 'VM' | 'LINK';
+
+/** A registered RDP/VNC/SSH machine the create dialog can bind a workspace to. */
+export interface ServerOption {
+  id: string;
+  hostname: string;
+  connectionType: 'RDP' | 'VNC' | 'SSH';
+  zoneName: string;
+}
+
+export interface UpdateWorkspaceInput {
+  friendlyName?: string;
+  description?: string;
+  category?: string;
+  iconUrl?: string;
+  cores?: number;
+  memMb?: number;
+  gpu?: number;
+  enabled?: boolean;
+}
+
+export interface Workspace {
+  id: string;
+  name: string;
+  friendlyName: string;
+  description: string;
+  category: string;
+  iconUrl?: string;
+  cores: number;
+  memMb: number;
+  gpu: number;
+  enabled: boolean;
+  dockerImage: string;
+  protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH';
+  /** What the workspace runs on. */
+  type: WorkspaceType;
+  /** For server-backed workspaces: the bound machine's id (for the RDP-client download). */
+  serverId?: string;
+  /** For server-backed workspaces: the bound machine's hostname. */
+  serverName?: string;
+  /** Deployment zone name, when set (server zone or preferred zone). */
+  zoneName?: string;
+  activeSessions: number;
+}
+
+export interface SessionRow {
+  id: string;
+  kasmId: string;
+  user: { id: string; name: string; email: string };
+  workspaceName: string;
+  workspaceIcon?: string;
+  zone: string;
+  agent: string;
+  status: SessionStatus;
+  cpuPct: number;
+  memMb: number;
+  memLimitMb: number;
+  uptimeSec: number;
+  createdAt: string;
+  connectionType: string;
+  /**
+   * Public URL of the session's KasmVNC web client, embedded by the streaming
+   * viewer. Populated once the session reaches RUNNING. Undefined while
+   * provisioning, or in mock mode when no demo stream URL is configured.
+   */
+  connectionUrl?: string;
+}
+
+export interface Agent {
+  id: string;
+  hostname: string;
+  zone: string;
+  status: AgentStatus;
+  version: string;
+  cpuCores: number;
+  cpuPct: number;
+  memTotalMb: number;
+  memUsedMb: number;
+  gpuPct: number | null;
+  sessions: number;
+  maxSessions: number;
+}
+
+export interface Zone {
+  id: string;
+  name: string;
+  region: string;
+  agents: number;
+  sessions: number;
+  status: 'healthy' | 'degraded' | 'offline';
+}
+
+export interface UserRow {
+  id: string;
+  name: string;
+  email: string;
+  username: string;
+  status: 'ACTIVE' | 'DISABLED' | 'INVITED' | 'LOCKED';
+  groups: string[];
+  twoFactor: boolean;
+  lastLoginAt: string | null;
+}
+
+export interface CreateUserInput {
+  email: string;
+  username?: string;
+  displayName?: string;
+  password?: string;
+  isSystemAdmin?: boolean;
+  locale?: string;
+}
+
+export interface CreateWorkspaceInput {
+  friendlyName: string;
+  name?: string;
+  description?: string;
+  iconUrl?: string;
+  type?: WorkspaceType;
+  category?: string;
+  dockerImage?: string;
+  serverId?: string;
+  zoneId?: string;
+  cores?: number;
+  memMb?: number;
+  gpu?: number;
+  enabled?: boolean;
+}
+
+export interface ActivityItem {
+  id: string;
+  kind: 'session' | 'auth' | 'admin' | 'agent' | 'alert';
+  actor: string;
+  message: string;
+  at: string;
+}
+
+export interface ImageRow {
+  id: string;
+  fullImage: string;
+  registry: string;
+  name: string;
+  tag: string;
+  workspaces: string[];
+  sizeMb: number;
+  pulledAt: string;
+  status: 'available' | 'pulling' | 'error';
+}
+
+export interface RecordingRow {
+  id: string;
+  sessionId: string;
+  workspaceName: string;
+  user: string;
+  protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH';
+  status: 'RECORDING' | 'FINALIZING' | 'AVAILABLE' | 'FAILED';
+  sizeMb: number;
+  durationSec: number;
+  startedAt: string;
+}
+
+export type SessionEndReason = 'USER' | 'TIMEOUT' | 'ADMIN' | 'ERROR';
+
+export interface HistoryRow {
+  id: string;
+  user: { id: string; name: string; email: string };
+  workspaceName: string;
+  zone: string;
+  agent: string;
+  startedAt: string;
+  endedAt: string;
+  durationSec: number;
+  endReason: SessionEndReason;
+  connectionType: string;
+}
+
+export interface KpiSeriesPoint {
+  t: string;
+  value: number;
+}
+
+// ── Feedback / bug reports (and the shared triage "memory") ──────────────────
+
+export type FeedbackKind = 'BUG' | 'FEEDBACK';
+export type FeedbackStatus = 'OPEN' | 'IN_PROGRESS' | 'FIXED' | 'WONTFIX';
+
+/** One entry in the collaboration thread admins/agents use to triage an item. */
+export interface FeedbackNote {
+  author: string;
+  body: string;
+  at: string;
+}
+
+export interface FeedbackItem {
+  id: string;
+  userId: string | null;
+  kind: FeedbackKind;
+  message: string;
+  pageUrl: string | null;
+  /** Optional screenshot captured with a bug report (data URL). */
+  screenshot: string | null;
+  status: FeedbackStatus;
+  notes: FeedbackNote[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateFeedbackInput {
+  kind: FeedbackKind;
+  message: string;
+  pageUrl?: string;
+  screenshot?: string;
+}
+
+export interface UpdateFeedbackInput {
+  status?: FeedbackStatus;
+  note?: string;
+}
+
+export interface DashboardSnapshot {
+  kpis: {
+    activeSessions: { value: number; deltaPct: number; series: number[] };
+    onlineAgents: { value: number; total: number; series: number[] };
+    cpuUtilization: { value: number; deltaPct: number; series: number[] };
+    memUtilization: { value: number; deltaPct: number; series: number[] };
+  };
+  sessionsOverTime: KpiSeriesPoint[];
+  topWorkspaces: { name: string; sessions: number; icon?: string }[];
+  utilization: { cpu: number; mem: number; gpu: number; storage: number };
+}

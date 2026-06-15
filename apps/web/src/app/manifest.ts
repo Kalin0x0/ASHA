@@ -1,0 +1,37 @@
+import type { MetadataRoute } from 'next';
+
+/**
+ * PWA manifest — makes Chista installable to the desktop ("Install app") and
+ * launchable as a standalone window. Next serves this at /manifest.webmanifest
+ * and injects the <link rel="manifest"> automatically.
+ *
+ * Icons are SVG (crisp at any size, `sizes: "any"`) plus the 1200² PNG as a
+ * raster fallback. The maskable variant is full-bleed so platform masks don't
+ * clip the mark.
+ */
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    id: '/',
+    name: 'Chista — Container Streaming Platform',
+    short_name: 'Chista',
+    description:
+      'Self-hosted container streaming, VDI and DaaS — launch desktops and apps from your browser or install Chista as a desktop app.',
+    start_url: '/',
+    scope: '/',
+    display: 'standalone',
+    orientation: 'any',
+    background_color: '#1a1a2e',
+    theme_color: '#1a1a2e',
+    categories: ['business', 'productivity', 'utilities'],
+    icons: [
+      { src: '/chista-logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+      { src: '/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+      { src: '/chista-logo.png', sizes: '1200x1200', type: 'image/png', purpose: 'any' },
+    ],
+    shortcuts: [
+      { name: 'My Workspaces', short_name: 'Workspaces', url: '/' },
+      { name: 'Dashboard', short_name: 'Dashboard', url: '/dashboard' },
+      { name: 'Updates', short_name: 'Updates', url: '/developer/updates' },
+    ],
+  };
+}

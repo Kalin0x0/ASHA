@@ -1,0 +1,13 @@
+apiVersion: v2
+name: chista
+description: Chista — container-streaming / VDI / DaaS platform (skeleton chart).
+type: application
+version: 0.1.0
+appVersion: '0.1.0'
+keywords:
+  - vdi
+  - daas
+  - container-streaming
+  - kasmvnc
+maintainers:
+  - name: Naiemi

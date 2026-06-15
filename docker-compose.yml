@@ -1,0 +1,195 @@
+name: chista
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Chista — single-node stack. `docker compose up -d --build`.
+# Add `127.0.0.1 chista.local` to your hosts file, then open https://chista.local
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  chista-edge: { name: chista-edge }
+  chista-core: { name: chista-core }
+  chista-sessions: { name: chista-sessions }
+
+volumes:
+  pg-data: {}
+  redis-data: {}
+  # Persists ACME/Let's Encrypt certificates across restarts (see traefik below).
+  traefik-acme: {}
+
+services:
+  traefik:
+    # v3.7.x ships a Docker API client that negotiates with Docker Engine 25+/29+.
+    # Older v3.3 fails against newer engines with "client version 1.24 is too old",
+    # reads no container labels, and routes nothing (every request returns 404).
+    image: traefik:v3.7.1
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=chista-edge
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --api.dashboard=true
+      # Production TLS: uncomment to issue + auto-renew Let's Encrypt certs into
+      # the persisted /letsencrypt volume, then add
+      # `--label traefik.http.routers.<r>.tls.certresolver=le` (or set it on the
+      # session router labels). Dev uses Traefik's default self-signed cert.
+      # - --certificatesresolvers.le.acme.tlschallenge=true
+      # - --certificatesresolvers.le.acme.email=admin@chista.local
+      # - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik-acme:/letsencrypt
+    networks: [chista-edge, chista-sessions]
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-chista}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chista_dev_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-chista}
+    volumes: [pg-data:/var/lib/postgresql/data]
+    networks: [chista-core]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-chista}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes: [redis-data:/data]
+    networks: [chista-core]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  db-migrate:
+    build: { context: ., dockerfile: packages/db/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-chista}:${POSTGRES_PASSWORD:-chista_dev_change_me}@postgres:5432/${POSTGRES_DB:-chista}?schema=public
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [chista-core]
+    restart: 'no'
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_PORT: '4000'
+      DATABASE_URL: postgresql://${POSTGRES_USER:-chista}:${POSTGRES_PASSWORD:-chista_dev_change_me}@postgres:5432/${POSTGRES_DB:-chista}?schema=public
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: https://${CHISTA_BASE_DOMAIN:-chista.local}
+      CHISTA_PUBLIC_URL: https://${CHISTA_BASE_DOMAIN:-chista.local}
+      CHISTA_BASE_DOMAIN: ${CHISTA_BASE_DOMAIN:-chista.local}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me-please-32++chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me-please-32++chars}
+      SESSION_TOKEN_SECRET: ${SESSION_TOKEN_SECRET:-dev-session-token-secret-change-me-32++chars}
+      # Shared secret the manager validates the agent's enrollment against. Must be
+      # the SAME value the agent receives (see the agent service below); otherwise
+      # the agent gets 401 "Invalid agent token" and never registers, so sessions
+      # hang at "Allocating an agent".
+      CHISTA_AGENT_ENROLLMENT_TOKEN: ${CHISTA_AGENT_ENROLLMENT_TOKEN:-dev-enrollment-token-change-me}
+      # Auto-terminate sessions PAUSED longer than this many minutes (0 = never).
+      CHISTA_MAX_PAUSED_MINUTES: ${CHISTA_MAX_PAUSED_MINUTES:-0}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+      db-migrate: { condition: service_completed_successfully }
+    networks: [chista-edge, chista-core]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=chista-edge
+      - traefik.http.routers.api.rule=Host(`${CHISTA_BASE_DOMAIN:-chista.local}`) && (PathPrefix(`/api`) || PathPrefix(`/ws`))
+      - traefik.http.routers.api.entrypoints=websecure
+      - traefik.http.routers.api.tls=true
+      - traefik.http.routers.api.priority=10
+      - traefik.http.services.api.loadbalancer.server.port=4000
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://${CHISTA_BASE_DOMAIN:-chista.local}/api/v1
+        NEXT_PUBLIC_WS_URL: wss://${CHISTA_BASE_DOMAIN:-chista.local}
+        NEXT_PUBLIC_API_MODE: ${NEXT_PUBLIC_API_MODE:-mock}
+    restart: unless-stopped
+    depends_on: [api]
+    networks: [chista-edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=chista-edge
+      - traefik.http.routers.web.rule=Host(`${CHISTA_BASE_DOMAIN:-chista.local}`)
+      - traefik.http.routers.web.entrypoints=websecure
+      - traefik.http.routers.web.tls=true
+      - traefik.http.routers.web.priority=1
+      - traefik.http.services.web.loadbalancer.server.port=3000
+
+  agent:
+    build: { context: ., dockerfile: apps/agent/Dockerfile }
+    restart: unless-stopped
+    environment:
+      CHISTA_MANAGER_URL: http://api:4000
+      CHISTA_ZONE: default
+      REDIS_URL: redis://redis:6379
+      DOCKER_SOCKET: /var/run/docker.sock
+      CHISTA_SESSION_NETWORK: chista-sessions
+      CHISTA_TRAEFIK_DOMAIN: ${CHISTA_BASE_DOMAIN:-chista.local}
+      CHISTA_AGENT_ENROLLMENT_TOKEN: ${CHISTA_AGENT_ENROLLMENT_TOKEN:-dev-enrollment-token-change-me}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on: [api, redis]
+    networks: [chista-core, chista-sessions]
+
+  connection-proxy:
+    build: { context: ., dockerfile: apps/connection-proxy/Dockerfile }
+    restart: unless-stopped
+    environment:
+      PROXY_PORT: "4100"
+      REDIS_URL: redis://redis:6379
+      CHISTA_API_URL: http://api:4000
+      # Must equal the API's JWT_ACCESS_SECRET — the proxy verifies the user's
+      # access token before bridging RDP/VNC/SSH sessions.
+      JWT_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me-please-32++chars}
+      # Set GUACD_HOST to the guacamole/guacd container once you enable RDP/VNC
+      GUACD_HOST: ${GUACD_HOST:-guacd}
+      GUACD_PORT: ${GUACD_PORT:-4822}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=chista-edge
+      - traefik.http.routers.proxy.rule=Host(`${CHISTA_BASE_DOMAIN:-chista.local}`) && PathPrefix(`/proxy`)
+      - traefik.http.routers.proxy.entrypoints=websecure
+      - traefik.http.routers.proxy.tls=true
+      - traefik.http.middlewares.proxy-strip.stripprefix.prefixes=/proxy
+      - traefik.http.routers.proxy.middlewares=proxy-strip
+      - traefik.http.services.proxy.loadbalancer.server.port=4100
+    depends_on: [api, redis, guacd]
+    networks: [chista-core, chista-edge]
+
+  # Guacamole daemon — performs the actual RDP/VNC negotiation. The
+  # connection-proxy bridges browser WebSockets to this over the Guacamole
+  # protocol (GUACD_HOST/GUACD_PORT). Only needed for RDP/VNC workspaces;
+  # KasmVNC sessions don't use it.
+  guacd:
+    # Custom build with H.264/GFX-AVC444 support (Debian FreeRDP w/ libavcodec);
+    # the official guacamole/guacd lacks it → black screen on modern Windows RDP.
+    # Build: docker build -t chista-guacd-h264:1.5.5 infra/guacd-h264
+    image: chista-guacd-h264:1.5.5
+    build: ./infra/guacd-h264
+    restart: unless-stopped
+    networks: [chista-core]

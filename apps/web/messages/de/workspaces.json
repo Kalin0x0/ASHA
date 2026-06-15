@@ -1,0 +1,155 @@
+{
+  "catalog": {
+    "title": "Workspaces",
+    "description": "Der Katalog containerisierter Desktops, Browser und Anwendungen, die Benutzer starten können.",
+    "newWorkspace": "Neuer Workspace",
+    "searchPlaceholder": "Workspaces durchsuchen…",
+    "create": {
+      "title": "Workspace erstellen",
+      "description": "Fügen Sie eine Docker-App/-Desktop oder eine server-basierte (RDP/VNC/SSH) Maschine hinzu — Windows-Desktops, Server und mehr.",
+      "machineType": "Maschinentyp",
+      "types": {
+        "container": "Docker-Container",
+        "containerHint": "Gestreamtes App-/Desktop-Image",
+        "server": "Server / VM",
+        "serverHint": "RDP/VNC/SSH-Maschine (Windows usw.)"
+      },
+      "friendlyName": "Name",
+      "friendlyNamePlaceholder": "Windows 11",
+      "slug": "Slug",
+      "slugHint": "URL-sichere ID; wird aus dem Namen abgeleitet, wenn leer.",
+      "descriptionField": "Beschreibung",
+      "category": "Kategorie",
+      "categoryPlaceholder": "Kategorie wählen…",
+      "newCategory": "+ Neue Kategorie…",
+      "iconUrl": "Symbol",
+      "iconUrlHint": "Wird automatisch erkannt. Eigene Bild-URL einfügen, um es zu überschreiben.",
+      "dockerImage": "Docker-Image",
+      "dockerImageHint": "z. B. kasmweb/brave:1.16.0 — erstellt und verknüpft ein Image, damit der Workspace startbar ist.",
+      "vcpu": "vCPU",
+      "ramGb": "RAM (GB)",
+      "gpu": "GPU",
+      "zone": "Zone",
+      "defaultZone": "Standardzone",
+      "server": "Server",
+      "selectServer": "Server auswählen…",
+      "noServers": "Noch keine Server registriert. Fügen Sie einen unter Infrastruktur → Server hinzu.",
+      "serverZone": "{protocol} · Zone {zone}",
+      "serverHintLong": "Wählen Sie eine registrierte RDP/VNC/SSH-Maschine — ihre Zone wird automatisch verwendet.",
+      "serverRequired": "Wählen Sie einen Server für einen server-basierten Workspace.",
+      "submit": "Workspace erstellen",
+      "nameRequired": "Ein Workspace-Name ist erforderlich."
+    },
+    "edit": {
+      "title": "Workspace bearbeiten",
+      "description": "Name, Beschreibung, Kategorie, Symbol und Ressourcen aktualisieren.",
+      "submit": "Änderungen speichern",
+      "enabled": "Aktiviert",
+      "enabledHint": "Deaktivierte Workspaces bleiben im Katalog, können aber nicht gestartet werden."
+    },
+    "delete": {
+      "title": "Workspace löschen?",
+      "description": "{name} wird aus dem Katalog entfernt. Das kann nicht rückgängig gemacht werden.",
+      "confirm": "Löschen"
+    },
+    "toasts": {
+      "launchTitle": "Sitzung wird gestartet",
+      "launchDescription": "Agent wird zugewiesen und Container wird gestartet.",
+      "created": "Workspace {name} erstellt",
+      "createFailed": "Workspace konnte nicht erstellt werden",
+      "updated": "Workspace {name} aktualisiert",
+      "updateFailed": "Workspace konnte nicht aktualisiert werden",
+      "deleted": "Workspace {name} gelöscht",
+      "deleteFailed": "Workspace konnte nicht gelöscht werden"
+    }
+  },
+  "images": {
+    "title": "Workspace-Images",
+    "description": "Container-Images, die auf Agents gepullt und zwischengespeichert werden. Neue Images werden automatisch gepullt, wenn ein Workspace zum ersten Mal gestartet wird.",
+    "stats": {
+      "images": "Images",
+      "cachedSize": "Cache-Größe (GB)",
+      "workspacesCovered": "Abgedeckte Workspaces"
+    },
+    "searchPlaceholder": "Nach Name, Registry oder Tag suchen…",
+    "table": {
+      "image": "Image",
+      "registry": "Registry",
+      "tag": "Tag",
+      "usedBy": "Verwendet von",
+      "size": "Größe",
+      "pulled": "Gepullt"
+    },
+    "status": {
+      "available": "Verfügbar",
+      "pulling": "Pull läuft",
+      "error": "Fehler"
+    },
+    "age": {
+      "today": "Heute",
+      "yesterday": "Gestern",
+      "daysAgo": "vor {days} Tagen"
+    },
+    "empty": "Keine Images entsprechen Ihrer Suche."
+  },
+  "registry": {
+    "title": "Image-Registry",
+    "description": "Verbinden Sie offene Workspace-Registries, synchronisieren Sie deren Kataloge und installieren Sie Workspaces aus dem Marketplace.",
+    "liveOnly": "Die Registry-Verwaltung ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>, um sich mit der API zu verbinden.",
+    "stats": {
+      "registries": "Registries",
+      "marketplaceApps": "Marketplace-Apps",
+      "installed": "Installiert",
+      "available": "Verfügbar",
+      "catalogSize": "Kataloggröße"
+    },
+    "form": {
+      "namePlaceholder": "Chista Community",
+      "urlLabel": "Index-URL (JSON)"
+    },
+    "empty": "Noch keine Registries konfiguriert.",
+    "type": {
+      "FIRST_PARTY": "Erstanbieter",
+      "THIRD_PARTY": "Drittanbieter"
+    },
+    "appCount": "{count, plural, one {# App} other {# Apps}}",
+    "marketplace": {
+      "title": "Marketplace",
+      "searchPlaceholder": "Apps suchen…",
+      "noDescription": "Keine Beschreibung.",
+      "install": "Installieren",
+      "installed": "Installiert",
+      "emptyLive": "Keine Marketplace-Apps. Fügen Sie eine Registry hinzu und synchronisieren Sie sie.",
+      "emptyMock": "Verbinden Sie das Live-Backend, um den Marketplace zu durchsuchen."
+    },
+    "toasts": {
+      "loadFailed": "Registries konnten nicht geladen werden",
+      "added": "Registry hinzugefügt — Synchronisierung läuft…",
+      "addFailed": "Registry konnte nicht hinzugefügt werden",
+      "synced": "{count, plural, one {# Workspace synchronisiert} other {# Workspaces synchronisiert}}",
+      "syncFailed": "Synchronisierung fehlgeschlagen",
+      "installedTitle": "{name} installiert",
+      "installedDescription": "Image + Workspace erstellt.",
+      "installFailed": "Installation fehlgeschlagen",
+      "removed": "Registry entfernt",
+      "removeFailed": "Registry konnte nicht entfernt werden"
+    },
+    "tabs": {
+      "available": "Verfügbar",
+      "installed": "Installiert",
+      "registries": "Registrierungen"
+    },
+    "allCategories": "Alle",
+    "availableEmpty": "Keine Images entsprechen deiner Suche.",
+    "installedEmpty": "Noch keine Images installiert — installiere eines im Tab „Verfügbar“.",
+    "card": {
+      "source": "Quelle"
+    },
+    "sources": {
+      "addTitle": "Registrierungsquelle hinzufügen",
+      "addHint": "Verweise Chista auf einen beliebigen Workspace-Registry-Index im offenen Format (JSON). Füge beliebig viele Quellen hinzu.",
+      "syncedAt": "Synchronisiert {time}",
+      "never": "Nie synchronisiert"
+    }
+  }
+}
