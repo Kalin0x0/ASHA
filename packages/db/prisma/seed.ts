@@ -333,7 +333,7 @@ async function main() {
   // populated out of the box (no external sync required to browse images).
   const REGISTRIES: Array<{ id: string; name: string; url: string; type: Prisma.RegistryCreateInput['type'] }> = [
     { id: 'seed-reg-kasm', name: 'Kasm Technologies', url: 'https://registry.kasmweb.com/1.0/', type: 'FIRST_PARTY' },
-    { id: 'seed-reg-lsio', name: 'LinuxServer.io', url: 'https://fleet.linuxserver.io', type: 'THIRD_PARTY' },
+    { id: 'seed-reg-lsio', name: 'LinuxServer.io', url: 'https://api.linuxserver.io/api/v1/images', type: 'THIRD_PARTY' },
     { id: 'seed-reg-chista', name: 'Chista Official', url: 'https://registry.chista.io/index.json', type: 'FIRST_PARTY' },
   ];
   for (const r of REGISTRIES) {
