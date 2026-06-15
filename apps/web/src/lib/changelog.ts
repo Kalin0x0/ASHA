@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.12',
+    date: '2026-06-15',
+    title: { en: 'Remote agent deploy by IP', de: 'Agent-Fernverteilung per IP' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Deploy the Windows host agent remotely by IP — a remote-install script (PowerShell Remoting / WinRM) installs it on one or many hosts without RDP-ing into each. Docs also cover baking the agent into VM golden templates (the VMware/Parallels-style path).',
+          de: 'Den Windows-Host-Agent per IP aus der Ferne verteilen — ein Remote-Installationsskript (PowerShell Remoting / WinRM) installiert ihn auf einem oder vielen Hosts, ohne sich per RDP auf jedem anzumelden. Die Doku beschreibt auch das Einbacken des Agents in VM-Golden-Templates (der VMware/Parallels-Weg).',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.11',
     date: '2026-06-15',
     title: { en: 'Windows host agent (availability)', de: 'Windows-Host-Agent (Verfügbarkeit)' },
