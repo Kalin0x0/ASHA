@@ -997,6 +997,10 @@ model Server {
   // Reported by the installed Windows/host agent (availability tracking).
   lastSeenAt     DateTime?
   agentVersion   String?
+  // Reverse-tunnel reachability (WireGuard): the host's assigned tunnel IP +
+  // public key. When set, sessions reach the host over the tunnel IP.
+  tunnelIp       String?
+  tunnelPublicKey String?
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 

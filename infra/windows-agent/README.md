@@ -62,6 +62,31 @@ creds. For **workgroup** hosts addressed by IP, trust them on the admin box firs
 Set-Item WSMan:\localhost\Client\TrustedHosts -Value '10.0.0.5,10.0.0.6' -Force
 ```
 
+## Reachability behind NAT — reverse tunnel (WireGuard)
+
+If a host can't be reached directly (NAT/firewall, no port-forwarding), run the
+agent with **`-Tunnel`**. It asks Chista for a WireGuard config, brings up an
+**outbound** tunnel, and Chista repoints the server's address at the host's
+tunnel IP — so sessions reach it over the tunnel.
+
+```powershell
+./install.ps1 -ChistaUrl "https://chista.example.com" -Token "cra_xxxx" -EnableRdp -Tunnel
+```
+
+Requirements:
+- **WireGuard for Windows** installed on the host (the agent imports the config;
+  without it, the config is written to `%ProgramData%\Chista\chista-tunnel.conf`
+  to import manually).
+- A **WireGuard server** reachable by the hosts, and these env vars on Chista:
+  - `CHISTA_WG_ENDPOINT` — e.g. `tunnel.example.com:51820`
+  - `CHISTA_WG_SERVER_PUBLIC_KEY`
+  - `CHISTA_WG_SUBNET` (default `10.77.0.0/24`) · `CHISTA_WG_ALLOWED_IPS`
+- Apply the server-side peers to your WireGuard server — fetch them from
+  `GET /agent/server/wg-peers` (admin) and add them (or `wg syncconf`).
+
+> Chista is the control plane (issues tunnel IPs + peer keys); the WireGuard
+> data plane (the wg server + routing to the tunnel subnet) is your infra.
+
 ## VM-provisioned desktops (the VMware/Parallels-style path)
 
 VMware Tools / Parallels Tools install through the **hypervisor's** guest channel,

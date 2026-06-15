@@ -2,10 +2,27 @@ import {
   createCipheriv,
   createDecipheriv,
   createHash,
+  generateKeyPairSync,
   randomBytes,
   timingSafeEqual,
 } from 'node:crypto';
 import bcrypt from 'bcryptjs';
+
+// ── WireGuard (reverse-tunnel reachability) ──────────────────────────────────
+/**
+ * Generate a Curve25519 keypair in WireGuard's wire format (raw 32-byte keys,
+ * base64). Uses Node's x25519 keygen and extracts the raw key from the DER tail.
+ */
+export function generateWireguardKeypair(): { privateKey: string; publicKey: string } {
+  const { publicKey, privateKey } = generateKeyPairSync('x25519', {
+    publicKeyEncoding: { type: 'spki', format: 'der' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'der' },
+  });
+  return {
+    privateKey: privateKey.subarray(-32).toString('base64'),
+    publicKey: publicKey.subarray(-32).toString('base64'),
+  };
+}
 
 // ── Passwords ────────────────────────────────────────────────────────────────
 export async function hashPassword(plain: string): Promise<string> {

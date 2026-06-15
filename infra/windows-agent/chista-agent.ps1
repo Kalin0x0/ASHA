@@ -19,7 +19,8 @@ param(
   [string]$Address = '',
   [ValidateSet('RDP', 'VNC', 'SSH')][string]$ConnectionType = 'RDP',
   [int]$IntervalSeconds = 30,
-  [switch]$EnableRdp
+  [switch]$EnableRdp,
+  [switch]$Tunnel
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,6 +66,25 @@ function Send-Heartbeat {
 Write-Host "Registering '$Hostname' ($Address) with Chista at $ChistaUrl ..."
 $reg = Send-Register
 Write-Host "Registered (serverId=$($reg.serverId), zone=$($reg.zoneId)). Heartbeating every $IntervalSeconds s."
+
+# Optional reverse tunnel (WireGuard) — makes a host behind NAT reachable.
+if ($Tunnel) {
+  try {
+    $body = @{ hostname = $Hostname } | ConvertTo-Json
+    $t = Invoke-RestMethod -Uri "$ChistaUrl/agent/server/tunnel" -Method Post -Headers $headers -Body $body
+    $conf = Join-Path $env:ProgramData 'Chista\chista-tunnel.conf'
+    $t.config | Out-File -FilePath $conf -Encoding ascii -Force
+    $wg = Join-Path $env:ProgramFiles 'WireGuard\wireguard.exe'
+    if (Test-Path $wg) {
+      & $wg /installtunnelservice $conf
+      Write-Host "Tunnel up at $($t.tunnelIp) (WireGuard)."
+    } else {
+      Write-Warning "WireGuard for Windows is not installed. Tunnel config written to $conf — install WireGuard and import it."
+    }
+  } catch {
+    Write-Warning "Tunnel setup failed: $_"
+  }
+}
 
 while ($true) {
   try {
