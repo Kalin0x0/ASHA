@@ -141,6 +141,13 @@ export class RegistryService {
                 e.categories.some((c) => c.toLowerCase().includes(q)),
             )
           : entries,
+      )
+      .then((entries) =>
+        // Surface an estimated size when the registry index carried one (raw.size_mb).
+        entries.map((e) => {
+          const size = (e.raw as { size_mb?: unknown } | null)?.size_mb;
+          return { ...e, sizeMb: typeof size === 'number' ? size : undefined };
+        }),
       );
   }
 

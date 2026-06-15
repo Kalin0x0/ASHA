@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.6',
+    date: '2026-06-15',
+    title: { en: 'Live session monitoring + seeded registry', de: 'Live-Sitzungsüberwachung + befüllte Registry' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Watch a running desktop live in view-only mode — admins can see exactly what a user is doing without sending any input, so the user is never interrupted. The session page also shows a live preview thumbnail.',
+          de: 'Einen laufenden Desktop live im Nur-Ansehen-Modus beobachten — Admins sehen genau, was ein Nutzer tut, ohne Eingaben zu senden, sodass der Nutzer nie gestört wird. Die Sitzungsseite zeigt zudem ein Live-Vorschaubild.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'The Image Registry now ships with default sources (Kasm, LinuxServer.io, Chista) and a starter catalog, so it is no longer empty on a fresh deployment.',
+          de: 'Die Image-Registry wird jetzt mit Standardquellen (Kasm, LinuxServer.io, Chista) und einem Startkatalog ausgeliefert und ist bei einer frischen Installation nicht mehr leer.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.5',
     date: '2026-06-15',
     title: { en: 'Image marketplace', de: 'Image-Marktplatz' },
