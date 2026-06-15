@@ -13,6 +13,8 @@ import type {
   Workspace,
   Zone,
 } from '@/lib/types';
+import type { ApiMarketplaceEntry, ApiRegistry } from '@/lib/api/endpoints';
+import { MARKETPLACE_SEED, REGISTRY_SEED, registryEntryCounts } from '@/lib/mock/marketplace';
 import { mulberry32 } from '@/lib/utils';
 
 const SEED = 20260601;
@@ -73,6 +75,8 @@ export interface MockData {
   images: ImageRow[];
   recordings: RecordingRow[];
   feedback: FeedbackItem[];
+  registries: ApiRegistry[];
+  marketplace: ApiMarketplaceEntry[];
 }
 
 // Seed a few reports so the triage "memory" demonstrates the collaboration
@@ -308,5 +312,10 @@ export function buildInitialData(): MockData {
     images,
     recordings,
     feedback: FEEDBACK_SEED.map((f) => ({ ...f, notes: [...f.notes] })),
+    registries: (() => {
+      const counts = registryEntryCounts();
+      return REGISTRY_SEED.map((r) => ({ ...r, _count: { entries: counts[r.id] ?? 0 } }));
+    })(),
+    marketplace: MARKETPLACE_SEED.map((m) => ({ ...m })),
   };
 }

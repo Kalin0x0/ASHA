@@ -138,3 +138,31 @@ export function useUpdateFeedback() {
     [],
   );
 }
+
+export function useRegistries() {
+  return useSnapshot(() => store.getRegistries());
+}
+
+export function useMarketplace() {
+  return useSnapshot(() => store.getMarketplace());
+}
+
+export function useAddRegistry() {
+  return useCallback(async (input: { name: string; url: string }) => store.addRegistry(input), []);
+}
+
+export function useDeleteRegistry() {
+  return useCallback(async (id: string) => {
+    store.deleteRegistry(id);
+  }, []);
+}
+
+export function useSyncRegistry() {
+  return useCallback(async (id: string) => store.syncRegistry(id), []);
+}
+
+export function useInstallEntry() {
+  return useCallback(async (id: string) => {
+    store.installEntry(id);
+  }, []);
+}

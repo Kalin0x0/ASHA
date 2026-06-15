@@ -157,6 +157,8 @@ export interface ApiMarketplaceEntry {
   iconUrl: string | null;
   categories: string[];
   installed: boolean;
+  /** Estimated image size in MB (shown in the catalog, when known). */
+  sizeMb?: number;
   registry?: { name: string; type: string };
 }
 export const getRegistries = () => apiFetch<ApiRegistry[]>('/registries');

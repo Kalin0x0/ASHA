@@ -99,7 +99,9 @@
     "stats": {
       "registries": "Registries",
       "marketplaceApps": "Marketplace apps",
-      "installed": "Installed"
+      "installed": "Installed",
+      "available": "Available",
+      "catalogSize": "Catalog size"
     },
     "form": {
       "namePlaceholder": "Chista Community",
@@ -131,6 +133,23 @@
       "installFailed": "Install failed",
       "removed": "Registry removed",
       "removeFailed": "Could not remove registry"
+    },
+    "tabs": {
+      "available": "Available",
+      "installed": "Installed",
+      "registries": "Registries"
+    },
+    "allCategories": "All",
+    "availableEmpty": "No images match your search.",
+    "installedEmpty": "No images installed yet — install one from the Available tab.",
+    "card": {
+      "source": "Source"
+    },
+    "sources": {
+      "addTitle": "Add a registry source",
+      "addHint": "Point Chista at any open-format workspace registry index (JSON). Add as many sources as you like.",
+      "syncedAt": "Synced {time}",
+      "never": "Never synced"
     }
   }
 }

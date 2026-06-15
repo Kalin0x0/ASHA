@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.5',
+    date: '2026-06-15',
+    title: { en: 'Image marketplace', de: 'Image-Marktplatz' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'A Kasm-style workspace registry: browse the newest images by category, see size and source, and install them with one click — across Available / Installed / Registries tabs.',
+          de: 'Eine Arbeitsbereichs-Registrierung im Kasm-Stil: die neuesten Images nach Kategorie durchsuchen, Größe und Quelle sehen und mit einem Klick installieren — über die Tabs Verfügbar / Installiert / Registrierungen.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'Admins can connect multiple registry sources (e.g. Kasm, LinuxServer.io, a custom index URL) and sync their catalogs.',
+          de: 'Admins können mehrere Registrierungsquellen verbinden (z. B. Kasm, LinuxServer.io, eine eigene Index-URL) und deren Kataloge synchronisieren.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.4',
     date: '2026-06-15',
     title: { en: 'Image digest pinning + pull policy', de: 'Image-Digest-Pinning + Pull-Policy' },
