@@ -402,10 +402,40 @@ interface RegistryIndexItem {
 }
 
 /** Accept either a bare array or a `{ items: [...] }` / `{ workspaces: [...] }` wrapper. */
-function normalizeIndex(body: unknown): RegistryIndexItem[] {
+export function normalizeIndex(body: unknown): RegistryIndexItem[] {
   if (Array.isArray(body)) return body as RegistryIndexItem[];
-  const obj = body as { items?: unknown; workspaces?: unknown };
+  const obj = body as { items?: unknown; workspaces?: unknown; data?: { repositories?: unknown } };
   if (Array.isArray(obj?.items)) return obj.items as RegistryIndexItem[];
   if (Array.isArray(obj?.workspaces)) return obj.workspaces as RegistryIndexItem[];
+  // LinuxServer.io fleet API: { data: { repositories: { <repo>: [ { name, description, category, project_logo } ] } } }
+  const repos = obj?.data?.repositories;
+  if (repos && typeof repos === 'object') return parseLinuxServer(repos as Record<string, unknown>);
   return [];
+}
+
+/** Map the LinuxServer.io fleet API into installable registry items. */
+function parseLinuxServer(repos: Record<string, unknown>): RegistryIndexItem[] {
+  const items: RegistryIndexItem[] = [];
+  for (const [repo, arr] of Object.entries(repos)) {
+    if (!Array.isArray(arr)) continue;
+    for (const im of arr as Array<Record<string, unknown>>) {
+      const name = typeof im.name === 'string' ? im.name : '';
+      if (!name || im.deprecated) continue;
+      const category = typeof im.category === 'string' ? im.category : '';
+      items.push({
+        name,
+        friendlyName: titleCase(name),
+        description: typeof im.description === 'string' ? im.description : undefined,
+        // LinuxServer images are pulled from the lscr.io mirror.
+        dockerImage: `lscr.io/${repo}/${name}:latest`,
+        iconUrl: typeof im.project_logo === 'string' ? im.project_logo : undefined,
+        categories: category ? category.split(/[,;|/]/).map((s) => s.trim()).filter(Boolean) : [],
+      });
+    }
+  }
+  return items;
+}
+
+function titleCase(s: string): string {
+  return s.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
