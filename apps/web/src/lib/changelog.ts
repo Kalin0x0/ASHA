@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.9',
+    date: '2026-06-15',
+    title: { en: 'Check for updates', de: 'Auf Updates prüfen' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Developer → Updates now has a "Check for updates" button: it compares your running version against a configurable release feed (NEXT_PUBLIC_UPDATE_FEED_URL) and shows an "Update available" banner with release notes when a newer version exists.',
+          de: 'Entwickler → Updates hat jetzt eine Schaltfläche „Auf Updates prüfen": sie vergleicht deine laufende Version mit einem konfigurierbaren Release-Feed (NEXT_PUBLIC_UPDATE_FEED_URL) und zeigt einen Hinweis „Update verfügbar" mit Versionshinweisen, wenn eine neuere Version existiert.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.8',
     date: '2026-06-15',
     title: { en: 'Session viewer polish', de: 'Sitzungs-Viewer verbessert' },
