@@ -55,6 +55,32 @@ export class SessionReaperService {
   }
 
   /**
+   * Mark agents OFFLINE once their heartbeat goes stale
+   * (`CHISTA_AGENT_OFFLINE_SECONDS`, default 90s). Agents heartbeat every few
+   * seconds, so a gap this large means the process is gone (stopped container,
+   * dead host). Without this, agents that never sent a clean shutdown linger as
+   * ONLINE — misleading the dashboard's "online" count and the agent fleet view.
+   * A still-live agent is never caught (its heartbeat keeps it well under the
+   * cutoff), and a transiently-flipped agent self-heals: the next heartbeat sets
+   * it back ONLINE. The scheduler already ignores stale-heartbeat agents, so this
+   * keeps `status` honest rather than affecting placement.
+   */
+  @Interval('agent-liveness-reaper', 30_000)
+  async reapStaleAgents(): Promise<number> {
+    const secs = Number(process.env.CHISTA_AGENT_OFFLINE_SECONDS ?? 90);
+    if (!Number.isFinite(secs) || secs <= 0) return 0;
+    const cutoff = new Date(Date.now() - secs * 1000);
+    const res = await prisma.agent.updateMany({
+      where: { status: 'ONLINE', lastHeartbeatAt: { lt: cutoff } },
+      data: { status: 'OFFLINE' },
+    });
+    if (res.count > 0) {
+      this.logger.warn(`Marked ${res.count} stale agent(s) OFFLINE (no heartbeat in ${secs}s)`);
+    }
+    return res.count;
+  }
+
+  /**
    * Terminate sessions that have been PAUSED longer than the configured cap
    * (`CHISTA_MAX_PAUSED_MINUTES`). A paused container retains disk + RAM state
    * but still holds host resources, so deployments can bound how long that

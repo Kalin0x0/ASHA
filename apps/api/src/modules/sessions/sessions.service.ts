@@ -115,16 +115,35 @@ export class SessionsService {
 
     const agent = await this.scheduler.pickAgent(zone.id);
     if (agent) {
-      await prisma.session.update({
-        where: { id: session.id },
-        data: { status: 'SCHEDULED', agentId: agent.id },
-      });
+      // The scheduler may spill over to another zone (cross-zone fallback) when
+      // the requested zone has no fresh agent with spare capacity. An agent only
+      // subscribes to ITS OWN zone's Redis channels, so we MUST align the session
+      // and the provision/destroy/control channel to the chosen agent's zone —
+      // otherwise the provision command is published to `provision(<requested
+      // zone>)`, which no agent is listening on, and the launch hangs until the
+      // reaper fails it ("Launch timed out before the workspace became ready").
+      let provisionZoneName = zone.name;
+      const scheduleData: { status: 'SCHEDULED'; agentId: string; zoneId?: string } = {
+        status: 'SCHEDULED',
+        agentId: agent.id,
+      };
+      if (agent.zoneId && agent.zoneId !== zone.id) {
+        const agentZone = await prisma.deploymentZone.findUnique({
+          where: { id: agent.zoneId },
+          select: { name: true },
+        });
+        if (agentZone) {
+          provisionZoneName = agentZone.name;
+          scheduleData.zoneId = agent.zoneId;
+        }
+      }
+      await prisma.session.update({ where: { id: session.id }, data: scheduleData });
       const tokenCtx: TokenContext = {
         username: user.email.split('@')[0],
         email: user.email,
         customAttributes: (dto.launchValues ?? {}) as Record<string, unknown>,
       };
-      await this.dispatchProvision(session.id, zone.name, workspace, protocol, tokenCtx, user.sub);
+      await this.dispatchProvision(session.id, provisionZoneName, workspace, protocol, tokenCtx, user.sub);
     }
 
     await this.audit.record({
