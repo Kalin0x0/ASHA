@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  ArrowLeft,
   Camera,
   CameraOff,
   Check,
@@ -25,6 +26,7 @@ import {
 import { useLocale, useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { ChistaMark } from '@/components/brand/logo';
 import { SessionWatermark } from '@/components/composite/session-watermark';
@@ -40,7 +42,7 @@ import {
   resumeSession,
 } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
-import { useSession, useTerminateSession } from '@/lib/hooks';
+import { useSession, useTerminateSession, useWorkspaces } from '@/lib/hooks';
 import { isLikelyUnreachableUrl } from '@/lib/stream';
 import { cn } from '@/lib/utils';
 
@@ -107,6 +109,14 @@ export default function StreamingViewerPage() {
   const [timedOut, setTimedOut] = useState(false);
 
   const workspaceName = session?.workspaceName ?? t('status.workspaceFallback');
+  // Resolve the workspace's description to show under the title in the control bar.
+  const workspaces = useWorkspaces();
+  const workspaceDescription = workspaces.find((w) => w.friendlyName === session?.workspaceName)?.description;
+  // The viewer is a fullscreen takeover — render it through a portal to <body> so
+  // it escapes the portal layout's stacking context (otherwise the "My Workspaces"
+  // header paints over it). Portal only after mount (document is client-only).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const status = session?.status;
   const isPaused = status === 'PAUSED' || paused;
   const isRunning = status === 'RUNNING' || status === 'DEGRADED';
@@ -248,27 +258,50 @@ export default function StreamingViewerPage() {
     }
   };
 
-  return (
-    <div className="on-dark fixed inset-0 z-50 flex flex-col bg-anthracite-950">
+  if (!mounted) return null;
+  return createPortal(
+    <div className="on-dark fixed inset-0 z-[100] flex flex-col bg-anthracite-950">
       {/* Control bar */}
-      <div className="glass-strong absolute inset-x-0 top-0 z-20 flex h-12 items-center gap-3 px-4">
-        <div className="flex items-center gap-2">
-          <ChistaMark className="size-5" />
-          <span className="text-sm font-medium">{workspaceName}</span>
-          <span
-            className={cn(
-              'ml-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs',
-              isError ? 'text-destructive' : connected ? 'text-success' : 'text-warning',
-            )}
-          >
-            <span
-              className={cn(
-                'size-1.5 rounded-full',
-                isError ? 'bg-destructive' : connected ? 'bg-success animate-pulse-ring' : 'bg-warning',
-              )}
-            />
-            {isError ? t('status.disconnected') : connected ? t('status.connected') : t('status.connecting')}
-          </span>
+      <div className="glass-strong absolute inset-x-0 top-0 z-20 flex h-14 items-center gap-3 px-3 sm:px-4">
+        {/* Back to Workspaces — non-destructive; keeps the session running so the
+            user can switch to another from the portal's "My Sessions" strip. */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={disconnect}
+              aria-label={t('toolbar.backToWorkspaces')}
+              className="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground ring-gold-focus rtl:rotate-180"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{t('toolbar.backToWorkspaces')}</TooltipContent>
+        </Tooltip>
+
+        <div className="flex min-w-0 items-center gap-2.5">
+          <ChistaMark className="size-7 shrink-0" />
+          <div className="min-w-0 leading-tight">
+            <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
+              {workspaceName}
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 text-[11px] font-medium',
+                  isError ? 'text-destructive' : connected ? 'text-success' : 'text-warning',
+                )}
+              >
+                <span
+                  className={cn(
+                    'size-1.5 rounded-full',
+                    isError ? 'bg-destructive' : connected ? 'bg-success animate-pulse-ring' : 'bg-warning',
+                  )}
+                />
+                {isError ? t('status.disconnected') : connected ? t('status.connected') : t('status.connecting')}
+              </span>
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {workspaceDescription || `${session?.connectionType ?? ''} · ${session?.zone ?? ''}`}
+            </p>
+          </div>
         </div>
 
         {connected && (
@@ -467,7 +500,8 @@ export default function StreamingViewerPage() {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -523,23 +557,62 @@ function LiveStream({
   onReady: () => void;
 }) {
   const t = useTranslations('viewer');
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadingText = isWebRtc
     ? t('status.negotiatingWebRtc')
     : t('status.establishingChannel');
 
+  const handleLoad = () => {
+    onReady();
+    // Best-effort: KasmVNC's own client bundle can throw a benign uncaught error
+    // ("lastActiveAt") and pop its own error dialog. We can't patch the
+    // third-party bundle, but on a same-origin session we can swallow that error
+    // and hide the dialog *inside the KasmVNC iframe* — this never touches
+    // Chista's own UI, and is a no-op if the frame blocks access.
+    try {
+      const win = iframeRef.current?.contentWindow as (Window & typeof globalThis) | null | undefined;
+      const doc = iframeRef.current?.contentDocument;
+      if (!win || !doc) return;
+      win.addEventListener(
+        'error',
+        (e: ErrorEvent) => {
+          if (typeof e.message === 'string' && e.message.includes('lastActiveAt')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        },
+        true,
+      );
+      const PHRASE = /KasmVNC (hat einen Fehler|has encountered|encountered an error)/i;
+      const hideKasmError = () => {
+        for (const el of Array.from(doc.querySelectorAll<HTMLElement>('body *'))) {
+          // Target the small error dialog only — never a large container/body.
+          if (PHRASE.test(el.textContent ?? '') && el.querySelectorAll('*').length < 40) {
+            el.style.display = 'none';
+          }
+        }
+      };
+      hideKasmError();
+      new win.MutationObserver(hideKasmError).observe(doc.body, { childList: true, subtree: true });
+    } catch {
+      /* cross-origin or access blocked — leave KasmVNC's overlay as-is */
+    }
+  };
+
   return (
-    <div className="absolute inset-0 pt-12">
+    <div className="absolute inset-0 pt-14">
       <iframe
+        ref={iframeRef}
         src={url}
         title={`${workspaceName} — ${isWebRtc ? 'WebRTC/H.264' : t('status.liveStream')}`}
-        onLoad={onReady}
+        onLoad={handleLoad}
         className="size-full border-0 bg-anthracite-950"
         // Neko/KasmVNC both need scripts + clipboard/pointer/fullscreen + WebRTC media.
         allow="fullscreen; clipboard-read; clipboard-write; autoplay; microphone; camera; display-capture"
         allowFullScreen
       />
       {!ready && (
-        <div className="absolute inset-0 top-12 flex flex-col items-center justify-center gap-3 bg-aurora">
+        <div className="absolute inset-0 top-14 flex flex-col items-center justify-center gap-3 bg-aurora">
           <Loader2 className="size-6 animate-spin text-gold-400" />
           <p className="text-sm text-muted-foreground">{loadingText}</p>
         </div>
