@@ -38,6 +38,34 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.8',
+    date: '2026-06-15',
+    title: { en: 'Session viewer polish', de: 'Sitzungs-Viewer verbessert' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'The session viewer is now truly full-screen — the "My Workspaces" header no longer paints over it — and its title bar shows the workspace name with the description beneath.',
+          de: 'Der Sitzungs-Viewer ist jetzt wirklich im Vollbild — die Kopfzeile „Meine Workspaces" überdeckt ihn nicht mehr — und seine Titelleiste zeigt den Workspace-Namen mit der Beschreibung darunter.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'A "Back to Workspaces" button leaves a session without ending it, so you can minimize it and switch to another desktop (it keeps running).',
+          de: 'Eine Schaltfläche „Zurück zu Arbeitsbereichen" verlässt eine Sitzung, ohne sie zu beenden — du kannst sie minimieren und zu einem anderen Desktop wechseln (sie läuft weiter).',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: "Suppressed a benign error dialog that KasmVNC's own client could pop up over a running desktop.",
+          de: 'Ein harmloses Fehlerdialogfeld unterdrückt, das der KasmVNC-Client über einem laufenden Desktop anzeigen konnte.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.7',
     date: '2026-06-15',
     title: { en: 'Live activity feed + LinuxServer.io catalog', de: 'Live-Aktivität + LinuxServer.io-Katalog' },
