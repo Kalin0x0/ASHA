@@ -281,6 +281,74 @@ export function useUpdateFeedback() {
   );
 }
 
+const REGISTRIES_KEY = ['registries'] as const;
+const MARKETPLACE_KEY = ['marketplace'] as const;
+
+export function useRegistries() {
+  const { data } = useQuery({ queryKey: REGISTRIES_KEY, queryFn: api.getRegistries });
+  return data ?? [];
+}
+
+export function useMarketplace() {
+  const { data } = useQuery({ queryKey: MARKETPLACE_KEY, queryFn: () => api.getMarketplace() });
+  return data ?? [];
+}
+
+export function useAddRegistry() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: (input: { name: string; url: string }) => api.createRegistry(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: REGISTRIES_KEY });
+      qc.invalidateQueries({ queryKey: MARKETPLACE_KEY });
+    },
+  });
+  return useCallback(async (input: { name: string; url: string }) => mutateAsync(input), [mutateAsync]);
+}
+
+export function useDeleteRegistry() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.deleteRegistry,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: REGISTRIES_KEY });
+      qc.invalidateQueries({ queryKey: MARKETPLACE_KEY });
+    },
+  });
+  return useCallback(
+    async (id: string) => {
+      await mutateAsync(id);
+    },
+    [mutateAsync],
+  );
+}
+
+export function useSyncRegistry() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.syncRegistry,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: REGISTRIES_KEY });
+      qc.invalidateQueries({ queryKey: MARKETPLACE_KEY });
+    },
+  });
+  return useCallback(async (id: string) => mutateAsync(id), [mutateAsync]);
+}
+
+export function useInstallEntry() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: (id: string) => api.installMarketplaceEntry(id, true),
+    onSuccess: () => qc.invalidateQueries({ queryKey: MARKETPLACE_KEY }),
+  });
+  return useCallback(
+    async (id: string) => {
+      await mutateAsync(id);
+    },
+    [mutateAsync],
+  );
+}
+
 export function useDashboard() {
   const sessions = useSessions();
   const agents = useAgents();

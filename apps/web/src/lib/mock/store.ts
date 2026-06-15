@@ -1,3 +1,4 @@
+import type { ApiMarketplaceEntry, ApiRegistry } from '@/lib/api/endpoints';
 import { buildInitialData, type MockData } from '@/lib/mock/data';
 import { resolveStreamUrl } from '@/lib/stream';
 import type {
@@ -320,6 +321,62 @@ class MockStore {
     this.data.feedback = [item, ...this.data.feedback];
     this.emit();
     return item;
+  }
+
+  // ── Registry sources + image marketplace ────────────────────────────────────
+
+  getRegistries(): ApiRegistry[] {
+    return this.data.registries;
+  }
+
+  getMarketplace(): ApiMarketplaceEntry[] {
+    return this.data.marketplace;
+  }
+
+  addRegistry(input: { name: string; url: string }): ApiRegistry {
+    const name = input.name.trim();
+    const url = input.url.trim();
+    if (!name || !url) throw new Error('A name and URL are required');
+    if (this.data.registries.some((r) => r.url === url)) {
+      throw new Error('A registry with this URL already exists');
+    }
+    const reg: ApiRegistry = {
+      id: `reg-${Math.floor(Math.random() * 1e6)}`,
+      name,
+      url,
+      type: 'THIRD_PARTY',
+      enabled: true,
+      lastSyncedAt: null,
+      _count: { entries: 0 },
+    };
+    this.data.registries = [...this.data.registries, reg];
+    this.emit();
+    return reg;
+  }
+
+  deleteRegistry(id: string): void {
+    this.data.registries = this.data.registries.filter((r) => r.id !== id);
+    // Drop the marketplace entries contributed by that source.
+    const name = this.data.registries.find((r) => r.id === id)?.name;
+    if (name) this.data.marketplace = this.data.marketplace.filter((m) => m.registry?.name !== name);
+    this.emit();
+  }
+
+  syncRegistry(id: string): { upserted: number } {
+    const reg = this.data.registries.find((r) => r.id === id);
+    if (!reg) throw new Error('Registry not found');
+    reg.lastSyncedAt = new Date().toISOString();
+    const upserted = reg._count?.entries ?? 0;
+    this.emit();
+    return { upserted };
+  }
+
+  installEntry(id: string): void {
+    const entry = this.data.marketplace.find((m) => m.id === id);
+    if (entry) {
+      entry.installed = true;
+      this.emit();
+    }
   }
 
   updateFeedback(id: string, patch: UpdateFeedbackInput): FeedbackItem {

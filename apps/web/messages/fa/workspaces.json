@@ -99,7 +99,9 @@
     "stats": {
       "registries": "رجیستری‌ها",
       "marketplaceApps": "برنامه‌های مارکت‌پلیس",
-      "installed": "نصب‌شده"
+      "installed": "نصب‌شده",
+      "available": "در دسترس",
+      "catalogSize": "حجم کاتالوگ"
     },
     "form": {
       "namePlaceholder": "Chista Community",
@@ -131,6 +133,23 @@
       "installFailed": "نصب ناموفق بود",
       "removed": "رجیستری حذف شد",
       "removeFailed": "حذف رجیستری ممکن نبود"
+    },
+    "tabs": {
+      "available": "در دسترس",
+      "installed": "نصب‌شده",
+      "registries": "ثبت‌ها"
+    },
+    "allCategories": "همه",
+    "availableEmpty": "هیچ ایمیجی با جست‌وجوی شما مطابقت ندارد.",
+    "installedEmpty": "هنوز ایمیجی نصب نشده — یکی را از زبانهٔ «در دسترس» نصب کنید.",
+    "card": {
+      "source": "منبع"
+    },
+    "sources": {
+      "addTitle": "افزودن منبع ثبت",
+      "addHint": "چیستا را به هر فهرست ثبت فضای کاری با قالب باز (JSON) متصل کنید. هر تعداد منبع که می‌خواهید اضافه کنید.",
+      "syncedAt": "همگام‌سازی {time}",
+      "never": "هرگز همگام نشده"
     }
   }
 }
