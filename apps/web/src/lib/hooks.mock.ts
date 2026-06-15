@@ -8,6 +8,7 @@ import type {
   CreateFeedbackInput,
   CreateUserInput,
   CreateWorkspaceInput,
+  ManagedImage,
   UpdateFeedbackInput,
   UpdateWorkspaceInput,
   Workspace,
@@ -70,8 +71,36 @@ export function useActivity() {
   return useSnapshot(() => store.getData().activity);
 }
 
-export function useImages() {
-  return useSnapshot(() => store.getData().images);
+export function useImages(): ManagedImage[] {
+  return useSnapshot(() => {
+    const data = store.getData();
+    const wsByName = new Map(data.workspaces.map((w) => [w.friendlyName, w] as const));
+    return data.images.map((img) => ({
+      id: img.id,
+      name: img.name,
+      friendlyName: img.name,
+      dockerImage: img.fullImage,
+      protocol: 'KASMVNC',
+      digest: null,
+      pullPolicy: 'ALWAYS' as const,
+      createdAt: img.pulledAt,
+      workspaces: img.workspaces.map((name) => {
+        const w = wsByName.get(name);
+        return { id: w?.id ?? name, friendlyName: name, cores: w?.cores ?? null, memMb: w?.memMb ?? null, gpu: w?.gpu ?? 0 };
+      }),
+    }));
+  });
+}
+
+export function useDeleteImage() {
+  return useCallback(async (id: string) => {
+    store.deleteImage(id);
+  }, []);
+}
+
+export function useSetImagePullPolicy() {
+  // Pull policy is a live-backend concept; no-op in mock mode.
+  return useCallback(async (_id: string, _policy: ManagedImage['pullPolicy']) => {}, []);
 }
 
 export function useSessionHistory() {

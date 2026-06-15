@@ -69,7 +69,9 @@
     "stats": {
       "images": "ایمیج‌ها",
       "cachedSize": "حجم کش‌شده (GB)",
-      "workspacesCovered": "فضاهای کاری تحت پوشش"
+      "workspacesCovered": "فضاهای کاری تحت پوشش",
+      "workspaces": "فضاهای کاری",
+      "pinned": "سنجاق‌شده"
     },
     "searchPlaceholder": "جستجو بر اساس نام، رجیستری یا تگ…",
     "table": {
@@ -90,7 +92,35 @@
       "yesterday": "دیروز",
       "daysAgo": "{days} روز پیش"
     },
-    "empty": "هیچ ایمیجی با جستجوی شما مطابقت ندارد."
+    "empty": "هیچ ایمیجی با جستجوی شما مطابقت ندارد.",
+    "emptyTitle": "هیچ ایمیجی نصب نشده",
+    "emptyDescription": "ایمیج‌ها را از بازار ثبت نصب کنید — برای مدیریت اینجا ظاهر می‌شوند.",
+    "pinned": "سنجاق‌شده",
+    "pullPolicy": "سیاست دریافت",
+    "pullPolicies": {
+      "ALWAYS": "همیشه",
+      "IF_NOT_PRESENT": "اگر موجود نباشد",
+      "NEVER": "هرگز"
+    },
+    "resources": "منابع",
+    "vcpu": "{n} vCPU",
+    "noLimit": "بدون محدودیت",
+    "editResources": "منابع",
+    "editResourcesTitle": "ویرایش منابع",
+    "cpuLabel": "vCPU",
+    "ramLabel": "رم (GB)",
+    "gpuLabel": "GPU",
+    "uninstall": "حذف نصب",
+    "deleteTitle": "حذف نصب ایمیج",
+    "deleteDescription": "حذف نصب {name}؟ رکورد ایمیج و فضاهای کاری مرتبط حذف می‌شوند.",
+    "toasts": {
+      "policyChanged": "سیاست دریافت به‌روزرسانی شد",
+      "policyFailed": "به‌روزرسانی سیاست دریافت ممکن نشد",
+      "deleted": "{name} حذف نصب شد",
+      "deleteFailed": "حذف نصب ایمیج ممکن نشد",
+      "resourcesSaved": "منابع به‌روزرسانی شد",
+      "resourcesFailed": "به‌روزرسانی منابع ممکن نشد"
+    }
   },
   "registry": {
     "title": "رجیستری ایمیج",

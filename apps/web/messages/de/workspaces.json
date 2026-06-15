@@ -69,7 +69,9 @@
     "stats": {
       "images": "Images",
       "cachedSize": "Cache-Größe (GB)",
-      "workspacesCovered": "Abgedeckte Workspaces"
+      "workspacesCovered": "Abgedeckte Workspaces",
+      "workspaces": "Workspaces",
+      "pinned": "Angeheftet"
     },
     "searchPlaceholder": "Nach Name, Registry oder Tag suchen…",
     "table": {
@@ -90,7 +92,35 @@
       "yesterday": "Gestern",
       "daysAgo": "vor {days} Tagen"
     },
-    "empty": "Keine Images entsprechen Ihrer Suche."
+    "empty": "Keine Images entsprechen Ihrer Suche.",
+    "emptyTitle": "Keine Images installiert",
+    "emptyDescription": "Installiere Images aus dem Registry-Marktplatz — sie erscheinen hier zur Verwaltung.",
+    "pinned": "Angeheftet",
+    "pullPolicy": "Pull-Policy",
+    "pullPolicies": {
+      "ALWAYS": "Immer",
+      "IF_NOT_PRESENT": "Wenn nicht vorhanden",
+      "NEVER": "Nie"
+    },
+    "resources": "Ressourcen",
+    "vcpu": "{n} vCPU",
+    "noLimit": "Kein Limit",
+    "editResources": "Ressourcen",
+    "editResourcesTitle": "Ressourcen bearbeiten",
+    "cpuLabel": "vCPU",
+    "ramLabel": "RAM (GB)",
+    "gpuLabel": "GPU",
+    "uninstall": "Deinstallieren",
+    "deleteTitle": "Image deinstallieren",
+    "deleteDescription": "{name} deinstallieren? Der Image-Eintrag und verknüpfte Workspaces werden entfernt.",
+    "toasts": {
+      "policyChanged": "Pull-Policy aktualisiert",
+      "policyFailed": "Pull-Policy konnte nicht aktualisiert werden",
+      "deleted": "{name} deinstalliert",
+      "deleteFailed": "Image konnte nicht deinstalliert werden",
+      "resourcesSaved": "Ressourcen aktualisiert",
+      "resourcesFailed": "Ressourcen konnten nicht aktualisiert werden"
+    }
   },
   "registry": {
     "title": "Image-Registry",
