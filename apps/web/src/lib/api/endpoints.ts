@@ -541,6 +541,18 @@ export interface ApiServer {
   zone?: { name: string } | null;
 }
 
+/** A freshly minted registration token (the plaintext is returned once). */
+export interface ApiRegistrationToken {
+  id: string;
+  name: string;
+  token: string;
+  zoneId: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+export const mintRegistrationToken = (body: { name: string; zoneId?: string; expiresInDays?: number }) =>
+  apiFetch<ApiRegistrationToken>('/registration-tokens', { method: 'POST', body });
+
 export const getServers = () => apiFetch<ApiServer[]>('/servers');
 export const createServer = (body: {
   zoneId: string;
