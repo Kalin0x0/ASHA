@@ -264,6 +264,118 @@ export class RegistryService {
       estimatedSizeMb: m.estimatedSizeMb,
     };
   }
+
+  // ── Images: digest-pinning + pull-policy (A3) ─────────────────────────────
+
+  listImages(orgId: string) {
+    return prisma.image.findMany({
+      where: { OR: [{ orgId }, { orgId: null }] },
+      orderBy: { friendlyName: 'asc' },
+    });
+  }
+
+  /** Resolve a repo:tag reference to its content digest via the Docker Registry v2 API. */
+  async resolveDigest(dockerImage: string): Promise<string> {
+    const ref = parseImageRef(dockerImage);
+    const url = `https://${ref.registry}/v2/${ref.repository}/manifests/${ref.tag}`;
+    const accept = [
+      'application/vnd.docker.distribution.manifest.v2+json',
+      'application/vnd.docker.distribution.manifest.list.v2+json',
+      'application/vnd.oci.image.manifest.v1+json',
+      'application/vnd.oci.image.index.v1+json',
+    ].join(', ');
+    const head = (token?: string) =>
+      fetch(url, { method: 'HEAD', headers: { Accept: accept, ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+    let res = await head();
+    if (res.status === 401) {
+      const token = await fetchRegistryToken(res.headers.get('www-authenticate'), ref.repository);
+      if (token) res = await head(token);
+    }
+    if (!res.ok) throw new BadRequestException(`Digest resolve failed for "${dockerImage}": ${res.status}`);
+    const digest = res.headers.get('docker-content-digest');
+    if (!digest) throw new BadRequestException(`No content digest returned for "${dockerImage}"`);
+    return digest;
+  }
+
+  /** Pin an org image to its current tag's digest (reproducible launches). */
+  async promoteImage(orgId: string, actorUserId: string, imageId: string) {
+    const image = await prisma.image.findFirst({ where: { id: imageId, orgId } });
+    if (!image) throw new NotFoundException('Image not found');
+    const digest = await this.resolveDigest(image.dockerImage);
+    const updated = await prisma.image.update({ where: { id: image.id }, data: { digest } });
+    await this.audit.record({
+      orgId,
+      actorUserId,
+      action: 'image.promote',
+      targetType: 'Image',
+      targetId: image.id,
+      metadata: { dockerImage: image.dockerImage, digest },
+    });
+    return { id: updated.id, dockerImage: updated.dockerImage, digest: updated.digest };
+  }
+
+  async setPullPolicy(
+    orgId: string,
+    actorUserId: string,
+    imageId: string,
+    pullPolicy: 'ALWAYS' | 'IF_NOT_PRESENT' | 'NEVER',
+  ) {
+    const res = await prisma.image.updateMany({ where: { id: imageId, orgId }, data: { pullPolicy } });
+    if (res.count === 0) throw new NotFoundException('Image not found');
+    await this.audit.record({
+      orgId,
+      actorUserId,
+      action: 'image.pull_policy',
+      targetType: 'Image',
+      targetId: imageId,
+      metadata: { pullPolicy },
+    });
+    return prisma.image.findUnique({ where: { id: imageId } });
+  }
+}
+
+/** Parse a Docker image reference into registry host, repository, and tag. */
+function parseImageRef(image: string): { registry: string; repository: string; tag: string } {
+  let rest = image.trim();
+  let registry = 'registry-1.docker.io';
+  const slash = rest.indexOf('/');
+  const firstSeg = slash >= 0 ? rest.slice(0, slash) : '';
+  // A leading segment with a dot/colon (or "localhost") is a registry host.
+  if (firstSeg && (firstSeg.includes('.') || firstSeg.includes(':') || firstSeg === 'localhost')) {
+    registry = firstSeg;
+    rest = rest.slice(slash + 1);
+  }
+  let tag = 'latest';
+  const at = rest.indexOf('@');
+  if (at >= 0) {
+    tag = rest.slice(at + 1); // digest reference
+    rest = rest.slice(0, at);
+  } else {
+    const colon = rest.lastIndexOf(':');
+    if (colon >= 0 && !rest.slice(colon).includes('/')) {
+      tag = rest.slice(colon + 1);
+      rest = rest.slice(0, colon);
+    }
+  }
+  let repository = rest;
+  // Docker Hub official ("library") images are addressed bare (e.g. `nginx`).
+  if (registry === 'registry-1.docker.io' && !repository.includes('/')) repository = `library/${repository}`;
+  return { registry, repository, tag };
+}
+
+/** Exchange a registry's Bearer challenge for a pull-scoped token (Docker Hub etc.). */
+async function fetchRegistryToken(wwwAuthenticate: string | null, repository: string): Promise<string | null> {
+  if (!wwwAuthenticate || !wwwAuthenticate.toLowerCase().startsWith('bearer ')) return null;
+  const params: Record<string, string> = {};
+  for (const m of wwwAuthenticate.slice(7).matchAll(/(\w+)="([^"]*)"/g)) params[m[1]!] = m[2]!;
+  if (!params.realm) return null;
+  const url = new URL(params.realm);
+  if (params.service) url.searchParams.set('service', params.service);
+  url.searchParams.set('scope', params.scope ?? `repository:${repository}:pull`);
+  const res = await fetch(url.toString());
+  if (!res.ok) return null;
+  const body = (await res.json()) as { token?: string; access_token?: string };
+  return body.token ?? body.access_token ?? null;
 }
 
 function normalizeProtocol(p: unknown): 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' | 'WEBRTC' {
