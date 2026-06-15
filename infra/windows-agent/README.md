@@ -37,6 +37,35 @@ powershell -ExecutionPolicy Bypass -File chista-agent.ps1 `
   -ChistaUrl "https://chista.example.com" -Token "cra_xxxxxxxx"
 ```
 
+## Install remotely, by IP (no RDP needed)
+
+RDP is a remote *desktop* protocol, not an install channel. To deploy by IP over
+the network, use **`remote-install.ps1`** (PowerShell Remoting / WinRM) from any
+Windows admin box that can reach the targets — it pushes the agent to each host
+and installs it:
+
+```powershell
+$cred = Get-Credential                              # admin on the targets
+./remote-install.ps1 -ComputerName 10.0.0.5,10.0.0.6 `
+  -ChistaUrl "https://chista.example.com" -Token "cra_xxxx" -Credential $cred -EnableRdp
+```
+
+Prerequisites on each target: WinRM enabled (`Enable-PSRemoting -Force`) and admin
+creds. For **workgroup** hosts addressed by IP, trust them on the admin box first:
+
+```powershell
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value '10.0.0.5,10.0.0.6' -Force
+```
+
+## VM-provisioned desktops (the VMware/Parallels-style path)
+
+VMware Tools / Parallels Tools install through the **hypervisor's** guest channel,
+which only applies to VMs that hypervisor manages. The equivalent for Chista-
+provisioned VMs (vSphere / Proxmox / Hyper-V via the VM providers) is to **bake
+the agent into the golden template** — install it once with `-EnableRdp` in the
+template image, and every cloned desktop boots already registered and Online. No
+per-host step needed.
+
 ## Parameters
 
 | Param | Default | Notes |
