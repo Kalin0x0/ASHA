@@ -68,7 +68,9 @@ export function MySessionsStrip() {
       <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:thin]">
         {mine.map((s) => {
           const ws = wsByName.get(s.workspaceName);
-          const thumb = ws ? thumbs[ws.id] : undefined;
+          // Prefer the live per-session snapshot (captured in the viewer); fall
+          // back to the workspace's placeholder thumbnail.
+          const thumb = thumbs[s.kasmId] ?? (ws ? thumbs[ws.id] : undefined);
           const running = s.status === 'RUNNING' || s.status === 'DEGRADED';
           const paused = s.status === 'PAUSED';
           const label = running
