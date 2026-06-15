@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, TerminalSquare } from 'lucide-react';
+import { Download, Copy, TerminalSquare } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -52,8 +52,28 @@ export function AgentInstallCard() {
               <Copy className="size-3.5" /> {copied ? 'Copied' : 'Copy'}
             </Button>
           </div>
+          <p className="mt-2.5 mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Download the agent
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { file: 'install.ps1', label: 'install.ps1' },
+              { file: 'chista-agent.ps1', label: 'chista-agent.ps1' },
+              { file: 'remote-install.ps1', label: 'remote-install.ps1' },
+            ].map(({ file, label }) => (
+              <a
+                key={file}
+                href={`/agent/${file}`}
+                download
+                className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-[var(--surface-1)] px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-[rgba(212,175,55,0.4)] hover:text-gold-300 ring-gold-focus"
+              >
+                <Download className="size-3.5" /> {label}
+              </a>
+            ))}
+          </div>
           <p className="mt-1.5 text-[11px] text-muted-foreground">
-            Agent script: <code>infra/windows-agent/</code> in the Chista repo.
+            <code>install.ps1</code> = install on this machine · <code>remote-install.ps1</code> = push to other
+            hosts by IP (WinRM).
           </p>
         </div>
       </div>

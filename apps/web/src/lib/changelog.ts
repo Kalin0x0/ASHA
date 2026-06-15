@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.13',
+    date: '2026-06-15',
+    title: { en: 'Download the agent from the admin panel', de: 'Agent aus dem Admin-Panel herunterladen' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'The Windows agent scripts are now downloadable directly from Infrastructure → Servers — download buttons for install.ps1, the agent, and the remote-install (by IP) script, alongside the ready-made install command.',
+          de: 'Die Windows-Agent-Skripte sind jetzt direkt unter Infrastruktur → Server herunterladbar — Schaltflächen für install.ps1, den Agenten und das Remote-Installationsskript (per IP), neben dem fertigen Installationsbefehl.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.12',
     date: '2026-06-15',
     title: { en: 'Remote agent deploy by IP', de: 'Agent-Fernverteilung per IP' },
