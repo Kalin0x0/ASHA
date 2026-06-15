@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ClipboardPaste,
   Command,
+  Eye,
   Gauge,
   LayoutGrid,
   Loader2,
@@ -15,7 +16,7 @@ import {
   Wifi,
   X,
 } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,10 @@ export default function ConnectPage() {
   const params = useParams<{ kasmId: string }>();
   const router = useRouter();
   const kasmId = params?.kasmId ?? '';
+  // View-only "watch" mode (admin monitoring): the stream renders but no
+  // keyboard/mouse/clipboard input is forwarded, so the user isn't disturbed.
+  const searchParams = useSearchParams();
+  const monitor = searchParams?.get('monitor') === '1';
 
   const containerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
@@ -129,16 +134,19 @@ export default function ConnectPage() {
       const sc = display.getScale() || 1;
       client.sendMouseState({ ...s, x: s.x / sc, y: s.y / sc });
     };
-    mouse.onmousedown = sendMouse;
-    mouse.onmouseup = sendMouse;
-    mouse.onmousemove = sendMouse;
-
     // Keyboard → server (whole document so shortcuts reach the desktop).
     const keyboard = new Guacamole.Keyboard(document);
-    keyboard.onkeydown = (keysym) => {
-      client.sendKeyEvent(1, keysym);
-    };
-    keyboard.onkeyup = (keysym) => client.sendKeyEvent(0, keysym);
+    // In view-only monitor mode we deliberately attach NO input handlers, so the
+    // admin can watch without sending a single keystroke or click to the user.
+    if (!monitor) {
+      mouse.onmousedown = sendMouse;
+      mouse.onmouseup = sendMouse;
+      mouse.onmousemove = sendMouse;
+      keyboard.onkeydown = (keysym) => {
+        client.sendKeyEvent(1, keysym);
+      };
+      keyboard.onkeyup = (keysym) => client.sendKeyEvent(0, keysym);
+    }
 
     // Clipboard: remote → local. When the remote clipboard changes, mirror it
     // into the OS clipboard so "copy on the desktop → paste locally" works.
@@ -207,7 +215,7 @@ export default function ConnectPage() {
       }
       clientRef.current = null;
     };
-  }, [kasmId, attempt, perfMode]);
+  }, [kasmId, attempt, perfMode, monitor]);
 
   const togglePerf = useCallback(() => {
     setPerfMode((p) => {
@@ -230,19 +238,19 @@ export default function ConnectPage() {
   /** Send Ctrl+Alt+Del — essential for the Windows lock/login screen. */
   const sendCtrlAltDel = useCallback(() => {
     const c = clientRef.current;
-    if (!c) return;
+    if (!c || monitor) return;
     c.sendKeyEvent(1, KEYSYM.CTRL);
     c.sendKeyEvent(1, KEYSYM.ALT);
     c.sendKeyEvent(1, KEYSYM.DEL);
     c.sendKeyEvent(0, KEYSYM.DEL);
     c.sendKeyEvent(0, KEYSYM.ALT);
     c.sendKeyEvent(0, KEYSYM.CTRL);
-  }, []);
+  }, [monitor]);
 
   /** Copy the local clipboard into the remote, then issue Ctrl+V to paste it. */
   const pasteToRemote = useCallback(async () => {
     const c = clientRef.current;
-    if (!c || !sendClipboardRef.current) return;
+    if (!c || !sendClipboardRef.current || monitor) return;
     let text = '';
     try {
       text = await navigator.clipboard.readText();
@@ -260,7 +268,7 @@ export default function ConnectPage() {
       c.sendKeyEvent(0, KEYSYM.CTRL);
     }, 80);
     toast.success('Pasted to the remote desktop');
-  }, []);
+  }, [monitor]);
 
   const toggleFullscreen = useCallback(() => {
     const el = containerRef.current;
@@ -284,8 +292,18 @@ export default function ConnectPage() {
         <Button variant="ghost" size="icon-sm" onClick={() => router.back()} aria-label="Back to servers">
           <ArrowLeft className="size-4" />
         </Button>
-        <span className="hidden font-display text-sm font-medium tracking-tight sm:inline">Remote desktop</span>
+        <span className="hidden font-display text-sm font-medium tracking-tight sm:inline">
+          {monitor ? 'Live-Monitor' : 'Remote desktop'}
+        </span>
         <StatusPill state={state} />
+        {monitor && (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full border border-info/40 bg-info/10 px-2.5 py-1 text-[11px] font-medium text-info"
+            title="View-only — keine Eingaben werden gesendet, der Nutzer wird nicht gestört."
+          >
+            <Eye className="size-3.5" /> Nur ansehen
+          </span>
+        )}
         <div className="ml-auto flex items-center gap-1.5">
           {(state === 'disconnected' || state === 'error') && (
             <Button variant="outline" size="sm" onClick={reconnect}>
