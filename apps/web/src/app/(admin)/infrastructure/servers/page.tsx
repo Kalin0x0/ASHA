@@ -4,6 +4,7 @@ import { HardDrive, Loader2, MonitorPlay, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { AgentInstallCard } from '@/components/composite/agent-install-card';
 import { EmptyState } from '@/components/composite/empty-state';
 import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
@@ -120,6 +121,8 @@ export default function ServersPage() {
         title="Servers"
         description="Static servers (RDP/VNC/SSH hosts) that back server-type workspaces. Each server caps its concurrent sessions."
       />
+
+      <AgentInstallCard />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">

@@ -535,6 +535,9 @@ export interface ApiServer {
   maxSessions: number;
   currentSessions?: number;
   status?: string;
+  /** Set by the installed host agent (availability tracking). */
+  lastSeenAt?: string | null;
+  agentVersion?: string | null;
   zone?: { name: string } | null;
 }
 

@@ -725,6 +725,25 @@ export const importConfigSchema = z.object({
 });
 export type ImportConfigDto = z.infer<typeof importConfigSchema>;
 
+// ── Host agent: server auto-register + heartbeat (availability) ──────────────
+export const registerServerAgentSchema = z.object({
+  hostname: z.string().min(1).max(255),
+  address: z.string().min(1).max(255),
+  connectionType: z.enum(['RDP', 'VNC', 'SSH']).default('RDP'),
+  zoneId: z.string().optional(),
+  maxSessions: z.number().int().min(1).max(1000).optional(),
+  os: z.string().max(255).optional(),
+  version: z.string().max(64).optional(),
+});
+export type RegisterServerAgentDto = z.infer<typeof registerServerAgentSchema>;
+
+export const serverAgentHeartbeatSchema = z.object({
+  hostname: z.string().min(1).max(255),
+  version: z.string().max(64).optional(),
+  sessions: z.number().int().min(0).max(100000).optional(),
+});
+export type ServerAgentHeartbeatDto = z.infer<typeof serverAgentHeartbeatSchema>;
+
 // ── Feedback / bug reports ───────────────────────────────────────────────────
 export const createFeedbackSchema = z.object({
   kind: z.enum(['BUG', 'FEEDBACK']).default('FEEDBACK'),
