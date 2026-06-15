@@ -9,7 +9,15 @@
       "added": "افزوده‌شده",
       "fixed": "برطرف‌شده",
       "changed": "تغییریافته"
-    }
+    },
+    "checkForUpdates": "بررسی به‌روزرسانی",
+    "upToDateChecked": "به‌روز",
+    "checkUpToDateToast": "شما از آخرین نسخه استفاده می‌کنید (نسخهٔ {version}).",
+    "checkAvailableToast": "به‌روزرسانی در دسترس: نسخهٔ {version}",
+    "checkFailed": "بررسی به‌روزرسانی ناموفق بود.",
+    "updateAvailable": "به‌روزرسانی در دسترس — نسخهٔ {version}",
+    "updateAvailableHint": "نسخهٔ جدیدتری از چیستا در دسترس است. برای ارتقا، استقرار خود را به‌روزرسانی کنید.",
+    "viewRelease": "مشاهدهٔ نسخه"
   },
   "apiKeys": {
     "title": "کلیدهای API",

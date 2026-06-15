@@ -9,7 +9,15 @@
       "added": "Added",
       "fixed": "Fixed",
       "changed": "Changed"
-    }
+    },
+    "checkForUpdates": "Check for updates",
+    "upToDateChecked": "Up to date",
+    "checkUpToDateToast": "You're on the latest version (v{version}).",
+    "checkAvailableToast": "Update available: v{version}",
+    "checkFailed": "Couldn't check for updates.",
+    "updateAvailable": "Update available — v{version}",
+    "updateAvailableHint": "A newer version of Chista is available. Update your deployment to upgrade.",
+    "viewRelease": "View release"
   },
   "apiKeys": {
     "title": "API Keys",

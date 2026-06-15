@@ -1,11 +1,15 @@
 'use client';
 
-import { CheckCircle2, Plus, RefreshCw, Rocket, Wrench } from 'lucide-react';
+import { ArrowUpCircle, CheckCircle2, ExternalLink, Loader2, Plus, RefreshCw, Rocket, Wrench } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+import { useState } from 'react';
+import { toast } from 'sonner';
 import { CHANGELOG, CURRENT_VERSION, type ChangeType, localize } from '@/lib/changelog';
 import { PageHeader } from '@/components/composite/page-header';
 import { Badge, type BadgeProps } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { checkForUpdates, type UpdateStatus } from '@/lib/update-check';
 import { cn } from '@/lib/utils';
 
 const TYPE_META: Record<ChangeType, { variant: BadgeProps['variant']; icon: typeof Plus; dot: string; text: string }> = {
@@ -26,6 +30,28 @@ export default function UpdatesPage() {
   const locale = useLocale();
   const latest = CHANGELOG[0];
 
+  const [checking, setChecking] = useState(false);
+  const [status, setStatus] = useState<UpdateStatus | null>(null);
+
+  const onCheck = async () => {
+    setChecking(true);
+    try {
+      const result = await checkForUpdates();
+      setStatus(result);
+      if (result.updateAvailable) {
+        toast.success(t('checkAvailableToast', { version: result.latest }));
+      } else {
+        toast.success(t('checkUpToDateToast', { version: result.current }));
+      }
+    } catch {
+      toast.error(t('checkFailed'));
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const updateAvailable = status?.updateAvailable ?? false;
+
   return (
     <div className="space-y-6">
       <PageHeader title={t('title')} description={t('description')} />
@@ -41,13 +67,41 @@ export default function UpdatesPage() {
             v{CURRENT_VERSION}
           </p>
         </div>
-        <div className="sm:ms-auto">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(95,184,143,0.3)] bg-[rgba(95,184,143,0.1)] px-3 py-1.5 text-xs font-medium text-success">
-            <CheckCircle2 className="size-4" />
-            {t('upToDate')}
-          </span>
+        <div className="flex flex-wrap items-center gap-3 sm:ms-auto">
+          {!updateAvailable && (
+            <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(95,184,143,0.3)] bg-[rgba(95,184,143,0.1)] px-3 py-1.5 text-xs font-medium text-success">
+              <CheckCircle2 className="size-4" />
+              {status ? t('upToDateChecked') : t('upToDate')}
+            </span>
+          )}
+          <Button variant="secondary" size="sm" onClick={() => void onCheck()} disabled={checking}>
+            {checking ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+            {t('checkForUpdates')}
+          </Button>
         </div>
       </Card>
+
+      {/* Update-available banner */}
+      {updateAvailable && status && (
+        <Card elevation={1} className="gold-hairline flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[rgba(212,175,55,0.35)] bg-gold-500/10 text-gold-300">
+            <ArrowUpCircle className="size-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-foreground">
+              {t('updateAvailable', { version: status.latest })}
+            </p>
+            <p className="text-sm text-muted-foreground">{status.notes || t('updateAvailableHint')}</p>
+          </div>
+          {status.url && (
+            <Button asChild size="sm">
+              <a href={status.url} target="_blank" rel="noreferrer">
+                <ExternalLink className="size-3.5" /> {t('viewRelease')}
+              </a>
+            </Button>
+          )}
+        </Card>
+      )}
 
       {/* Release timeline */}
       <div className="space-y-4">
