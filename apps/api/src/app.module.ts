@@ -51,16 +51,18 @@ import { ZonesModule } from './modules/zones/zones.module';
 @Module({
   imports: [
     ThrottlerModule.forRoot([
-      // Per-client cap for all routes (keyed on the real client IP once the app
-      // trusts the proxy — see main.ts). Generous enough for an authenticated
-      // dashboard that polls sessions/agents. Override via CHISTA_THROTTLE_*.
+      // ONE default throttler, applied to every route — a generous per-client cap
+      // (keyed on the real client IP once the app trusts the proxy, see main.ts)
+      // sized for an authenticated dashboard that polls sessions/agents. Auth
+      // routes tighten it with a per-route `@Throttle({ default: … })` override
+      // (auth / federation / webauthn controllers). A SECOND named throttler here
+      // would also apply to every route — that was the bug that capped the whole
+      // API at the auth limit (→ 429 on dashboard polling). Override via CHISTA_THROTTLE_*.
       {
-        name: 'global',
+        name: 'default',
         ttl: Number(process.env.CHISTA_THROTTLE_TTL) || 60_000,
         limit: Number(process.env.CHISTA_THROTTLE_LIMIT) || 600,
       },
-      // Tighter cap for auth endpoints (brute-force protection).
-      { name: 'auth', ttl: 60_000, limit: Number(process.env.CHISTA_THROTTLE_AUTH_LIMIT) || 10 },
     ]),
     // Drives the session reaper + scheduled DB backups
     ScheduleModule.forRoot(),

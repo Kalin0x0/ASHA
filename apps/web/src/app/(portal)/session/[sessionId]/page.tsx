@@ -78,6 +78,9 @@ function stepForStatus(status: string | undefined): number {
   }
 }
 
+/** Remote-desktop protocols stream through the guacd canvas at /connect. */
+const REMOTE_DESKTOP_PROTOCOLS = new Set(['RDP', 'VNC', 'SSH']);
+
 export default function StreamingViewerPage() {
   const t = useTranslations('viewer');
   const locale = useLocale();
@@ -109,6 +112,14 @@ export default function StreamingViewerPage() {
   const isRunning = status === 'RUNNING' || status === 'DEGRADED';
   const isError = status === 'ERROR' || status === 'DESTROYED' || status === 'TERMINATING';
   const connectionUrl = session?.connectionUrl;
+  // Remote-desktop sessions (RDP/VNC/SSH) render on the guacd canvas at /connect,
+  // not in an embedded iframe — the stored connectionUrl points at the proxy's
+  // /session/<kasmId> path (same-origin → collides with this route + X-Frame).
+  // Redirect to the canvas, which derives its own WS URL from the page origin.
+  const isRemoteDesktop = session ? REMOTE_DESKTOP_PROTOCOLS.has(session.connectionType) : false;
+  useEffect(() => {
+    if (isRemoteDesktop && session) router.replace(`/connect/${session.kasmId}`);
+  }, [isRemoteDesktop, session, router]);
   // The stream URL may point at a host the browser can't resolve (e.g. the
   // default chista.local). Detect it so we can show a clear error rather than
   // letting the <iframe> fail with a raw browser DNS error.
@@ -396,7 +407,7 @@ export default function StreamingViewerPage() {
         ) : isRunning ? (
           unreachable ? (
             <UnreachableHost url={connectionUrl!} onBack={disconnect} />
-          ) : connectionUrl ? (
+          ) : connectionUrl && !isRemoteDesktop ? (
             <LiveStream
               url={connectionUrl}
               workspaceName={workspaceName}

@@ -54,14 +54,14 @@ export class WebauthnController {
   // ── Authentication (public passkey login) ───────────────────────────────────
 
   @Public()
-  @Throttle({ auth: { ttl: 60_000, limit: 20 } })
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Post('login/options')
   loginOptions(@Body() body: { email: string }) {
     return this.webauthn.authenticationOptions(body.email);
   }
 
   @Public()
-  @Throttle({ auth: { ttl: 60_000, limit: 20 } })
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Post('login/verify')
   async loginVerify(
     @Body() body: { email: string; response: AuthenticationResponseJSON },
