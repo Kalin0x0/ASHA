@@ -43,7 +43,8 @@
     "disabledByPolicy": "{label} — durch Richtlinie deaktiviert",
     "dropToUpload": "Dateien hier ablegen, um sie in die Sitzung hochzuladen",
     "filesQueued": "{count, plural, one {# Datei für den Upload eingereiht} other {# Dateien für den Upload eingereiht}}",
-    "filesQueuedDescription": "Dateien werden über den Dateikanal im Stream an die Sitzung übermittelt."
+    "filesQueuedDescription": "Dateien werden über den Dateikanal im Stream an die Sitzung übermittelt.",
+    "backToWorkspaces": "Zurück zu Arbeitsbereichen"
   },
   "status": {
     "connected": "Verbunden",

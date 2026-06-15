@@ -43,7 +43,8 @@
     "disabledByPolicy": "{label} — disabled by policy",
     "dropToUpload": "Drop files to upload to the session",
     "filesQueued": "{count, plural, one {# file queued for upload} other {# files queued for upload}}",
-    "filesQueuedDescription": "Files are delivered to the session via the in-stream file channel."
+    "filesQueuedDescription": "Files are delivered to the session via the in-stream file channel.",
+    "backToWorkspaces": "Back to Workspaces"
   },
   "status": {
     "connected": "Connected",
