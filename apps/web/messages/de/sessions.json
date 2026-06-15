@@ -40,7 +40,10 @@
     "agent": "Agent",
     "connection": "Verbindung",
     "uptime": "Laufzeit",
-    "recording": "Aufzeichnung"
+    "recording": "Aufzeichnung",
+    "watchLive": "Live ansehen",
+    "watchHint": "Diesen Desktop live ansehen, nur lesend — der Nutzer wird nicht gestört.",
+    "viewOnly": "Nur ansehen"
   },
   "history": {
     "title": "Sitzungsverlauf",

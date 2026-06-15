@@ -40,7 +40,10 @@
     "agent": "Agent",
     "connection": "Connection",
     "uptime": "Uptime",
-    "recording": "Recording"
+    "recording": "Recording",
+    "watchLive": "Watch live",
+    "watchHint": "Watch this desktop live, view-only — the user is not interrupted.",
+    "viewOnly": "View only"
   },
   "history": {
     "title": "Session History",

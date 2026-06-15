@@ -328,6 +328,63 @@ async function main() {
     });
   }
 
+  // ── Image registries + marketplace catalog ─────────────────────────────────
+  // Seed default registry sources + a starter catalog so the Image Registry is
+  // populated out of the box (no external sync required to browse images).
+  const REGISTRIES: Array<{ id: string; name: string; url: string; type: Prisma.RegistryCreateInput['type'] }> = [
+    { id: 'seed-reg-kasm', name: 'Kasm Technologies', url: 'https://registry.kasmweb.com/1.0/', type: 'FIRST_PARTY' },
+    { id: 'seed-reg-lsio', name: 'LinuxServer.io', url: 'https://fleet.linuxserver.io', type: 'THIRD_PARTY' },
+    { id: 'seed-reg-chista', name: 'Chista Official', url: 'https://registry.chista.io/index.json', type: 'FIRST_PARTY' },
+  ];
+  for (const r of REGISTRIES) {
+    await prisma.registry.upsert({
+      where: { id: r.id },
+      update: { name: r.name, url: r.url, type: r.type, orgId: org.id, enabled: true, lastSyncedAt: new Date() },
+      create: { id: r.id, orgId: org.id, name: r.name, url: r.url, type: r.type, enabled: true, lastSyncedAt: new Date() },
+    });
+  }
+
+  type Entry = [reg: string, name: string, friendly: string, image: string, cats: string[], gib: number, desc: string];
+  const CATALOG: Entry[] = [
+    ['seed-reg-kasm', 'firefox', 'Firefox', 'kasmweb/firefox:1.16.0', ['Browsers'], 2.8, 'Isolated Firefox browser session.'],
+    ['seed-reg-kasm', 'chrome', 'Google Chrome', 'kasmweb/chrome:1.16.0', ['Browsers'], 2.7, 'Isolated Chrome browser session.'],
+    ['seed-reg-kasm', 'brave', 'Brave', 'kasmweb/brave:1.16.0', ['Browsers'], 2.8, 'Privacy-focused Brave browser.'],
+    ['seed-reg-kasm', 'edge', 'Microsoft Edge', 'kasmweb/edge:1.16.0', ['Browsers'], 2.9, 'Microsoft Edge browser.'],
+    ['seed-reg-kasm', 'tor-browser', 'Tor Browser', 'kasmweb/tor-browser:1.16.0', ['Browsers', 'Security'], 2.0, 'Non-attributable research browsing.'],
+    ['seed-reg-kasm', 'ubuntu-jammy', 'Ubuntu Desktop', 'kasmweb/ubuntu-jammy-desktop:1.16.0', ['Desktops'], 4.0, 'Full Ubuntu XFCE desktop.'],
+    ['seed-reg-kasm', 'debian-bookworm', 'Debian Bookworm', 'kasmweb/debian-bookworm-desktop:1.16.0', ['Desktops'], 7.8, 'Debian 12 desktop environment.'],
+    ['seed-reg-kasm', 'fedora-41', 'Fedora 41', 'kasmweb/fedora-41-desktop:1.16.0', ['Desktops'], 8.5, 'Fedora 41 desktop.'],
+    ['seed-reg-kasm', 'alpine-321', 'Alpine 3.21', 'kasmweb/alpine-321-desktop:1.16.0', ['Desktops'], 4.9, 'Lightweight Alpine 3.21 desktop.'],
+    ['seed-reg-kasm', 'vs-code', 'VS Code', 'kasmweb/vs-code:1.16.0', ['Development'], 4.1, 'Cloud development environment.'],
+    ['seed-reg-kasm', 'postman', 'Postman', 'kasmweb/postman:1.16.0', ['Development'], 3.1, 'API development workspace.'],
+    ['seed-reg-kasm', 'blender', 'Blender', 'kasmweb/blender:1.16.0', ['Creative'], 3.7, 'GPU-accelerated 3D suite.'],
+    ['seed-reg-kasm', 'gimp', 'GIMP', 'kasmweb/gimp:1.16.0', ['Creative'], 2.5, 'Image editing workspace.'],
+    ['seed-reg-kasm', 'inkscape', 'Inkscape', 'kasmweb/inkscape:1.16.0', ['Creative'], 2.7, 'Vector graphics editor.'],
+    ['seed-reg-kasm', 'libre-office', 'LibreOffice', 'kasmweb/libre-office:1.16.0', ['Productivity'], 3.4, 'Office productivity suite.'],
+    ['seed-reg-kasm', 'obsidian', 'Obsidian', 'kasmweb/obsidian:1.16.0', ['Productivity'], 3.2, 'Markdown knowledge base.'],
+    ['seed-reg-kasm', 'discord', 'Discord', 'kasmweb/discord:1.16.0', ['Communication'], 2.6, 'Voice, video & text chat.'],
+    ['seed-reg-kasm', 'kali-rolling', 'Kali Linux', 'kasmweb/kali-rolling-desktop:1.16.0', ['Security', 'Desktops'], 8.2, 'Security testing desktop.'],
+    ['seed-reg-kasm', 'maltego', 'Maltego', 'kasmweb/maltego:1.16.0', ['Security'], 3.2, 'OSINT link analysis.'],
+    ['seed-reg-lsio', 'plex', 'Plex', 'lscr.io/linuxserver/plex:latest', ['Media'], 1.2, 'Plex media server.'],
+    ['seed-reg-lsio', 'jellyfin', 'Jellyfin', 'lscr.io/linuxserver/jellyfin:latest', ['Media'], 1.4, 'Free software media system.'],
+    ['seed-reg-lsio', 'qbittorrent', 'qBittorrent', 'lscr.io/linuxserver/qbittorrent:latest', ['Productivity'], 0.4, 'BitTorrent client.'],
+    ['seed-reg-lsio', 'nextcloud', 'Nextcloud', 'lscr.io/linuxserver/nextcloud:latest', ['Productivity'], 0.7, 'Self-hosted file sync & share.'],
+    ['seed-reg-chista', 'chista-desktop', 'Chista Desktop', 'chista/desktop:1.0.0', ['Desktops'], 3.0, 'Branded Chista XFCE desktop.'],
+  ];
+  for (const [reg, name, friendly, image, cats, gib, desc] of CATALOG) {
+    const id = `seed-mk-${name}`;
+    const data = {
+      registryId: reg,
+      name,
+      friendlyName: friendly,
+      description: desc,
+      dockerImage: image,
+      categories: cats,
+      raw: { size_mb: Math.round(gib * 1024) } as Prisma.InputJsonValue,
+    };
+    await prisma.registryEntry.upsert({ where: { id }, update: data, create: { id, ...data } });
+  }
+
   console.log('\n✓ Seed complete.');
   console.log('  ┌──────────────────────────────────────────────┐');
   console.log('  │  Admin login                                  │');
