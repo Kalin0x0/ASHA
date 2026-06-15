@@ -1,0 +1,8 @@
+# Local stopgap (untracked -> survives git reset --hard).
+# #27 auth-throttler (10/min) leaks onto ALL routes -> caps dashboard polling -> 429.
+# Durable fix belongs in team repo: scope the auth throttler to auth routes only.
+services:
+  api:
+    environment:
+      CHISTA_THROTTLE_AUTH_LIMIT: "600"
+      CHISTA_TRUST_PROXY: "2"
