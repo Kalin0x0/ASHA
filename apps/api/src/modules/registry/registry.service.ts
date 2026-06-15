@@ -278,7 +278,36 @@ export class RegistryService {
     return prisma.image.findMany({
       where: { OR: [{ orgId }, { orgId: null }] },
       orderBy: { friendlyName: 'asc' },
+      // Surface the linked workspaces' resource limits so the UI can show/edit them.
+      include: {
+        workspaces: {
+          select: { id: true, friendlyName: true, coresLimit: true, memLimitMb: true, gpuCount: true },
+        },
+      },
     });
+  }
+
+  /** Uninstall an org image: remove it, its workspaces, and unmark its registry entry. */
+  async deleteImage(orgId: string, actorUserId: string, imageId: string) {
+    const image = await prisma.image.findFirst({ where: { id: imageId, orgId } });
+    if (!image) throw new NotFoundException('Image not found');
+    await prisma.workspace.deleteMany({ where: { orgId, imageId } });
+    if (image.sourceRegistryEntryId) {
+      await prisma.registryEntry.updateMany({
+        where: { id: image.sourceRegistryEntryId },
+        data: { installed: false },
+      });
+    }
+    await prisma.image.delete({ where: { id: image.id } });
+    await this.audit.record({
+      orgId,
+      actorUserId,
+      action: 'image.delete',
+      targetType: 'Image',
+      targetId: imageId,
+      metadata: { dockerImage: image.dockerImage },
+    });
+    return { ok: true };
   }
 
   /** Resolve a repo:tag reference to its content digest via the Docker Registry v2 API. */

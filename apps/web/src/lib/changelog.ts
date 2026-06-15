@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.16',
+    date: '2026-06-15',
+    title: { en: 'Manage installed images + install progress', de: 'Installierte Images verwalten + Installationsfortschritt' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Installing from the marketplace now shows a progress bar with a percentage that turns green when done.',
+          de: 'Die Installation aus dem Marktplatz zeigt jetzt einen Fortschrittsbalken mit Prozentanzeige, der bei Fertigstellung grün wird.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'Workspaces → Images now manages installed images: see each one’s CPU / RAM / GPU, edit those limits, set the pull policy, and uninstall (removes the image + its workspaces).',
+          de: 'Workspaces → Images verwaltet jetzt installierte Images: CPU / RAM / GPU jedes Images sehen, diese Limits bearbeiten, die Pull-Policy setzen und deinstallieren (entfernt das Image + seine Workspaces).',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.15',
     date: '2026-06-15',
     title: { en: 'Reverse tunnel for hosts behind NAT', de: 'Reverse-Tunnel für Hosts hinter NAT' },

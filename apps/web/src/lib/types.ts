@@ -147,6 +147,26 @@ export interface ActivityItem {
   at: string;
 }
 
+/** An installed image with its linked workspaces' resource limits (manageable). */
+export interface ManagedImageWorkspace {
+  id: string;
+  friendlyName: string;
+  cores: number | null;
+  memMb: number | null;
+  gpu: number;
+}
+export interface ManagedImage {
+  id: string;
+  name: string;
+  friendlyName: string;
+  dockerImage: string;
+  protocol: string;
+  digest: string | null;
+  pullPolicy: 'ALWAYS' | 'IF_NOT_PRESENT' | 'NEVER';
+  createdAt: string;
+  workspaces: ManagedImageWorkspace[];
+}
+
 export interface ImageRow {
   id: string;
   fullImage: string;

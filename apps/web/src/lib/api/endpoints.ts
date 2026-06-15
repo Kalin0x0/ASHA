@@ -193,6 +193,33 @@ export const upsertLicense = (body: {
   concurrentSessions: number;
 }) => apiFetch<unknown>('/license', { method: 'PUT', body });
 
+// ── Images (installed) — management + resources ──────────────────────────────
+export interface ApiImageWorkspace {
+  id: string;
+  friendlyName: string;
+  coresLimit: number | null;
+  memLimitMb: number | null;
+  gpuCount: number;
+}
+export interface ApiImageRow {
+  id: string;
+  name: string;
+  friendlyName: string;
+  dockerImage: string;
+  protocol: string;
+  architecture: string;
+  digest: string | null;
+  pullPolicy: 'ALWAYS' | 'IF_NOT_PRESENT' | 'NEVER';
+  available: boolean;
+  createdAt: string;
+  workspaces: ApiImageWorkspace[];
+}
+export const getImages = () => apiFetch<ApiImageRow[]>('/images');
+export const deleteImageEntry = (id: string) =>
+  apiFetch<{ ok: true }>(`/images/${id}`, { method: 'DELETE' });
+export const setImagePullPolicy = (id: string, pullPolicy: ApiImageRow['pullPolicy']) =>
+  apiFetch<ApiImageRow>(`/images/${id}/pull-policy`, { method: 'PATCH', body: { pullPolicy } });
+
 export const getWorkspaces = () => apiFetch<ApiWorkspace[]>('/workspaces');
 export const getLaunchableWorkspaces = () => apiFetch<ApiWorkspace[]>('/workspaces/launchable');
 
