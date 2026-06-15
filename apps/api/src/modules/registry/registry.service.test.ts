@@ -12,7 +12,7 @@ const { prismaMock } = vi.hoisted(() => ({
 
 vi.mock('@chista/db', () => ({ prisma: prismaMock }));
 
-import { RegistryService } from './registry.service';
+import { normalizeIndex, RegistryService } from './registry.service';
 
 const audit = { record: vi.fn().mockResolvedValue(undefined) };
 
@@ -211,5 +211,40 @@ describe('RegistryService — digest pinning + pull policy (A3)', () => {
   it('setPullPolicy 404s when nothing matched', async () => {
     prismaMock.image.updateMany.mockResolvedValue({ count: 0 });
     await expect(svc.setPullPolicy('org1', 'u1', 'ghost', 'NEVER')).rejects.toThrow(/not found/i);
+  });
+});
+
+describe('normalizeIndex', () => {
+  it('parses a bare array and { items } / { workspaces } wrappers', () => {
+    const item = { name: 'firefox', dockerImage: 'kasmweb/firefox:1.16.0' };
+    expect(normalizeIndex([item])).toHaveLength(1);
+    expect(normalizeIndex({ items: [item] })).toHaveLength(1);
+    expect(normalizeIndex({ workspaces: [item] })).toHaveLength(1);
+  });
+
+  it('maps the LinuxServer.io fleet API into lscr.io images', () => {
+    const body = {
+      data: {
+        repositories: {
+          linuxserver: [
+            { name: 'plex', description: 'Plex media server', category: 'Media,Downloaders', project_logo: 'https://logo/plex.png' },
+            { name: 'old', deprecated: true },
+          ],
+        },
+      },
+    };
+    const items = normalizeIndex(body);
+    expect(items).toHaveLength(1); // deprecated dropped
+    expect(items[0]).toMatchObject({
+      name: 'plex',
+      friendlyName: 'Plex',
+      dockerImage: 'lscr.io/linuxserver/plex:latest',
+      iconUrl: 'https://logo/plex.png',
+      categories: ['Media', 'Downloaders'],
+    });
+  });
+
+  it('returns [] for an unrecognised shape', () => {
+    expect(normalizeIndex({ nope: true })).toEqual([]);
   });
 });

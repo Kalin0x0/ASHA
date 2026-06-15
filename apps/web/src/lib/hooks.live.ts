@@ -6,6 +6,7 @@ import * as api from '@/lib/api/endpoints';
 import type { RdpFileOptions } from '@/lib/api/endpoints';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
 import { downloadRdpFile } from '@/lib/rdp';
+import { formatRelativeTime } from '@/lib/utils';
 import type { ActivityItem, Agent, CreateFeedbackInput, CreateUserInput, CreateWorkspaceInput, FeedbackItem, RecordingRow, ServerOption, SessionRow, UpdateFeedbackInput, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
 
 const SESSIONS_KEY = ['sessions'] as const;
@@ -355,9 +356,50 @@ export function useDashboard() {
   return useMemo(() => deriveDashboard(sessions, agents), [sessions, agents]);
 }
 
+const ACTIVITY_MESSAGE: Record<string, string> = {
+  'session.create': 'launched a workspace',
+  'session.terminate': 'terminated a session',
+  'session.delete': 'terminated a session',
+  'session.pause': 'paused a session',
+  'session.resume': 'resumed a session',
+  'server.connect': 'connected to a server',
+  'server.rdp-file': 'downloaded an RDP file',
+  'registry.sync': 'synced a registry',
+  'image.promote': 'pinned an image digest',
+  'image.pull_policy': 'changed an image pull policy',
+  'feedback.create': 'filed feedback',
+  'feedback.update': 'updated a feedback report',
+  'user.create': 'created a user',
+  'workspace.create': 'created a workspace',
+  'workspace.update': 'updated a workspace',
+  'workspace.delete': 'deleted a workspace',
+};
+
+function activityKind(action: string): ActivityItem['kind'] {
+  if (action.startsWith('session') || action.startsWith('server.connect')) return 'session';
+  if (action.startsWith('agent')) return 'agent';
+  if (action.startsWith('auth') || action.includes('login') || action.startsWith('user')) return 'auth';
+  return 'admin';
+}
+
 export function useActivity(): ActivityItem[] {
-  // No audit-log endpoint is exposed yet; live activity feed is empty for now.
-  return [];
+  // Recent audit-log entries drive the live activity feed.
+  const { data } = useQuery({
+    queryKey: ['audit-log', 'activity'],
+    queryFn: () => api.getAuditLog(25),
+    refetchInterval: 20_000,
+  });
+  const users = useUsersQuery().data;
+  return useMemo(() => {
+    const byId = new Map((users ?? []).map((u) => [u.id, u.displayName || u.username || u.email] as const));
+    return (data ?? []).map((e) => ({
+      id: e.id,
+      kind: activityKind(e.action),
+      actor: e.actorUserId ? byId.get(e.actorUserId) ?? 'A user' : 'System',
+      message: ACTIVITY_MESSAGE[e.action] ?? e.action.replace(/[._]/g, ' '),
+      at: formatRelativeTime(e.createdAt),
+    }));
+  }, [data, users]);
 }
 
 export function useImages() {

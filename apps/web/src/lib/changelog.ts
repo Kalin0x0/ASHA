@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.7',
+    date: '2026-06-15',
+    title: { en: 'Live activity feed + LinuxServer.io catalog', de: 'Live-Aktivität + LinuxServer.io-Katalog' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'The dashboard "Live activity" feed now shows recent actions (launches, terminations, syncs, …) from the audit log, instead of staying empty.',
+          de: 'Der Dashboard-Feed „Live-Aktivität" zeigt jetzt aktuelle Aktionen (Starts, Beendigungen, Synchronisierungen, …) aus dem Audit-Log, statt leer zu bleiben.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'The Image Registry can sync the real LinuxServer.io catalog: the default LinuxServer source points at their fleet API and imports its images (pulled from lscr.io).',
+          de: 'Die Image-Registry kann den echten LinuxServer.io-Katalog synchronisieren: die Standard-LinuxServer-Quelle nutzt deren Fleet-API und importiert deren Images (von lscr.io).',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.6',
     date: '2026-06-15',
     title: { en: 'Live session monitoring + seeded registry', de: 'Live-Sitzungsüberwachung + befüllte Registry' },
