@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.11',
+    date: '2026-06-15',
+    title: { en: 'Windows host agent (availability)', de: 'Windows-Host-Agent (Verfügbarkeit)' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'A lightweight Windows agent you install on a desktop/server: it auto-registers the host with Chista and heartbeats so it shows Online/available (and flips Offline when it goes away). Optionally enables Remote Desktop. The Servers page shows a ready-made install command.',
+          de: 'Ein schlanker Windows-Agent zum Installieren auf einem Desktop/Server: er registriert den Host automatisch bei Chista und sendet Heartbeats, sodass er Online/verfügbar erscheint (und Offline geht, wenn er verschwindet). Aktiviert optional Remote Desktop. Die Server-Seite zeigt einen fertigen Installationsbefehl.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.10',
     date: '2026-06-15',
     title: { en: 'Live desktop preview in the session switcher', de: 'Live-Desktop-Vorschau im Sitzungs-Umschalter' },

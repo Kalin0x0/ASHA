@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { prisma } from '@chista/db';
 import type { AuthUser } from '../../common/decorators';
 
@@ -57,6 +57,29 @@ export class RegistrationTokensService {
         useCount: true,
         createdAt: true,
       },
+    });
+  }
+
+  /**
+   * Validate a plaintext registration token (used by agents). Throws 401 if the
+   * token is unknown, revoked or expired; otherwise returns the owning org +
+   * (optional) zone. Read-only — call {@link markUsed} to record usage (agents
+   * heartbeat frequently, so we don't write on every validate).
+   */
+  async validate(plaintext: string): Promise<{ orgId: string; zoneId: string | null; tokenId: string }> {
+    const tok = plaintext
+      ? await prisma.registrationToken.findUnique({ where: { tokenHash: hashAgentToken(plaintext) } })
+      : null;
+    if (!tok || tok.revokedAt || (tok.expiresAt && tok.expiresAt.getTime() < Date.now())) {
+      throw new UnauthorizedException('Invalid or expired registration token');
+    }
+    return { orgId: tok.orgId, zoneId: tok.zoneId, tokenId: tok.id };
+  }
+
+  async markUsed(tokenId: string): Promise<void> {
+    await prisma.registrationToken.update({
+      where: { id: tokenId },
+      data: { lastUsedAt: new Date(), useCount: { increment: 1 } },
     });
   }
 
