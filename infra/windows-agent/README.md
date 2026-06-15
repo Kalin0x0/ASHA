@@ -17,7 +17,12 @@ and whether it's online. It:
 ## 1. Get a registration token
 
 In Chista: **Infrastructure → Servers → "Install agent"** (copy the ready-made
-command), or **Access → Authentication → Registration tokens → mint**.
+command **and download the scripts**), or **Access → Authentication →
+Registration tokens → mint**.
+
+> The scripts are also served for download from the admin panel at `/agent/*.ps1`
+> (a copy lives in `apps/web/public/agent/`). If you change a script here, update
+> that copy too.
 
 ## 2. Install on the Windows host (admin PowerShell)
 
