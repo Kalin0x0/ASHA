@@ -21,8 +21,9 @@ type ImpersonateDto = z.infer<typeof impersonateSchema>;
 const stepUpSchema = z.object({ totp: z.string().min(6).max(8) });
 type StepUpDto = z.infer<typeof stepUpSchema>;
 
-// login + refresh are the brute-force targets — cap at 10/min per IP
-@Throttle({ auth: { ttl: 60_000, limit: 10 } })
+// login + refresh are the brute-force targets — tighten the default throttler
+// to 10/min per IP on these routes (env-tunable via CHISTA_THROTTLE_AUTH_LIMIT).
+@Throttle({ default: { ttl: 60_000, limit: Number(process.env.CHISTA_THROTTLE_AUTH_LIMIT) || 10 } })
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {

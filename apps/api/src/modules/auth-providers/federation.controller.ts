@@ -46,7 +46,7 @@ export class FederationController {
 
   /** Assertion Consumer Service: the IdP POSTs SAMLResponse here. */
   @Public()
-  @Throttle({ auth: { ttl: 60_000, limit: 20 } })
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Post('saml/:id/callback')
   async samlCallback(
     @Param('id') id: string,
@@ -72,7 +72,7 @@ export class FederationController {
   // ── LDAP / Active Directory ────────────────────────────────────────────────
   /** Direct LDAP bind login (username + password against the directory). */
   @Public()
-  @Throttle({ auth: { ttl: 60_000, limit: 10 } })
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @Post('ldap/:orgId/:id/login')
   async ldapLogin(
     @Param('orgId') orgId: string,
@@ -116,7 +116,7 @@ export class FederationController {
    * UserInfo, provisions/updates the user, and issues a Chista session.
    */
   @Public()
-  @Throttle({ auth: { ttl: 60_000, limit: 20 } })
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @Get('oidc/:id/callback')
   async oidcCallback(
     @Param('id') id: string,
