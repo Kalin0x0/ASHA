@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.14',
+    date: '2026-06-15',
+    title: { en: 'Deploy the agent to hosts by IP', de: 'Agent per IP auf Hosts verteilen' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'A "Deploy to hosts by IP" dialog on Infrastructure → Servers: list target IPs, and Chista mints a registration token and builds the ready-to-run WinRM remote-deploy command — so you install the agent on many Windows hosts from the panel without RDP-ing into each.',
+          de: 'Ein Dialog „Per IP auf Hosts verteilen" unter Infrastruktur → Server: Ziel-IPs auflisten, und Chista erzeugt ein Registrierungs-Token und baut den fertigen WinRM-Remote-Deploy-Befehl — so installierst du den Agenten auf vielen Windows-Hosts aus dem Panel, ohne dich per RDP auf jedem anzumelden.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.13',
     date: '2026-06-15',
     title: { en: 'Download the agent from the admin panel', de: 'Agent aus dem Admin-Panel herunterladen' },
