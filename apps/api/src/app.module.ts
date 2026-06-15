@@ -32,6 +32,7 @@ import { GroupsModule } from './modules/groups/groups.module';
 import { DevApiModule } from './modules/dev-api/dev-api.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { ReportingModule } from './modules/reporting/reporting.module';
+import { ServerAgentModule } from './modules/server-agent/server-agent.module';
 import { ServersModule } from './modules/servers/servers.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { SharingModule } from './modules/sharing/sharing.module';
@@ -93,6 +94,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     StagingModule,
     CastingModule,
     ServersModule,
+    ServerAgentModule,
     PoolsModule,
     ProvidersModule,
     WebhooksModule,

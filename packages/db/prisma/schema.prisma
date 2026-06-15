@@ -994,6 +994,9 @@ model Server {
   vmProviderId   String?
   status         ServerStatus         @default(OFFLINE)
   maxSessions    Int                  @default(1)
+  // Reported by the installed Windows/host agent (availability tracking).
+  lastSeenAt     DateTime?
+  agentVersion   String?
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 
