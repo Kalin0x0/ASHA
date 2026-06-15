@@ -1,12 +1,14 @@
-import { Body, Controller, Headers, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   type RegisterServerAgentDto,
   registerServerAgentSchema,
   type ServerAgentHeartbeatDto,
   serverAgentHeartbeatSchema,
+  type ServerAgentTunnelDto,
+  serverAgentTunnelSchema,
 } from '@chista/contracts';
-import { Public } from '../../common/decorators';
+import { type AuthUser, CurrentUser, Public, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { ServerAgentService } from './server-agent.service';
 
@@ -35,5 +37,23 @@ export class ServerAgentController {
     @Body(new ZodPipe(serverAgentHeartbeatSchema)) dto: ServerAgentHeartbeatDto,
   ) {
     return this.svc.heartbeat(token ?? '', dto);
+  }
+
+  /** Issue a WireGuard tunnel config for a registered host (reachability). */
+  @Public()
+  @Post('tunnel')
+  tunnel(
+    @Headers('x-registration-token') token: string,
+    @Body(new ZodPipe(serverAgentTunnelSchema)) dto: ServerAgentTunnelDto,
+  ) {
+    return this.svc.requestTunnel(token ?? '', dto.hostname);
+  }
+
+  /** WireGuard server-side peer list for all tunnelled hosts (admin/ops). */
+  @ApiBearerAuth()
+  @RequirePermissions('SERVER_MANAGE')
+  @Get('wg-peers')
+  wgPeers(@CurrentUser() user: AuthUser) {
+    return this.svc.wgPeers(user.orgId);
   }
 }

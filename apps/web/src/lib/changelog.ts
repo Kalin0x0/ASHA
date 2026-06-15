@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.15',
+    date: '2026-06-15',
+    title: { en: 'Reverse tunnel for hosts behind NAT', de: 'Reverse-Tunnel für Hosts hinter NAT' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Reachability for Windows hosts behind NAT/firewall: run the agent with -Tunnel and it joins a Chista WireGuard network over an OUTBOUND connection (no port-forwarding). Chista issues the tunnel config + IP and repoints the server at it, so sessions reach the desktop over the tunnel. Requires a WireGuard server (env-gated).',
+          de: 'Erreichbarkeit für Windows-Hosts hinter NAT/Firewall: Der Agent mit -Tunnel tritt über eine AUSGEHENDE Verbindung einem Chista-WireGuard-Netz bei (keine Portweiterleitung). Chista vergibt Tunnel-Konfiguration + IP und leitet den Server darauf um, sodass Sitzungen den Desktop über den Tunnel erreichen. Erfordert einen WireGuard-Server (per Env aktiviert).',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.14',
     date: '2026-06-15',
     title: { en: 'Deploy the agent to hosts by IP', de: 'Agent per IP auf Hosts verteilen' },

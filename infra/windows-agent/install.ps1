@@ -10,7 +10,8 @@
 param(
   [Parameter(Mandatory = $true)][string]$ChistaUrl,
   [Parameter(Mandatory = $true)][string]$Token,
-  [switch]$EnableRdp
+  [switch]$EnableRdp,
+  [switch]$Tunnel
 )
 
 $ErrorActionPreference = 'Stop'
@@ -21,7 +22,8 @@ $agent = Join-Path $dir 'chista-agent.ps1'
 Copy-Item -Path (Join-Path $PSScriptRoot 'chista-agent.ps1') -Destination $agent -Force
 
 $rdp = if ($EnableRdp) { ' -EnableRdp' } else { '' }
-$argument = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$agent`" -ChistaUrl `"$ChistaUrl`" -Token `"$Token`"$rdp"
+$tun = if ($Tunnel) { ' -Tunnel' } else { '' }
+$argument = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$agent`" -ChistaUrl `"$ChistaUrl`" -Token `"$Token`"$rdp$tun"
 
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $argument
 $trigger = New-ScheduledTaskTrigger -AtStartup

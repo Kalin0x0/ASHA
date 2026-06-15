@@ -744,6 +744,11 @@ export const serverAgentHeartbeatSchema = z.object({
 });
 export type ServerAgentHeartbeatDto = z.infer<typeof serverAgentHeartbeatSchema>;
 
+export const serverAgentTunnelSchema = z.object({
+  hostname: z.string().min(1).max(255),
+});
+export type ServerAgentTunnelDto = z.infer<typeof serverAgentTunnelSchema>;
+
 // ── Feedback / bug reports ───────────────────────────────────────────────────
 export const createFeedbackSchema = z.object({
   kind: z.enum(['BUG', 'FEEDBACK']).default('FEEDBACK'),

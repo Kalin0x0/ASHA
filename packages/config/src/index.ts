@@ -41,6 +41,15 @@ export const envSchema = z.object({
   // agent endpoints. Must match the agent's CHISTA_AGENT_ENROLLMENT_TOKEN.
   CHISTA_AGENT_ENROLLMENT_TOKEN: z.string().min(8).default('dev-enrollment-token-change-me'),
 
+  // WireGuard reverse tunnel (reachability for hosts behind NAT). When the
+  // endpoint + server public key are set, the host agent can request a tunnel
+  // config and join Chista's WireGuard network; sessions then reach the host
+  // over its assigned tunnel IP. Leave the endpoint blank to disable tunneling.
+  CHISTA_WG_ENDPOINT: z.string().default(''), // e.g. tunnel.example.com:51820
+  CHISTA_WG_SERVER_PUBLIC_KEY: z.string().default(''),
+  CHISTA_WG_SUBNET: z.string().default('10.77.0.0/24'),
+  CHISTA_WG_ALLOWED_IPS: z.string().default('10.77.0.0/24'), // what the host routes via wg
+
   // S3-compatible object storage for session recordings. Left blank in dev,
   // which puts recordings into "unconfigured" mode (metadata only, no upload).
   S3_ENDPOINT: z.string().default(''),
