@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.10',
+    date: '2026-06-15',
+    title: { en: 'Live desktop preview in the session switcher', de: 'Live-Desktop-Vorschau im Sitzungs-Umschalter' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'The "My Sessions" switcher now shows a real, periodically-refreshed preview of each running remote desktop (snapshotted from the live session), so you can see what each one looks like before switching back.',
+          de: 'Der „Meine Sitzungen"-Umschalter zeigt jetzt eine echte, regelmäßig aktualisierte Vorschau jedes laufenden Remote-Desktops (aus der Live-Sitzung erfasst) — so siehst du, wie jeder aussieht, bevor du zurückwechselst.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'Leaving a desktop keeps it running in the background — switch between running sessions from the switcher without reconnecting from scratch.',
+          de: 'Wenn du einen Desktop verlässt, läuft er im Hintergrund weiter — wechsle über den Umschalter zwischen laufenden Sitzungen, ohne dich neu verbinden zu müssen.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.9',
     date: '2026-06-15',
     title: { en: 'Check for updates', de: 'Auf Updates prüfen' },

@@ -21,6 +21,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getAccessToken } from '@/lib/api/auth-store';
+import { captureCanvasThumb } from '@/lib/capture-thumb';
+import { useThumbnails } from '@/lib/thumbnail-store';
 import { cn } from '@/lib/utils';
 
 // X11 keysyms for the control-menu shortcuts.
@@ -277,14 +279,28 @@ export default function ConnectPage() {
     else void el.requestFullscreen().catch(() => {});
   }, []);
 
+  // Snapshot the live desktop so the "My Sessions" switcher shows a real preview.
+  const captureThumb = useCallback(() => {
+    const dataUrl = captureCanvasThumb(screenRef.current);
+    if (dataUrl) useThumbnails.getState().setThumb(kasmId, { dataUrl, capturedAt: new Date().toISOString() });
+  }, [kasmId]);
+
+  // Refresh the preview every so often while the desktop is live.
+  useEffect(() => {
+    if (state !== 'connected') return;
+    const id = setInterval(captureThumb, 12_000);
+    return () => clearInterval(id);
+  }, [state, captureThumb]);
+
   const disconnect = useCallback(() => {
+    captureThumb(); // keep a fresh preview for the switcher
     try {
       clientRef.current?.disconnect();
     } catch {
       /* already closed */
     }
     router.back();
-  }, [router]);
+  }, [router, captureThumb]);
 
   return (
     <div ref={containerRef} className="fixed inset-0 z-50 flex flex-col bg-anthracite-950 text-foreground">
