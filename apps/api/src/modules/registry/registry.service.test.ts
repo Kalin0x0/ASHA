@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     registry: { findMany: vi.fn(), create: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
-    registryEntry: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
-    image: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findMany: vi.fn() },
-    workspace: { create: vi.fn(), findFirst: vi.fn() },
+    registryEntry: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+    image: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), delete: vi.fn() },
+    workspace: { create: vi.fn(), findFirst: vi.fn(), deleteMany: vi.fn() },
   },
 }));
 
@@ -211,6 +211,23 @@ describe('RegistryService — digest pinning + pull policy (A3)', () => {
   it('setPullPolicy 404s when nothing matched', async () => {
     prismaMock.image.updateMany.mockResolvedValue({ count: 0 });
     await expect(svc.setPullPolicy('org1', 'u1', 'ghost', 'NEVER')).rejects.toThrow(/not found/i);
+  });
+
+  it('deleteImage removes the image, its workspaces, and unmarks the registry entry', async () => {
+    prismaMock.image.findFirst.mockResolvedValue({ id: 'img1', orgId: 'org1', dockerImage: 'x:1', sourceRegistryEntryId: 'mk1' });
+    prismaMock.workspace.deleteMany.mockResolvedValue({ count: 1 });
+    prismaMock.registryEntry.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.image.delete.mockResolvedValue({ id: 'img1' });
+
+    expect(await svc.deleteImage('org1', 'u1', 'img1')).toEqual({ ok: true });
+    expect(prismaMock.workspace.deleteMany).toHaveBeenCalledWith({ where: { orgId: 'org1', imageId: 'img1' } });
+    expect(prismaMock.registryEntry.updateMany).toHaveBeenCalledWith({ where: { id: 'mk1' }, data: { installed: false } });
+    expect(prismaMock.image.delete).toHaveBeenCalledWith({ where: { id: 'img1' } });
+  });
+
+  it('deleteImage 404s for an unknown image', async () => {
+    prismaMock.image.findFirst.mockResolvedValue(null);
+    await expect(svc.deleteImage('org1', 'u1', 'ghost')).rejects.toThrow(/not found/i);
   });
 });
 

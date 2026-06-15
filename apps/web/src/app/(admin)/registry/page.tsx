@@ -53,6 +53,7 @@ export default function RegistryPage() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Record<string, number>>({});
   const [newName, setNewName] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const [adding, setAdding] = useState(false);
@@ -85,14 +86,27 @@ export default function RegistryPage() {
 
   const onInstall = async (entry: ApiMarketplaceEntry) => {
     setBusyId(entry.id);
+    setProgress((p) => ({ ...p, [entry.id]: 8 }));
+    // Animate progress while the install registers the image (the heavy image
+    // pull happens on first launch); snap to 100% → green when it completes.
+    const timer = setInterval(() => {
+      setProgress((p) => {
+        const cur = p[entry.id] ?? 0;
+        return cur >= 92 ? p : { ...p, [entry.id]: Math.min(92, cur + Math.random() * 16 + 5) };
+      });
+    }, 220);
     try {
       await installEntry(entry.id);
+      setProgress((p) => ({ ...p, [entry.id]: 100 }));
       toast.success(t('toasts.installedTitle', { name: entry.friendlyName }), {
         description: t('toasts.installedDescription'),
       });
+      setTimeout(() => setProgress((p) => { const n = { ...p }; delete n[entry.id]; return n; }), 1200);
     } catch {
       toast.error(t('toasts.installFailed'));
+      setProgress((p) => { const n = { ...p }; delete n[entry.id]; return n; });
     } finally {
+      clearInterval(timer);
       setBusyId(null);
     }
   };
@@ -224,6 +238,7 @@ export default function RegistryPage() {
                   key={entry.id}
                   entry={entry}
                   busy={busyId === entry.id}
+                  progress={progress[entry.id]}
                   onInstall={() => void onInstall(entry)}
                   installLabel={t('marketplace.install')}
                   installedLabel={t('marketplace.installed')}
@@ -251,6 +266,7 @@ function Metric({ icon: Icon, label, value }: { icon: typeof Store; label: strin
 function ImageCard({
   entry,
   busy,
+  progress,
   onInstall,
   installLabel,
   installedLabel,
@@ -258,6 +274,7 @@ function ImageCard({
 }: {
   entry: ApiMarketplaceEntry;
   busy: boolean;
+  progress?: number;
   onInstall: () => void;
   installLabel: string;
   installedLabel: string;
@@ -299,22 +316,31 @@ function ImageCard({
         ))}
       </div>
 
-      <Button
-        size="sm"
-        variant={entry.installed ? 'secondary' : 'primary'}
-        disabled={busy || entry.installed}
-        onClick={onInstall}
-        className="mt-auto"
-      >
-        {busy ? (
-          <Loader2 className="size-3.5 animate-spin" />
-        ) : entry.installed ? (
-          <Check className="size-3.5" />
-        ) : (
-          <Download className="size-3.5" />
-        )}
-        {entry.installed ? installedLabel : installLabel}
-      </Button>
+      {progress != null && !entry.installed ? (
+        <div className="mt-auto">
+          <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+            <span>{installLabel}…</span>
+            <span className="tnum font-medium text-gold-300">{Math.round(progress)}%</span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-anthracite-950/60">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-gold-500 to-gold-300 transition-[width] duration-200 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      ) : (
+        <Button
+          size="sm"
+          variant={entry.installed ? 'secondary' : 'primary'}
+          disabled={busy || entry.installed}
+          onClick={onInstall}
+          className={cn('mt-auto', entry.installed && 'border-success/40 text-success')}
+        >
+          {entry.installed ? <Check className="size-3.5" /> : <Download className="size-3.5" />}
+          {entry.installed ? installedLabel : installLabel}
+        </Button>
+      )}
     </Card>
   );
 }

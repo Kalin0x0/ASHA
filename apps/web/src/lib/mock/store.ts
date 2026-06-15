@@ -323,6 +323,11 @@ class MockStore {
     return item;
   }
 
+  deleteImage(id: string): void {
+    this.data.images = this.data.images.filter((i) => i.id !== id);
+    this.emit();
+  }
+
   // ── Registry sources + image marketplace ────────────────────────────────────
 
   getRegistries(): ApiRegistry[] {

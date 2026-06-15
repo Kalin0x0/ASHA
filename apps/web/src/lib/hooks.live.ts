@@ -7,7 +7,7 @@ import type { RdpFileOptions } from '@/lib/api/endpoints';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
 import { downloadRdpFile } from '@/lib/rdp';
 import { formatRelativeTime } from '@/lib/utils';
-import type { ActivityItem, Agent, CreateFeedbackInput, CreateUserInput, CreateWorkspaceInput, FeedbackItem, RecordingRow, ServerOption, SessionRow, UpdateFeedbackInput, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
+import type { ActivityItem, Agent, CreateFeedbackInput, CreateUserInput, CreateWorkspaceInput, FeedbackItem, ManagedImage, RecordingRow, ServerOption, SessionRow, UpdateFeedbackInput, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
 
 const SESSIONS_KEY = ['sessions'] as const;
 const WORKSPACES_KEY = ['workspaces'] as const;
@@ -402,9 +402,61 @@ export function useActivity(): ActivityItem[] {
   }, [data, users]);
 }
 
-export function useImages() {
-  // Images API endpoint not yet implemented; return empty until Phase 3.
-  return [];
+export function useImages(): ManagedImage[] {
+  const { data } = useQuery({ queryKey: ['images'], queryFn: api.getImages });
+  return useMemo(
+    () =>
+      (data ?? []).map((i) => ({
+        id: i.id,
+        name: i.name,
+        friendlyName: i.friendlyName,
+        dockerImage: i.dockerImage,
+        protocol: i.protocol,
+        digest: i.digest,
+        pullPolicy: i.pullPolicy,
+        createdAt: i.createdAt,
+        workspaces: i.workspaces.map((w) => ({
+          id: w.id,
+          friendlyName: w.friendlyName,
+          cores: w.coresLimit,
+          memMb: w.memLimitMb,
+          gpu: w.gpuCount,
+        })),
+      })),
+    [data],
+  );
+}
+
+export function useDeleteImage() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.deleteImageEntry,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['images'] });
+      qc.invalidateQueries({ queryKey: WORKSPACES_KEY });
+    },
+  });
+  return useCallback(
+    async (id: string) => {
+      await mutateAsync(id);
+    },
+    [mutateAsync],
+  );
+}
+
+export function useSetImagePullPolicy() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, policy }: { id: string; policy: ManagedImage['pullPolicy'] }) =>
+      api.setImagePullPolicy(id, policy),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['images'] }),
+  });
+  return useCallback(
+    async (id: string, policy: ManagedImage['pullPolicy']) => {
+      await mutateAsync({ id, policy });
+    },
+    [mutateAsync],
+  );
 }
 
 export function useSessionHistory() {

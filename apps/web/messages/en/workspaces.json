@@ -69,7 +69,9 @@
     "stats": {
       "images": "Images",
       "cachedSize": "Cached size (GB)",
-      "workspacesCovered": "Workspaces covered"
+      "workspacesCovered": "Workspaces covered",
+      "workspaces": "Workspaces",
+      "pinned": "Pinned"
     },
     "searchPlaceholder": "Search by name, registry or tag…",
     "table": {
@@ -90,7 +92,35 @@
       "yesterday": "Yesterday",
       "daysAgo": "{days}d ago"
     },
-    "empty": "No images match your search."
+    "empty": "No images match your search.",
+    "emptyTitle": "No images installed",
+    "emptyDescription": "Install images from the Registry marketplace — they appear here to manage.",
+    "pinned": "Pinned",
+    "pullPolicy": "Pull policy",
+    "pullPolicies": {
+      "ALWAYS": "Always",
+      "IF_NOT_PRESENT": "If not present",
+      "NEVER": "Never"
+    },
+    "resources": "Resources",
+    "vcpu": "{n} vCPU",
+    "noLimit": "No limit",
+    "editResources": "Resources",
+    "editResourcesTitle": "Edit resources",
+    "cpuLabel": "vCPU",
+    "ramLabel": "RAM (GB)",
+    "gpuLabel": "GPU",
+    "uninstall": "Uninstall",
+    "deleteTitle": "Uninstall image",
+    "deleteDescription": "Uninstall {name}? Its image record and linked workspaces are removed.",
+    "toasts": {
+      "policyChanged": "Pull policy updated",
+      "policyFailed": "Couldn't update pull policy",
+      "deleted": "Uninstalled {name}",
+      "deleteFailed": "Couldn't uninstall the image",
+      "resourcesSaved": "Resources updated",
+      "resourcesFailed": "Couldn't update resources"
+    }
   },
   "registry": {
     "title": "Image Registry",

@@ -88,6 +88,12 @@ export class RegistryController {
   }
 
   @RequirePermissions('IMAGE_MANAGE')
+  @Delete('images/:id')
+  deleteImage(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.svc.deleteImage(user.orgId, user.sub, id);
+  }
+
+  @RequirePermissions('IMAGE_MANAGE')
   @Patch('images/:id/promote')
   promoteImage(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.svc.promoteImage(user.orgId, user.sub, id);
