@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.17',
+    date: '2026-06-16',
+    title: { en: 'Full control toolbar for RDP sessions', de: 'Vollständige Steuerleiste für RDP-Sitzungen' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'RDP / VNC / SSH sessions now have the same rich control toolbar as the browser desktops — workspace name + status, and working buttons: paste, Ctrl+Alt+Del, screenshot, resolution selector, quality toggle, a view-only share link, fullscreen, reconnect and end. Every button acts on the live session.',
+          de: 'RDP-/VNC-/SSH-Sitzungen haben jetzt dieselbe umfangreiche Steuerleiste wie die Browser-Desktops — Workspace-Name + Status und funktionierende Schaltflächen: Einfügen, Strg+Alt+Entf, Screenshot, Auflösungsauswahl, Qualitätsumschalter, ein Nur-Ansehen-Link, Vollbild, Neu verbinden und Beenden. Jede Schaltfläche wirkt auf die laufende Sitzung.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.16',
     date: '2026-06-15',
     title: { en: 'Manage installed images + install progress', de: 'Installierte Images verwalten + Installationsfortschritt' },
