@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="apps/web/public/chista-logo.svg" alt="Chista" width="168" height="168" />
+
 # Chista
 
 **A modern container-streaming / VDI / DaaS platform.**

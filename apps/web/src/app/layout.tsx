@@ -25,12 +25,9 @@ export async function generateMetadata(): Promise<Metadata> {
       statusBarStyle: 'black-translucent',
     },
     icons: {
-      icon: [
-        { url: '/chista-logo.svg', type: 'image/svg+xml' },
-        { url: '/chista-logo.png', type: 'image/png' },
-      ],
-      apple: '/chista-logo.png',
-      shortcut: '/chista-logo.png',
+      icon: [{ url: '/chista-logo.svg', type: 'image/svg+xml' }],
+      apple: '/chista-logo.svg',
+      shortcut: '/chista-logo.svg',
     },
   };
 }
