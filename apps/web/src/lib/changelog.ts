@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.19',
+    date: '2026-06-16',
+    title: { en: 'New brand logo', de: 'Neues Markenlogo' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'New Chista emblem — a gold-on-anthracite badge with a monitor, a shield + container cube and city window-panels. It now appears across the app (sidebar, login, browser tab / favicon and the installed-app icon) and as the README cover. Authored as a crisp vector, so it stays sharp at every size.',
+          de: 'Neues Chista-Emblem — ein Gold-auf-Anthrazit-Badge mit Monitor, Schild + Container-Würfel und Fenster-Panels. Es erscheint jetzt überall in der App (Seitenleiste, Login, Browser-Tab / Favicon und Symbol der installierten App) sowie als README-Titelbild. Als sauberer Vektor umgesetzt, bleibt es in jeder Größe scharf.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.18',
     date: '2026-06-16',
     title: { en: 'Edit servers + delete confirmation', de: 'Server bearbeiten + Löschbestätigung' },

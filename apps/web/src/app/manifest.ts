@@ -5,9 +5,8 @@ import type { MetadataRoute } from 'next';
  * launchable as a standalone window. Next serves this at /manifest.webmanifest
  * and injects the <link rel="manifest"> automatically.
  *
- * Icons are SVG (crisp at any size, `sizes: "any"`) plus the 1200² PNG as a
- * raster fallback. The maskable variant is full-bleed so platform masks don't
- * clip the mark.
+ * Icons are SVG (crisp at any size, `sizes: "any"`). The maskable variant is
+ * full-bleed so platform masks don't clip the mark.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -26,7 +25,6 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       { src: '/chista-logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
       { src: '/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
-      { src: '/chista-logo.png', sizes: '1200x1200', type: 'image/png', purpose: 'any' },
     ],
     shortcuts: [
       { name: 'My Workspaces', short_name: 'Workspaces', url: '/' },
