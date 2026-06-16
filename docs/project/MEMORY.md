@@ -73,7 +73,7 @@ codenames; surface it subtly, never cute.
   entry (version, date, `added` / `fixed` / `changed` notes) to the TOP of `CHANGELOG`.
   Notes are localizable (`{ en, de }`, fa falls back to en) — they are content, not chrome,
   so they live in the data file, not the message catalogs.
-- **Current head:** `1.1.17` (2026-06-16). **Next version to assign:** `1.1.18`.
+- **Current head:** `1.1.18` (2026-06-16). **Next version to assign:** `1.1.19`.
 - **PWA service worker:** bump `VERSION` in `apps/web/public/sw.js` on releases that
   change cached behaviour — it rolls the caches and triggers the installed app's
   "update available" prompt (`pwa.update*` strings).
