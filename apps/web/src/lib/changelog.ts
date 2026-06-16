@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.18',
+    date: '2026-06-16',
+    title: { en: 'Edit servers + delete confirmation', de: 'Server bearbeiten + Löschbestätigung' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Registered servers can now be edited from the Servers page — a pencil button opens a dialog to update the address, connection type, max sessions and (optionally) the credentials and RDP security. Leaving username / password blank keeps the sealed credentials unchanged.',
+          de: 'Registrierte Server lassen sich jetzt auf der Server-Seite bearbeiten — eine Stift-Schaltfläche öffnet einen Dialog, um Adresse, Verbindungstyp, max. Sitzungen und (optional) die Anmeldedaten sowie die RDP-Sicherheit zu ändern. Bleiben Benutzername / Passwort leer, bleiben die versiegelten Anmeldedaten unverändert.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'Deleting a server now always asks for confirmation first — the trash button opens an "Are you sure?" dialog naming the host instead of removing it immediately.',
+          de: 'Das Löschen eines Servers fragt jetzt immer zuerst nach einer Bestätigung — die Papierkorb-Schaltfläche öffnet einen „Sind Sie sicher?“-Dialog mit dem Hostnamen, statt den Server sofort zu entfernen.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.17',
     date: '2026-06-16',
     title: { en: 'Full control toolbar for RDP sessions', de: 'Vollständige Steuerleiste für RDP-Sitzungen' },

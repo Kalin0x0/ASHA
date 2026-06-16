@@ -595,7 +595,14 @@ export const createServer = (body: {
 }) => apiFetch<ApiServer>('/servers', { method: 'POST', body });
 export const updateServer = (
   id: string,
-  body: Partial<{ address: string; maxSessions: number; username: string; password: string }>,
+  body: Partial<{
+    address: string;
+    maxSessions: number;
+    connectionType: 'SSH' | 'RDP' | 'VNC';
+    username: string;
+    password: string;
+    security: 'any' | 'nla' | 'nla-ext' | 'tls' | 'rdp' | 'vmconnect';
+  }>,
 ) => apiFetch<ApiServer>(`/servers/${id}`, { method: 'PATCH', body });
 export const deleteServer = (id: string) =>
   apiFetch<{ ok: true }>(`/servers/${id}`, { method: 'DELETE' });
