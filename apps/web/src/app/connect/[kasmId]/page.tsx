@@ -3,6 +3,7 @@
 import Guacamole, { type Client as GuacClient } from 'guacamole-common-js';
 import {
   ArrowLeft,
+  Camera,
   ClipboardPaste,
   Command,
   Eye,
@@ -10,23 +11,69 @@ import {
   LayoutGrid,
   Loader2,
   Maximize2,
+  Monitor,
   MonitorX,
   Power,
   RefreshCw,
+  Share2,
   Wifi,
   X,
 } from 'lucide-react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { AppIcon } from '@/components/composite/app-icon';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getAccessToken } from '@/lib/api/auth-store';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
+import { useSessions, useWorkspaces } from '@/lib/hooks';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import { cn } from '@/lib/utils';
 
 // X11 keysyms for the control-menu shortcuts.
 const KEYSYM = { CTRL: 0xffe3, ALT: 0xffe9, DEL: 0xffff, V: 0x0076 } as const;
+
+// Resolution presets for the toolbar (w:0 = fit the window).
+const RESOLUTIONS = [
+  { label: 'Fit window', w: 0, h: 0 },
+  { label: '1280 × 720', w: 1280, h: 720 },
+  { label: '1920 × 1080', w: 1920, h: 1080 },
+  { label: '2560 × 1440', w: 2560, h: 1440 },
+  { label: '3840 × 2160', w: 3840, h: 2160 },
+];
+
+/** A toolbar icon button with a tooltip (all wired to real guacamole actions). */
+function ToolBtn({
+  icon: Icon,
+  label,
+  onClick,
+  active,
+}: {
+  icon: typeof Camera;
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={label}
+          className={cn(
+            'inline-flex size-9 items-center justify-center rounded-md transition-colors ring-gold-focus',
+            active ? 'bg-gold-500/15 text-gold-300' : 'text-muted-foreground hover:bg-white/10 hover:text-foreground',
+          )}
+        >
+          <Icon className="size-4" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 type ViewState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -55,6 +102,18 @@ export default function ConnectPage() {
   const [perfMode, setPerfMode] = useState(
     () => typeof window !== 'undefined' && window.localStorage.getItem('chista-rdp-perf') === '1',
   );
+  // Forced resolution (null = fit the viewport). Changing it reconnects.
+  const [resOverride, setResOverride] = useState<{ w: number; h: number } | null>(null);
+  const [resMenuOpen, setResMenuOpen] = useState(false);
+
+  // Resolve the session → workspace so the toolbar shows the name + description.
+  const session = useSessions().find((s) => s.kasmId === kasmId);
+  const workspaces = useWorkspaces();
+  const ws = workspaces.find((w) => w.friendlyName === session?.workspaceName);
+  const workspaceName = session?.workspaceName ?? 'Remote desktop';
+  const workspaceDescription = ws?.description;
+  const protocolLabel = session?.connectionType ?? 'RDP';
+  const connected = state === 'connected';
 
   useEffect(() => {
     const token = getAccessToken();
@@ -71,8 +130,8 @@ export default function ConnectPage() {
     // window with no letterbox bars (clamped + rounded to even pixels).
     const clampEven = (v: number, lo: number, hi: number) =>
       Math.max(lo, Math.min(hi, Math.round(v / 2) * 2));
-    const reqW = clampEven(screen.clientWidth || 1280, 640, 3840);
-    const reqH = clampEven(screen.clientHeight || 720, 480, 2160);
+    const reqW = clampEven(resOverride?.w ?? screen.clientWidth ?? 1280, 640, 3840);
+    const reqH = clampEven(resOverride?.h ?? screen.clientHeight ?? 720, 480, 2160);
     const url = `${scheme}://${window.location.host}/proxy/session/${encodeURIComponent(
       kasmId,
     )}?token=${encodeURIComponent(token)}&w=${reqW}&h=${reqH}&perf=${perfMode ? 1 : 0}`;
@@ -217,7 +276,7 @@ export default function ConnectPage() {
       }
       clientRef.current = null;
     };
-  }, [kasmId, attempt, perfMode, monitor]);
+  }, [kasmId, attempt, perfMode, monitor, resOverride]);
 
   const togglePerf = useCallback(() => {
     setPerfMode((p) => {
@@ -302,38 +361,112 @@ export default function ConnectPage() {
     router.back();
   }, [router, captureThumb]);
 
+  // Download a full-resolution screenshot of the live desktop.
+  const screenshot = useCallback(() => {
+    const dataUrl = captureCanvasThumb(screenRef.current, 100000); // huge maxW → no downscale
+    if (!dataUrl) {
+      toast.error('Nothing to capture yet.');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `${workspaceName.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'desktop'}-${Date.now()}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast.success('Screenshot saved');
+  }, [workspaceName]);
+
+  // Copy a view-only (monitor) link others can watch without sending input.
+  const shareMonitorLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/connect/${kasmId}?monitor=1`);
+      toast.success('View-only link copied', { description: 'Whoever opens it can watch, but not control.' });
+    } catch {
+      toast.error('Clipboard access was blocked');
+    }
+  }, [kasmId]);
+
+  // Switch the remote resolution (reconnects). `null` = fit the window.
+  const setResolution = useCallback((res: { w: number; h: number } | null) => {
+    setResMenuOpen(false);
+    setErrMsg('');
+    setState('connecting');
+    setResOverride(res);
+  }, []);
+
   return (
     <div ref={containerRef} className="fixed inset-0 z-50 flex flex-col bg-anthracite-950 text-foreground">
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border-subtle bg-[var(--surface-1)] px-3 sm:px-4">
-        <Button variant="ghost" size="icon-sm" onClick={() => router.back()} aria-label="Back to servers">
+      {resMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setResMenuOpen(false)} aria-hidden />}
+      <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border-subtle bg-[var(--surface-1)] px-2 sm:px-3">
+        <Button variant="ghost" size="icon-sm" onClick={disconnect} aria-label="Back to Workspaces" className="rtl:rotate-180">
           <ArrowLeft className="size-4" />
         </Button>
-        <span className="hidden font-display text-sm font-medium tracking-tight sm:inline">
-          {monitor ? 'Live-Monitor' : 'Remote desktop'}
-        </span>
-        <StatusPill state={state} />
+        <AppIcon
+          name={workspaceName}
+          dockerImage={ws?.dockerImage}
+          category={ws?.category}
+          iconUrl={ws?.iconUrl}
+          rounded="rounded-lg"
+          className="size-8 shrink-0"
+        />
+        <div className="min-w-0 leading-tight">
+          <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
+            <span className="truncate">{workspaceName}</span>
+            <StatusPill state={state} />
+          </p>
+          <p className="truncate text-[11px] text-muted-foreground">
+            {workspaceDescription || `Live · ${protocolLabel}`}
+          </p>
+        </div>
         {monitor && (
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full border border-info/40 bg-info/10 px-2.5 py-1 text-[11px] font-medium text-info"
-            title="View-only — keine Eingaben werden gesendet, der Nutzer wird nicht gestört."
-          >
+          <span className="ms-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-info/40 bg-info/10 px-2.5 py-1 text-[11px] font-medium text-info">
             <Eye className="size-3.5" /> Nur ansehen
           </span>
         )}
-        <div className="ml-auto flex items-center gap-1.5">
+
+        <div className="ms-auto flex items-center gap-0.5">
+          {connected && !monitor && (
+            <>
+              <ToolBtn icon={ClipboardPaste} label="Paste (local → remote)" onClick={() => void pasteToRemote()} />
+              <ToolBtn icon={Command} label="Ctrl + Alt + Del" onClick={sendCtrlAltDel} />
+            </>
+          )}
+          {connected && <ToolBtn icon={Camera} label="Screenshot" onClick={screenshot} />}
+          <div className="relative">
+            <ToolBtn icon={Monitor} label="Display / resolution" active={resMenuOpen} onClick={() => setResMenuOpen((o) => !o)} />
+            {resMenuOpen && (
+              <div className="absolute end-0 top-10 z-50 w-44 overflow-hidden rounded-lg border border-border-subtle bg-anthracite-900/95 py-1 shadow-[var(--shadow-lifted)] backdrop-blur">
+                <p className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Resolution</p>
+                {RESOLUTIONS.map((r) => {
+                  const isActive = r.w === 0 ? resOverride === null : resOverride?.w === r.w;
+                  return (
+                    <button
+                      key={r.label}
+                      onClick={() => setResolution(r.w === 0 ? null : { w: r.w, h: r.h })}
+                      className={cn(
+                        'flex w-full items-center gap-2 px-3 py-1.5 text-start text-xs transition-colors hover:bg-secondary',
+                        isActive ? 'text-gold-300' : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      <Monitor className="size-3.5" /> {r.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <ToolBtn icon={Gauge} label={perfMode ? 'Quality: performance (effects off)' : 'Quality: full'} active={perfMode} onClick={togglePerf} />
+          <ToolBtn icon={Share2} label="Copy view-only link" onClick={() => void shareMonitorLink()} />
+          <ToolBtn icon={Maximize2} label="Fullscreen" onClick={toggleFullscreen} />
+          <ToolBtn icon={LayoutGrid} label="Control Panel" active={panelOpen} onClick={() => setPanelOpen((o) => !o)} />
           {(state === 'disconnected' || state === 'error') && (
-            <Button variant="outline" size="sm" onClick={reconnect}>
-              <RefreshCw className="size-3.5" />
-              Neu verbinden
+            <Button variant="outline" size="sm" onClick={reconnect} className="ms-1">
+              <RefreshCw className="size-3.5" /> <span className="hidden sm:inline">Reconnect</span>
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={() => setPanelOpen((o) => !o)} aria-expanded={panelOpen}>
-            <LayoutGrid className="size-4" />
-            <span className="hidden sm:inline">Control Panel</span>
-          </Button>
-          <Button variant="destructive" size="sm" onClick={disconnect} title="Sitzung beenden">
-            <Power className="size-3.5" />
-            <span className="hidden sm:inline">Beenden</span>
+          <Button variant="destructive" size="sm" onClick={disconnect} title="End session" className="ms-1">
+            <Power className="size-3.5" /> <span className="hidden sm:inline">End</span>
           </Button>
         </div>
       </header>
