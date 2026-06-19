@@ -19,6 +19,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { isLive } from '@/lib/api/mode';
 import { type ApiSessionShare, useRevokeShare, useSessionShares } from '@/lib/hooks.storage';
 
@@ -38,6 +39,8 @@ function expiryLabel(iso: string | null): {
 
 export default function SharingPage() {
   const t = useTranslations('sessions');
+  const tc = useTranslations('common');
+  const confirm = useConfirm();
   const { data: shares = [], isLoading } = useSessionShares();
   const revoke = useRevokeShare();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -45,6 +48,13 @@ export default function SharingPage() {
   const participants = shares.reduce((sum, s) => sum + (s.participantCount ?? 0), 0);
 
   const onRevoke = async (share: ApiSessionShare) => {
+    if (
+      !(await confirm({
+        title: tc('confirm.deleteNamed', { name: share.workspaceName ?? share.sessionId }),
+        confirmLabel: tc('actions.remove'),
+      }))
+    )
+      return;
     setBusyId(share.id);
     try {
       await revoke.mutateAsync(share);

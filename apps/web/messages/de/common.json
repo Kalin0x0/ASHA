@@ -24,6 +24,13 @@
     "upload": "Hochladen",
     "view": "Anzeigen"
   },
+  "confirm": {
+    "title": "Sind Sie sicher?",
+    "deleteNamed": "„{name}“ löschen?",
+    "description": "Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirm": "Löschen",
+    "cancel": "Abbrechen"
+  },
   "labels": {
     "actions": "Aktionen",
     "active": "Aktiv",

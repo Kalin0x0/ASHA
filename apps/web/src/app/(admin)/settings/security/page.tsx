@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/composite/page-header';
 import { StatCard } from '@/components/composite/stat-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiPasskey,
@@ -21,6 +22,8 @@ import { isLive } from '@/lib/api/mode';
 
 export default function SecurityPage() {
   const t = useTranslations('settings');
+  const tc = useTranslations('common');
+  const confirm = useConfirm();
   const locale = useLocale();
   const [passkeys, setPasskeys] = useState<ApiPasskey[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,6 +65,8 @@ export default function SecurityPage() {
   };
 
   const onDelete = async (id: string) => {
+    const passkey = passkeys.find((p) => p.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: passkey?.deviceName ?? '' }) }))) return;
     setBusyId(id);
     try {
       await deletePasskey(id);

@@ -184,6 +184,7 @@
     "allCategories": "All",
     "availableEmpty": "No images match your search.",
     "installedEmpty": "No images installed yet — install one from the Available tab.",
+    "removeImageConfirm": "This also deletes the cached image from the host to reclaim disk space, and removes its workspaces. This cannot be undone.",
     "card": {
       "source": "Source"
     },

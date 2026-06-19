@@ -10,6 +10,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   useCreateVolumeMapping,
@@ -20,6 +21,7 @@ import {
 export default function VolumeMappingsPage() {
   const t = useTranslations('storage');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const { data: volumes = [], isLoading } = useVolumeMappings();
   const create = useCreateVolumeMapping();
   const remove = useDeleteVolumeMapping();
@@ -45,6 +47,8 @@ export default function VolumeMappingsPage() {
   };
 
   const onDelete = async (id: string) => {
+    const vol = volumes.find((v) => v.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: vol?.name ?? '' }) }))) return;
     setBusyId(id);
     try {
       await remove.mutateAsync(id);

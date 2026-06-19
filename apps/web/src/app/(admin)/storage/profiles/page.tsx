@@ -10,6 +10,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   useCreatePersistentProfile,
@@ -30,6 +31,8 @@ function relTime(iso: string | null, t: ReturnType<typeof useTranslations>): str
 
 export default function PersistentProfilesPage() {
   const t = useTranslations('storage');
+  const tc = useTranslations('common');
+  const confirm = useConfirm();
   const { data: profiles = [], isLoading } = usePersistentProfiles();
   const create = useCreatePersistentProfile();
   const remove = useDeletePersistentProfile();
@@ -64,6 +67,8 @@ export default function PersistentProfilesPage() {
   };
 
   const onDelete = async (id: string) => {
+    const profile = profiles.find((p) => p.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: profile?.volumeName ?? '' }) }))) return;
     setBusyId(id);
     try {
       await remove.mutateAsync(id);

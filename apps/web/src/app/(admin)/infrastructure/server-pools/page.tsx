@@ -9,6 +9,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiServerPool,
@@ -23,6 +24,7 @@ import { isLive } from '@/lib/api/mode';
 export default function ServerPoolsPage() {
   const t = useTranslations('infrastructure');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const [pools, setPools] = useState<ApiServerPool[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -63,6 +65,8 @@ export default function ServerPoolsPage() {
   };
 
   const onDelete = async (id: string) => {
+    const pool = pools.find((p) => p.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: pool?.name ?? '' }) }))) return;
     setBusyId(id);
     try {
       await deletePool(id);

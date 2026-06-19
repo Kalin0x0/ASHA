@@ -10,6 +10,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiApiKey,
@@ -24,6 +25,7 @@ const SCOPE_OPTIONS = ['SCIM', 'SESSION_LAUNCH', 'REPORTING_VIEW', 'WORKSPACE_MA
 export default function ApiKeysPage() {
   const t = useTranslations('developer');
   const tCommon = useTranslations('common');
+  const confirm = useConfirm();
   const [keys, setKeys] = useState<ApiApiKey[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -75,6 +77,14 @@ export default function ApiKeysPage() {
   };
 
   const onRevoke = async (id: string) => {
+    const key = keys.find((k) => k.id === id);
+    if (
+      !(await confirm({
+        title: tCommon('confirm.deleteNamed', { name: key?.name ?? '' }),
+        confirmLabel: tCommon('actions.remove'),
+      }))
+    )
+      return;
     setBusyId(id);
     try {
       await revokeApiKey(id);

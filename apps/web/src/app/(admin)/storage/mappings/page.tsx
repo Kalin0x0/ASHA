@@ -9,6 +9,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiStorageMapping,
@@ -43,6 +44,7 @@ const SCOPES = ['USER', 'GROUP', 'WORKSPACE'] as const;
 export default function StorageMappingsPage() {
   const t = useTranslations('storage');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const [mappings, setMappings] = useState<ApiStorageMapping[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -99,6 +101,8 @@ export default function StorageMappingsPage() {
   };
 
   const onDelete = async (id: string) => {
+    const mapping = mappings.find((m) => m.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: mapping?.name ?? '' }) }))) return;
     setBusyId(id);
     try {
       await deleteStorageMapping(id);

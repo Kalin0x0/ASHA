@@ -9,6 +9,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiConnectionProxy,
@@ -22,6 +23,7 @@ import { isLive } from '@/lib/api/mode';
 export default function ConnectionProxiesPage() {
   const t = useTranslations('connectivity');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const [proxies, setProxies] = useState<ApiConnectionProxy[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -75,6 +77,8 @@ export default function ConnectionProxiesPage() {
   };
 
   const onDelete = async (id: string) => {
+    const p = proxies.find((x) => x.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: p?.name ?? '' }) }))) return;
     setBusyId(id);
     try {
       await deleteConnectionProxy(id);

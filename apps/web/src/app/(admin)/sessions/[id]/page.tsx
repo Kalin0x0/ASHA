@@ -8,6 +8,7 @@ import { Monogram } from '@/components/composite/monogram';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Progress } from '@/components/ui/progress';
 import { SessionStatusPill } from '@/components/ui/status-pill';
 import { useSession, useTerminateSession, useWorkspaces } from '@/lib/hooks';
@@ -19,6 +20,7 @@ const REMOTE_DESKTOP = new Set(['RDP', 'VNC', 'SSH']);
 export default function SessionDetailPage() {
   const t = useTranslations('sessions');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const session = useSession(params.id);
@@ -43,6 +45,20 @@ export default function SessionDetailPage() {
   }
 
   const memPct = (session.memMb / session.memLimitMb) * 100;
+
+  const onTerminate = async () => {
+    if (
+      !(await confirm({
+        title: tc('confirm.title'),
+        confirmLabel: tc('actions.terminate'),
+        description: tc('confirm.description'),
+      }))
+    )
+      return;
+    terminate(session.id);
+    toast.success(t('detail.toastTerminated'));
+    router.push('/sessions');
+  };
 
   return (
     <div className="space-y-6">
@@ -79,11 +95,7 @@ export default function SessionDetailPage() {
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => {
-              terminate(session.id);
-              toast.success(t('detail.toastTerminated'));
-              router.push('/sessions');
-            }}
+            onClick={() => void onTerminate()}
           >
             <XCircle className="size-4" /> {tc('actions.terminate')}
           </Button>
