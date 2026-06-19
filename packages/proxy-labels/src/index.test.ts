@@ -78,7 +78,7 @@ describe('sessionConnectionUrl', () => {
   it('builds a path-routed URL and normalises a trailing slash', () => {
     expect(
       sessionConnectionUrl({ kasmId: 'abc123', proxyBaseUrl: 'https://chista.local/', token: 't0k' }),
-    ).toBe('https://chista.local/session/abc123/?token=t0k');
+    ).toBe('https://chista.local/session/abc123/?path=session/abc123/websockify&token=t0k');
   });
 
   it('builds a subdomain URL when mode + domain are given', () => {
@@ -101,6 +101,6 @@ describe('sessionConnectionUrl', () => {
         token: 't0k',
         mode: 'subdomain',
       }),
-    ).toBe('https://chista.local/session/abc123/?token=t0k');
+    ).toBe('https://chista.local/session/abc123/?path=session/abc123/websockify&token=t0k');
   });
 });
