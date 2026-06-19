@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { type UpsertWatermarkDto, upsertWatermarkSchema } from '@chista/contracts';
+import { type UpsertWatermarkDto, upsertWatermarkSchema } from '@asha/contracts';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { WatermarksService } from './watermarks.service';

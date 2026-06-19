@@ -5,10 +5,10 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ .Values.agent.k8sSessionNs | default "chista-sessions" }}
+  name: {{ .Values.agent.k8sSessionNs | default "asha-sessions" }}
   labels:
-    app.kubernetes.io/managed-by: chista
-    {{- include "chista.labels" . | nindent 4 }}
+    app.kubernetes.io/managed-by: asha
+    {{- include "asha.labels" . | nindent 4 }}
 ---
 # ResourceQuota — prevent runaway session pods from starving the cluster.
 # Override .Values.agent.sessionQuota in production.
@@ -16,8 +16,8 @@ metadata:
 apiVersion: v1
 kind: ResourceQuota
 metadata:
-  name: chista-session-quota
-  namespace: {{ $.Values.agent.k8sSessionNs | default "chista-sessions" }}
+  name: asha-session-quota
+  namespace: {{ $.Values.agent.k8sSessionNs | default "asha-sessions" }}
 spec:
   hard:
     pods: {{ .maxPods | default "200" | quote }}
@@ -32,8 +32,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: chista-session-isolation
-  namespace: {{ .Values.agent.k8sSessionNs | default "chista-sessions" }}
+  name: asha-session-isolation
+  namespace: {{ .Values.agent.k8sSessionNs | default "asha-sessions" }}
 spec:
   podSelector: {}
   policyTypes: [Ingress, Egress]

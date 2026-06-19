@@ -15,16 +15,16 @@ export default defineConfig({
   // build (the package `exports` point at dist, which CI/dev may not have built).
   resolve: {
     alias: {
-      '@chista/config': pkg('config'),
-      '@chista/contracts': pkg('contracts'),
-      '@chista/crypto': pkg('crypto'),
-      '@chista/db': pkg('db'),
-      '@chista/events': pkg('events'),
-      '@chista/logger': pkg('logger'),
-      '@chista/proxy-labels': pkg('proxy-labels'),
-      '@chista/rbac': pkg('rbac'),
+      '@asha/config': pkg('config'),
+      '@asha/contracts': pkg('contracts'),
+      '@asha/crypto': pkg('crypto'),
+      '@asha/db': pkg('db'),
+      '@asha/events': pkg('events'),
+      '@asha/logger': pkg('logger'),
+      '@asha/proxy-labels': pkg('proxy-labels'),
+      '@asha/rbac': pkg('rbac'),
       // Web app path alias ('@/x' → apps/web/src/x). Safe: the alias matcher only
-      // matches '@' when followed by '/', so the '@chista/*' entries above are
+      // matches '@' when followed by '/', so the '@asha/*' entries above are
       // unaffected.
       '@': resolve(root, 'apps/web/src'),
     },

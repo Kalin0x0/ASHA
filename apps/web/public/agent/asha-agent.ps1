@@ -1,19 +1,19 @@
 <#
 .SYNOPSIS
-  Chista host agent (availability) — registers this Windows desktop/server with
-  Chista and sends heartbeats so it shows up Online/available in the catalog.
+  Asha host agent (availability) — registers this Windows desktop/server with
+  Asha and sends heartbeats so it shows up Online/available in the catalog.
 
 .NOTES
-  Auth is a Chista registration token (Access -> Authentication -> Registration
+  Auth is a Asha registration token (Access -> Authentication -> Registration
   tokens, or the "Install agent" panel under Infrastructure -> Servers).
   Reachability (a reverse tunnel for hosts behind NAT) is a separate component.
 
 .EXAMPLE
-  powershell -ExecutionPolicy Bypass -File chista-agent.ps1 `
-    -ChistaUrl "https://chista.example.com" -Token "cra_xxx" -EnableRdp
+  powershell -ExecutionPolicy Bypass -File asha-agent.ps1 `
+    -AshaUrl "https://asha.example.com" -Token "cra_xxx" -EnableRdp
 #>
 param(
-  [Parameter(Mandatory = $true)][string]$ChistaUrl,
+  [Parameter(Mandatory = $true)][string]$AshaUrl,
   [Parameter(Mandatory = $true)][string]$Token,
   [string]$Hostname = $env:COMPUTERNAME,
   [string]$Address = '',
@@ -25,7 +25,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $AgentVersion = '1.0.0'
-$ChistaUrl = $ChistaUrl.TrimEnd('/')
+$AshaUrl = $AshaUrl.TrimEnd('/')
 
 # Best-effort: discover a routable IPv4 if the caller didn't pass one.
 if (-not $Address) {
@@ -55,15 +55,15 @@ function Send-Register {
     os             = 'windows'
     version        = $AgentVersion
   } | ConvertTo-Json
-  return Invoke-RestMethod -Uri "$ChistaUrl/agent/server/register" -Method Post -Headers $headers -Body $body
+  return Invoke-RestMethod -Uri "$AshaUrl/agent/server/register" -Method Post -Headers $headers -Body $body
 }
 
 function Send-Heartbeat {
   $body = @{ hostname = $Hostname; version = $AgentVersion } | ConvertTo-Json
-  Invoke-RestMethod -Uri "$ChistaUrl/agent/server/heartbeat" -Method Post -Headers $headers -Body $body | Out-Null
+  Invoke-RestMethod -Uri "$AshaUrl/agent/server/heartbeat" -Method Post -Headers $headers -Body $body | Out-Null
 }
 
-Write-Host "Registering '$Hostname' ($Address) with Chista at $ChistaUrl ..."
+Write-Host "Registering '$Hostname' ($Address) with Asha at $AshaUrl ..."
 $reg = Send-Register
 Write-Host "Registered (serverId=$($reg.serverId), zone=$($reg.zoneId)). Heartbeating every $IntervalSeconds s."
 
@@ -71,8 +71,8 @@ Write-Host "Registered (serverId=$($reg.serverId), zone=$($reg.zoneId)). Heartbe
 if ($Tunnel) {
   try {
     $body = @{ hostname = $Hostname } | ConvertTo-Json
-    $t = Invoke-RestMethod -Uri "$ChistaUrl/agent/server/tunnel" -Method Post -Headers $headers -Body $body
-    $conf = Join-Path $env:ProgramData 'Chista\chista-tunnel.conf'
+    $t = Invoke-RestMethod -Uri "$AshaUrl/agent/server/tunnel" -Method Post -Headers $headers -Body $body
+    $conf = Join-Path $env:ProgramData 'Asha\asha-tunnel.conf'
     $t.config | Out-File -FilePath $conf -Encoding ascii -Force
     $wg = Join-Path $env:ProgramFiles 'WireGuard\wireguard.exe'
     if (Test-Path $wg) {

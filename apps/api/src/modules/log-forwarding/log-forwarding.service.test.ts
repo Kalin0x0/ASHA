@@ -14,9 +14,9 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 // Reversible stand-ins so the sealing round-trip is observable in assertions.
-vi.mock('@chista/crypto', () => ({
+vi.mock('@asha/crypto', () => ({
   seal: (plaintext: string) => `sealed:${plaintext}`,
   unseal: (stored: string) => stored.replace(/^sealed:/, ''),
 }));

@@ -8,7 +8,7 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 import { ServersService } from './servers.service';
 
@@ -19,7 +19,7 @@ const env = {
   SECRET_SEAL_KEY: '0123456789abcdef0123456789abcdef',
   SESSION_TOKEN_SECRET: 'session-secret',
   SESSION_TOKEN_TTL: 120,
-  CHISTA_PUBLIC_URL: 'https://chista.test',
+  ASHA_PUBLIC_URL: 'https://asha.test',
 };
 
 describe('ServersService', () => {

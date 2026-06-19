@@ -1,13 +1,13 @@
-{{- define "chista.name" -}}
-{{- default "chista" .Chart.Name -}}
+{{- define "asha.name" -}}
+{{- default "asha" .Chart.Name -}}
 {{- end -}}
 
-{{- define "chista.labels" -}}
-app.kubernetes.io/part-of: chista
+{{- define "asha.labels" -}}
+app.kubernetes.io/part-of: asha
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 {{- end -}}
 
-{{- define "chista.image" -}}
+{{- define "asha.image" -}}
 {{- printf "%s/%s:%s" .registry .name .tag -}}
 {{- end -}}

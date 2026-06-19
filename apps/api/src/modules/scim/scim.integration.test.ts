@@ -15,8 +15,8 @@ const { prismaMock } = vi.hoisted(() => ({
     userGroup: { create: vi.fn(), deleteMany: vi.fn() },
   },
 }));
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
-vi.mock('@chista/crypto', () => ({ hashToken: (t: string) => `hashed:${t}`, randomToken: () => 'rand' }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/crypto', () => ({ hashToken: (t: string) => `hashed:${t}`, randomToken: () => 'rand' }));
 
 import { ScimController } from './scim.controller';
 import { ScimService } from './scim.service';

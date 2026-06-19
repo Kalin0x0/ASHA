@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { prisma } from '@chista/db';
+import { prisma } from '@asha/db';
 
 const ACTIVE = ['REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED'];
 
@@ -7,7 +7,7 @@ const ACTIVE = ['REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED',
  * KI-Copilot backend (differentiator). Answers natural-language questions about
  * the org's live platform state (sessions, cost, agents, users) via a
  * deterministic intent router over real data — no hallucinations. Free-form
- * reasoning is a pluggable LLM step (CHISTA_COPILOT_*), so the deterministic
+ * reasoning is a pluggable LLM step (ASHA_COPILOT_*), so the deterministic
  * answers are always available and verifiable while the AI layer is optional.
  */
 @Injectable()
@@ -76,7 +76,7 @@ export class CopilotService {
     return {
       intent: 'unknown',
       answer:
-        'I can answer about sessions, cost, agents, and users — try "how many sessions are running?" or "what did we spend this month?". Free-form AI answers require a configured LLM provider (CHISTA_COPILOT_*).',
+        'I can answer about sessions, cost, agents, and users — try "how many sessions are running?" or "what did we spend this month?". Free-form AI answers require a configured LLM provider (ASHA_COPILOT_*).',
       data: { capabilities: ['sessions', 'cost', 'agents', 'users'] },
     };
   }

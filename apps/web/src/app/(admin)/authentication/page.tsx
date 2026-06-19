@@ -50,11 +50,11 @@ const CONFIG_FIELDS: Record<Exclude<AuthProviderType, 'LOCAL'>, ProviderConfigFi
     { key: 'issuer', placeholder: 'https://accounts.google.com' },
     { key: 'clientId' },
     { key: 'clientSecret', secret: true },
-    { key: 'redirectUri', placeholder: 'https://chista.local/api/v1/auth/oidc/<id>/callback' },
+    { key: 'redirectUri', placeholder: 'https://asha.local/api/v1/auth/oidc/<id>/callback' },
   ],
   SAML: [
     { key: 'entryPoint', placeholder: 'https://idp.example.com/sso' },
-    { key: 'issuer', placeholder: 'chista' },
+    { key: 'issuer', placeholder: 'asha' },
     { key: 'cert', secret: true },
   ],
   LDAP: [
@@ -346,7 +346,7 @@ export default function AuthenticationPage() {
 
 /**
  * Per-provider SSO group-mapping editor: maps an IdP assertion attribute/value
- * (e.g. groups = "admins") onto a Chista group. Memberships in mapped groups
+ * (e.g. groups = "admins") onto a Asha group. Memberships in mapped groups
  * are reconciled on every federated login.
  */
 function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiGroup[] }) {
@@ -445,7 +445,7 @@ function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiG
           <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="admins" />
         </div>
         <div className="min-w-[10rem]">
-          <Label className="text-xs">{t('authentication.mappings.chistaGroup')}</Label>
+          <Label className="text-xs">{t('authentication.mappings.ashaGroup')}</Label>
           <select
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}

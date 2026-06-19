@@ -100,7 +100,7 @@ export default function ConnectPage() {
   // Performance mode = the "Windows optimization": wallpaper/effects OFF to save
   // bandwidth. Persisted; toggling it reconnects with the new RDP experience.
   const [perfMode, setPerfMode] = useState(
-    () => typeof window !== 'undefined' && window.localStorage.getItem('chista-rdp-perf') === '1',
+    () => typeof window !== 'undefined' && window.localStorage.getItem('asha-rdp-perf') === '1',
   );
   // Forced resolution (null = fit the viewport). Changing it reconnects.
   const [resOverride, setResOverride] = useState<{ w: number; h: number } | null>(null);
@@ -282,7 +282,7 @@ export default function ConnectPage() {
     setPerfMode((p) => {
       const next = !p;
       try {
-        window.localStorage.setItem('chista-rdp-perf', next ? '1' : '0');
+        window.localStorage.setItem('asha-rdp-perf', next ? '1' : '0');
       } catch {
         /* storage unavailable */
       }

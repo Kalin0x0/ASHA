@@ -8,8 +8,8 @@ import type {
   UpdateConnectionProxyDto,
   UpdateEgressGatewayDto,
   UpdateWebFilterDto,
-} from '@chista/contracts';
-import { prisma } from '@chista/db';
+} from '@asha/contracts';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
 /**

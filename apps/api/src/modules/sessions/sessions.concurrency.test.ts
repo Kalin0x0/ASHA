@@ -15,7 +15,7 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 vi.mock('../../common/audit.service', () => ({ AuditService: class {} }));
 vi.mock('../../common/redis.service', () => ({ RedisService: class {} }));
 vi.mock('./scheduler.service', () => ({ SchedulerService: class {} }));

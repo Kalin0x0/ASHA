@@ -25,7 +25,7 @@ export function ComingSoon({
         {/* Icon stack */}
         <div className="relative flex items-end justify-center animate-float">
           <Image
-            src="/chista-logo.svg"
+            src="/asha-logo.svg"
             alt=""
             width={60}
             height={60}

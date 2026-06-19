@@ -5,11 +5,11 @@ import bcrypt from 'bcryptjs';
 // Raw client on purpose: seeding must not be tenant-scoped.
 const prisma = new PrismaClient();
 
-const ADMIN_EMAIL = 'admin@chista.local';
+const ADMIN_EMAIL = 'admin@asha.local';
 const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = process.env.CHISTA_SEED_ADMIN_PASSWORD ?? 'AshaAdmin!2026';
+const ADMIN_PASSWORD = process.env.ASHA_SEED_ADMIN_PASSWORD ?? 'AshaAdmin!2026';
 
-// ── Permission catalog (canonical copy mirrored in @chista/rbac) ─────────────
+// ── Permission catalog (canonical copy mirrored in @asha/rbac) ─────────────
 const PERMISSIONS: Array<{ key: string; category: string; description: string }> = [
   // Sessions
   { key: 'SESSION_VIEW', category: 'Sessions', description: 'View own sessions' },
@@ -123,9 +123,9 @@ async function main() {
 
   console.log('▸ Seeding organisation…');
   const org = await prisma.org.upsert({
-    where: { slug: 'chista' },
+    where: { slug: 'asha' },
     update: {},
-    create: { name: 'Chista', slug: 'chista' },
+    create: { name: 'Asha', slug: 'asha' },
   });
 
   console.log('▸ Seeding default zone…');
@@ -138,7 +138,7 @@ async function main() {
       name: 'default',
       region: 'on-prem',
       isDefault: true,
-      proxyBaseUrl: process.env.CHISTA_PUBLIC_URL ?? 'https://chista.local',
+      proxyBaseUrl: process.env.ASHA_PUBLIC_URL ?? 'https://asha.local',
     },
   });
 
@@ -183,7 +183,7 @@ async function main() {
       orgId: org.id,
       email: ADMIN_EMAIL,
       username: ADMIN_USERNAME,
-      displayName: 'Chista Administrator',
+      displayName: 'Asha Administrator',
       isSystemAdmin: true,
       status: 'ACTIVE',
     },
@@ -287,7 +287,7 @@ async function main() {
       type: 'CONCURRENT',
       seats: 25,
       concurrentSessions: 25,
-      issuedTo: 'Chista Development',
+      issuedTo: 'Asha Development',
       features: { branding: true, recording: true, autoscale: true, sso: true },
     },
   });
@@ -299,7 +299,7 @@ async function main() {
       scope: 'ORG',
       orgId: org.id,
       groupId: '',
-      productName: 'Chista',
+      productName: 'Asha',
       primaryColor: '#1a1a2e',
       accentColor: '#d4af37',
     },
@@ -311,14 +311,14 @@ async function main() {
     create: {
       orgId: org.id,
       noticeTitle: 'Authorized access only',
-      noticeBody: 'This is a private Chista deployment. Activity may be monitored.',
+      noticeBody: 'This is a private Asha deployment. Activity may be monitored.',
     },
   });
 
   for (const [key, value] of Object.entries({
     'session.default_idle_disconnect_sec': 3600,
     'session.default_keepalive_sec': 28800,
-    'branding.product_name': 'Chista',
+    'branding.product_name': 'Asha',
     'security.enforce_2fa': false,
   })) {
     await prisma.setting.upsert({
@@ -334,7 +334,7 @@ async function main() {
   const REGISTRIES: Array<{ id: string; name: string; url: string; type: Prisma.RegistryCreateInput['type'] }> = [
     { id: 'seed-reg-kasm', name: 'Kasm Technologies', url: 'https://registry.kasmweb.com/1.0/', type: 'FIRST_PARTY' },
     { id: 'seed-reg-lsio', name: 'LinuxServer.io', url: 'https://api.linuxserver.io/api/v1/images', type: 'THIRD_PARTY' },
-    { id: 'seed-reg-chista', name: 'Chista Official', url: 'https://registry.chista.io/index.json', type: 'FIRST_PARTY' },
+    { id: 'seed-reg-asha', name: 'Asha Official', url: 'https://registry.asha.io/index.json', type: 'FIRST_PARTY' },
   ];
   for (const r of REGISTRIES) {
     await prisma.registry.upsert({
@@ -369,7 +369,7 @@ async function main() {
     ['seed-reg-lsio', 'jellyfin', 'Jellyfin', 'lscr.io/linuxserver/jellyfin:latest', ['Media'], 1.4, 'Free software media system.'],
     ['seed-reg-lsio', 'qbittorrent', 'qBittorrent', 'lscr.io/linuxserver/qbittorrent:latest', ['Productivity'], 0.4, 'BitTorrent client.'],
     ['seed-reg-lsio', 'nextcloud', 'Nextcloud', 'lscr.io/linuxserver/nextcloud:latest', ['Productivity'], 0.7, 'Self-hosted file sync & share.'],
-    ['seed-reg-chista', 'chista-desktop', 'Chista Desktop', 'chista/desktop:1.0.0', ['Desktops'], 3.0, 'Branded Chista XFCE desktop.'],
+    ['seed-reg-asha', 'asha-desktop', 'Asha Desktop', 'asha/desktop:1.0.0', ['Desktops'], 3.0, 'Branded Asha XFCE desktop.'],
   ];
   for (const [reg, name, friendly, image, cats, gib, desc] of CATALOG) {
     const id = `seed-mk-${name}`;

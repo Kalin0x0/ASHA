@@ -6,7 +6,7 @@
  * locale-specific marker string actually rendered (sidebar nav for admin
  * pages, header for portal, heading for login).
  *
- *   pnpm --filter @chista/web dev   # in another terminal
+ *   pnpm --filter @asha/web dev   # in another terminal
  *   node scripts/verify-locales.mjs [baseUrl]
  */
 const BASE = process.argv[2] ?? 'http://localhost:3000';
@@ -86,7 +86,7 @@ for (const locale of LOCALES) {
     const problems = [];
     try {
       const res = await fetch(BASE + path, {
-        headers: { cookie: `chista-locale=${locale.code}` },
+        headers: { cookie: `asha-locale=${locale.code}` },
         redirect: 'manual',
       });
       if (res.status !== 200) problems.push(`HTTP ${res.status}`);

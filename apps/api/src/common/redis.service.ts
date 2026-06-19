@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import Redis from 'ioredis';
-import type { Env } from '@chista/config';
+import type { Env } from '@asha/config';
 import { ENV } from './env.module';
 
 /**

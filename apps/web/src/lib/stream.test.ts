@@ -34,13 +34,13 @@ describe('resolveStreamUrl', () => {
   });
 
   it('path-routes per session when the base carries a path', () => {
-    vi.stubEnv('NEXT_PUBLIC_DEMO_STREAM_URL', 'https://chista.local/proxy');
-    expect(resolveStreamUrl('abc')).toBe('https://chista.local/proxy/session/abc/');
+    vi.stubEnv('NEXT_PUBLIC_DEMO_STREAM_URL', 'https://asha.local/proxy');
+    expect(resolveStreamUrl('abc')).toBe('https://asha.local/proxy/session/abc/');
   });
 
   it('returns the base unchanged when no kasmId is supplied', () => {
-    vi.stubEnv('NEXT_PUBLIC_DEMO_STREAM_URL', 'https://chista.local/proxy');
-    expect(resolveStreamUrl()).toBe('https://chista.local/proxy');
+    vi.stubEnv('NEXT_PUBLIC_DEMO_STREAM_URL', 'https://asha.local/proxy');
+    expect(resolveStreamUrl()).toBe('https://asha.local/proxy');
   });
 
   it('returns undefined for a malformed URL', () => {
@@ -51,11 +51,11 @@ describe('resolveStreamUrl', () => {
 
 describe('isLikelyUnreachableUrl', () => {
   it('flags a .local stream host when the browser is elsewhere', () => {
-    expect(isLikelyUnreachableUrl('https://chista.local/session/abc/', 'app.example.com')).toBe(true);
+    expect(isLikelyUnreachableUrl('https://asha.local/session/abc/', 'app.example.com')).toBe(true);
   });
 
   it('does not flag when the browser is served from that same .local host', () => {
-    expect(isLikelyUnreachableUrl('https://chista.local/session/abc/', 'chista.local')).toBe(false);
+    expect(isLikelyUnreachableUrl('https://asha.local/session/abc/', 'asha.local')).toBe(false);
   });
 
   it('does not flag a real public host', () => {

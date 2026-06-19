@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
-import type { CreateSessionDto } from '@chista/contracts';
-import { prisma } from '@chista/db';
+import type { CreateSessionDto } from '@asha/contracts';
+import { prisma } from '@asha/db';
 import {
   type DlpPolicy,
   type GpuConfig,
@@ -10,7 +10,7 @@ import {
   type SessionControlCommand,
   type SessionSidecar,
   type StreamProfile,
-} from '@chista/events';
+} from '@asha/events';
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
 import { RedisService } from '../../common/redis.service';
@@ -222,7 +222,7 @@ export class SessionsService {
       const sub = String(cfg.bucket ?? cfg.path ?? cfg.remotePath ?? '');
       const mountPath = resolveTokens({ p: m.mountPath }, tokenCtx).p;
       sidecars.push({
-        image: process.env.CHISTA_RCLONE_IMAGE ?? 'rclone/rclone:latest',
+        image: process.env.ASHA_RCLONE_IMAGE ?? 'rclone/rclone:latest',
         env,
         cmd: ['mount', `REMOTE:${sub}`, mountPath, '--allow-other', '--vfs-cache-mode', 'writes', '--no-modtime'],
         capAdd: ['SYS_ADMIN'],
@@ -337,7 +337,7 @@ export class SessionsService {
       if (workspace.browserIsolationId) {
         // If a Squid sidecar is present, auto-wire its hostname as the forward proxy.
         const squidUrl = workspace.webFilterId
-          ? `http://chista-squid-${session.kasmId}:3128`
+          ? `http://asha-squid-${session.kasmId}:3128`
           : undefined;
         sidecars.neko = await this.render
           .resolveNekoSidecar(workspace.orgId, workspace.browserIsolationId, squidUrl)
@@ -679,7 +679,7 @@ function dlpEnv(dlp: DlpPolicy): Record<string, string> {
   if (deny(dlp.pwa)) env.KASM_PWA = '0';
 
   // Geometric / advanced DLP — honoured by DLP-capable KasmVNC builds
-  // (CHISTA_DLP_ENABLED images, see infra/workstation).
+  // (ASHA_DLP_ENABLED images, see infra/workstation).
   if (dlp.watermark?.text) {
     env.KASM_DLP_WATERMARK_TEXT = dlp.watermark.text;
     if (dlp.watermark.opacity !== undefined) env.KASM_DLP_WATERMARK_OPACITY = String(dlp.watermark.opacity);

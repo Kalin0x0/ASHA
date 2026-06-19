@@ -42,7 +42,7 @@ export const dlpPolicySchema = z.object({
   audioOut: z.boolean().optional(),
   pwa: z.boolean().optional(),
   // Geometric / advanced DLP — honoured by DLP-capable KasmVNC images
-  // (CHISTA_DLP_ENABLED, see infra/workstation). Propagated as KASM_DLP_* env.
+  // (ASHA_DLP_ENABLED, see infra/workstation). Propagated as KASM_DLP_* env.
   watermark: z
     .object({
       text: z.string().max(120).optional(),

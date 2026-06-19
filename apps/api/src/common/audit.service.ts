@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { prisma } from '@chista/db';
-import type { AuditEntry } from '@chista/logger';
+import { prisma } from '@asha/db';
+import type { AuditEntry } from '@asha/logger';
 
 @Injectable()
 export class AuditService {

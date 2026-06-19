@@ -1,4 +1,4 @@
-// Generates the Chista emblem (gold-on-anthracite: bezelled badge + monitor +
+// Generates the Asha emblem (gold-on-anthracite: bezelled badge + monitor +
 // shield + isometric cube, flanked by perspective window-panels) as SVG.
 // No rasterizer is available in CI, so the brand mark is authored as vector.
 // Emits the rounded-badge logo and a full-bleed maskable PWA variant.
@@ -122,7 +122,7 @@ function svg({ maskable }) {
     ? '  <rect width="1200" height="1200" fill="url(#face)"/>'
     : `  <rect x="80" y="80" width="1040" height="1040" rx="236" fill="url(#face)" stroke="url(#goldBezel)" stroke-width="16"/>
   <rect x="118" y="118" width="964" height="964" rx="206" fill="none" stroke="#d4af37" stroke-width="4" opacity="0.45"/>`;
-  const label = maskable ? 'Chista' : 'Chista logo';
+  const label = maskable ? 'Asha' : 'Asha logo';
   return `<svg width="1200" height="1200" viewBox="0 0 1200 1200" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}">${DEFS}
 ${badge}
 ${MARK}
@@ -132,7 +132,7 @@ ${MARK}
 
 mkdirSync(new URL('../docs/brand/', import.meta.url), { recursive: true });
 const logo = svg({ maskable: false });
-writeFileSync(new URL('../apps/web/public/chista-logo.svg', import.meta.url), logo);
+writeFileSync(new URL('../apps/web/public/asha-logo.svg', import.meta.url), logo);
 writeFileSync(new URL('../apps/web/public/icon-maskable.svg', import.meta.url), svg({ maskable: true }));
-writeFileSync(new URL('../docs/brand/chista-logo.svg', import.meta.url), logo);
-console.log('wrote chista-logo.svg, icon-maskable.svg, docs/brand/chista-logo.svg');
+writeFileSync(new URL('../docs/brand/asha-logo.svg', import.meta.url), logo);
+console.log('wrote asha-logo.svg, icon-maskable.svg, docs/brand/asha-logo.svg');

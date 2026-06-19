@@ -21,7 +21,7 @@
   },
   "apiKeys": {
     "title": "کلیدهای API",
-    "description": "توکن‌های دسترسی برای استفادهٔ برنامه‌نویسی از API Chista. هر کلید دارای دامنه‌های دسترسی و انقضای اختیاری است؛ مقدار محرمانه فقط یک بار نمایش داده می‌شود.",
+    "description": "توکن‌های دسترسی برای استفادهٔ برنامه‌نویسی از API Asha. هر کلید دارای دامنه‌های دسترسی و انقضای اختیاری است؛ مقدار محرمانه فقط یک بار نمایش داده می‌شود.",
     "loadError": "بارگذاری کلیدهای API ناموفق بود",
     "liveOnlyNotice": "مدیریت کلیدهای API فقط با بک‌اند زنده در دسترس است. اجرا با",
     "createdToast": "کلید API ایجاد شد",
@@ -35,7 +35,7 @@
     "totalIssued": "مجموع صادرشده",
     "keysHeading": "کلیدها",
     "emptyTitle": "هیچ کلید API صادر نشده است",
-    "emptyDescription": "برای فعال‌سازی دسترسی برنامه‌نویسی به API Chista یک کلید ایجاد کنید.",
+    "emptyDescription": "برای فعال‌سازی دسترسی برنامه‌نویسی به API Asha یک کلید ایجاد کنید.",
     "revoked": "باطل‌شده",
     "createKey": "ایجاد کلید",
     "expiresInDays": "انقضا پس از (روز، اختیاری)",
@@ -44,7 +44,7 @@
   },
   "webhooks": {
     "title": "وب‌هوک‌ها",
-    "description": "کال‌بک‌های رویداد امضاشده با HMAC را برای نشست‌ها، کاربران و ضبط‌ها دریافت کنید. هدر X-Chista-Signature را با مقدار محرمانهٔ خود اعتبارسنجی کنید.",
+    "description": "کال‌بک‌های رویداد امضاشده با HMAC را برای نشست‌ها، کاربران و ضبط‌ها دریافت کنید. هدر X-Asha-Signature را با مقدار محرمانهٔ خود اعتبارسنجی کنید.",
     "loadError": "بارگذاری وب‌هوک‌ها ناموفق بود",
     "liveOnlyNotice": "مدیریت وب‌هوک‌ها فقط با بک‌اند زنده در دسترس است. اجرا با",
     "createdToast": "وب‌هوک ایجاد شد",
@@ -68,7 +68,7 @@
   },
   "apiDocs": {
     "title": "مستندات API",
-    "description": "Chista یک REST API کاملاً مستند به همراه کاوشگر تعاملی OpenAPI (Swagger) ارائه می‌کند.",
+    "description": "Asha یک REST API کاملاً مستند به همراه کاوشگر تعاملی OpenAPI (Swagger) ارائه می‌کند.",
     "openSwaggerUi": "باز کردن Swagger UI",
     "interactiveExplorer": "کاوشگر تعاملی",
     "interactiveExplorerDescription": "هر اندپوینت را با احراز هویت زنده در Swagger UI امتحان کنید؛ ارائه‌شده توسط API در مسیر",
@@ -79,7 +79,7 @@
     "authDescriptionAfterCode": "یا با کلید API صادرشده در بخش «توسعه‌دهنده ← کلیدهای API» احراز هویت کنید.",
     "manageApiKeys": "مدیریت کلیدهای API",
     "embeddedExplorer": "کاوشگر تعبیه‌شده",
-    "iframeTitle": "مستندات API Chista",
+    "iframeTitle": "مستندات API Asha",
     "backendNotConnectedTitle": "بک‌اند متصل نیست",
     "backendNotConnectedDescription": "Swagger UI تعبیه‌شده از API زنده بارگذاری می‌شود. برای کاوش اندپوینت‌ها در همین‌جا، برنامه را با NEXT_PUBLIC_API_MODE=live اجرا کنید.",
     "openSwaggerUiNewTab": "باز کردن Swagger UI در زبانهٔ جدید"

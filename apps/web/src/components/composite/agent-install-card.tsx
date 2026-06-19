@@ -19,12 +19,12 @@ import { isLive } from '@/lib/api/mode';
 
 const FILES = [
   { file: 'install.ps1', label: 'install.ps1' },
-  { file: 'chista-agent.ps1', label: 'chista-agent.ps1' },
+  { file: 'asha-agent.ps1', label: 'asha-agent.ps1' },
   { file: 'remote-install.ps1', label: 'remote-install.ps1' },
 ];
 
 function useOrigin() {
-  return typeof window !== 'undefined' ? window.location.origin : 'https://chista.example.com';
+  return typeof window !== 'undefined' ? window.location.origin : 'https://asha.example.com';
 }
 
 async function copy(text: string) {
@@ -45,7 +45,7 @@ async function copy(text: string) {
 export function AgentInstallCard() {
   const origin = useOrigin();
   const [deployOpen, setDeployOpen] = useState(false);
-  const localCmd = `powershell -ExecutionPolicy Bypass -File install.ps1 -ChistaUrl "${origin}" -Token "<REGISTRATION_TOKEN>" -EnableRdp`;
+  const localCmd = `powershell -ExecutionPolicy Bypass -File install.ps1 -AshaUrl "${origin}" -Token "<REGISTRATION_TOKEN>" -EnableRdp`;
 
   return (
     <Card elevation={1} className="p-4">
@@ -137,7 +137,7 @@ function DeployDialog({
       const rdp = enableRdp ? ' -EnableRdp' : '';
       setCommand(
         `$cred = Get-Credential\n` +
-          `./remote-install.ps1 -ComputerName ${targets.join(',')} -ChistaUrl "${origin}" -Token "${token}" -Credential $cred${rdp}`,
+          `./remote-install.ps1 -ComputerName ${targets.join(',')} -AshaUrl "${origin}" -Token "${token}" -Credential $cred${rdp}`,
       );
       if (!isLive) toast.message('Demo mode — token is a placeholder. Connect the live API to mint a real one.');
     } catch (err) {

@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: { user: { findFirst: vi.fn() } },
 }));
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
-vi.mock('@chista/crypto', () => ({ hashToken: (t: string) => `hash:${t}`, randomToken: () => 'r' }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/crypto', () => ({ hashToken: (t: string) => `hash:${t}`, randomToken: () => 'r' }));
 
 import { AuthService } from './auth.service';
 

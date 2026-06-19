@@ -26,13 +26,13 @@ importers:
 
   apps/agent:
     dependencies:
-      '@chista/events':
+      '@asha/events':
         specifier: workspace:*
         version: link:../../packages/events
-      '@chista/logger':
+      '@asha/logger':
         specifier: workspace:*
         version: link:../../packages/logger
-      '@chista/proxy-labels':
+      '@asha/proxy-labels':
         specifier: workspace:*
         version: link:../../packages/proxy-labels
       '@kubernetes/client-node':
@@ -63,28 +63,28 @@ importers:
 
   apps/api:
     dependencies:
-      '@chista/config':
+      '@asha/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@chista/contracts':
+      '@asha/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@chista/crypto':
+      '@asha/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
-      '@chista/db':
+      '@asha/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@chista/events':
+      '@asha/events':
         specifier: workspace:*
         version: link:../../packages/events
-      '@chista/logger':
+      '@asha/logger':
         specifier: workspace:*
         version: link:../../packages/logger
-      '@chista/proxy-labels':
+      '@asha/proxy-labels':
         specifier: workspace:*
         version: link:../../packages/proxy-labels
-      '@chista/rbac':
+      '@asha/rbac':
         specifier: workspace:*
         version: link:../../packages/rbac
       '@nestjs/common':
@@ -184,13 +184,13 @@ importers:
 
   apps/connection-proxy:
     dependencies:
-      '@chista/events':
+      '@asha/events':
         specifier: workspace:*
         version: link:../../packages/events
-      '@chista/logger':
+      '@asha/logger':
         specifier: workspace:*
         version: link:../../packages/logger
-      '@chista/proxy-labels':
+      '@asha/proxy-labels':
         specifier: workspace:*
         version: link:../../packages/proxy-labels
       ioredis:
@@ -230,7 +230,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@chista/rbac':
+      '@asha/rbac':
         specifier: workspace:*
         version: link:../../packages/rbac
       '@fontsource-variable/fraunces':

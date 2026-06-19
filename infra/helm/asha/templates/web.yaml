@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: chista-web
+  name: asha-web
   labels:
-    app.kubernetes.io/name: chista-web
-    {{- include "chista.labels" . | nindent 4 }}
+    app.kubernetes.io/name: asha-web
+    {{- include "asha.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.web.replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: chista-web
+      app.kubernetes.io/name: asha-web
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: chista-web
+        app.kubernetes.io/name: asha-web
     spec:
       containers:
         - name: web
-          image: {{ printf "%s/chista-web:%s" .Values.image.registry .Values.image.tag | quote }}
+          image: {{ printf "%s/asha-web:%s" .Values.image.registry .Values.image.tag | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.web.port }}
@@ -28,12 +28,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: chista-web
+  name: asha-web
   labels:
-    app.kubernetes.io/name: chista-web
+    app.kubernetes.io/name: asha-web
 spec:
   selector:
-    app.kubernetes.io/name: chista-web
+    app.kubernetes.io/name: asha-web
   ports:
     - port: {{ .Values.web.port }}
       targetPort: {{ .Values.web.port }}

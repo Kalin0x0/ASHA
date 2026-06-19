@@ -43,7 +43,7 @@ export function Topbar() {
       {/* Breadcrumb */}
       <nav className="hidden items-center gap-1.5 text-[13px] sm:flex" aria-label="Breadcrumb">
         <span className="text-muted-foreground/70 font-medium">
-          {match ? tNav(`groups.${match.group.key}`) : 'Chista'}
+          {match ? tNav(`groups.${match.group.key}`) : 'Asha'}
         </span>
         {match && (
           <>
@@ -122,7 +122,7 @@ export function Topbar() {
         <DropdownMenuContent align="end" className="w-56">
           <div className="px-2.5 py-2.5">
             <p className="text-sm font-semibold leading-tight">Administrator</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Chista Admin</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Asha Admin</p>
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => router.push('/settings/general')}>

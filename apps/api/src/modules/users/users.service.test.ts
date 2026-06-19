@@ -7,13 +7,13 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
-vi.mock('@chista/crypto', () => ({ hashPassword: vi.fn(async () => 'hashed-secret') }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/crypto', () => ({ hashPassword: vi.fn(async () => 'hashed-secret') }));
 
 import { UsersService } from './users.service';
 
-const admin = { sub: 'admin1', orgId: 'org1', email: 'admin@chista.local', isSystemAdmin: true } as never;
-const nonAdmin = { sub: 'u2', orgId: 'org1', email: 'u2@chista.local', isSystemAdmin: false } as never;
+const admin = { sub: 'admin1', orgId: 'org1', email: 'admin@asha.local', isSystemAdmin: true } as never;
+const nonAdmin = { sub: 'u2', orgId: 'org1', email: 'u2@asha.local', isSystemAdmin: false } as never;
 
 describe('UsersService.create', () => {
   let svc: UsersService;
@@ -30,11 +30,11 @@ describe('UsersService.create', () => {
       ...args.data,
     }));
 
-    await svc.create(admin, { email: 'New.User@Chista.LOCAL', password: 'supersecret' });
+    await svc.create(admin, { email: 'New.User@Asha.LOCAL', password: 'supersecret' });
 
     const arg = prismaMock.user.create.mock.calls[0]![0] as { data: Record<string, unknown> };
-    expect(arg.data.email).toBe('new.user@chista.local');
-    expect(arg.data.username).toBe('new.user@chista.local');
+    expect(arg.data.email).toBe('new.user@asha.local');
+    expect(arg.data.username).toBe('new.user@asha.local');
     expect(arg.data.status).toBe('ACTIVE');
     // password is stored as a hashed credential, never in plaintext
     expect(JSON.stringify(arg.data)).not.toContain('supersecret');
@@ -43,13 +43,13 @@ describe('UsersService.create', () => {
 
   it('rejects a duplicate email/username with a conflict', async () => {
     prismaMock.user.findFirst.mockResolvedValue({ id: 'existing' });
-    await expect(svc.create(admin, { email: 'dupe@chista.local' })).rejects.toThrow(/already exists/i);
+    await expect(svc.create(admin, { email: 'dupe@asha.local' })).rejects.toThrow(/already exists/i);
     expect(prismaMock.user.create).not.toHaveBeenCalled();
   });
 
   it('forbids a non-admin from minting a system admin', async () => {
     await expect(
-      svc.create(nonAdmin, { email: 'x@chista.local', isSystemAdmin: true }),
+      svc.create(nonAdmin, { email: 'x@asha.local', isSystemAdmin: true }),
     ).rejects.toThrow(/system.admin/i);
     expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
   });

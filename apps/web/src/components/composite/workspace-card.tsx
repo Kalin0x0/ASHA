@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 /**
  * Image-forward workspace tile — the launcher's centrepiece. Mirrors Kasm's
  * launch grid (a colour-coded app tile up top, metadata below, launch-on-hover)
- * while staying in the Chista anthracite + gold system. Click anywhere on an
+ * while staying in the Asha anthracite + gold system. Click anywhere on an
  * enabled card to launch; the star and any drag handle stop propagation.
  *
  * When a previous-session thumbnail exists for this workspace (stored by the

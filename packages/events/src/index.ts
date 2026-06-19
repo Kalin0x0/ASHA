@@ -6,21 +6,21 @@
 
 export const RedisChannels = {
   /** Manager → agents in a zone: provision a session. */
-  provision: (zone: string) => `chista:zone:${zone}:provision`,
+  provision: (zone: string) => `asha:zone:${zone}:provision`,
   /** Manager → agents in a zone: destroy a session. */
-  destroy: (zone: string) => `chista:zone:${zone}:destroy`,
+  destroy: (zone: string) => `asha:zone:${zone}:destroy`,
   /** Manager → agents in a zone: pause/resume/control an existing session. */
-  control: (zone: string) => `chista:zone:${zone}:control`,
+  control: (zone: string) => `asha:zone:${zone}:control`,
   /** Manager → agents in a zone: image lifecycle (remove/pull) — host disk hygiene. */
-  image: (zone: string) => `chista:zone:${zone}:image`,
+  image: (zone: string) => `asha:zone:${zone}:image`,
   /** Agent → manager: lifecycle/status updates. */
-  agentStatus: 'chista:agent:status',
+  agentStatus: 'asha:agent:status',
   /** Agent → manager: batched resource stats. */
-  agentStats: 'chista:agent:stats',
+  agentStats: 'asha:agent:stats',
   /** Manager fan-out to an org's connected dashboards. */
-  orgSessions: (orgId: string) => `chista:org:${orgId}:sessions`,
+  orgSessions: (orgId: string) => `asha:org:${orgId}:sessions`,
   /** Session-share chat/control fan-out. */
-  share: (shareId: string) => `chista:share:${shareId}`,
+  share: (shareId: string) => `asha:share:${shareId}`,
 } as const;
 
 /**

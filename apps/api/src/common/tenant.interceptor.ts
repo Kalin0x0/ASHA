@@ -1,6 +1,6 @@
 import { type CallHandler, type ExecutionContext, Injectable, type NestInterceptor } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { runWithTenant } from '@chista/db';
+import { runWithTenant } from '@asha/db';
 
 /**
  * Runs the request handler inside an AsyncLocalStorage tenant context so the

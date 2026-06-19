@@ -1,4 +1,4 @@
-import { seal, unseal } from '@chista/crypto';
+import { seal, unseal } from '@asha/crypto';
 
 /**
  * Provider configs (VM/DNS/auth) carry secrets — API tokens, passwords, private

@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { Client } from 'ldapts';
-import { prisma } from '@chista/db';
-import type { Env } from '@chista/config';
+import { prisma } from '@asha/db';
+import type { Env } from '@asha/config';
 import { unsealConfig } from '../../common/config-seal';
 import { ENV } from '../../common/env.module';
 import type { FederatedProfile } from './federation.service';
@@ -117,7 +117,7 @@ export class LdapService {
 
   /**
    * Bulk directory sync (C3) — service-bind, search all users matching the sync
-   * filter, and provision/update the matching Chista users. `dryRun` reports what
+   * filter, and provision/update the matching Asha users. `dryRun` reports what
    * would happen without writing. Just-in-time login is still handled by
    * authenticate(); this is the up-front provisioning path.
    */

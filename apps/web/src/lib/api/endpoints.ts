@@ -461,7 +461,7 @@ export const testLdapProvider = (id: string, sampleUsername?: string) =>
     body: { sampleUsername },
   });
 
-// SSO group mappings — map an IdP attribute/value onto a Chista group.
+// SSO group mappings — map an IdP attribute/value onto a Asha group.
 export interface ApiSsoMapping {
   id: string;
   authConfigId: string;

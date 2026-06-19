@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { CreatePoolDto, UpdatePoolDto, UpsertAutoscaleDto } from '@chista/contracts';
-import { prisma } from '@chista/db';
+import type { CreatePoolDto, UpdatePoolDto, UpsertAutoscaleDto } from '@asha/contracts';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
 /**

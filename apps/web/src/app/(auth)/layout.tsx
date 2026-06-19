@@ -1,5 +1,5 @@
 import { AuroraBackground, GrainOverlay } from '@/components/decor/aurora-background';
-import { ChistaMark } from '@/components/brand/logo';
+import { AshaMark } from '@/components/brand/logo';
 import { LanguageSwitcher } from '@/components/composite/language-switcher';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -18,7 +18,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="pointer-events-none absolute right-[10%] bottom-[25%] size-80 rounded-full bg-info-500/6 blur-[120px] animate-float delay-300" aria-hidden />
 
       {/* Brand watermark */}
-      <ChistaMark className="pointer-events-none absolute bottom-8 right-8 size-36 opacity-[0.035]" />
+      <AshaMark className="pointer-events-none absolute bottom-8 right-8 size-36 opacity-[0.035]" />
 
       <div className="relative z-10 w-full max-w-[420px]">{children}</div>
     </div>

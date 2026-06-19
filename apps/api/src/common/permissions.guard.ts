@@ -5,7 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { hasPermission } from '@chista/rbac';
+import { hasPermission } from '@asha/rbac';
 import { AGENT_ONLY, IS_PUBLIC, PERMISSIONS_KEY, type PermissionRequirement } from './decorators';
 import { RbacService } from './rbac.service';
 

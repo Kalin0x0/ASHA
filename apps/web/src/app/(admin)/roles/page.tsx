@@ -6,7 +6,7 @@ import {
   PERMISSION_KEYS,
   SUPER_ADMIN,
   SYSTEM_ROLE_MATRIX,
-} from '@chista/rbac';
+} from '@asha/rbac';
 import { Check, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Fragment } from 'react';

@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { CreateCastingDto, UpdateCastingDto } from '@chista/contracts';
-import { prisma } from '@chista/db';
+import type { CreateCastingDto, UpdateCastingDto } from '@asha/contracts';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
 /**

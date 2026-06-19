@@ -10,7 +10,7 @@ import {
   sessionStatsSchema,
   type SessionStatusDto,
   sessionStatusSchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { AgentOnly, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { z } from 'zod';

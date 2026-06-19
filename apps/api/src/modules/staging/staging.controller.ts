@@ -5,7 +5,7 @@ import {
   createStagingSchema,
   type UpdateStagingDto,
   updateStagingSchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { StagingService } from './staging.service';

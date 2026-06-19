@@ -14,20 +14,20 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('common.meta');
   return {
     title: {
-      default: 'Chista — Container Streaming Platform',
-      template: '%s · Chista',
+      default: 'Asha — Container Streaming Platform',
+      template: '%s · Asha',
     },
     description: t('description'),
-    applicationName: 'Chista',
+    applicationName: 'Asha',
     appleWebApp: {
       capable: true,
-      title: 'Chista',
+      title: 'Asha',
       statusBarStyle: 'black-translucent',
     },
     icons: {
-      icon: [{ url: '/chista-logo.svg', type: 'image/svg+xml' }],
-      apple: '/chista-logo.svg',
-      shortcut: '/chista-logo.svg',
+      icon: [{ url: '/asha-logo.svg', type: 'image/svg+xml' }],
+      apple: '/asha-logo.svg',
+      shortcut: '/asha-logo.svg',
     },
   };
 }

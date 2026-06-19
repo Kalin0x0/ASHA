@@ -7,8 +7,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { hashToken, safeEqual } from '@chista/crypto';
-import { prisma, runUnscoped } from '@chista/db';
+import { hashToken, safeEqual } from '@asha/crypto';
+import { prisma, runUnscoped } from '@asha/db';
 
 export const SCOPES_KEY = 'apiScopes';
 /** Require the API key to carry these scopes (a key with the '*' scope passes any check). */

@@ -3,7 +3,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import type { WsServerEvent } from '@chista/events';
+import type { WsServerEvent } from '@asha/events';
 import type { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({ namespace: '/ws', cors: { origin: '*' } })

@@ -1,22 +1,22 @@
 {{- if .Values.agent.enabled }}
-# ── Chista Agent — ServiceAccount + RBAC ─────────────────────────────────────
-# When CHISTA_DRIVER=kubernetes the agent creates/deletes Pods, Services, and
+# ── Asha Agent — ServiceAccount + RBAC ─────────────────────────────────────
+# When ASHA_DRIVER=kubernetes the agent creates/deletes Pods, Services, and
 # Ingresses in the session namespace. The Role here grants exactly those verbs
 # and nothing more (principle of least privilege).
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: chista-agent
+  name: asha-agent
   labels:
-    {{- include "chista.labels" . | nindent 4 }}
+    {{- include "asha.labels" . | nindent 4 }}
 ---
 # ClusterRole: lets the agent read node/zone info (used for heartbeat reporting)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: chista-agent-node-reader
+  name: asha-agent-node-reader
   labels:
-    {{- include "chista.labels" . | nindent 4 }}
+    {{- include "asha.labels" . | nindent 4 }}
 rules:
   - apiGroups: [""]
     resources: [nodes]
@@ -25,26 +25,26 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: chista-agent-node-reader
+  name: asha-agent-node-reader
   labels:
-    {{- include "chista.labels" . | nindent 4 }}
+    {{- include "asha.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: chista-agent-node-reader
+  name: asha-agent-node-reader
 subjects:
   - kind: ServiceAccount
-    name: chista-agent
+    name: asha-agent
     namespace: {{ .Release.Namespace }}
 ---
 # Namespaced Role: full control over session Pods/Services/Ingresses
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: chista-agent-session-manager
-  namespace: {{ .Values.agent.k8sSessionNs | default "chista-sessions" }}
+  name: asha-agent-session-manager
+  namespace: {{ .Values.agent.k8sSessionNs | default "asha-sessions" }}
   labels:
-    {{- include "chista.labels" . | nindent 4 }}
+    {{- include "asha.labels" . | nindent 4 }}
 rules:
   - apiGroups: [""]
     resources: [pods, services]
@@ -63,16 +63,16 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: chista-agent-session-manager
-  namespace: {{ .Values.agent.k8sSessionNs | default "chista-sessions" }}
+  name: asha-agent-session-manager
+  namespace: {{ .Values.agent.k8sSessionNs | default "asha-sessions" }}
   labels:
-    {{- include "chista.labels" . | nindent 4 }}
+    {{- include "asha.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: chista-agent-session-manager
+  name: asha-agent-session-manager
 subjects:
   - kind: ServiceAccount
-    name: chista-agent
+    name: asha-agent
     namespace: {{ .Release.Namespace }}
 {{- end }}

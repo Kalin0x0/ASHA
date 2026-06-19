@@ -94,7 +94,7 @@
     "viewLiveSessions": "View live sessions",
     "toggleTheme": "Toggle theme",
     "toSelect": "to select",
-    "brand": "Chista Command",
+    "brand": "Asha Command",
     "launchError": "Could not start the session"
   },
   "comingSoon": {
@@ -103,7 +103,7 @@
   },
   "notFound": {
     "title": "Page not found",
-    "description": "This route doesn't exist in your Chista deployment.",
+    "description": "This route doesn't exist in your Asha deployment.",
     "backToDashboard": "Back to dashboard"
   }
 }

@@ -3,16 +3,16 @@ import type {
   CreateAuthConfigDto,
   CreateSsoMappingDto,
   UpdateAuthConfigDto,
-} from '@chista/contracts';
-import type { Env } from '@chista/config';
-import { prisma } from '@chista/db';
+} from '@asha/contracts';
+import type { Env } from '@asha/config';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 import { mergeSealedConfig, redactConfig, sealConfig, unsealConfig } from '../../common/config-seal';
 import { ENV } from '../../common/env.module';
 
 /**
  * Identity federation: manage external auth providers (OIDC / SAML / LDAP) and
- * the group mappings that map IdP attributes onto Chista groups.
+ * the group mappings that map IdP attributes onto Asha groups.
  *
  * Secrets in `config` (clientSecret, bindPassword, idpCert) are sealed with
  * AES-256-GCM into `secretRef`; `config` holds a redacted copy for display.

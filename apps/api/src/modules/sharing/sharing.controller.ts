@@ -7,7 +7,7 @@ import {
   joinShareSchema,
   type PostChatMessageDto,
   postChatMessageSchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { type AuthUser, CurrentUser, Public, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { SharingService } from './sharing.service';

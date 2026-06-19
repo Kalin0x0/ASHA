@@ -184,7 +184,7 @@ export default function WebhooksPage() {
           </div>
           <div>
             <Label>{t('webhooks.payloadUrl')}</Label>
-            <Input placeholder="https://hooks.example.com/chista" value={url} onChange={(e) => setUrl(e.target.value)} />
+            <Input placeholder="https://hooks.example.com/asha" value={url} onChange={(e) => setUrl(e.target.value)} />
           </div>
           <div className="sm:col-span-2">
             <Label>{t('webhooks.signingSecret')}</Label>

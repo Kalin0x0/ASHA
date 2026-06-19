@@ -1,4 +1,4 @@
-import type { SessionStatSample } from '@chista/events';
+import type { SessionStatSample } from '@asha/events';
 import { agentEnv } from './env.js';
 
 const base = `${agentEnv.managerUrl.replace(/\/$/, '')}/api/v1`;

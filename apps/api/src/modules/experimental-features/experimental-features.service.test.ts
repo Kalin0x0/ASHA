@@ -8,7 +8,7 @@ const { prismaMock } = vi.hoisted(() => ({
     orgFeatureFlag: { upsert: vi.fn() },
   },
 }));
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 import { ExperimentalFeaturesService } from './experimental-features.service';
 

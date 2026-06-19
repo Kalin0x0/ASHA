@@ -178,7 +178,7 @@ class MockStore {
     const session: SessionRow = {
       id: `sess-${Math.floor(Math.random() * 1e6)}`,
       kasmId: Array.from({ length: 12 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
-      user: { id: 'user-1', name: 'Shahin Naiemi', email: 'shahin.naiemi@chista.local' },
+      user: { id: 'user-1', name: 'Shahin Naiemi', email: 'shahin.naiemi@asha.local' },
       workspaceName: ws.friendlyName,
       zone: agent.zone,
       agent: agent.hostname,

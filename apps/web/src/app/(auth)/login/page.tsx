@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { ChistaMark } from '@/components/brand/logo';
+import { AshaMark } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -78,7 +78,7 @@ export default function LoginPage() {
         <div className="relative">
           <div className="absolute -inset-6 rounded-full bg-gold-500/10 blur-3xl animate-float" />
           <div className="relative flex size-24 items-center justify-center">
-            <ChistaMark className="size-24 rounded-3xl" />
+            <AshaMark className="size-24 rounded-3xl" />
           </div>
         </div>
         <div className="space-y-1">

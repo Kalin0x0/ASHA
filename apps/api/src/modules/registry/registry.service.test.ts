@@ -12,7 +12,7 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 import { normalizeIndex, RegistryService } from './registry.service';
 
@@ -256,7 +256,7 @@ describe('RegistryService — digest pinning + pull policy (A3)', () => {
     expect(prismaMock.image.delete).toHaveBeenCalledWith({ where: { id: 'img1' } });
     // Host disk reclaimed: a REMOVE command is published to the zone's agent.
     expect(redis.publish).toHaveBeenCalledWith(
-      'chista:zone:default:image',
+      'asha:zone:default:image',
       expect.objectContaining({ action: 'REMOVE', dockerImage: 'x:1' }),
     );
   });
@@ -300,7 +300,7 @@ describe('RegistryService — digest pinning + pull policy (A3)', () => {
 
     expect(await svc.reinstallImage('org1', 'u1', 'img1')).toEqual({ ok: true, imageId: 'img1', dockerImage: 'x:1' });
     expect(redis.publish).toHaveBeenCalledWith(
-      'chista:zone:default:image',
+      'asha:zone:default:image',
       expect.objectContaining({ action: 'PULL', dockerImage: 'x:1' }),
     );
   });

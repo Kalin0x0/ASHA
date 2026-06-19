@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { CreateRemoteAppDto } from '@chista/contracts';
-import { prisma } from '@chista/db';
+import type { CreateRemoteAppDto } from '@asha/contracts';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
 /**

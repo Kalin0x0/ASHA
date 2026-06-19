@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import type { CreateZoneDto, UpdateZoneDto } from '@chista/contracts';
-import { prisma } from '@chista/db';
+import type { CreateZoneDto, UpdateZoneDto } from '@asha/contracts';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
 /**

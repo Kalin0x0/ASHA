@@ -29,7 +29,7 @@ const CONFIG_FIELDS: Partial<Record<VMProviderKind, ConfigField[]>> = {
   PROXMOX: [
     { key: 'apiUrl', placeholder: 'https://pve.example.com:8006' },
     { key: 'node', placeholder: 'pve' },
-    { key: 'tokenId', placeholder: 'root@pam!chista' },
+    { key: 'tokenId', placeholder: 'root@pam!asha' },
     { key: 'tokenSecret', secret: true },
     { key: 'template', placeholder: '9000' },
   ],

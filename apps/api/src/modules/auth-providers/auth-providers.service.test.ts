@@ -9,8 +9,8 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
-vi.mock('@chista/crypto', () => ({
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/crypto', () => ({
   seal: (t: string) => `sealed:${t}`,
   unseal: (t: string) => t.replace(/^sealed:/, ''),
   hashToken: (t: string) => `hashed:${t}`,

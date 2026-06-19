@@ -45,8 +45,8 @@ export const CHANGELOG: Release[] = [
       {
         type: 'changed',
         text: {
-          en: 'New Chista emblem — a gold-on-anthracite badge with a monitor, a shield + container cube and city window-panels. It now appears across the app (sidebar, login, browser tab / favicon and the installed-app icon) and as the README cover. Authored as a crisp vector, so it stays sharp at every size.',
-          de: 'Neues Chista-Emblem — ein Gold-auf-Anthrazit-Badge mit Monitor, Schild + Container-Würfel und Fenster-Panels. Es erscheint jetzt überall in der App (Seitenleiste, Login, Browser-Tab / Favicon und Symbol der installierten App) sowie als README-Titelbild. Als sauberer Vektor umgesetzt, bleibt es in jeder Größe scharf.',
+          en: 'New Asha emblem — a gold-on-anthracite badge with a monitor, a shield + container cube and city window-panels. It now appears across the app (sidebar, login, browser tab / favicon and the installed-app icon) and as the README cover. Authored as a crisp vector, so it stays sharp at every size.',
+          de: 'Neues Asha-Emblem — ein Gold-auf-Anthrazit-Badge mit Monitor, Schild + Container-Würfel und Fenster-Panels. Es erscheint jetzt überall in der App (Seitenleiste, Login, Browser-Tab / Favicon und Symbol der installierten App) sowie als README-Titelbild. Als sauberer Vektor umgesetzt, bleibt es in jeder Größe scharf.',
         },
       },
     ],
@@ -115,8 +115,8 @@ export const CHANGELOG: Release[] = [
       {
         type: 'added',
         text: {
-          en: 'Reachability for Windows hosts behind NAT/firewall: run the agent with -Tunnel and it joins a Chista WireGuard network over an OUTBOUND connection (no port-forwarding). Chista issues the tunnel config + IP and repoints the server at it, so sessions reach the desktop over the tunnel. Requires a WireGuard server (env-gated).',
-          de: 'Erreichbarkeit für Windows-Hosts hinter NAT/Firewall: Der Agent mit -Tunnel tritt über eine AUSGEHENDE Verbindung einem Chista-WireGuard-Netz bei (keine Portweiterleitung). Chista vergibt Tunnel-Konfiguration + IP und leitet den Server darauf um, sodass Sitzungen den Desktop über den Tunnel erreichen. Erfordert einen WireGuard-Server (per Env aktiviert).',
+          en: 'Reachability for Windows hosts behind NAT/firewall: run the agent with -Tunnel and it joins a Asha WireGuard network over an OUTBOUND connection (no port-forwarding). Asha issues the tunnel config + IP and repoints the server at it, so sessions reach the desktop over the tunnel. Requires a WireGuard server (env-gated).',
+          de: 'Erreichbarkeit für Windows-Hosts hinter NAT/Firewall: Der Agent mit -Tunnel tritt über eine AUSGEHENDE Verbindung einem Asha-WireGuard-Netz bei (keine Portweiterleitung). Asha vergibt Tunnel-Konfiguration + IP und leitet den Server darauf um, sodass Sitzungen den Desktop über den Tunnel erreichen. Erfordert einen WireGuard-Server (per Env aktiviert).',
         },
       },
     ],
@@ -129,8 +129,8 @@ export const CHANGELOG: Release[] = [
       {
         type: 'added',
         text: {
-          en: 'A "Deploy to hosts by IP" dialog on Infrastructure → Servers: list target IPs, and Chista mints a registration token and builds the ready-to-run WinRM remote-deploy command — so you install the agent on many Windows hosts from the panel without RDP-ing into each.',
-          de: 'Ein Dialog „Per IP auf Hosts verteilen" unter Infrastruktur → Server: Ziel-IPs auflisten, und Chista erzeugt ein Registrierungs-Token und baut den fertigen WinRM-Remote-Deploy-Befehl — so installierst du den Agenten auf vielen Windows-Hosts aus dem Panel, ohne dich per RDP auf jedem anzumelden.',
+          en: 'A "Deploy to hosts by IP" dialog on Infrastructure → Servers: list target IPs, and Asha mints a registration token and builds the ready-to-run WinRM remote-deploy command — so you install the agent on many Windows hosts from the panel without RDP-ing into each.',
+          de: 'Ein Dialog „Per IP auf Hosts verteilen" unter Infrastruktur → Server: Ziel-IPs auflisten, und Asha erzeugt ein Registrierungs-Token und baut den fertigen WinRM-Remote-Deploy-Befehl — so installierst du den Agenten auf vielen Windows-Hosts aus dem Panel, ohne dich per RDP auf jedem anzumelden.',
         },
       },
     ],
@@ -171,8 +171,8 @@ export const CHANGELOG: Release[] = [
       {
         type: 'added',
         text: {
-          en: 'A lightweight Windows agent you install on a desktop/server: it auto-registers the host with Chista and heartbeats so it shows Online/available (and flips Offline when it goes away). Optionally enables Remote Desktop. The Servers page shows a ready-made install command.',
-          de: 'Ein schlanker Windows-Agent zum Installieren auf einem Desktop/Server: er registriert den Host automatisch bei Chista und sendet Heartbeats, sodass er Online/verfügbar erscheint (und Offline geht, wenn er verschwindet). Aktiviert optional Remote Desktop. Die Server-Seite zeigt einen fertigen Installationsbefehl.',
+          en: 'A lightweight Windows agent you install on a desktop/server: it auto-registers the host with Asha and heartbeats so it shows Online/available (and flips Offline when it goes away). Optionally enables Remote Desktop. The Servers page shows a ready-made install command.',
+          de: 'Ein schlanker Windows-Agent zum Installieren auf einem Desktop/Server: er registriert den Host automatisch bei Asha und sendet Heartbeats, sodass er Online/verfügbar erscheint (und Offline geht, wenn er verschwindet). Aktiviert optional Remote Desktop. Die Server-Seite zeigt einen fertigen Installationsbefehl.',
         },
       },
     ],
@@ -276,8 +276,8 @@ export const CHANGELOG: Release[] = [
       {
         type: 'fixed',
         text: {
-          en: 'The Image Registry now ships with default sources (Kasm, LinuxServer.io, Chista) and a starter catalog, so it is no longer empty on a fresh deployment.',
-          de: 'Die Image-Registry wird jetzt mit Standardquellen (Kasm, LinuxServer.io, Chista) und einem Startkatalog ausgeliefert und ist bei einer frischen Installation nicht mehr leer.',
+          en: 'The Image Registry now ships with default sources (Kasm, LinuxServer.io, Asha) and a starter catalog, so it is no longer empty on a fresh deployment.',
+          de: 'Die Image-Registry wird jetzt mit Standardquellen (Kasm, LinuxServer.io, Asha) und einem Startkatalog ausgeliefert und ist bei einer frischen Installation nicht mehr leer.',
         },
       },
     ],
@@ -360,15 +360,15 @@ export const CHANGELOG: Release[] = [
       {
         type: 'added',
         text: {
-          en: 'Install Chista as a desktop app — an "Install app" button appears in supported browsers, and it launches in its own window.',
-          de: 'Chista als Desktop-App installieren — in unterstützten Browsern erscheint eine Schaltfläche „App installieren", und Chista startet in einem eigenen Fenster.',
+          en: 'Install Asha as a desktop app — an "Install app" button appears in supported browsers, and it launches in its own window.',
+          de: 'Asha als Desktop-App installieren — in unterstützten Browsern erscheint eine Schaltfläche „App installieren", und Asha startet in einem eigenen Fenster.',
         },
       },
       {
         type: 'added',
         text: {
-          en: 'Offline support: the app shell is cached so Chista keeps loading without a connection, with an offline indicator and a friendly offline page.',
-          de: 'Offline-Unterstützung: die App-Hülle wird zwischengespeichert, sodass Chista auch ohne Verbindung lädt — mit Offline-Anzeige und einer freundlichen Offline-Seite.',
+          en: 'Offline support: the app shell is cached so Asha keeps loading without a connection, with an offline indicator and a friendly offline page.',
+          de: 'Offline-Unterstützung: die App-Hülle wird zwischengespeichert, sodass Asha auch ohne Verbindung lädt — mit Offline-Anzeige und einer freundlichen Offline-Seite.',
         },
       },
       {

@@ -6,7 +6,7 @@
  * client needs to be bundled.
  *
  * In `live` mode the API's `GET /sessions/:id/connection` returns the real,
- * per-session URL (built by `@chista/proxy-labels` and routed through Traefik).
+ * per-session URL (built by `@asha/proxy-labels` and routed through Traefik).
  * For local development against the mock store, point a single running KasmVNC
  * container at the viewer:
  *

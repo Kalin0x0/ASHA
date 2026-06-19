@@ -7,7 +7,7 @@ import {
   installRegistryEntrySchema,
   type UpdateRegistryDto,
   updateRegistrySchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { z } from 'zod';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';

@@ -125,7 +125,7 @@ export default function VolumeMappingsPage() {
           </div>
           <div>
             <Label>{t('volumes.form.hostPath')}</Label>
-            <Input placeholder="/srv/chista/datasets" value={hostPath} onChange={(e) => setHostPath(e.target.value)} />
+            <Input placeholder="/srv/asha/datasets" value={hostPath} onChange={(e) => setHostPath(e.target.value)} />
           </div>
           <div>
             <Label>{t('volumes.form.destPath')}</Label>

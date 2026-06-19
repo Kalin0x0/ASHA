@@ -1,13 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { createHash, createPublicKey, verify as edVerify } from 'node:crypto';
 import { z } from 'zod';
-import type { UpsertLicenseDto } from '@chista/contracts';
-import { prisma } from '@chista/db';
+import type { UpsertLicenseDto } from '@asha/contracts';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
-// Chista license-signing public key (Ed25519, SPKI DER base64). Licenses are
+// Asha license-signing public key (Ed25519, SPKI DER base64). Licenses are
 // signed offline by the vendor's private key and verified here — no phone-home.
-// Override with CHISTA_LICENSE_PUBKEY to use a custom signing key.
+// Override with ASHA_LICENSE_PUBKEY to use a custom signing key.
 const DEFAULT_LICENSE_PUBKEY = 'MCowBQYDK2VwAyEArZLVMVmDutZKSJg3dFTBCuE5NbRMnYi3W+7lUkqUAPc=';
 
 interface LicenseClaims {
@@ -43,7 +43,7 @@ function verifyLicenseKey(licenseKey: string): LicenseClaims {
   let pubKey;
   try {
     pubKey = createPublicKey({
-      key: Buffer.from(process.env.CHISTA_LICENSE_PUBKEY ?? DEFAULT_LICENSE_PUBKEY, 'base64'),
+      key: Buffer.from(process.env.ASHA_LICENSE_PUBKEY ?? DEFAULT_LICENSE_PUBKEY, 'base64'),
       format: 'der',
       type: 'spki',
     });
@@ -110,7 +110,7 @@ export class LicensingService {
 
   /** Stable per-deployment installation id — a license can be bound to it. */
   installationId(orgId: string): string {
-    return createHash('sha256').update(`chista:${orgId}`).digest('hex').slice(0, 24);
+    return createHash('sha256').update(`asha:${orgId}`).digest('hex').slice(0, 24);
   }
 
   /**

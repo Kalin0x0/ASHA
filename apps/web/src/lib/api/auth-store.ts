@@ -29,7 +29,7 @@ interface AuthState {
   user: AuthUser | null;
 }
 
-const STORAGE_KEY = 'chista.auth.v1';
+const STORAGE_KEY = 'asha.auth.v1';
 
 let state: AuthState = { tokens: null, user: null };
 let hydrated = false;

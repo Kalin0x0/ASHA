@@ -35,7 +35,7 @@ export function isNewer(a: string, b: string): boolean {
 const FEED_URL = process.env.NEXT_PUBLIC_UPDATE_FEED_URL;
 
 /**
- * Check for a newer Chista release. With no feed configured the running build is
+ * Check for a newer Asha release. With no feed configured the running build is
  * the source of truth, so we report "up to date". When a feed is configured we
  * fetch it and compare its version to the running one.
  */
