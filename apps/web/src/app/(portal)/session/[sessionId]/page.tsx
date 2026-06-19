@@ -76,6 +76,9 @@ function stepForStatus(status: string | undefined): number {
       return 1;
     case 'PROVISIONING':
       return 2;
+    case 'RUNNING':
+    case 'DEGRADED':
+      return 3;
     default:
       return 0;
   }
@@ -866,47 +869,62 @@ function LaunchTimedOut({
 
 /**
  * Shown when a session is live but no real stream endpoint is configured
- * (mock mode without NEXT_PUBLIC_DEMO_STREAM_URL). Keeps the launch → stream
- * flow demonstrable and tells the operator exactly how to wire a real one.
+ * (mock mode without NEXT_PUBLIC_DEMO_STREAM_URL). Tells the operator exactly
+ * how to wire a real container while keeping the launch → viewer flow working.
  */
 function PlaceholderStream({ workspaceName, clock }: { workspaceName: string; clock: string }) {
   const t = useTranslations('viewer');
 
   return (
     <div className="absolute inset-0 pt-12">
-      <div className="relative size-full bg-[radial-gradient(120%_120%_at_30%_10%,#23234a_0%,#14141f_55%,#0e0e1a_100%)]">
-        <div className="absolute inset-0 bg-grid opacity-30" />
-        <AshaMark className="absolute left-1/2 top-1/2 size-72 -translate-x-1/2 -translate-y-1/2 opacity-[0.05]" />
+      <div className="relative size-full overflow-hidden bg-aurora">
+        <div className="absolute inset-0 bg-grid opacity-20" />
+        <ChistaMark className="absolute left-1/2 top-1/2 size-[560px] -translate-x-1/2 -translate-y-1/2 opacity-[0.03]" />
 
-        <div className="absolute left-1/2 top-1/2 w-[min(880px,86vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-white/10 shadow-[var(--shadow-lifted)]">
-          <div className="flex items-center gap-2 bg-anthracite-800/90 px-4 py-2.5 backdrop-blur">
-            <span className="size-3 rounded-full bg-error-500/80" />
-            <span className="size-3 rounded-full bg-warn-500/80" />
-            <span className="size-3 rounded-full bg-success-500/80" />
-            <span className="ml-3 text-xs text-muted-foreground">{workspaceName}</span>
+        {/* Central setup panel — high-contrast so it's unmistakable */}
+        <div className="absolute left-1/2 top-1/2 w-[min(560px,90vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-gold-500/30 bg-anthracite-900 shadow-[0_0_0_1px_rgba(212,175,55,0.08),0_24px_64px_rgba(0,0,0,0.6)]">
+          {/* Header */}
+          <div className="flex items-center gap-3 border-b border-border-subtle bg-anthracite-800 px-5 py-3.5">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success/15">
+              <Check className="size-3.5 text-success" />
+            </div>
+            <span className="text-sm font-medium">{workspaceName}</span>
+            <span className="ms-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-gold-500/30 bg-gold-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-gold-300">
+              {t('status.demoModeBadge')}
+            </span>
           </div>
-          <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 bg-anthracite-900/80 p-12 text-center backdrop-blur">
-            <Check className="size-10 rounded-full bg-success/15 p-2 text-success" />
-            <p className="font-display text-xl">{t('status.placeholderLive')}</p>
-            <p className="max-w-md text-sm text-muted-foreground">
-              {t('status.placeholderDescription', { name: workspaceName })}
-            </p>
-            <pre dir="ltr" className="mt-1 overflow-x-auto rounded-md border border-border-subtle bg-anthracite-950/80 px-4 py-3 text-left text-[11px] leading-relaxed text-muted-foreground">
-              {`docker run --rm -p 6901:6901 \\
+
+          {/* Body */}
+          <div className="flex flex-col gap-4 p-6">
+            <div className="text-center">
+              <p className="font-display text-lg font-medium">{t('status.noStreamTitle')}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                {t('status.noStreamDescription', { name: workspaceName })}
+              </p>
+            </div>
+
+            <pre dir="ltr" className="overflow-x-auto rounded-lg border border-border-subtle bg-anthracite-950 px-4 py-3.5 text-start text-[11px] leading-relaxed text-muted-foreground">
+              {`# 1. Run a KasmVNC container locally:
+docker run --rm -p 6901:6901 \\
   -e VNC_PW=password kasmweb/firefox:1.16.0-rolling
 
-# .env
+# 2. Add to .env (or docker-compose.yml build args):
 NEXT_PUBLIC_DEMO_STREAM_URL=https://localhost:6901`}
             </pre>
+
+            <p className="text-center text-[11px] text-muted-foreground/70">
+              {t('status.noStreamSetupHint')}
+            </p>
           </div>
         </div>
 
-        <div className="absolute inset-x-0 bottom-0 flex h-11 items-center gap-3 bg-anthracite-800/80 px-4 backdrop-blur-xl">
-          <button className="flex items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-white/5">
-            <AshaMark className="size-4" /> {t('status.start')}
+        {/* Mock taskbar */}
+        <div className="absolute inset-x-0 bottom-0 flex h-10 items-center gap-3 border-t border-white/5 bg-anthracite-800/80 px-4 backdrop-blur-sm">
+          <button className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-muted-foreground/70 hover:bg-white/5 hover:text-muted-foreground transition-colors">
+            <ChistaMark className="size-3.5" /> {t('status.start')}
           </button>
           <div className="ms-auto flex items-center gap-3 text-xs text-muted-foreground">
-            <Wifi className="size-3.5 text-success" />
+            <Wifi className="size-3 text-success" />
             <span className="tnum">{clock}</span>
           </div>
         </div>
