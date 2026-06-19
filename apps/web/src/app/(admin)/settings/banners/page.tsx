@@ -9,6 +9,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiBannerConfig,
@@ -23,6 +24,7 @@ const SCOPES = ['WORKSPACE', 'GROUP', 'USER'] as const;
 export default function BannersPage() {
   const t = useTranslations('settings');
   const tCommon = useTranslations('common');
+  const confirm = useConfirm();
   const [banners, setBanners] = useState<ApiBannerConfig[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -78,6 +80,15 @@ export default function BannersPage() {
   };
 
   const onDelete = async (id: string) => {
+    const banner = banners.find((b) => b.id === id);
+    if (
+      !(await confirm({
+        title: tCommon('confirm.deleteNamed', {
+          name: banner?.bannerText || banner?.watermarkText || t('banners.emptyText'),
+        }),
+      }))
+    )
+      return;
     setBusyId(id);
     try {
       await deleteBanner(id);

@@ -9,6 +9,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiLogForwarder,
@@ -31,6 +32,7 @@ const TYPES: { key: LogForwarderType; label: string }[] = [
 export default function LogForwardingPage() {
   const t = useTranslations('observability');
   const tCommon = useTranslations('common');
+  const confirm = useConfirm();
   const [forwarders, setForwarders] = useState<ApiLogForwarder[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -84,6 +86,8 @@ export default function LogForwardingPage() {
   };
 
   const onDelete = async (id: string) => {
+    const forwarder = forwarders.find((f) => f.id === id);
+    if (!(await confirm({ title: tCommon('confirm.deleteNamed', { name: forwarder?.name ?? '' }) }))) return;
     setBusyId(id);
     try {
       await deleteLogForwarder(id);

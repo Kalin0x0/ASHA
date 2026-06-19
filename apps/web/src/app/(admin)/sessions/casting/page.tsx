@@ -9,6 +9,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiCasting,
@@ -24,6 +25,7 @@ import { isLive } from '@/lib/api/mode';
 export default function CastingPage() {
   const t = useTranslations('sessions');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const [casts, setCasts] = useState<ApiCasting[]>([]);
   const [workspaces, setWorkspaces] = useState<ApiWorkspace[]>([]);
   const [loading, setLoading] = useState(false);
@@ -87,6 +89,8 @@ export default function CastingPage() {
   };
 
   const onDelete = async (id: string) => {
+    const cast = casts.find((c) => c.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: cast ? wsName(cast) : '' }) }))) return;
     setBusyId(id);
     try {
       await deleteCasting(id);

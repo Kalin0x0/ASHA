@@ -24,6 +24,13 @@
     "upload": "Upload",
     "view": "View"
   },
+  "confirm": {
+    "title": "Are you sure?",
+    "deleteNamed": "Delete “{name}”?",
+    "description": "This action cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel"
+  },
   "labels": {
     "actions": "Actions",
     "active": "Active",

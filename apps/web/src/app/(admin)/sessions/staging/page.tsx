@@ -9,6 +9,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiStaging,
@@ -26,6 +27,7 @@ import { isLive } from '@/lib/api/mode';
 export default function StagingPage() {
   const t = useTranslations('sessions');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const [staging, setStaging] = useState<ApiStaging[]>([]);
   const [workspaces, setWorkspaces] = useState<ApiWorkspace[]>([]);
   const [zones, setZones] = useState<ApiZone[]>([]);
@@ -97,6 +99,8 @@ export default function StagingPage() {
   };
 
   const onDelete = async (id: string) => {
+    const pool = staging.find((s) => s.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: pool ? wsName(pool) : '' }) }))) return;
     setBusyId(id);
     try {
       await deleteStaging(id);

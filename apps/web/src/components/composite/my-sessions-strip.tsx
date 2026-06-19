@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
+import { useConfirm } from '@/components/ui/confirm';
 import { CURRENT_USER } from '@/lib/current-user';
 import { usePauseSession, useResumeSession, useSessions, useTerminateSession, useWorkspaces } from '@/lib/hooks';
 import { useThumbnails } from '@/lib/thumbnail-store';
@@ -26,6 +27,7 @@ const GUAC = new Set(['RDP', 'VNC', 'SSH']);
 export function MySessionsStrip() {
   const t = useTranslations('portal');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const router = useRouter();
   const sessions = useSessions();
   const workspaces = useWorkspaces();
@@ -52,7 +54,15 @@ export function MySessionsStrip() {
     pause(s.id);
     toast.success(t('mySessions.stoppedToast'));
   };
-  const onDelete = (s: SessionRow) => {
+  const onDelete = async (s: SessionRow) => {
+    if (
+      !(await confirm({
+        title: tc('confirm.title'),
+        confirmLabel: tc('actions.terminate'),
+        description: tc('confirm.description'),
+      }))
+    )
+      return;
     terminate(s.id);
     toast.success(t('mySessions.endedToast'));
   };
@@ -150,7 +160,7 @@ export function MySessionsStrip() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => onDelete(s)}
+                    onClick={() => void onDelete(s)}
                     aria-label={t('mySessions.deleteAria', { name: s.workspaceName })}
                     title={t('mySessions.delete')}
                     className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-destructive/15 hover:text-destructive ring-gold-focus"

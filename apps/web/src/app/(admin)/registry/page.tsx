@@ -32,6 +32,7 @@ import {
   useSyncRegistry,
   useUninstallEntry,
 } from '@/lib/hooks';
+import { useConfirm } from '@/components/ui/confirm';
 import { cn, formatRelativeTime } from '@/lib/utils';
 
 type Tab = 'available' | 'installed' | 'registries';
@@ -44,6 +45,7 @@ function gib(sizeMb?: number): string {
 export default function RegistryPage() {
   const t = useTranslations('workspaces.registry');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const registries = useRegistries();
   const marketplace = useMarketplace();
   const addRegistry = useAddRegistry();
@@ -130,6 +132,14 @@ export default function RegistryPage() {
   };
 
   const onRemove = async (entry: ApiMarketplaceEntry) => {
+    if (
+      !(await confirm({
+        title: tc('confirm.deleteNamed', { name: entry.friendlyName }),
+        description: t('removeImageConfirm'),
+        confirmLabel: t('marketplace.remove'),
+      }))
+    )
+      return;
     setBusyId(entry.id);
     try {
       const res = await uninstallEntry(entry.id);
@@ -173,6 +183,8 @@ export default function RegistryPage() {
   };
 
   const onDelete = async (id: string) => {
+    const reg = registries.find((r) => r.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: reg?.name ?? '' }) }))) return;
     try {
       await deleteRegistry(id);
       toast.success(t('toasts.removed'));

@@ -10,6 +10,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   useCreateFileMapping,
@@ -23,6 +24,7 @@ const SCOPES = ['USER', 'GROUP', 'WORKSPACE'] as const;
 export default function FileMappingsPage() {
   const t = useTranslations('storage');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const { data: files = [], isLoading } = useFileMappings();
   const create = useCreateFileMapping();
   const remove = useDeleteFileMapping();
@@ -70,6 +72,8 @@ export default function FileMappingsPage() {
   };
 
   const onDelete = async (id: string) => {
+    const file = files.find((f) => f.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: file?.name ?? '' }) }))) return;
     setBusyId(id);
     try {
       await remove.mutateAsync(id);

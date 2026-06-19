@@ -30,6 +30,7 @@ import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { ChistaMark } from '@/components/brand/logo';
 import { SessionWatermark } from '@/components/composite/session-watermark';
+import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/lib/api/auth-context';
 import { CURRENT_USER } from '@/lib/current-user';
@@ -85,6 +86,8 @@ const REMOTE_DESKTOP_PROTOCOLS = new Set(['RDP', 'VNC', 'SSH']);
 
 export default function StreamingViewerPage() {
   const t = useTranslations('viewer');
+  const tc = useTranslations('common');
+  const confirm = useConfirm();
   const locale = useLocale();
   const params = useParams<{ sessionId: string }>();
   const router = useRouter();
@@ -232,7 +235,15 @@ export default function StreamingViewerPage() {
   };
 
   const disconnect = () => router.push('/');
-  const onTerminate = () => {
+  const onTerminate = async () => {
+    if (
+      !(await confirm({
+        title: tc('confirm.title'),
+        confirmLabel: tc('actions.terminate'),
+        description: tc('confirm.description'),
+      }))
+    )
+      return;
     if (session) terminate(session.id);
     toast.success(t('status.endedToast'));
     router.push('/');
@@ -414,7 +425,7 @@ export default function StreamingViewerPage() {
             <Maximize2 className="size-4" />
           </ControlButton>
           <button
-            onClick={onTerminate}
+            onClick={() => void onTerminate()}
             className="ml-1 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-destructive/90 px-3 text-xs font-medium text-destructive-foreground transition-colors hover:bg-destructive ring-gold-focus"
           >
             <Power className="size-3.5" /> <span className="hidden sm:inline">{t('toolbar.end')}</span>

@@ -9,6 +9,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiWebFilter,
@@ -24,6 +25,7 @@ const CATEGORIES = ['ads', 'malware', 'adult', 'social', 'gambling', 'streaming'
 export default function WebFilteringPage() {
   const t = useTranslations('connectivity');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const [filters, setFilters] = useState<ApiWebFilter[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -79,6 +81,8 @@ export default function WebFilteringPage() {
   };
 
   const onDelete = async (id: string) => {
+    const f = filters.find((x) => x.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: f?.name ?? '' }) }))) return;
     setBusyId(id);
     try {
       await deleteWebFilter(id);
