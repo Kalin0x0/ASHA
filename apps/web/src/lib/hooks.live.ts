@@ -350,6 +350,32 @@ export function useInstallEntry() {
   );
 }
 
+export function useReinstallEntry() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.reinstallMarketplaceEntry,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: MARKETPLACE_KEY });
+      qc.invalidateQueries({ queryKey: ['images'] });
+      qc.invalidateQueries({ queryKey: WORKSPACES_KEY });
+    },
+  });
+  return useCallback((id: string) => mutateAsync(id), [mutateAsync]);
+}
+
+export function useUninstallEntry() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.uninstallMarketplaceEntry,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: MARKETPLACE_KEY });
+      qc.invalidateQueries({ queryKey: ['images'] });
+      qc.invalidateQueries({ queryKey: WORKSPACES_KEY });
+    },
+  });
+  return useCallback((id: string) => mutateAsync(id), [mutateAsync]);
+}
+
 export function useDashboard() {
   const sessions = useSessions();
   const agents = useAgents();
@@ -434,14 +460,23 @@ export function useDeleteImage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['images'] });
       qc.invalidateQueries({ queryKey: WORKSPACES_KEY });
+      qc.invalidateQueries({ queryKey: ['marketplace'] });
     },
   });
-  return useCallback(
-    async (id: string) => {
-      await mutateAsync(id);
+  return useCallback((id: string) => mutateAsync(id), [mutateAsync]);
+}
+
+export function useReinstallImage() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.reinstallImageEntry,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['images'] });
+      qc.invalidateQueries({ queryKey: WORKSPACES_KEY });
+      qc.invalidateQueries({ queryKey: ['marketplace'] });
     },
-    [mutateAsync],
-  );
+  });
+  return useCallback((id: string) => mutateAsync(id), [mutateAsync]);
 }
 
 export function useSetImagePullPolicy() {

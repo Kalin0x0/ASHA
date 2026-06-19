@@ -80,6 +80,18 @@ export class RegistryController {
     return this.svc.install(user.orgId, user.sub, entryId, dto);
   }
 
+  @RequirePermissions('IMAGE_MANAGE')
+  @Post('marketplace/:entryId/reinstall')
+  reinstallEntry(@CurrentUser() user: AuthUser, @Param('entryId') entryId: string) {
+    return this.svc.reinstallEntry(user.orgId, user.sub, entryId);
+  }
+
+  @RequirePermissions('IMAGE_MANAGE')
+  @Post('marketplace/:entryId/uninstall')
+  uninstallEntry(@CurrentUser() user: AuthUser, @Param('entryId') entryId: string) {
+    return this.svc.uninstallEntry(user.orgId, user.sub, entryId);
+  }
+
   // ── Images: digest-pinning + pull-policy (A3) ─────────────────────────────
   @RequirePermissions('IMAGE_MANAGE')
   @Get('images')
@@ -91,6 +103,12 @@ export class RegistryController {
   @Delete('images/:id')
   deleteImage(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.svc.deleteImage(user.orgId, user.sub, id);
+  }
+
+  @RequirePermissions('IMAGE_MANAGE')
+  @Post('images/:id/reinstall')
+  reinstallImage(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.svc.reinstallImage(user.orgId, user.sub, id);
   }
 
   @RequirePermissions('IMAGE_MANAGE')

@@ -111,13 +111,17 @@
     "ramLabel": "رم (GB)",
     "gpuLabel": "GPU",
     "uninstall": "حذف نصب",
+    "reinstall": "نصب مجدد",
     "deleteTitle": "حذف نصب ایمیج",
-    "deleteDescription": "حذف نصب {name}؟ رکورد ایمیج و فضاهای کاری مرتبط حذف می‌شوند.",
+    "deleteDescription": "حذف نصب {name}؟ رکورد ایمیج و فضاهای کاری مرتبط حذف می‌شوند و ایمیج ذخیره‌شده برای آزادسازی فضای دیسک از میزبان پاک می‌شود.",
     "toasts": {
       "policyChanged": "سیاست دریافت به‌روزرسانی شد",
       "policyFailed": "به‌روزرسانی سیاست دریافت ممکن نشد",
       "deleted": "{name} حذف نصب شد",
+      "deletedDisk": "{name} حذف نصب شد — فضای دیسک میزبان آزاد شد",
       "deleteFailed": "حذف نصب ایمیج ممکن نشد",
+      "reinstalled": "{name} دوباره نصب شد",
+      "reinstallFailed": "نصب مجدد ایمیج ممکن نشد",
       "resourcesSaved": "منابع به‌روزرسانی شد",
       "resourcesFailed": "به‌روزرسانی منابع ممکن نشد"
     }
@@ -149,6 +153,8 @@
       "noDescription": "بدون توضیحات.",
       "install": "نصب",
       "installed": "نصب‌شده",
+      "reinstall": "نصب مجدد",
+      "remove": "حذف",
       "emptyLive": "هیچ برنامه‌ای در مارکت‌پلیس نیست. یک رجیستری اضافه کنید و آن را همگام‌سازی کنید.",
       "emptyMock": "برای مرور مارکت‌پلیس، بک‌اند زنده را متصل کنید."
     },
@@ -162,7 +168,13 @@
       "installedDescription": "ایمیج + فضای کاری ایجاد شد.",
       "installFailed": "نصب ناموفق بود",
       "removed": "رجیستری حذف شد",
-      "removeFailed": "حذف رجیستری ممکن نبود"
+      "removeFailed": "حذف رجیستری ممکن نبود",
+      "reinstalledTitle": "{name} دوباره نصب شد",
+      "reinstalledDescription": "به‌روزرسانی شد و دوباره روی ایجنت‌ها بارگیری شد.",
+      "reinstallFailed": "نصب مجدد ناموفق بود",
+      "imageRemovedDisk": "{name} حذف شد — فضای دیسک میزبان آزاد شد.",
+      "imageRemovedShared": "{name} حذف شد (ایمیج نگه داشته شد — توسط فضای کاری دیگری استفاده می‌شود).",
+      "imageRemoveFailed": "حذف ایمیج ممکن نبود"
     },
     "tabs": {
       "available": "در دسترس",

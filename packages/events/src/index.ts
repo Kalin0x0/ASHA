@@ -11,6 +11,8 @@ export const RedisChannels = {
   destroy: (zone: string) => `chista:zone:${zone}:destroy`,
   /** Manager → agents in a zone: pause/resume/control an existing session. */
   control: (zone: string) => `chista:zone:${zone}:control`,
+  /** Manager → agents in a zone: image lifecycle (remove/pull) — host disk hygiene. */
+  image: (zone: string) => `chista:zone:${zone}:image`,
   /** Agent → manager: lifecycle/status updates. */
   agentStatus: 'chista:agent:status',
   /** Agent → manager: batched resource stats. */
@@ -188,6 +190,18 @@ export interface SessionControlCommand {
   streamProfile?: StreamProfile;
   /** For RECORD_START / RECORD_STOP. */
   recordingId?: string;
+}
+
+/**
+ * Manager → agent image-lifecycle command. `REMOVE` deletes the cached Docker
+ * image from the host so the filesystem space is reclaimed (uninstall); `PULL`
+ * (re-)fetches it so a re-installed image is ready before the next launch.
+ */
+export interface ImageCommand {
+  action: 'REMOVE' | 'PULL';
+  dockerImage: string;
+  /** REMOVE only: also prune dangling layers left behind. Defaults to true. */
+  prune?: boolean;
 }
 
 export type SessionLifecycleStatus =

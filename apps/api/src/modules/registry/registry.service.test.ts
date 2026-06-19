@@ -5,8 +5,10 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     registry: { findMany: vi.fn(), create: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
     registryEntry: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
-    image: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), delete: vi.fn() },
+    image: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findMany: vi.fn(), delete: vi.fn(), count: vi.fn() },
     workspace: { create: vi.fn(), findFirst: vi.fn(), deleteMany: vi.fn() },
+    session: { count: vi.fn() },
+    agent: { findMany: vi.fn() },
   },
 }));
 
@@ -15,13 +17,14 @@ vi.mock('@chista/db', () => ({ prisma: prismaMock }));
 import { normalizeIndex, RegistryService } from './registry.service';
 
 const audit = { record: vi.fn().mockResolvedValue(undefined) };
+const redis = { publish: vi.fn().mockResolvedValue(undefined) };
 
 describe('RegistryService.syncRegistry', () => {
   let svc: RegistryService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new RegistryService(audit as never);
+    svc = new RegistryService(audit as never, redis as never);
   });
 
   afterEach(() => {
@@ -81,7 +84,7 @@ describe('RegistryService.install', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new RegistryService(audit as never);
+    svc = new RegistryService(audit as never, redis as never);
   });
 
   it('materialises an Image and, when asked, a Workspace; marks entry installed', async () => {
@@ -157,7 +160,7 @@ describe('RegistryService — digest pinning + pull policy (A3)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new RegistryService(audit as never);
+    svc = new RegistryService(audit as never, redis as never);
   });
   afterEach(() => vi.unstubAllGlobals());
 
@@ -234,21 +237,72 @@ describe('RegistryService — digest pinning + pull policy (A3)', () => {
     await expect(svc.setPullPolicy('org1', 'u1', 'ghost', 'NEVER')).rejects.toThrow(/not found/i);
   });
 
-  it('deleteImage removes the image, its workspaces, and unmarks the registry entry', async () => {
+  it('deleteImage removes the image + workspaces, unmarks the entry, and frees host disk', async () => {
     prismaMock.image.findFirst.mockResolvedValue({ id: 'img1', orgId: 'org1', dockerImage: 'x:1', sourceRegistryEntryId: 'mk1' });
+    prismaMock.session.count.mockResolvedValue(0);
+    prismaMock.image.count.mockResolvedValue(0); // not shared → host image safe to remove
     prismaMock.workspace.deleteMany.mockResolvedValue({ count: 1 });
     prismaMock.registryEntry.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.image.delete.mockResolvedValue({ id: 'img1' });
+    prismaMock.agent.findMany.mockResolvedValue([{ zone: { name: 'default' } }]);
 
-    expect(await svc.deleteImage('org1', 'u1', 'img1')).toEqual({ ok: true });
+    expect(await svc.deleteImage('org1', 'u1', 'img1')).toEqual({
+      ok: true,
+      hostImageRemoved: true,
+      sharedWithOtherImages: false,
+    });
     expect(prismaMock.workspace.deleteMany).toHaveBeenCalledWith({ where: { orgId: 'org1', imageId: 'img1' } });
     expect(prismaMock.registryEntry.updateMany).toHaveBeenCalledWith({ where: { id: 'mk1' }, data: { installed: false } });
     expect(prismaMock.image.delete).toHaveBeenCalledWith({ where: { id: 'img1' } });
+    // Host disk reclaimed: a REMOVE command is published to the zone's agent.
+    expect(redis.publish).toHaveBeenCalledWith(
+      'chista:zone:default:image',
+      expect.objectContaining({ action: 'REMOVE', dockerImage: 'x:1' }),
+    );
+  });
+
+  it('deleteImage blocks while a live session still uses the image', async () => {
+    prismaMock.image.findFirst.mockResolvedValue({ id: 'img1', orgId: 'org1', dockerImage: 'x:1' });
+    prismaMock.session.count.mockResolvedValue(2);
+    await expect(svc.deleteImage('org1', 'u1', 'img1')).rejects.toThrow(/in use by 2 active session/i);
+    expect(prismaMock.image.delete).not.toHaveBeenCalled();
+    expect(redis.publish).not.toHaveBeenCalled();
+  });
+
+  it('deleteImage keeps the host image when another image shares the Docker tag', async () => {
+    prismaMock.image.findFirst.mockResolvedValue({ id: 'img1', orgId: 'org1', dockerImage: 'x:1', sourceRegistryEntryId: null });
+    prismaMock.session.count.mockResolvedValue(0);
+    prismaMock.image.count.mockResolvedValue(1); // another image references x:1
+    prismaMock.workspace.deleteMany.mockResolvedValue({ count: 0 });
+    prismaMock.image.delete.mockResolvedValue({ id: 'img1' });
+
+    expect(await svc.deleteImage('org1', 'u1', 'img1')).toEqual({
+      ok: true,
+      hostImageRemoved: false,
+      sharedWithOtherImages: true,
+    });
+    expect(redis.publish).not.toHaveBeenCalled();
   });
 
   it('deleteImage 404s for an unknown image', async () => {
     prismaMock.image.findFirst.mockResolvedValue(null);
     await expect(svc.deleteImage('org1', 'u1', 'ghost')).rejects.toThrow(/not found/i);
+  });
+
+  it('reinstallImage re-materialises from the entry and re-pulls the image', async () => {
+    prismaMock.image.findFirst.mockResolvedValue({ id: 'img1', orgId: 'org1', dockerImage: 'x:1', friendlyName: 'X', sourceRegistryEntryId: 'mk1' });
+    // install() path: look up the entry, upsert the image, mark installed.
+    prismaMock.registryEntry.findFirst.mockResolvedValue({ id: 'mk1', name: 'x', friendlyName: 'X', dockerImage: 'x:1', raw: {} });
+    prismaMock.image.update.mockResolvedValue({ id: 'img1' });
+    prismaMock.registryEntry.update.mockResolvedValue({ id: 'mk1' });
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
+    prismaMock.agent.findMany.mockResolvedValue([{ zone: { name: 'default' } }]);
+
+    expect(await svc.reinstallImage('org1', 'u1', 'img1')).toEqual({ ok: true, imageId: 'img1', dockerImage: 'x:1' });
+    expect(redis.publish).toHaveBeenCalledWith(
+      'chista:zone:default:image',
+      expect.objectContaining({ action: 'PULL', dockerImage: 'x:1' }),
+    );
   });
 });
 

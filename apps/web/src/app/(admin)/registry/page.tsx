@@ -28,7 +28,9 @@ import {
   useInstallEntry,
   useMarketplace,
   useRegistries,
+  useReinstallEntry,
   useSyncRegistry,
+  useUninstallEntry,
 } from '@/lib/hooks';
 import { cn, formatRelativeTime } from '@/lib/utils';
 
@@ -48,6 +50,8 @@ export default function RegistryPage() {
   const deleteRegistry = useDeleteRegistry();
   const syncRegistry = useSyncRegistry();
   const installEntry = useInstallEntry();
+  const reinstallEntry = useReinstallEntry();
+  const uninstallEntry = useUninstallEntry();
 
   const [tab, setTab] = useState<Tab>('available');
   const [query, setQuery] = useState('');
@@ -107,6 +111,36 @@ export default function RegistryPage() {
       setProgress((p) => { const n = { ...p }; delete n[entry.id]; return n; });
     } finally {
       clearInterval(timer);
+      setBusyId(null);
+    }
+  };
+
+  const onReinstall = async (entry: ApiMarketplaceEntry) => {
+    setBusyId(entry.id);
+    try {
+      await reinstallEntry(entry.id);
+      toast.success(t('toasts.reinstalledTitle', { name: entry.friendlyName }), {
+        description: t('toasts.reinstalledDescription'),
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('toasts.reinstallFailed'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const onRemove = async (entry: ApiMarketplaceEntry) => {
+    setBusyId(entry.id);
+    try {
+      const res = await uninstallEntry(entry.id);
+      toast.success(
+        res.hostImageRemoved
+          ? t('toasts.imageRemovedDisk', { name: entry.friendlyName })
+          : t('toasts.imageRemovedShared', { name: entry.friendlyName }),
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('toasts.imageRemoveFailed'));
+    } finally {
       setBusyId(null);
     }
   };
@@ -240,8 +274,12 @@ export default function RegistryPage() {
                   busy={busyId === entry.id}
                   progress={progress[entry.id]}
                   onInstall={() => void onInstall(entry)}
+                  onReinstall={() => void onReinstall(entry)}
+                  onRemove={() => void onRemove(entry)}
                   installLabel={t('marketplace.install')}
                   installedLabel={t('marketplace.installed')}
+                  reinstallLabel={t('marketplace.reinstall')}
+                  removeLabel={t('marketplace.remove')}
                   sourceLabel={t('card.source')}
                 />
               ))}
@@ -268,16 +306,24 @@ function ImageCard({
   busy,
   progress,
   onInstall,
+  onReinstall,
+  onRemove,
   installLabel,
   installedLabel,
+  reinstallLabel,
+  removeLabel,
   sourceLabel,
 }: {
   entry: ApiMarketplaceEntry;
   busy: boolean;
   progress?: number;
   onInstall: () => void;
+  onReinstall: () => void;
+  onRemove: () => void;
   installLabel: string;
   installedLabel: string;
+  reinstallLabel: string;
+  removeLabel: string;
   sourceLabel: string;
 }) {
   const firstParty = entry.registry?.type === 'FIRST_PARTY';
@@ -329,16 +375,37 @@ function ImageCard({
             />
           </div>
         </div>
+      ) : entry.installed ? (
+        <div className="mt-auto flex items-center gap-2">
+          <span className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-success/40 px-2.5 py-1.5 text-xs font-medium text-success">
+            <Check className="size-3.5" />
+            {installedLabel}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={reinstallLabel}
+            title={reinstallLabel}
+            disabled={busy}
+            onClick={onReinstall}
+          >
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={removeLabel}
+            title={removeLabel}
+            disabled={busy}
+            onClick={onRemove}
+          >
+            <Trash2 className="size-4 text-destructive" />
+          </Button>
+        </div>
       ) : (
-        <Button
-          size="sm"
-          variant={entry.installed ? 'secondary' : 'primary'}
-          disabled={busy || entry.installed}
-          onClick={onInstall}
-          className={cn('mt-auto', entry.installed && 'border-success/40 text-success')}
-        >
-          {entry.installed ? <Check className="size-3.5" /> : <Download className="size-3.5" />}
-          {entry.installed ? installedLabel : installLabel}
+        <Button size="sm" variant="primary" disabled={busy} onClick={onInstall} className="mt-auto">
+          <Download className="size-3.5" />
+          {installLabel}
         </Button>
       )}
     </Card>
