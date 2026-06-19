@@ -87,5 +87,10 @@ export function sessionConnectionUrl(input: {
   // WS path to the session so the upgrade routes through the (prefix-stripped)
   // session router to the container's KasmVNC.
   const base = input.proxyBaseUrl.replace(/\/$/, '');
-  return `${base}${sessionPath(input.kasmId)}/?path=session/${input.kasmId}/websockify&token=${input.token}`;
+  // KasmVNC client tuning (read from the noVNC query vars): `resize=remote` makes
+  // the desktop track the viewer size — full-bleed at native resolution, with no
+  // letterboxing or upscaling blur; `enable_webp` + a high `quality` keep the
+  // stream sharp while staying bandwidth-efficient (so it also feels faster).
+  const tuning = 'resize=remote&quality=8&enable_webp=true';
+  return `${base}${sessionPath(input.kasmId)}/?path=session/${input.kasmId}/websockify&${tuning}&token=${input.token}`;
 }
