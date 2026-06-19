@@ -1,6 +1,6 @@
 'use client';
 
-import { Container, Cpu, Loader2, MemoryStick, MonitorCog, Package, Pencil, Trash2 } from 'lucide-react';
+import { Container, Cpu, Loader2, MemoryStick, MonitorCog, Package, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
@@ -20,7 +20,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input, Label } from '@/components/ui/input';
-import { useDeleteImage, useImages, useSetImagePullPolicy, useUpdateWorkspace } from '@/lib/hooks';
+import {
+  useDeleteImage,
+  useImages,
+  useReinstallImage,
+  useSetImagePullPolicy,
+  useUpdateWorkspace,
+} from '@/lib/hooks';
 import type { ManagedImage, ManagedImageWorkspace } from '@/lib/types';
 
 const POLICIES = ['ALWAYS', 'IF_NOT_PRESENT', 'NEVER'] as const;
@@ -32,12 +38,14 @@ export default function ImagesPage() {
   const tc = useTranslations('common');
   const images = useImages();
   const deleteImage = useDeleteImage();
+  const reinstallImage = useReinstallImage();
   const setPolicy = useSetImagePullPolicy();
 
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<ManagedImageWorkspace | null>(null);
   const [deleting, setDeleting] = useState<ManagedImage | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reinstallingId, setReinstallingId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -60,13 +68,29 @@ export default function ImagesPage() {
     if (!deleting) return;
     setBusy(true);
     try {
-      await deleteImage(deleting.id);
-      toast.success(t('toasts.deleted', { name: deleting.friendlyName }));
+      const res = await deleteImage(deleting.id);
+      toast.success(
+        res?.hostImageRemoved
+          ? t('toasts.deletedDisk', { name: deleting.friendlyName })
+          : t('toasts.deleted', { name: deleting.friendlyName }),
+      );
       setDeleting(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('toasts.deleteFailed'));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const onReinstall = async (img: ManagedImage) => {
+    setReinstallingId(img.id);
+    try {
+      await reinstallImage(img.id);
+      toast.success(t('toasts.reinstalled', { name: img.friendlyName }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('toasts.reinstallFailed'));
+    } finally {
+      setReinstallingId(null);
     }
   };
 
@@ -103,9 +127,25 @@ export default function ImagesPage() {
                     {img.digest && <Badge variant="success" className="text-[10px]">{t('pinned')}</Badge>}
                   </div>
                 </div>
-                <Button variant="ghost" size="icon-sm" aria-label={t('uninstall')} onClick={() => setDeleting(img)}>
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
+                <div className="flex shrink-0 items-center gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t('reinstall')}
+                    title={t('reinstall')}
+                    disabled={reinstallingId === img.id}
+                    onClick={() => void onReinstall(img)}
+                  >
+                    {reinstallingId === img.id ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="size-4" />
+                    )}
+                  </Button>
+                  <Button variant="ghost" size="icon-sm" aria-label={t('uninstall')} title={t('uninstall')} onClick={() => setDeleting(img)}>
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
 
               <div className="mt-3 flex items-center justify-between gap-2 border-t border-border-subtle pt-3 text-sm">

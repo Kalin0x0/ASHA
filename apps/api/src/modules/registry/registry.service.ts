@@ -5,7 +5,20 @@ import type {
   UpdateRegistryDto,
 } from '@chista/contracts';
 import { prisma } from '@chista/db';
+import { type ImageCommand, RedisChannels } from '@chista/events';
 import { AuditService } from '../../common/audit.service';
+import { RedisService } from '../../common/redis.service';
+
+/** Session statuses that count as "live" — an image they use must not be removed. */
+const ACTIVE_SESSION_STATUSES = [
+  'REQUESTED',
+  'SCHEDULED',
+  'PROVISIONING',
+  'RUNNING',
+  'DEGRADED',
+  'PAUSED',
+  'TERMINATING',
+] as const;
 
 /**
  * Image-registry management + workspace marketplace. A Registry points at a
@@ -16,7 +29,32 @@ import { AuditService } from '../../common/audit.service';
  */
 @Injectable()
 export class RegistryService {
-  constructor(private readonly audit: AuditService) {}
+  constructor(
+    private readonly audit: AuditService,
+    private readonly redis: RedisService,
+  ) {}
+
+  /**
+   * Zone names that host an agent for this org — the agents that may have the
+   * image cached. We fan the REMOVE/PULL command to each so host disk is
+   * reclaimed (or the image re-pulled) wherever it lives. Falls back to the
+   * default zone when no agents are registered yet.
+   */
+  private async zonesForOrg(orgId: string): Promise<string[]> {
+    const agents = await prisma.agent.findMany({
+      where: { orgId },
+      select: { zone: { select: { name: true } } },
+    });
+    const names = [...new Set(agents.map((a) => a.zone?.name).filter((n): n is string => Boolean(n)))];
+    return names.length ? names : ['default'];
+  }
+
+  /** Publish an image-lifecycle command to every zone that may cache the image. */
+  private async dispatchImageCommand(orgId: string, cmd: ImageCommand): Promise<string[]> {
+    const zones = await this.zonesForOrg(orgId);
+    await Promise.all(zones.map((zone) => this.redis.publish(RedisChannels.image(zone), cmd)));
+    return zones;
+  }
 
   // ── Registries ────────────────────────────────────────────────────────────
   listRegistries(orgId: string) {
@@ -295,10 +333,33 @@ export class RegistryService {
     });
   }
 
-  /** Uninstall an org image: remove it, its workspaces, and unmark its registry entry. */
+  /**
+   * Uninstall an org image: remove its DB row + workspaces, unmark its registry
+   * entry, and — unless another image shares the same Docker reference — tell the
+   * agents to delete the cached image from the host so the disk space is freed.
+   * Blocks while any live session still uses the image (terminate those first).
+   */
   async deleteImage(orgId: string, actorUserId: string, imageId: string) {
     const image = await prisma.image.findFirst({ where: { id: imageId, orgId } });
     if (!image) throw new NotFoundException('Image not found');
+
+    // Guard: never pull an image out from under a running/queued session.
+    const activeSessions = await prisma.session.count({
+      where: { imageId, status: { in: [...ACTIVE_SESSION_STATUSES] } },
+    });
+    if (activeSessions > 0) {
+      throw new BadRequestException(
+        `Image is in use by ${activeSessions} active session${activeSessions === 1 ? '' : 's'} — terminate them before removing it.`,
+      );
+    }
+
+    // Only reclaim the host image when no OTHER image (any org) references the
+    // same Docker tag — otherwise removing it would break those images.
+    const sharedCount = await prisma.image.count({
+      where: { dockerImage: image.dockerImage, NOT: { id: image.id } },
+    });
+    const freeHostDisk = sharedCount === 0;
+
     await prisma.workspace.deleteMany({ where: { orgId, imageId } });
     if (image.sourceRegistryEntryId) {
       await prisma.registryEntry.updateMany({
@@ -307,15 +368,86 @@ export class RegistryService {
       });
     }
     await prisma.image.delete({ where: { id: image.id } });
+
+    let dispatchedZones: string[] = [];
+    if (freeHostDisk) {
+      dispatchedZones = await this.dispatchImageCommand(orgId, {
+        action: 'REMOVE',
+        dockerImage: image.dockerImage,
+      });
+    }
+
     await this.audit.record({
       orgId,
       actorUserId,
       action: 'image.delete',
       targetType: 'Image',
       targetId: imageId,
-      metadata: { dockerImage: image.dockerImage },
+      metadata: { dockerImage: image.dockerImage, hostImageRemoved: freeHostDisk, zones: dispatchedZones },
     });
-    return { ok: true };
+    return { ok: true, hostImageRemoved: freeHostDisk, sharedWithOtherImages: !freeHostDisk };
+  }
+
+  /**
+   * Reinstall an installed image: re-materialise it from its source registry
+   * entry (refreshing run-config metadata + restoring a launchable workspace) and
+   * tell the agents to re-pull the Docker image so it is freshly cached. Images
+   * with no registry source are simply re-pulled.
+   */
+  async reinstallImage(orgId: string, actorUserId: string, imageId: string) {
+    const image = await prisma.image.findFirst({ where: { id: imageId, orgId } });
+    if (!image) throw new NotFoundException('Image not found');
+
+    if (image.sourceRegistryEntryId) {
+      // install() is idempotent on sourceRegistryEntryId — it updates this same
+      // image row with fresh metadata and restores the workspace if it was removed.
+      await this.install(orgId, actorUserId, image.sourceRegistryEntryId, {
+        createWorkspace: true,
+        friendlyName: image.friendlyName,
+        imageOverride: image.dockerImage,
+      });
+    }
+
+    const zones = await this.dispatchImageCommand(orgId, { action: 'PULL', dockerImage: image.dockerImage });
+    await this.audit.record({
+      orgId,
+      actorUserId,
+      action: 'image.reinstall',
+      targetType: 'Image',
+      targetId: imageId,
+      metadata: { dockerImage: image.dockerImage, zones },
+    });
+    return { ok: true, imageId, dockerImage: image.dockerImage };
+  }
+
+  /** The image previously materialised from a registry entry, if any. */
+  private imageForEntry(orgId: string, entryId: string) {
+    return prisma.image.findFirst({ where: { orgId, sourceRegistryEntryId: entryId } });
+  }
+
+  /**
+   * Marketplace-facing reinstall: resolve the installed image for an entry and
+   * reinstall it (or do a fresh install if it isn't materialised yet). Lets the
+   * registry "Installed" cards reinstall by entry id.
+   */
+  async reinstallEntry(orgId: string, actorUserId: string, entryId: string) {
+    const image = await this.imageForEntry(orgId, entryId);
+    if (!image) return this.install(orgId, actorUserId, entryId, { createWorkspace: true });
+    return this.reinstallImage(orgId, actorUserId, image.id);
+  }
+
+  /**
+   * Marketplace-facing uninstall: resolve the installed image for an entry and
+   * remove it (freeing host disk). If the entry is flagged installed but has no
+   * image, just clear the flag so the UI reconciles.
+   */
+  async uninstallEntry(orgId: string, actorUserId: string, entryId: string) {
+    const image = await this.imageForEntry(orgId, entryId);
+    if (!image) {
+      await prisma.registryEntry.updateMany({ where: { id: entryId }, data: { installed: false } });
+      return { ok: true as const, hostImageRemoved: false, sharedWithOtherImages: false };
+    }
+    return this.deleteImage(orgId, actorUserId, image.id);
   }
 
   /** Resolve a repo:tag reference to its content digest via the Docker Registry v2 API. */
