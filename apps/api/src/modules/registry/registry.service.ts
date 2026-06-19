@@ -213,7 +213,15 @@ export class RegistryService {
   /** Parse rich install metadata (compat / security / resources / channels) from an entry's raw index item. */
   private meta(entry: { dockerImage: string; raw: unknown }) {
     const raw = (entry.raw ?? {}) as Record<string, any>;
-    const rc = (raw.run_config ?? raw.docker_run_config ?? raw.runConfig ?? {}) as Record<string, any>;
+    const rc = { ...((raw.run_config ?? raw.docker_run_config ?? raw.runConfig ?? {}) as Record<string, any>) };
+    // LinuxServer.io webtop images serve their KasmVNC web UI on 3000 (http) /
+    // 3001 (https), NOT the kasmweb default of 6901. The LSIO fleet API doesn't
+    // declare ports, so without this the session routes to 6901, finds nothing,
+    // and the launch times out ("…became ready"). Default lscr.io images to the
+    // 3001 HTTPS port unless the entry already declares one.
+    if (rc.ports == null && /^lscr\.io\//.test(entry.dockerImage)) {
+      rc.ports = [3001];
+    }
     const protocol = normalizeProtocol(raw.protocol ?? rc.protocol);
     const architecture = String(raw.architecture ?? raw.arch ?? 'amd64');
     const num = (v: unknown) =>
