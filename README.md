@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="apps/web/public/asha-logo.svg" alt="Asha" width="168" height="168" />
+<img src="apps/web/public/asha-logo.svg" alt="ASHA" width="168" height="168" />
 
 # Asha
 
