@@ -24,6 +24,13 @@
     "upload": "بارگذاری",
     "view": "مشاهده"
   },
+  "confirm": {
+    "title": "مطمئن هستید؟",
+    "deleteNamed": "«{name}» حذف شود؟",
+    "description": "این عمل قابل بازگشت نیست.",
+    "confirm": "حذف",
+    "cancel": "لغو"
+  },
   "labels": {
     "actions": "عملیات",
     "active": "فعال",

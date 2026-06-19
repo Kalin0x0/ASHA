@@ -181,6 +181,7 @@
       "installed": "Installiert",
       "registries": "Registrierungen"
     },
+    "removeImageConfirm": "Dabei wird auch das zwischengespeicherte Image vom Host gelöscht, um Speicherplatz freizugeben, und die zugehörigen Workspaces werden entfernt. Dies kann nicht rückgängig gemacht werden.",
     "allCategories": "Alle",
     "availableEmpty": "Keine Images entsprechen deiner Suche.",
     "installedEmpty": "Noch keine Images installiert — installiere eines im Tab „Verfügbar“.",

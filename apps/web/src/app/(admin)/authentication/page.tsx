@@ -21,6 +21,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiAuthProvider,
@@ -68,6 +69,7 @@ const CONFIG_FIELDS: Record<Exclude<AuthProviderType, 'LOCAL'>, ProviderConfigFi
 export default function AuthenticationPage() {
   const t = useTranslations('access');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const [providers, setProviders] = useState<ApiAuthProvider[]>([]);
   const [groups, setGroups] = useState<ApiGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -133,6 +135,8 @@ export default function AuthenticationPage() {
   };
 
   const onDelete = async (id: string) => {
+    const provider = providers.find((p) => p.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: provider?.name ?? '' }) }))) return;
     setBusyId(id);
     try {
       await deleteAuthProvider(id);
@@ -348,6 +352,7 @@ export default function AuthenticationPage() {
 function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiGroup[] }) {
   const t = useTranslations('access');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const [mappings, setMappings] = useState<ApiSsoMapping[]>([]);
   const [loading, setLoading] = useState(false);
   const [groupId, setGroupId] = useState('');
@@ -388,6 +393,13 @@ function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiG
   };
 
   const onRemove = async (id: string) => {
+    const mapping = mappings.find((m) => m.id === id);
+    if (
+      !(await confirm({
+        title: tc('confirm.deleteNamed', { name: mapping ? groupName(mapping.groupId) : '' }),
+      }))
+    )
+      return;
     try {
       await deleteSsoMapping(id);
       await load();

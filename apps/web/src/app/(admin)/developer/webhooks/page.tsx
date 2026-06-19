@@ -10,6 +10,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiWebhook,
@@ -34,6 +35,7 @@ const EVENT_OPTIONS = [
 export default function WebhooksPage() {
   const t = useTranslations('developer');
   const tCommon = useTranslations('common');
+  const confirm = useConfirm();
   const [webhooks, setWebhooks] = useState<ApiWebhook[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -107,6 +109,8 @@ export default function WebhooksPage() {
   };
 
   const onDelete = async (id: string) => {
+    const webhook = webhooks.find((w) => w.id === id);
+    if (!(await confirm({ title: tCommon('confirm.deleteNamed', { name: webhook?.name ?? '' }) }))) return;
     setBusyId(id);
     try {
       await deleteWebhook(id);

@@ -9,6 +9,7 @@ import { StatCard } from '@/components/composite/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
 import {
   type ApiEgressGateway,
@@ -25,6 +26,7 @@ const PROVIDERS = ['wireguard', 'http_proxy', 'socks5'];
 export default function EgressPage() {
   const t = useTranslations('connectivity');
   const tc = useTranslations('common');
+  const confirm = useConfirm();
   const [gateways, setGateways] = useState<ApiEgressGateway[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -96,6 +98,8 @@ export default function EgressPage() {
   };
 
   const onDelete = async (id: string) => {
+    const g = gateways.find((x) => x.id === id);
+    if (!(await confirm({ title: tc('confirm.deleteNamed', { name: g?.name ?? '' }) }))) return;
     setBusyId(id);
     try {
       await deleteEgressGateway(id);
