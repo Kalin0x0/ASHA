@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
-import { prisma } from '@chista/db';
+import { prisma } from '@asha/db';
 import { Public, RequirePermissions } from '../../common/decorators';
 import { RedisService } from '../../common/redis.service';
 
@@ -14,7 +14,7 @@ export class HealthController {
   @Public()
   @Get('live')
   live() {
-    return { status: 'ok', service: 'chista-api' };
+    return { status: 'ok', service: 'asha-api' };
   }
 
   @Public()

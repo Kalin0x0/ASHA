@@ -7,7 +7,7 @@ import {
   createVMProviderSchema,
   type UpdateProviderDto,
   updateProviderSchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { ProvidersService } from './providers.service';

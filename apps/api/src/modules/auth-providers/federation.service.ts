@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { prisma } from '@chista/db';
+import { prisma } from '@asha/db';
 
 /** A normalized identity extracted from an SSO assertion (SAML/OIDC/LDAP). */
 export interface FederatedProfile {

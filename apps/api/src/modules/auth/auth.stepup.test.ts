@@ -6,8 +6,8 @@ const { prismaMock, otpMock } = vi.hoisted(() => ({
   prismaMock: { twoFactorMethod: { findFirst: vi.fn() } },
   otpMock: { verify: vi.fn() },
 }));
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
-vi.mock('@chista/crypto', () => ({ hashToken: (t: string) => `h:${t}`, randomToken: () => 'r', verifyPassword: vi.fn() }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/crypto', () => ({ hashToken: (t: string) => `h:${t}`, randomToken: () => 'r', verifyPassword: vi.fn() }));
 vi.mock('otplib', () => ({ verify: otpMock.verify, generateSecret: vi.fn(), generateURI: vi.fn() }));
 
 import { AuthService } from './auth.service';

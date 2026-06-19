@@ -2,7 +2,7 @@
 http:
   serversTransports:
     # KasmVNC serves HTTPS with a self-signed cert inside the container; allow it.
-    chista-insecure:
+    asha-insecure:
       insecureSkipVerify: true
 
   middlewares:
@@ -15,7 +15,7 @@ http:
         address: 'http://api:4000/api/v1/health/live'
 
 # With routers declaring `tls: true` and no resolver configured, Traefik serves its
-# built-in self-signed certificate (expect a browser warning on chista.local).
+# built-in self-signed certificate (expect a browser warning on asha.local).
 tls:
   stores:
     default: {}

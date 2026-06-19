@@ -1,4 +1,4 @@
-# Chista — TODO / Open Work
+# Asha — TODO / Open Work
 
 > **Authoritative roadmap lives in the repo-root [`TODO.md`](../../TODO.md).**
 > This file is the historical Phase-1→7 backlog, kept for context. All items
@@ -14,7 +14,7 @@ For the why/how see [`PLAN.md`](PLAN.md); for decisions/gotchas see [`MEMORY.md`
       edge; Traefik `sess-auth` middleware points at the internal auth route.
 - [x] **3. Enforce the agent token.** `@AgentOnly()` routes validate
       `x-agent-token` with a timing-safe compare against
-      `CHISTA_AGENT_ENROLLMENT_TOKEN` (added to `@chista/config`).
+      `ASHA_AGENT_ENROLLMENT_TOKEN` (added to `@asha/config`).
 
 ## ✅ Verification & infra hardening — done
 

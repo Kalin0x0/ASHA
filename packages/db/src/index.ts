@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { PrismaClient } from '@prisma/client';
 
 // Re-export all generated Prisma types/enums so the rest of the monorepo has a
-// single import surface: `import { SessionStatus, type Session } from '@chista/db'`.
+// single import surface: `import { SessionStatus, type Session } from '@asha/db'`.
 export * from '@prisma/client';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -137,12 +137,12 @@ function buildClient() {
   });
 }
 
-export type ChistaPrisma = ReturnType<typeof buildClient>;
+export type AshaPrisma = ReturnType<typeof buildClient>;
 
-const globalForPrisma = globalThis as unknown as { __chistaPrisma?: ChistaPrisma };
+const globalForPrisma = globalThis as unknown as { __ashaPrisma?: AshaPrisma };
 
-export const prisma: ChistaPrisma = globalForPrisma.__chistaPrisma ?? buildClient();
+export const prisma: AshaPrisma = globalForPrisma.__ashaPrisma ?? buildClient();
 
 if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.__chistaPrisma = prisma;
+  globalForPrisma.__ashaPrisma = prisma;
 }

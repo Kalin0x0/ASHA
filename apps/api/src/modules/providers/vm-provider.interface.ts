@@ -32,7 +32,7 @@ export interface VMProviderDriver {
 interface ProxmoxConfig {
   apiUrl: string; // e.g. https://pve.example.com:8006
   node: string; // e.g. pve
-  tokenId: string; // e.g. root@pam!chista
+  tokenId: string; // e.g. root@pam!asha
   tokenSecret: string;
   template?: string | number; // default template VMID to clone
   /** Proxmox storage for full clones (optional). */
@@ -398,7 +398,7 @@ export class AzureVmDriver implements VMProviderDriver {
         },
         osProfile: {
           computerName: spec.name.slice(0, 15),
-          adminUsername: 'chista',
+          adminUsername: 'asha',
           linuxConfiguration: { disablePasswordAuthentication: true },
         },
         networkProfile: { networkInterfaces: [] },

@@ -8,9 +8,9 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import type { Env } from '@chista/config';
-import { prisma, runUnscoped } from '@chista/db';
-import { safeEqual } from '@chista/crypto';
+import type { Env } from '@asha/config';
+import { prisma, runUnscoped } from '@asha/db';
+import { safeEqual } from '@asha/crypto';
 import { AGENT_ONLY, IS_PUBLIC } from './decorators';
 import { ENV } from './env.module';
 
@@ -42,7 +42,7 @@ export class JwtAuthGuard implements CanActivate {
       const presented = req.headers['x-agent-token'] as string | undefined;
       if (!presented) throw new UnauthorizedException('Invalid agent token');
       // 1) Shared env enrollment token (timing-safe) — global enrollment.
-      if (safeEqual(presented, this.env.CHISTA_AGENT_ENROLLMENT_TOKEN)) {
+      if (safeEqual(presented, this.env.ASHA_AGENT_ENROLLMENT_TOKEN)) {
         req.agentToken = { scope: 'global' } satisfies AgentTokenScope;
         return true;
       }

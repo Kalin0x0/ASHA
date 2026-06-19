@@ -7,8 +7,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: { apiKey: { findUnique: vi.fn(), update: vi.fn() } },
 }));
-vi.mock('@chista/db', () => ({ prisma: prismaMock, runUnscoped: (fn: () => unknown) => fn() }));
-vi.mock('@chista/crypto', () => ({
+vi.mock('@asha/db', () => ({ prisma: prismaMock, runUnscoped: (fn: () => unknown) => fn() }));
+vi.mock('@asha/crypto', () => ({
   hashToken: (t: string) => `hash:${t}`,
   safeEqual: (a: string, b: string) => a === b,
 }));

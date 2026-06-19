@@ -5,8 +5,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { hashPassword } from '@chista/crypto';
-import { prisma } from '@chista/db';
+import { hashPassword } from '@asha/crypto';
+import { prisma } from '@asha/db';
 import type { AuthUser } from '../../common/decorators';
 
 /** Columns safe to return to the admin UI — never credentials/secrets. */

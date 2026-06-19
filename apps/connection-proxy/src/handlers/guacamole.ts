@@ -23,7 +23,7 @@
 import type { IncomingMessage } from 'node:http';
 import net from 'node:net';
 import { StringDecoder } from 'node:string_decoder';
-import { createLogger } from '@chista/logger';
+import { createLogger } from '@asha/logger';
 import type WebSocket from 'ws';
 import type { SessionRecord } from '../session-store.js';
 import { encodeInstruction, GuacamoleParser } from './guac-protocol.js';

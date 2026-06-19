@@ -7,7 +7,7 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 // Avoid touching the real filesystem in the prune/mkdir paths.
 vi.mock('node:fs/promises', () => ({
   mkdir: vi.fn().mockResolvedValue(undefined),
@@ -19,9 +19,9 @@ vi.mock('node:fs/promises', () => ({
 import { BackupsService } from './backups.service';
 
 const env = {
-  DATABASE_URL: 'postgresql://localhost/chista',
+  DATABASE_URL: 'postgresql://localhost/asha',
   BACKUP_ENABLED: true,
-  BACKUP_DIR: '/tmp/chista-backups',
+  BACKUP_DIR: '/tmp/asha-backups',
   BACKUP_CRON: '0 3 * * *',
   BACKUP_RETENTION: 7,
 } as Record<string, unknown>;

@@ -1,5 +1,5 @@
 {
-  "name": "@chista/api",
+  "name": "@asha/api",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,14 +9,14 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@chista/config": "workspace:*",
-    "@chista/contracts": "workspace:*",
-    "@chista/crypto": "workspace:*",
-    "@chista/db": "workspace:*",
-    "@chista/events": "workspace:*",
-    "@chista/logger": "workspace:*",
-    "@chista/proxy-labels": "workspace:*",
-    "@chista/rbac": "workspace:*",
+    "@asha/config": "workspace:*",
+    "@asha/contracts": "workspace:*",
+    "@asha/crypto": "workspace:*",
+    "@asha/db": "workspace:*",
+    "@asha/events": "workspace:*",
+    "@asha/logger": "workspace:*",
+    "@asha/proxy-labels": "workspace:*",
+    "@asha/rbac": "workspace:*",
     "@nestjs/common": "^10.4.15",
     "@nestjs/core": "^10.4.15",
     "@nestjs/jwt": "^10.2.0",

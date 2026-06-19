@@ -1,4 +1,4 @@
-import { createLogger } from '@chista/logger';
+import { createLogger } from '@asha/logger';
 import Redis from 'ioredis';
 import { proxyEnv } from './env.js';
 
@@ -36,7 +36,7 @@ export interface SessionRecord {
   remoteAppArgs?: string;
 }
 
-const REDIS_KEY = (kasmId: string) => `chista:proxy:session:${kasmId}`;
+const REDIS_KEY = (kasmId: string) => `asha:proxy:session:${kasmId}`;
 
 export class SessionStore {
   private redis: Redis;

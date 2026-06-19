@@ -7,7 +7,7 @@ import {
   serverAgentHeartbeatSchema,
   type ServerAgentTunnelDto,
   serverAgentTunnelSchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { type AuthUser, CurrentUser, Public, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { ServerAgentService } from './server-agent.service';

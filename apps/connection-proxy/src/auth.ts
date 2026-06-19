@@ -17,7 +17,7 @@ export class AuthError extends Error {
 }
 
 /**
- * Verify a Chista access token (signed by the API with JWT_ACCESS_SECRET, shared
+ * Verify a Asha access token (signed by the API with JWT_ACCESS_SECRET, shared
  * here as JWT_SECRET) and return its payload. The API's access tokens carry
  * `sub`/`orgId` (no explicit `type` claim), so we require those rather than a
  * token-type tag. Throws AuthError on failure.

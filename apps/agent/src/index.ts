@@ -5,19 +5,19 @@ import {
   type ProvisionCommand,
   RedisChannels,
   type SessionControlCommand,
-} from '@chista/events';
-import { createLogger } from '@chista/logger';
+} from '@asha/events';
+import { createLogger } from '@asha/logger';
 import Redis from 'ioredis';
 import { agentEnv } from './env.js';
 import { manager } from './manager.js';
 
 const log = createLogger('agent');
 
-// Select the container driver at startup. CHISTA_DRIVER=kubernetes switches
+// Select the container driver at startup. ASHA_DRIVER=kubernetes switches
 // the agent from Docker to ephemeral Kubernetes Pods. All other code is
 // identical since both modules export the same provisionContainer / destroyContainer
 // / collectStats / pauseContainer / unpauseContainer / resizeContainer interface.
-const driver = process.env.CHISTA_DRIVER === 'kubernetes'
+const driver = process.env.ASHA_DRIVER === 'kubernetes'
   ? await import('./kubernetes.js')
   : await import('./docker.js');
 const {
@@ -37,7 +37,7 @@ const {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function main(): Promise<void> {
-  log.info({ zone: agentEnv.zone, host: agentEnv.hostname, cores: agentEnv.cpuCores }, 'Chista agent starting');
+  log.info({ zone: agentEnv.zone, host: agentEnv.hostname, cores: agentEnv.cpuCores }, 'Asha agent starting');
 
   let agentId = '';
   // Default to the local zone; replaced by the zone the manager actually

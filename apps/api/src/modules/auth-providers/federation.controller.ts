@@ -6,7 +6,7 @@ import {
   ldapLoginSchema,
   type LdapTestDto,
   ldapTestSchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { type AuthUser, CurrentUser, Public, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { AuthService } from '../auth/auth.service';
@@ -113,7 +113,7 @@ export class FederationController {
 
   /**
    * OIDC callback: receives `code` + `state`, exchanges for tokens, fetches
-   * UserInfo, provisions/updates the user, and issues a Chista session.
+   * UserInfo, provisions/updates the user, and issues a Asha session.
    */
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
@@ -144,7 +144,7 @@ export class FederationController {
     @Query('idTokenHint') idTokenHint: string | undefined,
     @Res() res: Redirectable,
   ) {
-    const postLogout = returnTo ?? `${process.env.CHISTA_BASE_URL ?? ''}/login`;
+    const postLogout = returnTo ?? `${process.env.ASHA_BASE_URL ?? ''}/login`;
     const { url } = await this.oidc.logoutUrl(id, postLogout, idTokenHint);
     res.redirect(url);
   }

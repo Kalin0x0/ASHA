@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { hashToken, randomToken } from '@chista/crypto';
-import { prisma } from '@chista/db';
+import { hashToken, randomToken } from '@asha/crypto';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
 /**

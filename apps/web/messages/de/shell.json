@@ -94,7 +94,7 @@
     "viewLiveSessions": "Live-Sitzungen anzeigen",
     "toggleTheme": "Design umschalten",
     "toSelect": "zum Auswählen",
-    "brand": "Chista Command",
+    "brand": "Asha Command",
     "launchError": "Sitzung konnte nicht gestartet werden"
   },
   "comingSoon": {
@@ -103,7 +103,7 @@
   },
   "notFound": {
     "title": "Seite nicht gefunden",
-    "description": "Diese Route existiert in Ihrer Chista-Installation nicht.",
+    "description": "Diese Route existiert in Ihrer Asha-Installation nicht.",
     "backToDashboard": "Zurück zum Dashboard"
   }
 }

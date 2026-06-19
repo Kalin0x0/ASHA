@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { SAML, type SamlConfig } from '@node-saml/node-saml';
-import { prisma } from '@chista/db';
-import type { Env } from '@chista/config';
+import { prisma } from '@asha/db';
+import type { Env } from '@asha/config';
 import { unsealConfig } from '../../common/config-seal';
 import { ENV } from '../../common/env.module';
 import type { FederatedProfile } from './federation.service';
@@ -18,7 +18,7 @@ export class SamlService {
 
   /** Where the IdP POSTs its assertion back to (the SP ACS endpoint). */
   callbackUrl(id: string): string {
-    return `${this.env.CHISTA_PUBLIC_URL.replace(/\/$/, '')}/api/v1/auth/saml/${id}/callback`;
+    return `${this.env.ASHA_PUBLIC_URL.replace(/\/$/, '')}/api/v1/auth/saml/${id}/callback`;
   }
 
   private async load(orgId: string | undefined, id: string) {

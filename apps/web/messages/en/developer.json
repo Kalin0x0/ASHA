@@ -1,7 +1,7 @@
 {
   "updates": {
     "title": "Updates",
-    "description": "What's new in Chista — what was added, fixed and changed in every release, and the version you're running.",
+    "description": "What's new in Asha — what was added, fixed and changed in every release, and the version you're running.",
     "currentVersion": "Current version",
     "upToDate": "You're running the latest version",
     "latest": "Latest",
@@ -16,12 +16,12 @@
     "checkAvailableToast": "Update available: v{version}",
     "checkFailed": "Couldn't check for updates.",
     "updateAvailable": "Update available — v{version}",
-    "updateAvailableHint": "A newer version of Chista is available. Update your deployment to upgrade.",
+    "updateAvailableHint": "A newer version of Asha is available. Update your deployment to upgrade.",
     "viewRelease": "View release"
   },
   "apiKeys": {
     "title": "API Keys",
-    "description": "Programmatic access tokens for the Chista API. Each key carries scopes and an optional expiry; the secret is shown once.",
+    "description": "Programmatic access tokens for the Asha API. Each key carries scopes and an optional expiry; the secret is shown once.",
     "loadError": "Failed to load API keys",
     "liveOnlyNotice": "API key management is live-backend only. Run with",
     "createdToast": "API key created",
@@ -35,7 +35,7 @@
     "totalIssued": "Total issued",
     "keysHeading": "Keys",
     "emptyTitle": "No API keys issued",
-    "emptyDescription": "Create a key to enable programmatic access to the Chista API.",
+    "emptyDescription": "Create a key to enable programmatic access to the Asha API.",
     "revoked": "Revoked",
     "createKey": "Create key",
     "expiresInDays": "Expires in (days, optional)",
@@ -44,7 +44,7 @@
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "Receive HMAC-signed event callbacks for sessions, users, and recordings. Verify the X-Chista-Signature header against your secret.",
+    "description": "Receive HMAC-signed event callbacks for sessions, users, and recordings. Verify the X-Asha-Signature header against your secret.",
     "loadError": "Failed to load webhooks",
     "liveOnlyNotice": "Webhook management is live-backend only. Run with",
     "createdToast": "Webhook created",
@@ -68,7 +68,7 @@
   },
   "apiDocs": {
     "title": "API Docs",
-    "description": "Chista exposes a fully documented REST API with an interactive OpenAPI (Swagger) explorer.",
+    "description": "Asha exposes a fully documented REST API with an interactive OpenAPI (Swagger) explorer.",
     "openSwaggerUi": "Open Swagger UI",
     "interactiveExplorer": "Interactive explorer",
     "interactiveExplorerDescription": "Try every endpoint with live auth from the Swagger UI, served by the API at",
@@ -79,7 +79,7 @@
     "authDescriptionAfterCode": "or an API key issued under Developer → API Keys.",
     "manageApiKeys": "Manage API keys",
     "embeddedExplorer": "Embedded explorer",
-    "iframeTitle": "Chista API docs",
+    "iframeTitle": "Asha API docs",
     "backendNotConnectedTitle": "Backend not connected",
     "backendNotConnectedDescription": "The embedded Swagger UI loads from the live API. Run with NEXT_PUBLIC_API_MODE=live to explore endpoints here.",
     "openSwaggerUiNewTab": "Open Swagger UI in a new tab"

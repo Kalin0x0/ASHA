@@ -1,8 +1,8 @@
 import { Inject, Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { createHash, createPublicKey, randomBytes, verify as cryptoVerify } from 'crypto';
 import type { JsonWebKey, KeyObject } from 'crypto';
-import { prisma } from '@chista/db';
-import type { Env } from '@chista/config';
+import { prisma } from '@asha/db';
+import type { Env } from '@asha/config';
 import { unsealConfig } from '../../common/config-seal';
 import { ENV } from '../../common/env.module';
 import type { FederatedProfile } from './federation.service';
@@ -191,7 +191,7 @@ export class OidcService {
     // token replay/injection — verified against the id_token `nonce` claim.
     const nonce = randomBytes(16).toString('hex');
     const scopes = cfg.scopes ?? ['openid', 'email', 'profile'];
-    const redirectUri = cfg.redirectUri ?? `${process.env.CHISTA_BASE_URL ?? ''}/auth/oidc/${id}/callback`;
+    const redirectUri = cfg.redirectUri ?? `${process.env.ASHA_BASE_URL ?? ''}/auth/oidc/${id}/callback`;
 
     const params = new URLSearchParams({
       response_type: 'code',
@@ -237,7 +237,7 @@ export class OidcService {
 
     const { cfg } = await this.loadConfig(id);
     const doc = await this.discover(cfg.issuer);
-    const redirectUri = cfg.redirectUri ?? `${process.env.CHISTA_BASE_URL ?? ''}/auth/oidc/${id}/callback`;
+    const redirectUri = cfg.redirectUri ?? `${process.env.ASHA_BASE_URL ?? ''}/auth/oidc/${id}/callback`;
     const authMethod = cfg.tokenEndpointAuthMethod ?? 'client_secret_basic';
 
     // ── Token exchange ──────────────────────────────────────────────────────
@@ -334,7 +334,7 @@ export class OidcService {
   /**
    * RP-initiated logout (OIDC Session Management). Returns the IdP
    * end_session_endpoint URL to redirect the browser to, so the IdP session is
-   * terminated too — not just the local Chista session. Falls back to the local
+   * terminated too — not just the local Asha session. Falls back to the local
    * post-logout target when the IdP advertises no end_session_endpoint.
    */
   async logoutUrl(id: string, postLogoutRedirect: string, idTokenHint?: string): Promise<{ url: string }> {

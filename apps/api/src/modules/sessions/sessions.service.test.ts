@@ -14,7 +14,7 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 vi.mock('../../common/audit.service', () => ({ AuditService: class {} }));
 vi.mock('../../common/redis.service', () => ({ RedisService: class {} }));
 vi.mock('./scheduler.service', () => ({ SchedulerService: class {} }));
@@ -120,7 +120,7 @@ describe('SessionsService.create', () => {
     );
     // Provision goes out on the resolved zone's channel (regression: zone name).
     expect(redis.publish).toHaveBeenCalledWith(
-      'chista:zone:default:provision',
+      'asha:zone:default:provision',
       expect.objectContaining({ sessionId: 'sess1', kasmId: 'kid', zone: 'default', protocol: 'KASMVNC' }),
     );
     expect(prismaMock.session.update).toHaveBeenCalledWith(
@@ -193,7 +193,7 @@ describe('SessionsService.terminate', () => {
       expect.objectContaining({ data: { status: 'TERMINATING', terminationReason: 'admin_terminate' } }),
     );
     expect(redis.publish).toHaveBeenCalledWith(
-      'chista:zone:default:destroy',
+      'asha:zone:default:destroy',
       expect.objectContaining({ sessionId: 'sess1', containerId: 'c1' }),
     );
     expect(res).toEqual({ ok: true });
@@ -223,7 +223,7 @@ describe('SessionsService pause / resume / resize', () => {
     prismaMock.session.findFirst.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
     const res = await svc.pause('s1', USER);
     expect(redis.publish).toHaveBeenCalledWith(
-      'chista:zone:default:control',
+      'asha:zone:default:control',
       expect.objectContaining({ sessionId: 's1', action: 'PAUSE', containerId: 'c1' }),
     );
     expect(prismaMock.session.update).toHaveBeenCalledWith(
@@ -242,7 +242,7 @@ describe('SessionsService pause / resume / resize', () => {
     prismaMock.session.findFirst.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'PAUSED' });
     await svc.resume('s1', USER);
     expect(redis.publish).toHaveBeenCalledWith(
-      'chista:zone:default:control',
+      'asha:zone:default:control',
       expect.objectContaining({ action: 'RESUME' }),
     );
     expect(prismaMock.session.update).toHaveBeenCalledWith(
@@ -254,7 +254,7 @@ describe('SessionsService pause / resume / resize', () => {
     prismaMock.session.findFirst.mockResolvedValue({ id: 's1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', status: 'RUNNING' });
     await svc.resize('s1', 1920, 1080, USER);
     expect(redis.publish).toHaveBeenCalledWith(
-      'chista:zone:default:control',
+      'asha:zone:default:control',
       expect.objectContaining({ action: 'RESIZE', width: 1920, height: 1080 }),
     );
   });

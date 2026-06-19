@@ -210,7 +210,7 @@ export default function UsersPage() {
                 required
                 autoFocus
                 dir="ltr"
-                placeholder="jane@chista.local"
+                placeholder="jane@asha.local"
                 value={form.email}
                 onChange={(e) => set({ email: e.target.value })}
               />

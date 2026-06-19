@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { prisma } from '@chista/db';
+import { prisma } from '@asha/db';
 import { type AuthUser, CurrentUser, Public } from '../../common/decorators';
 
 /** Lightweight read endpoints for zones, users, settings and branding. */
@@ -62,7 +62,7 @@ export class CatalogController {
     const branding = await prisma.branding.findFirst({ where: { scope: 'ORG' } });
     return (
       branding ?? {
-        productName: 'Chista',
+        productName: 'Asha',
         primaryColor: '#1a1a2e',
         accentColor: '#d4af37',
         logoUrl: null,

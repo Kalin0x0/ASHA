@@ -26,8 +26,8 @@ const rid = (p: string) => `${p}-${Math.random().toString(36).slice(2, 10)}`;
 // ── Mock store (module-level; survives navigation within a session) ──────────
 
 const mockVolumes: ApiVolumeMapping[] = [
-  { id: 'vol-shared-datasets', name: 'shared-datasets', hostPath: '/srv/chista/datasets', destPath: '/data/datasets', readOnly: true },
-  { id: 'vol-team-models', name: 'team-models', hostPath: 'chista_models', destPath: '/opt/models', readOnly: true },
+  { id: 'vol-shared-datasets', name: 'shared-datasets', hostPath: '/srv/asha/datasets', destPath: '/data/datasets', readOnly: true },
+  { id: 'vol-team-models', name: 'team-models', hostPath: 'asha_models', destPath: '/opt/models', readOnly: true },
   { id: 'vol-scratch', name: 'scratch-rw', hostPath: '/mnt/nvme/scratch', destPath: '/scratch', readOnly: false },
 ];
 

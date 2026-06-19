@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { prisma } from '@chista/db';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
 /**

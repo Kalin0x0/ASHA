@@ -9,8 +9,8 @@ const { prismaMock } = vi.hoisted(() => ({
     $transaction: vi.fn(),
   },
 }));
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
-vi.mock('@chista/rbac', () => ({
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/rbac', () => ({
   PERMISSION_CATALOG: [],
   PERMISSION_KEYS: new Set(['USER_DELETE', 'SESSION_VIEW', 'ROLE_MANAGE']),
 }));

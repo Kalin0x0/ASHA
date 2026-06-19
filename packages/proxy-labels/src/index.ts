@@ -14,7 +14,7 @@ export interface SessionRouteInput {
   kasmId: string;
   /** Port the stream server listens on inside the container (KasmVNC → 6901). */
   internalPort: number;
-  /** Public base domain, e.g. `chista.local`. */
+  /** Public base domain, e.g. `asha.local`. */
   domain: string;
   /** Docker network the session container and Traefik share. */
   network: string;

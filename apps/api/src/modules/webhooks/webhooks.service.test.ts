@@ -9,8 +9,8 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
-vi.mock('@chista/crypto', () => ({
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/crypto', () => ({
   seal: (t: string) => `sealed:${t}`,
   unseal: (t: string) => { if (!t.startsWith('sealed:')) throw new Error('not sealed'); return t.slice('sealed:'.length); },
   hashToken: (t: string) => `hashed:${t}`,
@@ -70,7 +70,7 @@ describe('WebhooksService', () => {
     expect(url).toBe('https://example.com/hook');
     // Verify the signature matches an independent HMAC over the exact body sent
     const expected = `sha256=${createHmac('sha256', 'topsecret').update(init.body).digest('hex')}`;
-    expect(init.headers['x-chista-signature']).toBe(expected);
+    expect(init.headers['x-asha-signature']).toBe(expected);
     expect(prismaMock.webhookDelivery.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'SUCCESS', responseCode: 200 }) }),
     );

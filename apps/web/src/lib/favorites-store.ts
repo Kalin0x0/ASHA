@@ -32,7 +32,7 @@ export const useFavorites = create<FavoritesState>()(
       remove: (id) => set((s) => ({ ids: s.ids.filter((x) => x !== id) })),
       reorder: (ids) => set({ ids }),
     }),
-    { name: 'chista-favorites' },
+    { name: 'asha-favorites' },
   ),
 );
 

@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: chista-api
+  name: asha-api
   labels:
-    app.kubernetes.io/name: chista-api
-    {{- include "chista.labels" . | nindent 4 }}
+    app.kubernetes.io/name: asha-api
+    {{- include "asha.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.api.replicas }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: chista-api
+      app.kubernetes.io/name: asha-api
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: chista-api
+        app.kubernetes.io/name: asha-api
     spec:
       containers:
         - name: api
-          image: {{ printf "%s/chista-api:%s" .Values.image.registry .Values.image.tag | quote }}
+          image: {{ printf "%s/asha-api:%s" .Values.image.registry .Values.image.tag | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.api.port }}
@@ -30,7 +30,7 @@ spec:
               value: {{ .Values.postgres.url | quote }}
             - name: REDIS_URL
               value: {{ .Values.redis.url | quote }}
-            - name: CHISTA_PUBLIC_URL
+            - name: ASHA_PUBLIC_URL
               value: {{ printf "https://%s" .Values.domain | quote }}
             - name: JWT_ACCESS_SECRET
               value: {{ .Values.secrets.jwtAccess | quote }}
@@ -48,12 +48,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: chista-api
+  name: asha-api
   labels:
-    app.kubernetes.io/name: chista-api
+    app.kubernetes.io/name: asha-api
 spec:
   selector:
-    app.kubernetes.io/name: chista-api
+    app.kubernetes.io/name: asha-api
   ports:
     - port: {{ .Values.api.port }}
       targetPort: {{ .Values.api.port }}

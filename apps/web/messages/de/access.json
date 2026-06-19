@@ -1,7 +1,7 @@
 {
   "users": {
     "title": "Benutzer",
-    "description": "Personen mit Zugriff auf diese Chista-Installation.",
+    "description": "Personen mit Zugriff auf diese Asha-Installation.",
     "newUser": "Neuer Benutzer",
     "stats": {
       "totalUsers": "Benutzer gesamt",
@@ -168,7 +168,7 @@
       "empty": "Noch keine Zuordnungen — Benutzer authentifizieren sich, treten aber automatisch keinen Gruppen bei.",
       "attribute": "Attribut",
       "value": "Wert",
-      "chistaGroup": "Chista-Gruppe",
+      "ashaGroup": "Asha-Gruppe",
       "selectGroup": "Gruppe auswählen…"
     },
     "toasts": {

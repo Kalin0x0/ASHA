@@ -1,9 +1,9 @@
 import { createHmac } from 'node:crypto';
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { CreateWebhookDto, UpdateWebhookDto } from '@chista/contracts';
-import type { Env } from '@chista/config';
-import { seal, unseal } from '@chista/crypto';
-import { prisma } from '@chista/db';
+import type { CreateWebhookDto, UpdateWebhookDto } from '@asha/contracts';
+import type { Env } from '@asha/config';
+import { seal, unseal } from '@asha/crypto';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 import { ENV } from '../../common/env.module';
 
@@ -13,7 +13,7 @@ import { ENV } from '../../common/env.module';
  * recorded with its HTTP status for observability/retry.
  *
  * Signature: HMAC-SHA256 over the raw JSON body, keyed by the webhook secret,
- * sent as `X-Chista-Signature: sha256=<hex>` (GitHub-style) so receivers can
+ * sent as `X-Asha-Signature: sha256=<hex>` (GitHub-style) so receivers can
  * verify authenticity.
  */
 @Injectable()
@@ -120,7 +120,7 @@ export class WebhooksService {
   async test(orgId: string, id: string) {
     const hook = await prisma.webhook.findFirst({ where: { id, orgId } });
     if (!hook) throw new NotFoundException('Webhook not found');
-    return this.deliver(hook, 'webhook.test', { message: 'Chista test event', at: new Date().toISOString() });
+    return this.deliver(hook, 'webhook.test', { message: 'Asha test event', at: new Date().toISOString() });
   }
 
   /**
@@ -143,13 +143,13 @@ export class WebhooksService {
     const body = JSON.stringify({ event, payload, deliveredAt: new Date().toISOString() });
     const headers: Record<string, string> = {
       'content-type': 'application/json',
-      'user-agent': 'Chista-Webhooks/1.0',
-      'x-chista-event': event,
+      'user-agent': 'Asha-Webhooks/1.0',
+      'x-asha-event': event,
     };
     const plainSecret = this.unsealSecret(hook.secret);
     if (plainSecret) {
       const sig = createHmac('sha256', plainSecret).update(body).digest('hex');
-      headers['x-chista-signature'] = `sha256=${sig}`;
+      headers['x-asha-signature'] = `sha256=${sig}`;
     }
 
     let status: 'SUCCESS' | 'FAILED' = 'FAILED';

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { isPlaceholderHost, resolveSessionBaseUrl } from './index';
 
 describe('resolveSessionBaseUrl', () => {
-  const env = { WORKSPACE_PUBLIC_BASE_URL: undefined, CHISTA_PUBLIC_URL: 'https://chista.local' };
+  const env = { WORKSPACE_PUBLIC_BASE_URL: undefined, ASHA_PUBLIC_URL: 'https://asha.local' };
 
   it('prefers the per-zone proxyBaseUrl when present', () => {
     expect(resolveSessionBaseUrl(env, 'https://eu.example.com')).toBe('https://eu.example.com');
@@ -14,15 +14,15 @@ describe('resolveSessionBaseUrl', () => {
     ).toBe('https://ws.example.com');
   });
 
-  it('falls back to CHISTA_PUBLIC_URL last', () => {
-    expect(resolveSessionBaseUrl(env, undefined)).toBe('https://chista.local');
+  it('falls back to ASHA_PUBLIC_URL last', () => {
+    expect(resolveSessionBaseUrl(env, undefined)).toBe('https://asha.local');
   });
 });
 
 describe('isPlaceholderHost', () => {
   it('flags the default .local dev domain', () => {
-    expect(isPlaceholderHost('https://chista.local/session/abc/')).toBe(true);
-    expect(isPlaceholderHost('https://eu.chista.local')).toBe(true);
+    expect(isPlaceholderHost('https://asha.local/session/abc/')).toBe(true);
+    expect(isPlaceholderHost('https://eu.asha.local')).toBe(true);
   });
 
   it('flags loopback hosts', () => {

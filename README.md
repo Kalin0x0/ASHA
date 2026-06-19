@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="apps/web/public/chista-logo.svg" alt="Chista" width="168" height="168" />
+<img src="apps/web/public/asha-logo.svg" alt="Asha" width="168" height="168" />
 
-# Chista
+# Asha
 
 **A modern container-streaming / VDI / DaaS platform.**
 Stream containerized desktops, browsers, and apps to any browser — self-hosted, multi-tenant, and built to outclass the incumbents.
@@ -15,11 +15,11 @@ Stream containerized desktops, browsers, and apps to any browser — self-hosted
 
 ---
 
-> **What is this?** Chista is an original, ground-up platform by **Naiemi Group**, inspired by the
+> **What is this?** Asha is an original, ground-up platform by **Naiemi Group**, inspired by the
 > feature set and architecture of commercial container-streaming products (Kasm Workspaces and the
 > like). It is **not** a copy of any proprietary codebase — every line is our own implementation.
 > Where genuinely open-source streaming/runtime components exist (KasmVNC, noVNC, Neko, Squid,
-> WireGuard, guacd, Fluent Bit), Chista consumes them as **unmodified runtime container images or
+> WireGuard, guacd, Fluent Bit), Asha consumes them as **unmodified runtime container images or
 > generated config**, never linked into our source, so licenses stay clean.
 
 > **Status:** Phases 1–7 complete. **276 unit tests**, full `typecheck · lint · test · build`
@@ -51,16 +51,16 @@ Stream containerized desktops, browsers, and apps to any browser — self-hosted
 
 | Workspace | Path | Purpose |
 | --- | --- | --- |
-| `@chista/web` | `apps/web` | Next.js 15 admin dashboard **and** end-user portal (the showpiece). |
-| `@chista/api` | `apps/api` | NestJS Manager/API — REST + WebSocket control plane, OpenAPI at `/api/docs`. |
-| `@chista/agent` | `apps/agent` | Node agent that provisions & destroys session containers — Docker (dockerode) **or** Kubernetes (ephemeral Pods) driver, plus connectivity sidecars + device passthrough. |
-| `@chista/connection-proxy` | `apps/connection-proxy` | RDP/VNC bridge to **guacd**, and SSH bridge via **ssh2** (PTY, resize, key/password auth). |
-| `@chista/db` | `packages/db` | Prisma schema (single source of truth), client, migrations, seed, RLS backstop. |
-| `@chista/contracts` | `packages/contracts` | Shared DTOs / zod schemas / event contracts. |
-| `@chista/rbac` | `packages/rbac` | Permission catalog + role matrix + policy evaluation. |
-| `@chista/proxy-labels` | `packages/proxy-labels` | Pure fn: a session → Traefik labels / k8s ingress. |
-| `@chista/events` | `packages/events` | Typed Redis pub/sub channels + provision/sidecar command shapes. |
-| `@chista/config` · `@chista/crypto` · `@chista/logger` | `packages/*` | Env loading, secret/token crypto, structured logging. |
+| `@asha/web` | `apps/web` | Next.js 15 admin dashboard **and** end-user portal (the showpiece). |
+| `@asha/api` | `apps/api` | NestJS Manager/API — REST + WebSocket control plane, OpenAPI at `/api/docs`. |
+| `@asha/agent` | `apps/agent` | Node agent that provisions & destroys session containers — Docker (dockerode) **or** Kubernetes (ephemeral Pods) driver, plus connectivity sidecars + device passthrough. |
+| `@asha/connection-proxy` | `apps/connection-proxy` | RDP/VNC bridge to **guacd**, and SSH bridge via **ssh2** (PTY, resize, key/password auth). |
+| `@asha/db` | `packages/db` | Prisma schema (single source of truth), client, migrations, seed, RLS backstop. |
+| `@asha/contracts` | `packages/contracts` | Shared DTOs / zod schemas / event contracts. |
+| `@asha/rbac` | `packages/rbac` | Permission catalog + role matrix + policy evaluation. |
+| `@asha/proxy-labels` | `packages/proxy-labels` | Pure fn: a session → Traefik labels / k8s ingress. |
+| `@asha/events` | `packages/events` | Typed Redis pub/sub channels + provision/sidecar command shapes. |
+| `@asha/config` · `@asha/crypto` · `@asha/logger` | `packages/*` | Env loading, secret/token crypto, structured logging. |
 
 ## Capabilities
 
@@ -93,7 +93,7 @@ The web app runs fully on deterministic mock data (`NEXT_PUBLIC_API_MODE=mock`).
 ```bash
 pnpm install
 cp .env.example .env
-pnpm --filter @chista/web dev
+pnpm --filter @asha/web dev
 # open http://localhost:3000  → login with any credentials (mock mode)
 ```
 
@@ -102,8 +102,8 @@ pnpm --filter @chista/web dev
 ```bash
 cp .env.example .env
 docker compose up -d --build
-# web:     https://chista.local        (add `127.0.0.1 chista.local` to your hosts file)
-# api docs: https://chista.local/api/docs
+# web:     https://asha.local        (add `127.0.0.1 asha.local` to your hosts file)
+# api docs: https://asha.local/api/docs
 ```
 
 The `db-migrate` one-shot container runs `prisma migrate deploy` + seed automatically.
@@ -134,7 +134,7 @@ pnpm dev                                        # turbo runs web + api + agent
 
 All seven phases are complete. The full per-item build log lives in [`TODO.md`](TODO.md).
 
-- ✅ **Phase 1** — monorepo, full data model, the Chista design system, admin shell + live dashboard + sessions, the end-user **launch → stream** flow against a real KasmVNC container, single-node Docker Compose, Helm skeleton.
+- ✅ **Phase 1** — monorepo, full data model, the Asha design system, admin shell + live dashboard + sessions, the end-user **launch → stream** flow against a real KasmVNC container, single-node Docker Compose, Helm skeleton.
 - ✅ **Phase 2** — RDP/VNC via guacd + SSH via ssh2, session sharing & chat, recording (S3), persistent profiles & file mappings, TOTP 2FA.
 - ✅ **Phase 3** — full OIDC/SAML/LDAP, multi-zone + staging + casting, server pools + autoscale + VM/DNS providers (real Proxmox VE driver), security hardening, reporting/webhooks.
 - ✅ **Phase 4** — storage mappings, browser isolation / web filtering / egress, Kubernetes driver + HPA, Windows/RDS.
@@ -144,10 +144,10 @@ All seven phases are complete. The full per-item build log lives in [`TODO.md`](
 
 ## License & ownership
 
-Chista is a **Naiemi Group** product. All first-party source in this repository is owned by
+Asha is a **Naiemi Group** product. All first-party source in this repository is owned by
 Naiemi Group. Third-party open-source runtime images and tools (KasmVNC, Neko, Squid, WireGuard,
 guacd, Fluent Bit, Traefik, Postgres, Redis) are used **unmodified** under their respective
-licenses and are never linked into Chista's source.
+licenses and are never linked into Asha's source.
 
 <div align="center">
 

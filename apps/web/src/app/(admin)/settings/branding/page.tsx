@@ -35,7 +35,7 @@ export default function BrandingPage() {
   }, [refresh]);
 
   const b = branding ?? {
-    productName: 'Chista',
+    productName: 'Asha',
     logoUrl: null,
     faviconUrl: null,
     loginBackgroundUrl: null,

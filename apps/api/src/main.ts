@@ -3,7 +3,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
-import { corsOrigins, loadEnv } from '@chista/config';
+import { corsOrigins, loadEnv } from '@asha/config';
 import { AppModule } from './app.module';
 import { DevApiModule } from './modules/dev-api/dev-api.module';
 
@@ -46,15 +46,15 @@ async function bootstrap() {
   // X-Forwarded-For. Without this, the rate-limiter keys every request on the
   // proxy's single IP → all users share one bucket → spurious 429s. Trust only
   // the first hop by default (safe behind one proxy); override with
-  // CHISTA_TRUST_PROXY (number of hops, or 0 to disable).
-  app.getHttpAdapter().getInstance().set('trust proxy', Number(process.env.CHISTA_TRUST_PROXY ?? 1));
+  // ASHA_TRUST_PROXY (number of hops, or 0 to disable).
+  app.getHttpAdapter().getInstance().set('trust proxy', Number(process.env.ASHA_TRUST_PROXY ?? 1));
   app.setGlobalPrefix('api/v1');
   app.enableCors({ origin: corsOrigins(env), credentials: true });
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Chista API')
-    .setDescription('Control plane for the Chista container-streaming platform.')
+    .setTitle('Asha API')
+    .setDescription('Control plane for the Asha container-streaming platform.')
     .setVersion('0.1.0')
     .addBearerAuth()
     .build();
@@ -65,7 +65,7 @@ async function bootstrap() {
   // codegen (openapi-generator etc.) targets the stable public endpoints rather
   // than the internal control plane. JSON served at /api/dev-docs-json.
   const devConfig = new DocumentBuilder()
-    .setTitle('Chista Developer API')
+    .setTitle('Asha Developer API')
     .setDescription('Public, API-key-authenticated developer surface for SDKs and automation.')
     .setVersion('1.0.0')
     .addApiKey({ type: 'apiKey', name: 'X-Api-Key', in: 'header' }, 'ApiKey')
@@ -75,7 +75,7 @@ async function bootstrap() {
 
   await app.listen(env.API_PORT);
   new Logger('Bootstrap').log(
-    `Chista API listening on :${env.API_PORT} — docs at /api/docs, developer SDK contract at /api/dev-docs`,
+    `Asha API listening on :${env.API_PORT} — docs at /api/docs, developer SDK contract at /api/dev-docs`,
   );
 }
 

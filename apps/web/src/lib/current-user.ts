@@ -7,6 +7,6 @@
 export const CURRENT_USER = {
   id: 'user-1',
   name: 'Shahin Naiemi',
-  email: 'shahin.naiemi@chista.local',
+  email: 'shahin.naiemi@asha.local',
   initials: 'SN',
 } as const;

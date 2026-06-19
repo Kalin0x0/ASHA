@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { prisma } from '@chista/db';
-import { PERMISSION_CATALOG, PERMISSION_KEYS } from '@chista/rbac';
+import { prisma } from '@asha/db';
+import { PERMISSION_CATALOG, PERMISSION_KEYS } from '@asha/rbac';
 import type { AuthUser } from '../../common/decorators';
 import { RbacService } from '../../common/rbac.service';
 

@@ -1,11 +1,11 @@
-# Chista trusted-workstation image (F6 enabler).
+# Asha trusted-workstation image (F6 enabler).
 # Bakes the deployment's internal CA(s) into the OS trust store and enables
 # Firefox enterprise-root import, so internal HTTPS services (e.g. *.persia.local
 # behind the Persia Root CA) work inside streamed sessions without cert warnings.
-# Also flags DLP-capability for KasmVNC builds that honour CHISTA_DLP_ENABLED.
+# Also flags DLP-capability for KasmVNC builds that honour ASHA_DLP_ENABLED.
 #
 # Build (any kasmweb/* base):
-#   ./build.sh kasmweb/firefox:1.16.0 chista/firefox-trusted:1.16.0
+#   ./build.sh kasmweb/firefox:1.16.0 asha/firefox-trusted:1.16.0
 ARG BASE_IMAGE=kasmweb/firefox:1.16.0
 FROM ${BASE_IMAGE}
 
@@ -13,7 +13,7 @@ ARG ENABLE_DLP=1
 USER root
 
 # Every certs/*.crt is added to the OS trust store.
-COPY certs/ /usr/local/share/ca-certificates/chista/
+COPY certs/ /usr/local/share/ca-certificates/asha/
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends ca-certificates; \
@@ -25,6 +25,6 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 # Honoured by DLP-capable KasmVNC builds; harmless on images that ignore it.
-ENV CHISTA_DLP_ENABLED=${ENABLE_DLP}
+ENV ASHA_DLP_ENABLED=${ENABLE_DLP}
 
 USER 1000

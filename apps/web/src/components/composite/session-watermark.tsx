@@ -23,7 +23,7 @@ export function SessionWatermark({
   opacity = 0.13,
   className,
 }: {
-  /** Human label for the viewer, e.g. "Shahin Naiemi · shahin@chista.local". */
+  /** Human label for the viewer, e.g. "Shahin Naiemi · shahin@asha.local". */
   identity: string;
   /** Session id — a short slice is shown for forensic correlation. */
   sessionId?: string;

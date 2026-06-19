@@ -5,7 +5,7 @@ import {
   createWorkspaceSchema,
   type UpdateWorkspaceDto,
   updateWorkspaceSchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { WorkspacesService } from './workspaces.service';

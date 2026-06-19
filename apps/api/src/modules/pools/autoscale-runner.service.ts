@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import { prisma } from '@chista/db';
+import { prisma } from '@asha/db';
 import { ProvidersService } from '../providers/providers.service';
 import { PoolsService } from './pools.service';
 
 /**
  * Autoscale runner (D5). Periodically evaluates each pool's plan
  * (PoolsService.planAutoscale) and reconciles capacity by driving the pool's VM
- * provider. Disabled by default — set CHISTA_AUTOSCALE_RUNNER=true to arm the
+ * provider. Disabled by default — set ASHA_AUTOSCALE_RUNNER=true to arm the
  * scheduled loop (real provider create/destroy). runPool() is the verifiable
  * core (drive it directly with a mocked driver — no cloud needed).
  */
@@ -22,7 +22,7 @@ export class AutoscaleRunnerService {
 
   @Interval(60_000)
   async runAll() {
-    if (process.env.CHISTA_AUTOSCALE_RUNNER !== 'true') return [];
+    if (process.env.ASHA_AUTOSCALE_RUNNER !== 'true') return [];
     const configs = await prisma.autoscaleConfig.findMany({ select: { orgId: true, serverPoolId: true } });
     const results: unknown[] = [];
     for (const cfg of configs) {

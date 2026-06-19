@@ -1,4 +1,4 @@
-# Chista — Plan & Architecture
+# Asha — Plan & Architecture
 
 This is the authoritative plan. For the live backlog see [`TODO.md`](TODO.md); for
 decisions and gotchas see [`MEMORY.md`](MEMORY.md).
@@ -28,16 +28,16 @@ Browser ──https──► Traefik (edge + per-session dynamic routing via con
    api ──► postgres (Prisma)   api/agent ──► redis (pub/sub)   agent ──► Docker Engine
 ```
 
-Networks: `chista-edge` (Traefik⇄web/api), `chista-core` (⇄postgres/redis),
-`chista-sessions` (Traefik⇄ephemeral session containers).
+Networks: `asha-edge` (Traefik⇄web/api), `asha-core` (⇄postgres/redis),
+`asha-sessions` (Traefik⇄ephemeral session containers).
 
 ## Launch → stream flow
 
 1. `POST /api/v1/sessions` → authz (`SESSION_LAUNCH`) → license check → `Session(REQUESTED)`.
 2. `SchedulerService` picks the least-loaded fresh ONLINE agent in the zone → `SCHEDULED`.
-3. Manager publishes a `ProvisionCommand` on `chista:zone:<zone>:provision` (Redis).
-4. Agent pulls the image, computes **Traefik labels** (`@chista/proxy-labels`), `docker run`s
-   the KasmVNC container on `chista-sessions`.
+3. Manager publishes a `ProvisionCommand` on `asha:zone:<zone>:provision` (Redis).
+4. Agent pulls the image, computes **Traefik labels** (`@asha/proxy-labels`), `docker run`s
+   the KasmVNC container on `asha-sessions`.
 5. Traefik picks up labels from the Docker event stream (~1 s, no reload); a `sess-auth`
    forward-auth middleware guards the route.
 6. Agent probes readiness → `POST /internal/agents/:id/sessions/:sid/status RUNNING`. Manager

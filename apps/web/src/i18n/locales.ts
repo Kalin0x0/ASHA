@@ -19,7 +19,7 @@ export type Locale = (typeof LOCALES)[number]['code'];
 export const DEFAULT_LOCALE: Locale = 'en';
 
 /** Cookie that persists the user's language across visits (1 year). */
-export const LOCALE_COOKIE = 'chista-locale';
+export const LOCALE_COOKIE = 'asha-locale';
 
 export function isLocale(value: string | undefined): value is Locale {
   return LOCALES.some((l) => l.code === value);

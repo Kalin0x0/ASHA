@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import { prisma } from '@chista/db';
+import { prisma } from '@asha/db';
 import { SessionsService } from './sessions.service';
 
 /** Session statuses that are still alive and therefore reapable. */
@@ -28,14 +28,14 @@ export class SessionReaperService {
 
   /**
    * Fail launches that never reached RUNNING within the launch timeout
-   * (`CHISTA_LAUNCH_TIMEOUT_SECONDS`, default 300s). Without this a session with
+   * (`ASHA_LAUNCH_TIMEOUT_SECONDS`, default 300s). Without this a session with
    * no available agent — or whose agent never reports back (slow image pull /
    * weak connection) — would sit in REQUESTED/SCHEDULED/PROVISIONING forever and
    * the viewer would spin indefinitely. Runs more often than the hourly caps.
    */
   @Interval('session-launch-reaper', 30_000)
   async reapStuckLaunches(): Promise<number> {
-    const secs = Number(process.env.CHISTA_LAUNCH_TIMEOUT_SECONDS ?? 300);
+    const secs = Number(process.env.ASHA_LAUNCH_TIMEOUT_SECONDS ?? 300);
     if (!Number.isFinite(secs) || secs <= 0) return 0;
     const cutoff = new Date(Date.now() - secs * 1000);
     const stuck = await prisma.session.findMany({
@@ -56,7 +56,7 @@ export class SessionReaperService {
 
   /**
    * Mark agents OFFLINE once their heartbeat goes stale
-   * (`CHISTA_AGENT_OFFLINE_SECONDS`, default 90s). Agents heartbeat every few
+   * (`ASHA_AGENT_OFFLINE_SECONDS`, default 90s). Agents heartbeat every few
    * seconds, so a gap this large means the process is gone (stopped container,
    * dead host). Without this, agents that never sent a clean shutdown linger as
    * ONLINE — misleading the dashboard's "online" count and the agent fleet view.
@@ -67,7 +67,7 @@ export class SessionReaperService {
    */
   @Interval('agent-liveness-reaper', 30_000)
   async reapStaleAgents(): Promise<number> {
-    const secs = Number(process.env.CHISTA_AGENT_OFFLINE_SECONDS ?? 90);
+    const secs = Number(process.env.ASHA_AGENT_OFFLINE_SECONDS ?? 90);
     if (!Number.isFinite(secs) || secs <= 0) return 0;
     const cutoff = new Date(Date.now() - secs * 1000);
     const res = await prisma.agent.updateMany({
@@ -82,7 +82,7 @@ export class SessionReaperService {
 
   /**
    * Terminate sessions that have been PAUSED longer than the configured cap
-   * (`CHISTA_MAX_PAUSED_MINUTES`). A paused container retains disk + RAM state
+   * (`ASHA_MAX_PAUSED_MINUTES`). A paused container retains disk + RAM state
    * but still holds host resources, so deployments can bound how long that
    * persists. Disabled (no reaping) when the env var is unset or <= 0.
    * Time-since-paused is read from `updatedAt`, which is stamped when the
@@ -90,7 +90,7 @@ export class SessionReaperService {
    */
   @Interval('session-paused-reaper', 60_000)
   async reapPaused(): Promise<number> {
-    const max = Number(process.env.CHISTA_MAX_PAUSED_MINUTES);
+    const max = Number(process.env.ASHA_MAX_PAUSED_MINUTES);
     if (!Number.isFinite(max) || max <= 0) return 0;
     const cutoff = new Date(Date.now() - max * 60_000);
     const due = await prisma.session.findMany({

@@ -1,5 +1,5 @@
 /*
- * Chista service worker — makes the installed PWA load and work offline.
+ * Asha service worker — makes the installed PWA load and work offline.
  *
  * Strategy:
  *   • Navigations  → network-first, fall back to the last-seen page, then /offline.
@@ -11,11 +11,11 @@
  * Bump VERSION on a release to roll the caches and trigger the in-app
  * "update available" prompt for installed users.
  */
-const VERSION = 'chista-v3';
+const VERSION = 'asha-v3';
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = '/offline';
-const PRECACHE = [OFFLINE_URL, '/manifest.webmanifest', '/chista-logo.svg', '/icon-maskable.svg'];
+const PRECACHE = [OFFLINE_URL, '/manifest.webmanifest', '/asha-logo.svg', '/icon-maskable.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

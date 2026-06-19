@@ -1,5 +1,5 @@
 {
-  "name": "@chista/proxy-labels",
+  "name": "@asha/proxy-labels",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",

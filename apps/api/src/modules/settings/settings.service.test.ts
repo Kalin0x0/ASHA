@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { prismaMock } = vi.hoisted(() => ({ prismaMock: { branding: { findFirst: vi.fn() } } }));
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 import { SettingsService } from './settings.service';
 
@@ -31,7 +31,7 @@ describe('SettingsService.resolveBranding — G3 hierarchy', () => {
   it('falls back to the built-in default when nothing is set', async () => {
     prismaMock.branding.findFirst.mockResolvedValue(null);
     expect(await svc.resolveBranding('org1')).toMatchObject({
-      productName: 'Chista',
+      productName: 'Asha',
       resolvedFrom: 'DEFAULT',
       primaryColor: '#1a1a2e',
     });

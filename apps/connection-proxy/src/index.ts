@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { createLogger } from '@chista/logger';
+import { createLogger } from '@asha/logger';
 import { WebSocketServer } from 'ws';
 import { proxyEnv } from './env.js';
 import { handleUpgrade } from './proxy.js';
@@ -8,7 +8,7 @@ import { SessionStore } from './session-store.js';
 const log = createLogger('proxy');
 
 async function main(): Promise<void> {
-  log.info({ port: proxyEnv.port }, 'Chista connection-proxy starting');
+  log.info({ port: proxyEnv.port }, 'Asha connection-proxy starting');
 
   const store = new SessionStore();
   await store.connect();
@@ -23,7 +23,7 @@ async function main(): Promise<void> {
     }
     if (req.url === '/') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ name: '@chista/connection-proxy', version: '0.1.0' }));
+      res.end(JSON.stringify({ name: '@asha/connection-proxy', version: '0.1.0' }));
       return;
     }
     res.writeHead(404).end();

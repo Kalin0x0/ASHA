@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { prisma } from '@chista/db';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
 type Item = Record<string, unknown>;
@@ -34,7 +34,7 @@ export class OrgConfigService {
     ]);
     return {
       version: 1,
-      kind: 'chista-org-config',
+      kind: 'asha-org-config',
       counts: { volumeMappings: volumeMappings.length, fileMappings: fileMappings.length, groups: groups.length },
       volumeMappings: volumeMappings.map((m) => ({
         name: m.name,

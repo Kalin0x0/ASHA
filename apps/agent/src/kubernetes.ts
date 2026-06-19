@@ -2,7 +2,7 @@
  * Kubernetes session driver — ephemeral Pod + ClusterIP Service per session.
  *
  * The agent must run with a ServiceAccount that has the following RBAC verbs
- * in the session namespace (see infra/helm/chista/templates/agent-rbac.yaml):
+ * in the session namespace (see infra/helm/asha/templates/agent-rbac.yaml):
  *   - pods:            create, get, delete, list
  *   - services:        create, delete
  *   - ingresses:       create, delete
@@ -13,8 +13,8 @@
  */
 import { KubeConfig, CoreV1Api, NetworkingV1Api, AppsV1Api, Metrics } from '@kubernetes/client-node';
 import type { V1ConfigMap, V1Container, V1Pod, V1Service, V1Ingress, V1Volume } from '@kubernetes/client-node';
-import type { ProvisionCommand, SessionSidecar, SessionStatSample, StreamProfile } from '@chista/events';
-import { routerName } from '@chista/proxy-labels';
+import type { ProvisionCommand, SessionSidecar, SessionStatSample, StreamProfile } from '@asha/events';
+import { routerName } from '@asha/proxy-labels';
 import { agentEnv } from './env.js';
 
 // ── Kubernetes client setup ──────────────────────────────────────────────────
@@ -38,9 +38,9 @@ function clients() {
   return _clients;
 }
 
-const SESSION_NS = process.env.CHISTA_K8S_SESSION_NS ?? 'chista-sessions';
-const INGRESS_CLASS = process.env.CHISTA_K8S_INGRESS_CLASS ?? 'traefik';
-const INGRESS_HOST = process.env.CHISTA_K8S_INGRESS_HOST ?? agentEnv.domain;
+const SESSION_NS = process.env.ASHA_K8S_SESSION_NS ?? 'asha-sessions';
+const INGRESS_CLASS = process.env.ASHA_K8S_INGRESS_CLASS ?? 'traefik';
+const INGRESS_HOST = process.env.ASHA_K8S_INGRESS_HOST ?? agentEnv.domain;
 
 // ── Public interface (same shape as docker.ts) ───────────────────────────────
 
@@ -53,16 +53,16 @@ export interface ProvisionResult {
 
 export async function provisionContainer(cmd: ProvisionCommand): Promise<ProvisionResult> {
   const { core, networking } = clients();
-  const name = `chista-sess-${cmd.kasmId}`.toLowerCase().slice(0, 63);
+  const name = `asha-sess-${cmd.kasmId}`.toLowerCase().slice(0, 63);
   const port = cmd.runConfig.ports[0] ?? 6901;
   const router = routerName(cmd.kasmId);
   const vncPw = randomSuffix();
 
   const labels = {
-    'app.kubernetes.io/managed-by': 'chista',
-    'chista.io/session-id': cmd.sessionId,
-    'chista.io/org-id': cmd.orgId,
-    'chista.io/kasm-id': cmd.kasmId,
+    'app.kubernetes.io/managed-by': 'asha',
+    'asha.io/session-id': cmd.sessionId,
+    'asha.io/org-id': cmd.orgId,
+    'asha.io/kasm-id': cmd.kasmId,
   };
 
   // Build sidecar containers + shared volumes from connectivity policy.
@@ -157,7 +157,7 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     kind: 'Service',
     metadata: { name, namespace: SESSION_NS, labels },
     spec: {
-      selector: { 'chista.io/kasm-id': cmd.kasmId },
+      selector: { 'asha.io/kasm-id': cmd.kasmId },
       ports: [{ port, targetPort: port }],
     },
   };
@@ -370,10 +370,10 @@ function gpuEnv(cmd: ProvisionCommand): Record<string, string> {
     return {
       NVIDIA_VISIBLE_DEVICES: 'all',
       NVIDIA_DRIVER_CAPABILITIES: 'all',
-      CHISTA_HW_ENCODER: 'nvenc',
+      ASHA_HW_ENCODER: 'nvenc',
     };
   }
-  return { CHISTA_HW_ENCODER: 'vaapi', LIBVA_DRIVER_NAME: 'iHD' };
+  return { ASHA_HW_ENCODER: 'vaapi', LIBVA_DRIVER_NAME: 'iHD' };
 }
 
 function randomSuffix(): string {

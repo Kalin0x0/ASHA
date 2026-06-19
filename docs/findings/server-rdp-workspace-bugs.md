@@ -7,10 +7,10 @@ Verified end-to-end against `main` (#34) with a Windows RDP host (NLA). The stre
 ### 1. `auth` throttler (10/min) applies to ALL routes -> 429 flood — ✅ FIXED
 `apps/api/src/app.module.ts` defined two throttlers (`global` 600/min, `auth` 10/min). In NestJS every named throttler applies to every route unless `@SkipThrottle` excludes it; there was no skip on the non-auth controllers, so the **10/min auth cap gated every endpoint**. The dashboard polls `/agents` + `/sessions` -> continuous 429.
 - Repro: the 11th request within 60s to any endpoint -> 429.
-- **Fix (applied):** collapsed to a single `default` throttler (600/min) applied to all routes, and tightened the auth/federation/webauthn routes with a per-route `@Throttle({ default: … })` override. Login brute-force protection (10/min, env-tunable via `CHISTA_THROTTLE_AUTH_LIMIT`) is preserved; the rest of the API is no longer capped at the auth limit.
+- **Fix (applied):** collapsed to a single `default` throttler (600/min) applied to all routes, and tightened the auth/federation/webauthn routes with a per-route `@Throttle({ default: … })` override. Login brute-force protection (10/min, env-tunable via `ASHA_THROTTLE_AUTH_LIMIT`) is preserved; the rest of the API is no longer capped at the auth limit.
 
 ### 2. `trust proxy = 1` is too low behind NPM -> Traefik (2 hops)
-`apps/api/src/main.ts` defaults `trust proxy = 1`; the public chain is NPM -> Traefik = 2 hops, so `req.ip` collapses to the NPM IP (one shared bucket). Set `CHISTA_TRUST_PROXY=2` for that topology (the value is already env-configurable — no code change needed; it's a per-deployment knob).
+`apps/api/src/main.ts` defaults `trust proxy = 1`; the public chain is NPM -> Traefik = 2 hops, so `req.ip` collapses to the NPM IP (one shared bucket). Set `ASHA_TRUST_PROXY=2` for that topology (the value is already env-configurable — no code change needed; it's a per-deployment knob).
 
 ### 3. (FIXED in #28) Create-workspace form did not persist Server/VM type + serverId
 Creating a "Server / VM" workspace saved `type=CONTAINER`, `serverId=NULL` (the web form did not send them; the API was already correct). Fixed in #28.
@@ -25,4 +25,4 @@ Creating a "Server / VM" workspace saved `type=CONTAINER`, `serverId=NULL` (the 
 
 ## Deployment notes
 1. ~~`docker-compose.override.yml` stopgap~~ — no longer needed now that #1 is fixed at the root; keep any throttle/trust-proxy overrides as **host-local** env (`docker-compose.override.yml` is conventionally untracked) rather than committed to the repo, so they don't weaken defaults for every deployment.
-2. Zone (default) `proxyBaseUrl` was the seed default `https://chista.local` (internal, unreachable from public browsers); it overrides `CHISTA_PUBLIC_URL` in `servers.service.ts`. Set it to the public domain via `PATCH /zones/:id`. The seed should default this to the deployment's public URL.
+2. Zone (default) `proxyBaseUrl` was the seed default `https://asha.local` (internal, unreachable from public browsers); it overrides `ASHA_PUBLIC_URL` in `servers.service.ts`. Set it to the public domain via `PATCH /zones/:id`. The seed should default this to the deployment's public URL.

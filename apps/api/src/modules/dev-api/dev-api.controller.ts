@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { type CreateSessionDto, createSessionSchema } from '@chista/contracts';
+import { type CreateSessionDto, createSessionSchema } from '@asha/contracts';
 import { ApiKeyGuard, RequireScopes } from '../../common/api-key.guard';
 import { type AuthUser, Public } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';

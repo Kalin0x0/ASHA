@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { prisma } from '@chista/db';
+import { prisma } from '@asha/db';
 
 /**
  * Reporting: read-only aggregates over sessions, agents, and metric samples.

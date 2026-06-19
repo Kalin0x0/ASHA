@@ -8,7 +8,7 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 import { ProvidersService } from './providers.service';
 import { ProxmoxDriver, resolveVMDriver } from './vm-provider.interface';
@@ -128,7 +128,7 @@ describe('ProxmoxDriver — API call sequence', () => {
   const CONFIG = {
     apiUrl: 'https://pve.example.com:8006',
     node: 'pve',
-    tokenId: 'root@pam!chista',
+    tokenId: 'root@pam!asha',
     tokenSecret: 'secret',
     template: 9000,
   };

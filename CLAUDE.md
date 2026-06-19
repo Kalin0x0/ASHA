@@ -1,13 +1,13 @@
-# CLAUDE.md — Chista project guide
+# CLAUDE.md — Asha project guide
 
 > **Read this first.** Claude Code auto-loads this file. It is the entry point for
 > every session. Detailed plan / open work / decisions live in [`docs/project/`](docs/project/).
 
-## What Chista is
+## What Asha is
 
-Chista is an **original, self-hosted container-streaming / VDI / DaaS platform** — a
+Asha is an **original, self-hosted container-streaming / VDI / DaaS platform** — a
 functional **superset of Kasm Workspaces**, built from scratch. Persian/Zoroastrian
-naming family (Chista = divinity of wisdom).
+naming family (Asha = divinity of wisdom).
 
 > ⚠️ **Do NOT reproduce Kasm proprietary code.** Kasm's core (manager/agent/web-UI) is
 > closed-source and not on GitHub. We build an original implementation and reuse only
@@ -20,10 +20,10 @@ TypeScript end-to-end · pnpm + Turborepo monorepo.
 
 | Path | Package | Purpose |
 | --- | --- | --- |
-| `apps/web` | `@chista/web` | Next.js 15 admin dashboard + end-user portal. **Showpiece.** Anthracite + gold design system. |
-| `apps/api` | `@chista/api` | NestJS manager: REST + WS, JWT auth, RBAC, multi-tenant, Prisma, Swagger `/api/docs`. |
-| `apps/agent` | `@chista/agent` | Node + dockerode: provisions/destroys KasmVNC session containers. |
-| `packages/db` | `@chista/db` | Prisma schema (~65 models, entire feature surface) + client + seed. **Single source of truth.** |
+| `apps/web` | `@asha/web` | Next.js 15 admin dashboard + end-user portal. **Showpiece.** Anthracite + gold design system. |
+| `apps/api` | `@asha/api` | NestJS manager: REST + WS, JWT auth, RBAC, multi-tenant, Prisma, Swagger `/api/docs`. |
+| `apps/agent` | `@asha/agent` | Node + dockerode: provisions/destroys KasmVNC session containers. |
+| `packages/db` | `@asha/db` | Prisma schema (~65 models, entire feature surface) + client + seed. **Single source of truth.** |
 | `packages/{rbac,proxy-labels,events,config,crypto,logger,contracts}` | shared libs (tsup-built) |
 | `infra/` | Traefik dynamic config, Helm skeleton |
 | `docs/project/` | **PLAN.md, TODO.md, MEMORY.md** — read these |
@@ -32,18 +32,18 @@ TypeScript end-to-end · pnpm + Turborepo monorepo.
 
 ```bash
 pnpm install                              # bootstrap
-pnpm --filter @chista/web dev             # UI only, mock data, no backend → http://localhost:3000
+pnpm --filter @asha/web dev             # UI only, mock data, no backend → http://localhost:3000
 pnpm dev                                  # web + api + agent (Turbo watch)
-pnpm --filter @chista/web build           # verify web
-pnpm --filter @chista/api build           # verify api (nest build)
+pnpm --filter @asha/web build           # verify web
+pnpm --filter @asha/api build           # verify api (nest build)
 pnpm exec turbo run typecheck --concurrency=3   # typecheck whole repo
 pnpm db:generate | db:migrate | db:seed   # Prisma lifecycle
-docker compose up -d --build              # full stack (needs Docker + hosts entry chista.local)
+docker compose up -d --build              # full stack (needs Docker + hosts entry asha.local)
 ```
 
 **Build gotcha:** the shared-package `--dts` builds can OOM-crash (exit 134) when run fully
 parallel. If `pnpm build` fails there, run `pnpm --filter "./packages/*" --workspace-concurrency=1 build`.
-`@chista/db` (or any shared pkg) must be **built before** `api`/`agent` typecheck — they consume `dist/*.d.ts`.
+`@asha/db` (or any shared pkg) must be **built before** `api`/`agent` typecheck — they consume `dist/*.d.ts`.
 
 ## Current status (Phase 1 = DONE & build-verified)
 
@@ -66,19 +66,19 @@ domains have no controller yet; RDP/SSH, recording, sharing, SSO, autoscale, VM 
   (`apps/web/src/lib/mock`) via `NEXT_PUBLIC_API_MODE=mock`. Wiring it live is open work (see TODO 🔴1).
 - **i18n (next-intl):** ALL UI text goes through message catalogs in `apps/web/messages/<locale>/*.json`
   (namespaces per area; `common.json` = shared vocabulary, statuses, actions). Locale = cookie
-  (`chista-locale`), switcher in topbar/login. Never hardcode user-visible strings in components —
+  (`asha-locale`), switcher in topbar/login. Never hardcode user-visible strings in components —
   use `useTranslations('<namespace>')`. Shipped: **en · de · fa** (Persian, RTL). **Add a language:**
   copy `messages/en/` → `messages/<code>/`, translate the JSON (missing keys fall back to English
   automatically), add one line in `apps/web/src/i18n/locales.ts` (set `dir: 'rtl'` for RTL scripts —
   the html `dir`, Radix `DirectionProvider`, Vazirmatn font and logical Tailwind classes handle
   mirroring; use `ms-/me-`, `ps-/pe-`, `text-start/end`, `start-/end-` insets in new UI, never
-  `ml-/pl-/text-left/left-`). Validate with `pnpm --filter @chista/web i18n:check` (key parity) and
+  `ml-/pl-/text-left/left-`). Validate with `pnpm --filter @asha/web i18n:check` (key parity) and
   `node apps/web/scripts/verify-locales.mjs` against a running server (per-route lang/dir + key-leak check).
 - **Versioning:** the product version lives in `apps/web/src/lib/changelog.ts` (`CHANGELOG`
   newest-first → derived `CURRENT_VERSION`), shown in the sidebar footer + **Developer → Updates**.
   Bump it with **every merged update** — started at `1.0.9`, then `1.1.0 → 1.1.1 → 1.1.2 → …`;
   prepend a `Release` entry (version, date, added/fixed/changed) per merge. See MEMORY.md → Versioning.
-- Admin seed login: `admin@chista.local` / `ChistaAdmin!2026`.
+- Admin seed login: `admin@asha.local` / `AshaAdmin!2026`.
 
 ## ➡️ Where to start each session
 

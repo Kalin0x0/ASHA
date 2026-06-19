@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 /**
- * PWA manifest — makes Chista installable to the desktop ("Install app") and
+ * PWA manifest — makes Asha installable to the desktop ("Install app") and
  * launchable as a standalone window. Next serves this at /manifest.webmanifest
  * and injects the <link rel="manifest"> automatically.
  *
@@ -11,10 +11,10 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'Chista — Container Streaming Platform',
-    short_name: 'Chista',
+    name: 'Asha — Container Streaming Platform',
+    short_name: 'Asha',
     description:
-      'Self-hosted container streaming, VDI and DaaS — launch desktops and apps from your browser or install Chista as a desktop app.',
+      'Self-hosted container streaming, VDI and DaaS — launch desktops and apps from your browser or install Asha as a desktop app.',
     start_url: '/',
     scope: '/',
     display: 'standalone',
@@ -23,7 +23,7 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#1a1a2e',
     categories: ['business', 'productivity', 'utilities'],
     icons: [
-      { src: '/chista-logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+      { src: '/asha-logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
       { src: '/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
     ],
     shortcuts: [

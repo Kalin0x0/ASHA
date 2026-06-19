@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { prisma } from '@chista/db';
+import { prisma } from '@asha/db';
 
 export interface PolicyDoc {
   /** Max number of ACTIVE system admins allowed. */

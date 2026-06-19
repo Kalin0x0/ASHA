@@ -1,9 +1,9 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import type { Env } from '@chista/config';
-import type { CreateServerDto, UpdateServerDto } from '@chista/contracts';
-import { prisma } from '@chista/db';
-import { sessionConnectionUrl } from '@chista/proxy-labels';
+import type { Env } from '@asha/config';
+import type { CreateServerDto, UpdateServerDto } from '@asha/contracts';
+import { prisma } from '@asha/db';
+import { sessionConnectionUrl } from '@asha/proxy-labels';
 import { AuditService } from '../../common/audit.service';
 import { mergeSealedConfig, sealConfig, unsealConfig } from '../../common/config-seal';
 import type { AuthUser } from '../../common/decorators';
@@ -171,14 +171,14 @@ export class ServersService {
     );
     const connectionUrl = sessionConnectionUrl({
       kasmId: session.kasmId,
-      proxyBaseUrl: server.zone?.proxyBaseUrl ?? this.env.CHISTA_PUBLIC_URL,
+      proxyBaseUrl: server.zone?.proxyBaseUrl ?? this.env.ASHA_PUBLIC_URL,
       token,
     });
     await prisma.session.update({ where: { id: session.id }, data: { connectionUrl } });
 
     // The connection-proxy reads this Redis record (by kasmId) to bridge to guacd.
     await this.redis.set(
-      `chista:proxy:session:${session.kasmId}`,
+      `asha:proxy:session:${session.kasmId}`,
       {
         sessionId: session.id,
         kasmId: session.kasmId,

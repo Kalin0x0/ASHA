@@ -10,7 +10,7 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 import { ConnectivityRenderService } from './connectivity-render.service';
 
@@ -121,10 +121,10 @@ describe('ConnectivityRenderService', () => {
     expect(content).not.toContain('http_access allow all');
   });
 
-  it('F1: safeSearch injects the X-Chista-SafeSearch enforcement header', async () => {
+  it('F1: safeSearch injects the X-Asha-SafeSearch enforcement header', async () => {
     prismaMock.webFilterConfig.findFirst.mockResolvedValue({ name: 's', cacheTtl: 60, categories: { safeSearch: true } });
     const { content } = await svc.renderSquidConfig('org1', 'f1');
-    expect(content).toContain('X-Chista-SafeSearch');
+    expect(content).toContain('X-Asha-SafeSearch');
     expect(content).toContain('.duckduckgo.com');
   });
 

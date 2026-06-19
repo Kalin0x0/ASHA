@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import type { Env } from '@chista/config';
-import type { UpdateLogForwarderDto, UpsertLogForwarderDto } from '@chista/contracts';
-import { prisma } from '@chista/db';
+import type { Env } from '@asha/config';
+import type { UpdateLogForwarderDto, UpsertLogForwarderDto } from '@asha/contracts';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 import { mergeSealedConfig, redactConfig, sealConfig, unsealConfig } from '../../common/config-seal';
 import { ENV } from '../../common/env.module';
@@ -106,7 +106,7 @@ export class LogForwardingService {
       }
     })();
     const host = url?.hostname ?? cfg.host ?? 'localhost';
-    const header = `# Fluent Bit output for Chista forwarder "${fwd.name}" (${fwd.type})\n[INPUT]\n    Name        forward\n    Listen      0.0.0.0\n    Port        24224\n\n`;
+    const header = `# Fluent Bit output for Asha forwarder "${fwd.name}" (${fwd.type})\n[INPUT]\n    Name        forward\n    Listen      0.0.0.0\n    Port        24224\n\n`;
 
     switch (fwd.type) {
       case 'syslog':
@@ -114,9 +114,9 @@ export class LogForwardingService {
       case 'splunk_hec':
         return `${header}[OUTPUT]\n    Name          splunk\n    Match         *\n    Host          ${host}\n    Port          ${url?.port || '8088'}\n    TLS           On\n    Splunk_Token  \${SPLUNK_HEC_TOKEN}\n`;
       case 'elasticsearch':
-        return `${header}[OUTPUT]\n    Name      es\n    Match     *\n    Host      ${host}\n    Port      ${url?.port || '9200'}\n    Index     ${cfg.index ?? 'chista'}\n    Suppress_Type_Name On\n`;
+        return `${header}[OUTPUT]\n    Name      es\n    Match     *\n    Host      ${host}\n    Port      ${url?.port || '9200'}\n    Index     ${cfg.index ?? 'asha'}\n    Suppress_Type_Name On\n`;
       case 'loki':
-        return `${header}[OUTPUT]\n    Name      loki\n    Match     *\n    Host      ${host}\n    Port      ${url?.port || '3100'}\n    Labels    job=chista\n`;
+        return `${header}[OUTPUT]\n    Name      loki\n    Match     *\n    Host      ${host}\n    Port      ${url?.port || '3100'}\n    Labels    job=asha\n`;
       case 'http':
         return `${header}[OUTPUT]\n    Name      http\n    Match     *\n    Host      ${host}\n    Port      ${url?.port || '443'}\n    URI       ${url?.pathname || '/'}\n    Format    json\n    TLS       On\n`;
       default:

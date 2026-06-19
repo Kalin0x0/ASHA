@@ -8,7 +8,7 @@ import {
   loginSchema,
   type RefreshDto,
   refreshSchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { z } from 'zod';
 import { type AuthUser, CurrentUser, Public } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
@@ -22,8 +22,8 @@ const stepUpSchema = z.object({ totp: z.string().min(6).max(8) });
 type StepUpDto = z.infer<typeof stepUpSchema>;
 
 // login + refresh are the brute-force targets — tighten the default throttler
-// to 10/min per IP on these routes (env-tunable via CHISTA_THROTTLE_AUTH_LIMIT).
-@Throttle({ default: { ttl: 60_000, limit: Number(process.env.CHISTA_THROTTLE_AUTH_LIMIT) || 10 } })
+// to 10/min per IP on these routes (env-tunable via ASHA_THROTTLE_AUTH_LIMIT).
+@Throttle({ default: { ttl: 60_000, limit: Number(process.env.ASHA_THROTTLE_AUTH_LIMIT) || 10 } })
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {

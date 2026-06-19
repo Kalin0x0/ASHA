@@ -136,7 +136,7 @@ export function buildInitialData(): MockData {
     return {
       id: `user-${i + 1}`,
       name,
-      email: `${username}@chista.local`,
+      email: `${username}@asha.local`,
       username,
       status: i === 11 ? 'DISABLED' : i === 12 ? 'INVITED' : 'ACTIVE',
       groups: i < 2 ? ['Administrators', 'All Users'] : ['All Users'],

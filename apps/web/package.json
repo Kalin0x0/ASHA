@@ -1,5 +1,5 @@
 {
-  "name": "@chista/web",
+  "name": "@asha/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "i18n:check": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
-    "@chista/rbac": "workspace:*",
+    "@asha/rbac": "workspace:*",
     "@fontsource-variable/fraunces": "^5.2.9",
     "@fontsource-variable/manrope": "^5.2.8",
     "@fontsource-variable/sora": "^5.2.8",
