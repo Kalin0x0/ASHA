@@ -79,5 +79,13 @@ export function sessionConnectionUrl(input: {
   if ((input.mode ?? 'path') === 'subdomain' && input.domain) {
     return `https://${sessionHost(input.kasmId, input.domain)}/?token=${input.token}`;
   }
-  return `${input.proxyBaseUrl.replace(/\/$/, '')}${sessionPath(input.kasmId)}/?token=${input.token}`;
+  // Path-mode: the KasmVNC/noVNC client builds its stream WebSocket from the
+  // `path` query param (default "websockify"), which it resolves against the
+  // ROOT host — so without this it opens `wss://<host>/websockify`, a path
+  // Traefik can't map to any session (the session router is
+  // `PathPrefix(/session/<kasmId>)`) → 502 and a frozen first frame. Scope the
+  // WS path to the session so the upgrade routes through the (prefix-stripped)
+  // session router to the container's KasmVNC.
+  const base = input.proxyBaseUrl.replace(/\/$/, '');
+  return `${base}${sessionPath(input.kasmId)}/?path=session/${input.kasmId}/websockify&token=${input.token}`;
 }
