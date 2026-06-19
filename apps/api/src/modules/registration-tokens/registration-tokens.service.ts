@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { prisma } from '@chista/db';
+import { prisma } from '@asha/db';
 import type { AuthUser } from '../../common/decorators';
 
 /** sha256 hex of an agent token — the only form we persist. */

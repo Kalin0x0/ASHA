@@ -1,5 +1,5 @@
 {
-  "name": "@chista/db",
+  "name": "@asha/db",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",

@@ -3,9 +3,9 @@ import type {
   CreateDNSProviderDto,
   CreateVMProviderDto,
   UpdateProviderDto,
-} from '@chista/contracts';
-import type { Env } from '@chista/config';
-import { prisma } from '@chista/db';
+} from '@asha/contracts';
+import type { Env } from '@asha/config';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 import { mergeSealedConfig, redactConfig, sealConfig, unsealConfig } from '../../common/config-seal';
 import { ENV } from '../../common/env.module';

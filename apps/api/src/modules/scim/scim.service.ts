@@ -4,8 +4,8 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { hashToken, randomToken } from '@chista/crypto';
-import { prisma } from '@chista/db';
+import { hashToken, randomToken } from '@asha/crypto';
+import { prisma } from '@asha/db';
 
 /**
  * Coerce a SCIM `active` value to a boolean. SCIM clients are inconsistent:

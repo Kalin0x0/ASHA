@@ -6,7 +6,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: { license: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() } },
 }));
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 import { LicensingService } from './licensing.service';
 
@@ -21,7 +21,7 @@ function makeKey(claims: Record<string, unknown>): string {
 }
 
 beforeAll(() => {
-  process.env.CHISTA_LICENSE_PUBKEY = publicKey.export({ format: 'der', type: 'spki' }).toString('base64');
+  process.env.ASHA_LICENSE_PUBKEY = publicKey.export({ format: 'der', type: 'spki' }).toString('base64');
 });
 
 describe('LicensingService.activate — Ed25519 offline license', () => {

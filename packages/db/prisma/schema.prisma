@@ -1,5 +1,5 @@
 // ╔══════════════════════════════════════════════════════════════════════════╗
-// ║  Chista — data model (single source of truth)                              ║
+// ║  Asha — data model (single source of truth)                              ║
 // ║                                                                            ║
 // ║  Multi-tenancy: every tenant-owned row carries `orgId`. Isolation is       ║
 // ║  enforced at three layers: (1) a Prisma client extension that injects      ║
@@ -500,7 +500,7 @@ model SsoMapping {
   orgId       String
   groupId     String
   authConfigId String
-  // e.g. match an IdP group/attribute → assign this Chista group
+  // e.g. match an IdP group/attribute → assign this Asha group
   attribute   String
   value       String
   createdAt   DateTime @default(now())
@@ -1271,7 +1271,7 @@ model Branding {
   scope             BrandingScope @default(ORG)
   orgId             String?
   groupId           String?
-  productName       String        @default("Chista")
+  productName       String        @default("Asha")
   logoUrl           String?
   faviconUrl        String?
   loginBackgroundUrl String?

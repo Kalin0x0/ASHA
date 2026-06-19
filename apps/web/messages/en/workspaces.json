@@ -138,7 +138,7 @@
       "catalogSize": "Catalog size"
     },
     "form": {
-      "namePlaceholder": "Chista Community",
+      "namePlaceholder": "Asha Community",
       "urlLabel": "Index URL (JSON)"
     },
     "empty": "No registries configured yet.",
@@ -190,7 +190,7 @@
     },
     "sources": {
       "addTitle": "Add a registry source",
-      "addHint": "Point Chista at any open-format workspace registry index (JSON). Add as many sources as you like.",
+      "addHint": "Point Asha at any open-format workspace registry index (JSON). Add as many sources as you like.",
       "syncedAt": "Synced {time}",
       "never": "Never synced"
     }

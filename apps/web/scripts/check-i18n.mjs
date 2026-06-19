@@ -3,7 +3,7 @@
  * Verifies message-catalog parity: every locale must have the same key tree
  * as English. Missing keys are WARNINGS (they fall back to English at
  * runtime); keys that don't exist in English are ERRORS (dead weight /
- * typos). Run: pnpm --filter @chista/web i18n:check
+ * typos). Run: pnpm --filter @asha/web i18n:check
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';

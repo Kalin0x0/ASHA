@@ -1,4 +1,4 @@
-# Chista — Project Memory
+# Asha — Project Memory
 
 Durable context for any future session. Pair with [`PLAN.md`](PLAN.md) and [`TODO.md`](TODO.md).
 
@@ -13,7 +13,7 @@ Durable context for any future session. Pair with [`PLAN.md`](PLAN.md) and [`TOD
 
 ## Naming
 
-Persian/Zoroastrian family (the user's convention): **Chista** = divinity of wisdom. Sibling
+Persian/Zoroastrian family (the user's convention): **Asha** = divinity of wisdom. Sibling
 projects/hosts: Daena, Mithra, Persia, Simorgh, Fravashi, etc. Keep this flavor for internal
 codenames; surface it subtly, never cute.
 
@@ -29,14 +29,14 @@ codenames; surface it subtly, never cute.
 ## Environment facts (the user's machine)
 
 - Windows 11, PowerShell. Node **v22.16**, pnpm **9.15.9**, git 2.53. GitHub CLI `gh` authed as
-  **Kalin0x0** (repo scope). Repo: https://github.com/Kalin0x0/Chista
+  **Kalin0x0** (repo scope). Repo: https://github.com/Kalin0x0/Asha
 - **Docker is NOT on PATH** in the build shell used so far → the Compose stack was written but
   never run/verified there (see TODO 🟠4). Docker Desktop may exist; verify before assuming.
-- Admin seed: `admin@chista.local` / `ChistaAdmin!2026` (in `packages/db/prisma/seed.ts`).
+- Admin seed: `admin@asha.local` / `AshaAdmin!2026` (in `packages/db/prisma/seed.ts`).
 
 ## Build/verify status
 
-- `pnpm --filter @chista/web build` ✓ (9 routes) · `pnpm --filter @chista/api build` (nest) ✓ ·
+- `pnpm --filter @asha/web build` ✓ (9 routes) · `pnpm --filter @asha/api build` (nest) ✓ ·
   full Turbo typecheck ✓ · Prisma client generates (schema valid).
 
 ## Gotchas (learned the hard way — don't re-trip these)
@@ -46,7 +46,7 @@ codenames; surface it subtly, never cute.
   `--concurrency=4`.
 - **`api`/`agent` typecheck needs the shared packages BUILT first** — `apps/api/tsconfig.json` uses
   `moduleResolution: Node`, so it reads each package's `dist/*.d.ts` (via `main`/`types`), not src.
-  If you see TS7016 "Could not find a declaration file for '@chista/db'", run the package build.
+  If you see TS7016 "Could not find a declaration file for '@asha/db'", run the package build.
 - **Web is decoupled from the API** (mock store, `NEXT_PUBLIC_API_MODE=mock`). Live wiring = TODO 🔴1.
 - **Traefik `sess-auth` is a placeholder** pointing at `/health/live`. Real validator = TODO 🔴2.
 - **Agent `x-agent-token` is not enforced** yet on `/internal/agents/*` = TODO 🔴3.

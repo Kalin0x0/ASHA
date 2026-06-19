@@ -1,10 +1,10 @@
 import { ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { AgentTokenScope } from '../../common/jwt-auth.guard';
 import { JwtService } from '@nestjs/jwt';
-import type { AgentHeartbeatDto, AgentRegisterDto, SessionStatsDto, SessionStatusDto } from '@chista/contracts';
-import { prisma, runUnscoped } from '@chista/db';
-import { sessionConnectionUrl } from '@chista/proxy-labels';
-import { type Env, isPlaceholderHost, resolveSessionBaseUrl } from '@chista/config';
+import type { AgentHeartbeatDto, AgentRegisterDto, SessionStatsDto, SessionStatusDto } from '@asha/contracts';
+import { prisma, runUnscoped } from '@asha/db';
+import { sessionConnectionUrl } from '@asha/proxy-labels';
+import { type Env, isPlaceholderHost, resolveSessionBaseUrl } from '@asha/config';
 import { ENV } from '../../common/env.module';
 import { RedisService } from '../../common/redis.service';
 import { SessionsGateway } from '../sessions/sessions.gateway';
@@ -87,7 +87,7 @@ export class AgentsService {
         agentId: agent.id,
         zoneId: zone.id,
         zoneName: zone.name,
-        sessionNetwork: this.env.CHISTA_SESSION_NETWORK,
+        sessionNetwork: this.env.ASHA_SESSION_NETWORK,
       };
     });
   }
@@ -145,7 +145,7 @@ export class AgentsService {
 
         // Log the FINAL resolved workspace URL (without the session token) so
         // operators can confirm it before the browser is sent there — and warn
-        // loudly when the host won't resolve for real users (the chista.local
+        // loudly when the host won't resolve for real users (the asha.local
         // DNS-failure class of bug).
         this.logger.log(
           `session ${session.id} ready → ${connectionUrl.split('?')[0]} (zone=${zone?.name ?? 'default'})`,
@@ -167,7 +167,7 @@ export class AgentsService {
         // RDP/VNC/SSH sessions (keyed by kasmId). KasmVNC goes straight through
         // Traefik and doesn't need this, but writing it is harmless.
         await this.redis.set(
-          `chista:proxy:session:${session.kasmId}`,
+          `asha:proxy:session:${session.kasmId}`,
           {
             sessionId: session.id,
             kasmId: session.kasmId,
@@ -205,7 +205,7 @@ export class AgentsService {
 
       if (dto.status === 'DESTROYED') {
         data.destroyedAt = new Date();
-        await this.redis.del(`chista:proxy:session:${session.kasmId}`);
+        await this.redis.del(`asha:proxy:session:${session.kasmId}`);
       }
 
       await prisma.session.update({ where: { id: sessionId }, data });

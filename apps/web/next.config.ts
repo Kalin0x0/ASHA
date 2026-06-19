@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
-// Content-Security-Policy for the Chista web app.
+// Content-Security-Policy for the Asha web app.
 // frame-src is intentionally permissive (https:) because the session viewer
 // embeds KasmVNC / remote-desktop iframes from operator-configured domains.
 const csp = [

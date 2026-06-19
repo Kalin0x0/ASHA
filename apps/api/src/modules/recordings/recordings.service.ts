@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import type { Env } from '@chista/config';
-import { prisma } from '@chista/db';
+import type { Env } from '@asha/config';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
 import { ENV } from '../../common/env.module';

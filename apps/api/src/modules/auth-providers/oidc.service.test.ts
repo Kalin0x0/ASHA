@@ -10,7 +10,7 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 // Mock global fetch for discovery + token exchange + JWKS + userinfo
 const fetchMock = vi.fn();

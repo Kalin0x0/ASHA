@@ -1,6 +1,6 @@
-# Chista — Architecture Overview
+# Asha — Architecture Overview
 
-Chista is an original, self-hosted container-streaming / VDI / DaaS platform — a
+Asha is an original, self-hosted container-streaming / VDI / DaaS platform — a
 functional superset of Kasm Workspaces, built from scratch. It is **not** a copy
 of any proprietary codebase; genuinely open-source streaming components
 (KasmVNC, noVNC, guacamole-lite) are consumed only as unmodified runtime images.
@@ -22,9 +22,9 @@ Browser ──https──► Traefik (edge + per-session dynamic routing)
    `Session(REQUESTED)`.
 2. `SchedulerService` picks the least-loaded ONLINE agent in the zone with a
    fresh heartbeat → `SCHEDULED`.
-3. Manager publishes a `ProvisionCommand` on `chista:zone:<zone>:provision` (Redis).
-4. Agent pulls the image, computes **Traefik labels** (`@chista/proxy-labels`),
-   `docker run`s the KasmVNC container on the `chista-sessions` network.
+3. Manager publishes a `ProvisionCommand` on `asha:zone:<zone>:provision` (Redis).
+4. Agent pulls the image, computes **Traefik labels** (`@asha/proxy-labels`),
+   `docker run`s the KasmVNC container on the `asha-sessions` network.
 5. Traefik picks up the labels from the Docker event stream (~1 s, no reload) and
    publishes the route; a `sess-auth` forward-auth middleware guards it.
 6. Agent probes readiness → `POST /internal/agents/:id/sessions/:sid/status RUNNING`.
@@ -42,7 +42,7 @@ Phase-3 backstop.
 
 ## Phase status
 
-- **Phase 1 (done):** monorepo, full data model (~65 models), the Chista design
+- **Phase 1 (done):** monorepo, full data model (~65 models), the Asha design
   system + admin dashboard + portal + streaming viewer, JWT auth + RBAC + tenant
   scoping, sessions/agents/workspaces modules, the dockerode agent lifecycle,
   Docker Compose + Traefik routing, Helm skeleton.

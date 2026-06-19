@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { type CreateRemoteAppDto, createRemoteAppSchema } from '@chista/contracts';
+import { type CreateRemoteAppDto, createRemoteAppSchema } from '@asha/contracts';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { WindowsService } from './windows.service';

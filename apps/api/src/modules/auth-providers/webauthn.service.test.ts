@@ -8,11 +8,11 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 import { WebauthnService } from './webauthn.service';
 
-const env = { CHISTA_PUBLIC_URL: 'https://chista.example.com' } as never;
+const env = { ASHA_PUBLIC_URL: 'https://asha.example.com' } as never;
 
 describe('WebauthnService', () => {
   let service: WebauthnService;
@@ -22,11 +22,11 @@ describe('WebauthnService', () => {
     vi.clearAllMocks();
   });
 
-  it('derives rpID + origin from CHISTA_PUBLIC_URL', () => {
+  it('derives rpID + origin from ASHA_PUBLIC_URL', () => {
     // @ts-expect-error access private for test
     const rp = service.rp();
-    expect(rp.rpID).toBe('chista.example.com');
-    expect(rp.origin).toBe('https://chista.example.com');
+    expect(rp.rpID).toBe('asha.example.com');
+    expect(rp.origin).toBe('https://asha.example.com');
   });
 
   it('generates registration options and stores a challenge', async () => {
@@ -40,7 +40,7 @@ describe('WebauthnService', () => {
 
     const options = await service.registrationOptions('u1');
     expect(options.challenge).toBeTruthy();
-    expect(options.rp.id).toBe('chista.example.com');
+    expect(options.rp.id).toBe('asha.example.com');
   });
 
   it('rejects registration verify when no challenge is pending', async () => {

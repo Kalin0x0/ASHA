@@ -161,7 +161,7 @@ export default function ZonesPage() {
           </div>
           <div>
             <Label>{t('zones.form.proxyBaseUrl')}</Label>
-            <Input placeholder="https://eu.chista.local" value={proxyBaseUrl} onChange={(e) => setProxyBaseUrl(e.target.value)} />
+            <Input placeholder="https://eu.asha.local" value={proxyBaseUrl} onChange={(e) => setProxyBaseUrl(e.target.value)} />
           </div>
         </div>
         <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !name || creating}>

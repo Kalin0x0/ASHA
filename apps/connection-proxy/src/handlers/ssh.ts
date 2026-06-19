@@ -17,7 +17,7 @@
  */
 
 import type { IncomingMessage } from 'node:http';
-import { createLogger } from '@chista/logger';
+import { createLogger } from '@asha/logger';
 import { Client, type ClientChannel } from 'ssh2';
 import type WebSocket from 'ws';
 import type { SessionRecord } from '../session-store.js';
@@ -57,12 +57,12 @@ export function handleSSH(ws: WebSocket, _req: IncomingMessage, session: Session
   const username = session.sshUser ?? 'kasm-user';
 
   if (!host) {
-    ws.send('\r\n\x1b[31m[Chista] SSH target not ready — no container host on record.\x1b[0m\r\n');
+    ws.send('\r\n\x1b[31m[Asha] SSH target not ready — no container host on record.\x1b[0m\r\n');
     ws.close(1011, 'ssh target not ready');
     return;
   }
   if (!session.sshPassword && !session.sshPrivateKey) {
-    ws.send('\r\n\x1b[31m[Chista] SSH credentials missing for this session.\x1b[0m\r\n');
+    ws.send('\r\n\x1b[31m[Asha] SSH credentials missing for this session.\x1b[0m\r\n');
     ws.close(1011, 'ssh credentials missing');
     return;
   }
@@ -83,7 +83,7 @@ export function handleSSH(ws: WebSocket, _req: IncomingMessage, session: Session
     conn.shell({ term: 'xterm-256color', cols, rows }, (err, sshStream) => {
       if (err) {
         log.warn({ sessionId: session.sessionId, err: err.message }, 'ssh shell failed');
-        ws.send(`\r\n\x1b[31m[Chista] Failed to open shell: ${err.message}\x1b[0m\r\n`);
+        ws.send(`\r\n\x1b[31m[Asha] Failed to open shell: ${err.message}\x1b[0m\r\n`);
         closeAll(1011, 'shell failed');
         return;
       }
@@ -106,7 +106,7 @@ export function handleSSH(ws: WebSocket, _req: IncomingMessage, session: Session
   conn.on('error', (err) => {
     log.warn({ sessionId: session.sessionId, err: err.message }, 'ssh connection error');
     if (ws.readyState === ws.OPEN) {
-      ws.send(`\r\n\x1b[31m[Chista] SSH connection error: ${err.message}\x1b[0m\r\n`);
+      ws.send(`\r\n\x1b[31m[Asha] SSH connection error: ${err.message}\x1b[0m\r\n`);
       ws.close(1011, 'ssh error');
     }
   });

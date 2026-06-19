@@ -3,9 +3,9 @@ import type {
   CreateRegistryDto,
   InstallRegistryEntryDto,
   UpdateRegistryDto,
-} from '@chista/contracts';
-import { prisma } from '@chista/db';
-import { type ImageCommand, RedisChannels } from '@chista/events';
+} from '@asha/contracts';
+import { prisma } from '@asha/db';
+import { type ImageCommand, RedisChannels } from '@asha/events';
 import { AuditService } from '../../common/audit.service';
 import { RedisService } from '../../common/redis.service';
 
@@ -22,7 +22,7 @@ const ACTIVE_SESSION_STATUSES = [
 
 /**
  * Image-registry management + workspace marketplace. A Registry points at a
- * Chista-compatible workspace catalog (a JSON index of installable images, the
+ * Asha-compatible workspace catalog (a JSON index of installable images, the
  * same open format Kasm-style registries publish). Syncing pulls the index into
  * RegistryEntry rows; installing an entry materialises an Image (and optionally
  * a ready-to-launch Workspace).

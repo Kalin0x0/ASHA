@@ -1,4 +1,4 @@
-# Chista — Kasm-Parität & darüber hinaus
+# Asha — Kasm-Parität & darüber hinaus
 
 > Master-Roadmap · Stand 2026-06-07 · Head of Product
 > Ziel: **alles was Kasm Workspaces kann — und mehr.** Konsolidiert aus einer 8-Bereiche-Gap-Analyse gegen docs.kasm.com.
@@ -8,7 +8,7 @@
 ## 0. Umsetzungsstatus (Stand 2026-06-07)
 
 ### 🏁 PHASE 1 ABGESCHLOSSEN — 16 / 16 P0 + Enabler, alle geshippt & end-to-end verifiziert
-PR #6 `fix/deployment-and-streaming`, live auf chista.naiemi.com; jede Stufe build-grün → deployt → per `qm guest exec` curl/inspect verifiziert; Live-App durchgehend stabil.
+PR #6 `fix/deployment-and-streaming`, live auf asha.naiemi.com; jede Stufe build-grün → deployt → per `qm guest exec` curl/inspect verifiziert; Live-App durchgehend stabil.
 
 | Epic | Status |
 |---|---|
@@ -56,7 +56,7 @@ PR #6 `fix/deployment-and-streaming`, live auf chista.naiemi.com; jede Stufe bui
 
 ## 1. Executive Summary
 
-Chista soll **alles können, was Kasm Workspaces bietet — und mehr**. Dieses Dokument konsolidiert 8 Bereichs-Backlogs zu **47 Parität-Epics** (davon **16 P0 = echte Lücken zuerst**) plus **8 neuen Differentiatoren** in einer einzigen, ausführungsreifen Roadmap. Strategie: zuerst die harten Kasm-Lücken schließen (Windows RemoteApp/RDS + RDP-HTTPS-Gateway, AD-Sync & Computer-Join, Image-Lifecycle & Commit-to-Image, Direct-to-Agent + Offline-Install, Multi-Monitor, Server-DLP-Tiefe), parallel die vorhandenen Chista-Vorteile (Neko-WebRTC, SCIM+JIT, Passkey, HMAC-Webhooks, Postgres-RLS-Multi-Tenancy, 11 VM-Provider) festigen — und Chista in Phase 3+ mit 8 Differentiatoren (KI-Copilot, Aurora-Glass-UX, Public-API+SDK, Realtime-Collaboration, FinOps, Policy-as-Code, Terraform-Provider, mobile PWA) klar über Kasm heben. **3 Hauptphasen** + Querschnitts-Enabler; Aufwand grob ~14× XL, ~16× L, ~9× M (≈ 18–24 Monate bei 2–3 Squads).
+Asha soll **alles können, was Kasm Workspaces bietet — und mehr**. Dieses Dokument konsolidiert 8 Bereichs-Backlogs zu **47 Parität-Epics** (davon **16 P0 = echte Lücken zuerst**) plus **8 neuen Differentiatoren** in einer einzigen, ausführungsreifen Roadmap. Strategie: zuerst die harten Kasm-Lücken schließen (Windows RemoteApp/RDS + RDP-HTTPS-Gateway, AD-Sync & Computer-Join, Image-Lifecycle & Commit-to-Image, Direct-to-Agent + Offline-Install, Multi-Monitor, Server-DLP-Tiefe), parallel die vorhandenen Asha-Vorteile (Neko-WebRTC, SCIM+JIT, Passkey, HMAC-Webhooks, Postgres-RLS-Multi-Tenancy, 11 VM-Provider) festigen — und Asha in Phase 3+ mit 8 Differentiatoren (KI-Copilot, Aurora-Glass-UX, Public-API+SDK, Realtime-Collaboration, FinOps, Policy-as-Code, Terraform-Provider, mobile PWA) klar über Kasm heben. **3 Hauptphasen** + Querschnitts-Enabler; Aufwand grob ~14× XL, ~16× L, ~9× M (≈ 18–24 Monate bei 2–3 Squads).
 
 ---
 
@@ -79,7 +79,7 @@ Chista soll **alles können, was Kasm Workspaces bietet — und mehr**. Dieses D
 | A3 | **Image-CI/CD & Rolling-Tags** — `ImagePullPolicy`/`ImagePullRun`, Scheduler (Bull/Redis), Auto-Pull, `maxConcurrentPulls`, Zero-Downtime-Tag-Switch via Digest-Pinning, Promote/Rollback. | FEHLT | L | P1 |
 | A4 | **Create Docker Image from Session** — Commit-to-Image (`docker commit` + Config) → Push → Auto-Workspace-Anlage; `ImageBuildJob`, Live-Logs, K8s-BuildKit-Fallback, `IMAGE_BUILD`-Permission. | FEHLT | L | P2 |
 | A5 | **Docker-Run-Config-Override + Lifecycle + Tokens** — `CapAdd/CapDrop/SecurityOpt/Privileged/Labels/RestartPolicy`; Lifecycle-Hooks (`firstLaunch/go/assign`); Token-Interpolation (`{username}`, `{custom_attribute_n}`); Privileged-Policy-Guard; K8s-securityContext. | TEILWEISE | M | **P0** |
-| A6 | **Single-App-Container-Build-Toolkit** — `Dockerfile.single-app`, `maximize_window.sh`, `desktop_ready`-Signal, App-Restart-Loop, `custom_startup.sh`, `chista-image build`-CLI. | TEILWEISE | M | P1 |
+| A6 | **Single-App-Container-Build-Toolkit** — `Dockerfile.single-app`, `maximize_window.sh`, `desktop_ready`-Signal, App-Restart-Loop, `custom_startup.sh`, `asha-image build`-CLI. | TEILWEISE | M | P1 |
 | A7 | **Per-Image-VPN-Sidecar-Pattern** — `VpnProfile` (wireguard/openvpn), Config-Templating, Kill-Switch (Default-Deny außer Tunnel), Health-Gating, shared netns Docker+K8s. | TEILWEISE | M | P2 |
 
 ### Bereich B — Sessions & Streaming
@@ -132,7 +132,7 @@ Chista soll **alles können, was Kasm Workspaces bietet — und mehr**. Dieses D
 | F3 | **Egress: OpenVPN + Managed PureVPN + Per-Credential-Limits + Diagnostics** — `gluetun`/openvpn-Sidecar, PureVPN-Auto-Provision, `maxSessions`/`maxBandwidth`/Usage-Telemetrie, Health-Samples. | TEILWEISE | L | P1 |
 | F4 | **KasmVNC DLP geometrisch** — visible/concealed_region (+allow_click), Clipboard-MIME-Whitelist+Size+Rate-Limit, Keyboard-Rate-Limit, Watermark location/tint/repeat, **DLP_PROCESS_FAIL_SECURE + RAM-Purge**; visueller Region-Editor; heute ungenutztes Modell verdrahten. | TEILWEISE | XL | **P0** |
 | F5 | **RDP-HTTPS-Gateway (RDP über 443) + DLP-over-RDP + Restrict-Client-IP** — `RdpGateway`/`RdpTarget`/`RdpClientIpRule`/`RdpDlpProfile`, WSS-443 via guacd (kein offener 3389), Clipboard/Drive/Printer/Audio-DLP, echte Client-IP via XFF-Trust, Watermark. | FEHLT | XL | **P0** |
-| F6 | **[ENABLER] Root-CA-Trust + DLP-fähige Workstation-Images** — Image-Build nimmt Chista-/Bump-/Neko-/Vendor-Root-CAs in System-Truststore + NSS-DB; KasmVNC-Build mit DLP-Env-Support. Voraussetzung für F1/F2/F4. | TEILWEISE | M | **P0** |
+| F6 | **[ENABLER] Root-CA-Trust + DLP-fähige Workstation-Images** — Image-Build nimmt Asha-/Bump-/Neko-/Vendor-Root-CAs in System-Truststore + NSS-DB; KasmVNC-Build mit DLP-Env-Support. Voraussetzung für F1/F2/F4. | TEILWEISE | M | **P0** |
 
 ### Bereich G — Admin & Operations
 | ID | Epic | Status | Aufwand | Prio |
@@ -188,10 +188,10 @@ A4 Commit-to-Image · A7 VPN-Sidecar · B3 Gamepad · C4 Hardware-TOTP · D6 Aut
 ### 5b. Neue Differentiatoren — über Kasm heben
 | # | Differentiator | Kurz | Aufwand | Prio |
 |---|---|---|---|---|
-| 1 | **KI-Copilot „ChistaGPT"** | In-Console-Assistent: Troubleshooting, NL→Admin-Action (RBAC-gated), Recording-Summaries, Audit-Anomalie-Erklärung. Nutzt Claude/ChatGPT-OAuth (Hermes-Pattern). | XL | P1 (nach H1/G4) |
+| 1 | **KI-Copilot „AshaGPT"** | In-Console-Assistent: Troubleshooting, NL→Admin-Action (RBAC-gated), Recording-Summaries, Audit-Anomalie-Erklärung. Nutzt Claude/ChatGPT-OAuth (Hermes-Pattern). | XL | P1 (nach H1/G4) |
 | 2 | **Aurora-Glass-UX** | Konsequentes Design-System, Command-Palette (⌘K), Live-Dashboards, In-Session-Floating-Dock — sichtbares Differenzierungsmerkmal ggü. Kasm. | L | P1 |
 | 3 | **Public-API + offizielles SDK** | Versionierte `/api/dev/v1` + generierte TS/Python/Go-SDKs, Postman-Collection, Sandbox-Org. | L | P1 (nach H1) |
-| 4 | **Terraform-Provider + Policy-as-Code** | `terraform-provider-chista` (HCL) + OPA/Rego-Policies für DLP/Egress/RBAC — versionierbar, PR-reviewbar, CI-gated. | XL | P2 |
+| 4 | **Terraform-Provider + Policy-as-Code** | `terraform-provider-asha` (HCL) + OPA/Rego-Policies für DLP/Egress/RBAC — versionierbar, PR-reviewbar, CI-gated. | XL | P2 |
 | 5 | **Realtime-Collaboration in Sessions** | Mehrere User live (Neko-nativ), Cursor-Presence, Rollen (Viewer/Controller), In-Session-Chat + Annotation, Control-Handover. | L | P2 |
 | 6 | **Cost-Dashboard / FinOps** | Kosten pro Org/Pool/User/Workspace, Idle-Alerts, Right-Sizing, Budget-Caps + Auto-Drain, Showback/Chargeback. | L | P1 |
 | 7 | **Mobile PWA** | Installierbares End-User-Portal: Start/Resume, Touch-Viewer, OSK, Push (Session-ready), Offline-Shell. | M | P2 |
@@ -214,4 +214,4 @@ A4 Commit-to-Image · A7 VPN-Sidecar · B3 Gamepad · C4 Hardware-TOTP · D6 Aut
 | Differentiatoren (5b) | 8 | — |
 | **Gesamt** | **55** | **16** |
 
-> Quelle der Lücken: `chista-kasm-gap-analysis` (8-Bereiche-Doku-Recherche gegen docs.kasm.com). Vergleich basiert auf Admin-Nav + README; [TEILWEISE]-Items vor Implementierung im Code gegenprüfen.
+> Quelle der Lücken: `asha-kasm-gap-analysis` (8-Bereiche-Doku-Recherche gegen docs.kasm.com). Vergleich basiert auf Admin-Nav + README; [TEILWEISE]-Items vor Implementierung im Code gegenprüfen.

@@ -23,7 +23,7 @@ export const useUIStore = create<UIState>()(
       setCommandOpen: (v) => set({ commandOpen: v }),
     }),
     {
-      name: 'chista-ui',
+      name: 'asha-ui',
       partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed }),
     },
   ),

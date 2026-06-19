@@ -138,7 +138,7 @@
       "catalogSize": "Kataloggröße"
     },
     "form": {
-      "namePlaceholder": "Chista Community",
+      "namePlaceholder": "Asha Community",
       "urlLabel": "Index-URL (JSON)"
     },
     "empty": "Noch keine Registries konfiguriert.",
@@ -190,7 +190,7 @@
     },
     "sources": {
       "addTitle": "Registrierungsquelle hinzufügen",
-      "addHint": "Verweise Chista auf einen beliebigen Workspace-Registry-Index im offenen Format (JSON). Füge beliebig viele Quellen hinzu.",
+      "addHint": "Verweise Asha auf einen beliebigen Workspace-Registry-Index im offenen Format (JSON). Füge beliebig viele Quellen hinzu.",
       "syncedAt": "Synchronisiert {time}",
       "never": "Nie synchronisiert"
     }

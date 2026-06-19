@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
-import { type Env, loadEnv } from '@chista/config';
+import { type Env, loadEnv } from '@asha/config';
 
-export const ENV = 'CHISTA_ENV';
+export const ENV = 'ASHA_ENV';
 
 @Global()
 @Module({

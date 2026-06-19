@@ -1,10 +1,10 @@
-Chista {{ .Chart.AppVersion }} (skeleton chart) deployed.
+Asha {{ .Chart.AppVersion }} (skeleton chart) deployed.
 
 This chart currently provisions the API and web tiers only. The agent
 (DaemonSet), the connection proxy, per-session Pod + Ingress routing, and HPA
 autoscaling land in Phase 4 — see docs/architecture.
 
-  kubectl get pods -l app.kubernetes.io/part-of=chista
+  kubectl get pods -l app.kubernetes.io/part-of=asha
 
-Point an Ingress / LoadBalancer at the chista-web and chista-api Services for
+Point an Ingress / LoadBalancer at the asha-web and asha-api Services for
 host {{ .Values.domain }}.

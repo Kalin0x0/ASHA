@@ -9,11 +9,11 @@ export const envSchema = z.object({
 
   DATABASE_URL: z
     .string()
-    .default('postgresql://chista:chista_dev_change_me@localhost:5432/chista?schema=public'),
+    .default('postgresql://asha:asha_dev_change_me@localhost:5432/asha?schema=public'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
 
   API_PORT: z.coerce.number().default(4000),
-  CORS_ORIGIN: z.string().default('http://localhost:3000,https://chista.local'),
+  CORS_ORIGIN: z.string().default('http://localhost:3000,https://asha.local'),
 
   JWT_ACCESS_SECRET: z.string().min(16).default('dev-access-secret-change-me-please-32++chars'),
   JWT_REFRESH_SECRET: z.string().min(16).default('dev-refresh-secret-change-me-please-32++chars'),
@@ -26,35 +26,35 @@ export const envSchema = z.object({
   SECRET_SEAL_KEY: z.string().default('0123456789abcdef0123456789abcdef'),
   GUAC_CRYPT_SECRET: z.string().length(32).default('MySuperSecretKeyForParamsToken12'),
 
-  CHISTA_BASE_DOMAIN: z.string().default('chista.local'),
-  CHISTA_PUBLIC_URL: z.string().default('https://chista.local'),
-  CHISTA_SESSION_NETWORK: z.string().default('chista-sessions'),
+  ASHA_BASE_DOMAIN: z.string().default('asha.local'),
+  ASHA_PUBLIC_URL: z.string().default('https://asha.local'),
+  ASHA_SESSION_NETWORK: z.string().default('asha-sessions'),
 
   // Public base URL the browser uses to reach a running workspace stream. Takes
-  // precedence over CHISTA_PUBLIC_URL for session connection URLs when set;
+  // precedence over ASHA_PUBLIC_URL for session connection URLs when set;
   // point it at the reverse proxy that is actually reachable from end users
   // (e.g. https://workspaces.example.com). A per-zone `proxyBaseUrl` still wins
-  // over this. Leave unset to fall back to CHISTA_PUBLIC_URL.
+  // over this. Leave unset to fall back to ASHA_PUBLIC_URL.
   WORKSPACE_PUBLIC_BASE_URL: z.string().url().optional(),
 
   // Shared secret the agent presents (x-agent-token header) to the internal
-  // agent endpoints. Must match the agent's CHISTA_AGENT_ENROLLMENT_TOKEN.
-  CHISTA_AGENT_ENROLLMENT_TOKEN: z.string().min(8).default('dev-enrollment-token-change-me'),
+  // agent endpoints. Must match the agent's ASHA_AGENT_ENROLLMENT_TOKEN.
+  ASHA_AGENT_ENROLLMENT_TOKEN: z.string().min(8).default('dev-enrollment-token-change-me'),
 
   // WireGuard reverse tunnel (reachability for hosts behind NAT). When the
   // endpoint + server public key are set, the host agent can request a tunnel
-  // config and join Chista's WireGuard network; sessions then reach the host
+  // config and join Asha's WireGuard network; sessions then reach the host
   // over its assigned tunnel IP. Leave the endpoint blank to disable tunneling.
-  CHISTA_WG_ENDPOINT: z.string().default(''), // e.g. tunnel.example.com:51820
-  CHISTA_WG_SERVER_PUBLIC_KEY: z.string().default(''),
-  CHISTA_WG_SUBNET: z.string().default('10.77.0.0/24'),
-  CHISTA_WG_ALLOWED_IPS: z.string().default('10.77.0.0/24'), // what the host routes via wg
+  ASHA_WG_ENDPOINT: z.string().default(''), // e.g. tunnel.example.com:51820
+  ASHA_WG_SERVER_PUBLIC_KEY: z.string().default(''),
+  ASHA_WG_SUBNET: z.string().default('10.77.0.0/24'),
+  ASHA_WG_ALLOWED_IPS: z.string().default('10.77.0.0/24'), // what the host routes via wg
 
   // S3-compatible object storage for session recordings. Left blank in dev,
   // which puts recordings into "unconfigured" mode (metadata only, no upload).
   S3_ENDPOINT: z.string().default(''),
   S3_REGION: z.string().default('us-east-1'),
-  S3_BUCKET: z.string().default('chista-recordings'),
+  S3_BUCKET: z.string().default('asha-recordings'),
   S3_ACCESS_KEY_ID: z.string().default(''),
   S3_SECRET_ACCESS_KEY: z.string().default(''),
   S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
@@ -62,7 +62,7 @@ export const envSchema = z.object({
   // Automated Postgres backups (pg_dump). Disabled by default; when enabled the
   // scheduler writes a dump into BACKUP_DIR on the cron below and prunes old ones.
   BACKUP_ENABLED: z.coerce.boolean().default(false),
-  BACKUP_DIR: z.string().default('/var/lib/chista/backups'),
+  BACKUP_DIR: z.string().default('/var/lib/asha/backups'),
   BACKUP_CRON: z.string().default('0 3 * * *'),
   BACKUP_RETENTION: z.coerce.number().int().min(1).default(7),
 });
@@ -82,21 +82,21 @@ export function corsOrigins(env: Env): string[] {
 /**
  * Resolve the public base URL a browser uses to reach a running workspace
  * stream. Precedence: per-zone `proxyBaseUrl` → `WORKSPACE_PUBLIC_BASE_URL` →
- * `CHISTA_PUBLIC_URL`. Centralised so the manager never hands the browser a
+ * `ASHA_PUBLIC_URL`. Centralised so the manager never hands the browser a
  * URL built from an ad-hoc default.
  */
 export function resolveSessionBaseUrl(
-  env: Pick<Env, 'WORKSPACE_PUBLIC_BASE_URL' | 'CHISTA_PUBLIC_URL'>,
+  env: Pick<Env, 'WORKSPACE_PUBLIC_BASE_URL' | 'ASHA_PUBLIC_URL'>,
   zoneProxyBaseUrl?: string | null,
 ): string {
-  return zoneProxyBaseUrl || env.WORKSPACE_PUBLIC_BASE_URL || env.CHISTA_PUBLIC_URL;
+  return zoneProxyBaseUrl || env.WORKSPACE_PUBLIC_BASE_URL || env.ASHA_PUBLIC_URL;
 }
 
 /**
  * True when a URL's host is a non-publicly-resolvable placeholder — the default
  * `*.local` dev domain, or a loopback address. Used to warn operators (and the
  * UI) that the configured workspace URL likely won't resolve for real end users
- * (the `chista.local`-DNS-failure class of bug).
+ * (the `asha.local`-DNS-failure class of bug).
  */
 export function isPlaceholderHost(url: string): boolean {
   try {

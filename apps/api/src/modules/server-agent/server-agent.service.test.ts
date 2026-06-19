@@ -7,16 +7,16 @@ const { prismaMock } = vi.hoisted(() => ({
     deploymentZone: { findFirst: vi.fn() },
   },
 }));
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 import { ServerAgentService } from './server-agent.service';
 
 const tokens = { validate: vi.fn(), markUsed: vi.fn().mockResolvedValue(undefined) };
 const env = {
-  CHISTA_WG_ENDPOINT: 'tunnel.example.com:51820',
-  CHISTA_WG_SERVER_PUBLIC_KEY: 'SERVERPUBKEY=',
-  CHISTA_WG_SUBNET: '10.77.0.0/24',
-  CHISTA_WG_ALLOWED_IPS: '10.77.0.0/24',
+  ASHA_WG_ENDPOINT: 'tunnel.example.com:51820',
+  ASHA_WG_SERVER_PUBLIC_KEY: 'SERVERPUBKEY=',
+  ASHA_WG_SUBNET: '10.77.0.0/24',
+  ASHA_WG_ALLOWED_IPS: '10.77.0.0/24',
 };
 
 describe('ServerAgentService', () => {
@@ -88,7 +88,7 @@ describe('ServerAgentService', () => {
   });
 
   it('refuses a tunnel when WireGuard is not configured', async () => {
-    const svc2 = new ServerAgentService(tokens as never, { CHISTA_WG_ENDPOINT: '', CHISTA_WG_SERVER_PUBLIC_KEY: '' } as never);
+    const svc2 = new ServerAgentService(tokens as never, { ASHA_WG_ENDPOINT: '', ASHA_WG_SERVER_PUBLIC_KEY: '' } as never);
     await expect(svc2.requestTunnel('cra_tok', 'WIN-1')).rejects.toThrow(/not configured/i);
   });
 

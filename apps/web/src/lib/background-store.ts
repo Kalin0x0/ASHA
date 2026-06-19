@@ -29,6 +29,6 @@ export const useBackground = create<BackgroundState>()(
       setCustomImage: (url) => set({ customImageUrl: url && url.trim() ? url.trim() : null }),
       reset: () => set({ presetId: DEFAULT_BACKGROUND_ID, customImageUrl: null }),
     }),
-    { name: 'chista-portal-background' },
+    { name: 'asha-portal-background' },
   ),
 );

@@ -58,11 +58,11 @@ import { ZonesModule } from './modules/zones/zones.module';
       // routes tighten it with a per-route `@Throttle({ default: … })` override
       // (auth / federation / webauthn controllers). A SECOND named throttler here
       // would also apply to every route — that was the bug that capped the whole
-      // API at the auth limit (→ 429 on dashboard polling). Override via CHISTA_THROTTLE_*.
+      // API at the auth limit (→ 429 on dashboard polling). Override via ASHA_THROTTLE_*.
       {
         name: 'default',
-        ttl: Number(process.env.CHISTA_THROTTLE_TTL) || 60_000,
-        limit: Number(process.env.CHISTA_THROTTLE_LIMIT) || 600,
+        ttl: Number(process.env.ASHA_THROTTLE_TTL) || 60_000,
+        limit: Number(process.env.ASHA_THROTTLE_LIMIT) || 600,
       },
     ]),
     // Drives the session reaper + scheduled DB backups

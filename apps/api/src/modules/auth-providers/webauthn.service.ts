@@ -9,8 +9,8 @@ import type {
   AuthenticationResponseJSON,
   RegistrationResponseJSON,
 } from '@simplewebauthn/server';
-import type { Env } from '@chista/config';
-import { prisma } from '@chista/db';
+import type { Env } from '@asha/config';
+import { prisma } from '@asha/db';
 import { ENV } from '../../common/env.module';
 
 /** Stored passkey metadata on the UserCredential.metadata JSON column. */
@@ -44,8 +44,8 @@ export class WebauthnService {
 
   /** RP ID is the registrable domain; origin is the full URL the browser sees. */
   private rp(): { rpID: string; rpName: string; origin: string } {
-    const url = new URL(this.env.CHISTA_PUBLIC_URL);
-    return { rpID: url.hostname, rpName: 'Chista', origin: url.origin };
+    const url = new URL(this.env.ASHA_PUBLIC_URL);
+    return { rpID: url.hostname, rpName: 'Asha', origin: url.origin };
   }
 
   private prune(map: Map<string, PendingChallenge>) {

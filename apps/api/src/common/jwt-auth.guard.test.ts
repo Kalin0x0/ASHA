@@ -6,7 +6,7 @@ import { AGENT_ONLY, IS_PUBLIC } from './decorators';
 
 // The guard falls back to a DB lookup for minted RegistrationTokens when the
 // shared env token doesn't match; mock it so unit tests stay hermetic.
-vi.mock('@chista/db', () => ({
+vi.mock('@asha/db', () => ({
   prisma: {
     registrationToken: {
       findUnique: vi.fn().mockResolvedValue(null),
@@ -17,7 +17,7 @@ vi.mock('@chista/db', () => ({
 }));
 
 const AGENT_TOKEN = 'agent-shared-secret-123';
-const env = { JWT_ACCESS_SECRET: 'access-secret', CHISTA_AGENT_ENROLLMENT_TOKEN: AGENT_TOKEN } as never;
+const env = { JWT_ACCESS_SECRET: 'access-secret', ASHA_AGENT_ENROLLMENT_TOKEN: AGENT_TOKEN } as never;
 
 /** Build an ExecutionContext whose request carries the given headers. */
 function contextWith(headers: Record<string, string>) {
@@ -68,7 +68,7 @@ describe('JwtAuthGuard — agent-only routes', () => {
   });
 
   it('accepts an agent-only route with a valid minted RegistrationToken', async () => {
-    const { prisma } = await import('@chista/db');
+    const { prisma } = await import('@asha/db');
     (prisma.registrationToken.findUnique as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       id: 't1',
       orgId: 'o1',

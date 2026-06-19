@@ -5,7 +5,7 @@ import {
   createFeedbackSchema,
   type UpdateFeedbackDto,
   updateFeedbackSchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { Audit } from '../../common/audit.interceptor';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';

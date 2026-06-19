@@ -7,7 +7,7 @@ import {
   createSsoMappingSchema,
   type UpdateAuthConfigDto,
   updateAuthConfigSchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { type AuthUser, CurrentUser, Public, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { z } from 'zod';
@@ -90,7 +90,7 @@ export class AuthProvidersController {
     return this.ldap.test(user.orgId, id, dto.sampleUsername);
   }
 
-  /** Bulk directory sync — provision/update Chista users from the directory. */
+  /** Bulk directory sync — provision/update Asha users from the directory. */
   @RequirePermissions('AUTH_MANAGE')
   @Post(':id/ldap/sync')
   ldapSync(

@@ -1,4 +1,4 @@
-# ── Chista Helm values ────────────────────────────────────────────────────────
+# ── Asha Helm values ────────────────────────────────────────────────────────
 # Override with -f custom-values.yaml in production.
 
 image:
@@ -6,10 +6,10 @@ image:
   pullPolicy: IfNotPresent
   tag: '0.1.0'
 
-domain: chista.local
+domain: asha.local
 
 postgres:
-  url: postgresql://chista:chista@postgres:5432/chista?schema=public
+  url: postgresql://asha:asha@postgres:5432/asha?schema=public
 
 redis:
   url: redis://redis:6379
@@ -29,8 +29,8 @@ api:
 web:
   replicas: 1
   port: 3000
-  apiUrl: https://chista.local/api/v1
-  wsUrl: wss://chista.local
+  apiUrl: https://asha.local/api/v1
+  wsUrl: wss://asha.local
   apiMode: live
   hpa:
     enabled: false
@@ -51,7 +51,7 @@ agent:
   zone: default
 
   # Kubernetes driver settings (only used when driver=kubernetes)
-  k8sSessionNs: chista-sessions
+  k8sSessionNs: asha-sessions
   k8sIngressClass: traefik
 
   # Session Pod resource quota for the session namespace.
@@ -65,9 +65,9 @@ agent:
 
   # Optional: restrict the DaemonSet to specific nodes.
   # nodeSelector:
-  #   chista.io/role: session-worker
+  #   asha.io/role: session-worker
 
-  sessionNetwork: chista-sessions
+  sessionNetwork: asha-sessions
 
 # ── Secrets (use sealed-secrets / external-secrets in production) ─────────────
 secrets:

@@ -1,5 +1,5 @@
 {
-  "name": "@chista/agent",
+  "name": "@asha/agent",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,9 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@chista/events": "workspace:*",
-    "@chista/logger": "workspace:*",
-    "@chista/proxy-labels": "workspace:*",
+    "@asha/events": "workspace:*",
+    "@asha/logger": "workspace:*",
+    "@asha/proxy-labels": "workspace:*",
     "@kubernetes/client-node": "^1.4.0",
     "dockerode": "^4.0.2",
     "ioredis": "^5.4.2"

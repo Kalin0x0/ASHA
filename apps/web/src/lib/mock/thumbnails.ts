@@ -67,14 +67,14 @@ export const terminalThumb = svg(W, H, `
   <!-- terminal body -->
   <rect x="0" y="26" width="${W}" height="${H - 26}" fill="#0a0a10"/>
   <!-- prompt lines -->
-  <text x="8" y="43" font-size="7.5" fill="#5fb88f" font-family="monospace">user@chista:~$</text>
+  <text x="8" y="43" font-size="7.5" fill="#5fb88f" font-family="monospace">user@asha:~$</text>
   <text x="100" y="43" font-size="7.5" fill="#c4c4d6" font-family="monospace"> ls -la</text>
   <text x="8" y="55" font-size="7" fill="#6b6b94" font-family="monospace">total 48</text>
   <text x="8" y="65" font-size="7" fill="#6b6b94" font-family="monospace">drwxr-xr-x  5 user user 4096 Jun  8 11:22 .</text>
   <text x="8" y="75" font-size="7" fill="#6b6b94" font-family="monospace">drwxr-xr-x 18 root root 4096 Jun  8 09:00 ..</text>
   <text x="8" y="85" font-size="7" fill="#6a8fc4" font-family="monospace">drwxr-xr-x  3 user user 4096 Jun  7 14:38 Documents</text>
   <text x="8" y="95" font-size="7" fill="#6a8fc4" font-family="monospace">drwxr-xr-x  2 user user 4096 Jun  8 10:15 Downloads</text>
-  <text x="8" y="107" font-size="7.5" fill="#5fb88f" font-family="monospace">user@chista:~$</text>
+  <text x="8" y="107" font-size="7.5" fill="#5fb88f" font-family="monospace">user@asha:~$</text>
   <!-- blinking cursor -->
   <rect x="101" y="100" width="5" height="9" fill="#5fb88f" opacity="0.9"/>
 `);

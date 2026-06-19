@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { ImportConfigDto, UpsertBrandingDto, UpsertSettingsDto } from '@chista/contracts';
-import { prisma } from '@chista/db';
+import type { ImportConfigDto, UpsertBrandingDto, UpsertSettingsDto } from '@asha/contracts';
+import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
 /**
@@ -41,7 +41,7 @@ export class SettingsService {
     const branding = await prisma.branding.findFirst({ where: { scope: 'ORG', orgId } });
     return (
       branding ?? {
-        productName: 'Chista',
+        productName: 'Asha',
         primaryColor: '#1a1a2e',
         accentColor: '#d4af37',
         logoUrl: null,
@@ -118,7 +118,7 @@ export class SettingsService {
     const org = await prisma.branding.findFirst({ where: { scope: 'ORG', orgId } });
     if (org) return { ...org, resolvedFrom: 'ORG' as const };
     return {
-      productName: 'Chista',
+      productName: 'Asha',
       primaryColor: '#1a1a2e',
       accentColor: '#d4af37',
       logoUrl: null,

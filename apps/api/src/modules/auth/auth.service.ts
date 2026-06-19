@@ -7,10 +7,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import type { ConfirmTotpDto, LoginDto } from '@chista/contracts';
-import { hashToken, randomToken, verifyPassword } from '@chista/crypto';
-import { prisma } from '@chista/db';
-import type { Env } from '@chista/config';
+import type { ConfirmTotpDto, LoginDto } from '@asha/contracts';
+import { hashToken, randomToken, verifyPassword } from '@asha/crypto';
+import { prisma } from '@asha/db';
+import type { Env } from '@asha/config';
 import { generateSecret, generateURI, verify as verifyOtp } from 'otplib';
 import qrcode from 'qrcode';
 import { AuditService } from '../../common/audit.service';
@@ -169,7 +169,7 @@ export class AuthService {
     if (!user) throw new NotFoundException('User not found');
 
     const secret = generateSecret();
-    const otpUri = generateURI({ issuer: 'Chista', label: user.email, secret });
+    const otpUri = generateURI({ issuer: 'Asha', label: user.email, secret });
     const qrDataUrl = await qrcode.toDataURL(otpUri);
 
     const method = await prisma.twoFactorMethod.create({

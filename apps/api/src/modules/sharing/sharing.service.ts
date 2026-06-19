@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import type { CreateShareDto, JoinShareDto, PostChatMessageDto } from '@chista/contracts';
-import { prisma } from '@chista/db';
-import type { ShareChatEvent, ShareParticipantEvent } from '@chista/events';
+import type { CreateShareDto, JoinShareDto, PostChatMessageDto } from '@asha/contracts';
+import { prisma } from '@asha/db';
+import type { ShareChatEvent, ShareParticipantEvent } from '@asha/events';
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
 import { SessionsGateway } from '../sessions/sessions.gateway';
@@ -100,7 +100,7 @@ export class SharingService {
   }
 
   /**
-   * Enforce a share's `requireAuth` flag: when set, only a signed-in Chista user
+   * Enforce a share's `requireAuth` flag: when set, only a signed-in Asha user
    * (not an anonymous guest holding only the key) may participate. The guest
    * routes are public, so this is the single place that gates authentication.
    */

@@ -1,4 +1,4 @@
-# Chista — Roadmap & TODO
+# Asha — Roadmap & TODO
 
 A **Naiemi Group** product. Checklist tracking the build-out phase by phase.
 Status legend: `[x]` done · `[~]` partial / scaffolded · `[ ]` not started.
@@ -61,7 +61,7 @@ launch → stream flow against a real KasmVNC container.
 
 ## Phase 2 — Connectivity, sharing, persistence
 
-- [x] `@chista/connection-proxy` app — RDP/VNC/SSH bridge.
+- [x] `@asha/connection-proxy` app — RDP/VNC/SSH bridge.
       HTTP+WS server, JWT auth, Redis session store, protocol router.
       **Guacamole**: full server-side guacd handshake (select → parse args →
       size/audio/video/image → connect with session params), then raw bridging;
@@ -91,7 +91,7 @@ launch → stream flow against a real KasmVNC container.
       Login now verifies TOTP via otplib when a confirmed method exists.
       CAPTCHA deferred.
 - [x] Admin **Access** pages real: Users (live table), Groups (derived from
-      memberships), Roles (permission matrix from `@chista/rbac`) — no new API
+      memberships), Roles (permission matrix from `@asha/rbac`) — no new API
       endpoints needed; work in mock + live.
 - [x] Admin pages: Images, History, Recordings, Sharing
 - [x] Storage: persistent profiles, volume/file mappings UI + API
@@ -138,7 +138,7 @@ launch → stream flow against a real KasmVNC container.
       set (activated in production via `SET LOCAL` inside transactions).
 - [x] Reporting + webhooks —
       `WebhooksModule` (`/webhooks`): CRUD + delivery log + `POST /:id/test`,
-      HMAC-SHA256 signing (`X-Chista-Signature: sha256=…`), secrets redacted on
+      HMAC-SHA256 signing (`X-Asha-Signature: sha256=…`), secrets redacted on
       read, `dispatch()` fans events to subscribed hooks. Wired into the session
       lifecycle (`session.created` / `session.terminated`).
       `ReportingModule` (`/reporting`): org-scoped summary, sessions-over-time,
@@ -157,7 +157,7 @@ launch → stream flow against a real KasmVNC container.
       each with audit records. 16 tests.
 - [x] Kubernetes driver: agent DaemonSet, ephemeral session pods, per-session
       ingress, HPA —
-      Agent: dynamic driver selection (`CHISTA_DRIVER=kubernetes|docker`);
+      Agent: dynamic driver selection (`ASHA_DRIVER=kubernetes|docker`);
       `kubernetes.ts` provisions session Pod + ClusterIP Service + per-session
       Ingress via `@kubernetes/client-node`, collects metrics, tears down with
       `Promise.allSettled`. Helm: agent DaemonSet (conditional Docker-socket /
@@ -174,7 +174,7 @@ launch → stream flow against a real KasmVNC container.
 
 ## Phase 5 — Operational maturity (closing the Kasm gap)
 
-Features Kasm Workspaces ships that Chista lacked. Built from scratch or on
+Features Kasm Workspaces ships that Asha lacked. Built from scratch or on
 open-source tooling — nothing derived from Kasm.
 
 - [x] **Session reaper** — `@nestjs/schedule`-driven `SessionReaperService`
@@ -212,7 +212,7 @@ open-source tooling — nothing derived from Kasm.
       a `sidecars` map; `dispatchProvision()` resolves the workspace's
       connectivity-policy IDs (`webFilterId`/`egressGatewayId`/`browserIsolationId`)
       into `SessionSidecar` descriptors via `ConnectivityRenderService`. Docker
-      driver writes config files + launches `chista-{squid,wg,neko}-<kasmId>` on
+      driver writes config files + launches `asha-{squid,wg,neko}-<kasmId>` on
       the session network (and tears them down on destroy); Kubernetes driver
       injects sidecar containers + a per-Pod ConfigMap for config mounts. Squid's
       proxy URL is auto-wired into Neko when both are active.
@@ -239,7 +239,7 @@ nothing from Kasm.
 
 ## Phase 6 — Closing the last gaps to the incumbents
 
-Everything Kasm still had that Chista didn't — built from scratch / open-source.
+Everything Kasm still had that Asha didn't — built from scratch / open-source.
 
 ### Done
 - [x] **Session pause/resume** — `control` Redis channel + `SessionControlCommand`;
@@ -326,7 +326,7 @@ and reading the runtime paths.
 
 ### Fixed
 - [x] **Agent subscribed to the wrong zone channel.** The agent listened on
-      `provision/destroy(CHISTA_ZONE)` (local env) while the manager publishes on
+      `provision/destroy(ASHA_ZONE)` (local env) while the manager publishes on
       the DB zone's `name`. When enrollment fell back to the default zone these
       differed and provision commands were silently lost. `register()` now
       returns the resolved zone name and the agent subscribes to that.

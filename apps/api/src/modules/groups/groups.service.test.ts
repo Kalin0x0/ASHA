@@ -9,7 +9,7 @@ const { prismaMock } = vi.hoisted(() => ({
     $transaction: vi.fn(),
   },
 }));
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 import { GroupsService } from './groups.service';
 

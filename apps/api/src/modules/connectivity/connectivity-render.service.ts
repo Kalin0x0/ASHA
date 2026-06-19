@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { prisma } from '@chista/db';
-import type { SessionSidecar } from '@chista/events';
+import { prisma } from '@asha/db';
+import type { SessionSidecar } from '@asha/events';
 
 /** A rendered, ready-to-deploy artifact for an open-source sidecar. */
 export interface RenderedArtifact {
@@ -31,7 +31,7 @@ export class ConnectivityRenderService {
     };
 
     const lines = [
-      `# Squid web filter for Chista filter "${filter.name}"`,
+      `# Squid web filter for Asha filter "${filter.name}"`,
       'http_port 3128',
       `# Negative-DNS + positive caches honour the configured TTL`,
       `negative_ttl ${filter.cacheTtl} seconds`,
@@ -49,7 +49,7 @@ export class ConnectivityRenderService {
       lines.push('# Forced SafeSearch — pin search engines to their safe variants');
       lines.push('acl safe_search_hosts dstdomain .google.com .bing.com .youtube.com .duckduckgo.com');
       lines.push('# Resolver/rewriter maps these to forcesafesearch.google.com / strict.bing.com / restrict.youtube.com');
-      lines.push('request_header_add X-Chista-SafeSearch "1" safe_search_hosts');
+      lines.push('request_header_add X-Asha-SafeSearch "1" safe_search_hosts');
     }
     if (cat.allowedDomains?.length) {
       lines.push('http_access allow allowed_domains');
@@ -85,7 +85,7 @@ export class ConnectivityRenderService {
     }
 
     const content = [
-      `# WireGuard egress for Chista gateway "${egress.name}"`,
+      `# WireGuard egress for Asha gateway "${egress.name}"`,
       '[Interface]',
       `Address = ${c.address}`,
       `PrivateKey = ${c.privateKey}`,
@@ -123,7 +123,7 @@ export class ConnectivityRenderService {
     }
     const proto = (c.proto ?? 'udp').toLowerCase();
     const content = [
-      `# OpenVPN egress for Chista gateway "${egress.name}"`,
+      `# OpenVPN egress for Asha gateway "${egress.name}"`,
       'client',
       'dev tun',
       `proto ${proto}`,
@@ -160,7 +160,7 @@ export class ConnectivityRenderService {
     const screen = `${c.screenWidth ?? 1280}x${c.screenHeight ?? 720}@${c.fps ?? 30}`;
 
     const content = [
-      `# Neko isolated-browser service for Chista isolation "${iso.name}"`,
+      `# Neko isolated-browser service for Asha isolation "${iso.name}"`,
       'services:',
       `  neko-${iso.name}:`,
       `    image: ${image}`,

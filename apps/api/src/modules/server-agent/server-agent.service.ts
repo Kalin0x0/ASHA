@@ -6,17 +6,17 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
-import type { Env } from '@chista/config';
-import type { RegisterServerAgentDto, ServerAgentHeartbeatDto } from '@chista/contracts';
-import { generateWireguardKeypair } from '@chista/crypto';
-import { prisma } from '@chista/db';
+import type { Env } from '@asha/config';
+import type { RegisterServerAgentDto, ServerAgentHeartbeatDto } from '@asha/contracts';
+import { generateWireguardKeypair } from '@asha/crypto';
+import { prisma } from '@asha/db';
 import { ENV } from '../../common/env.module';
 import { RegistrationTokensService } from '../registration-tokens/registration-tokens.service';
 
 /** A server is considered offline if no heartbeat arrives within this window. */
 const STALE_MS = 90_000;
 
-/** Render a WireGuard client config for a host joining Chista's tunnel network. */
+/** Render a WireGuard client config for a host joining Asha's tunnel network. */
 function renderWgClientConfig(o: {
   privateKey: string;
   address: string;
@@ -41,7 +41,7 @@ function renderWgClientConfig(o: {
 /**
  * Availability layer for the installable host/Windows agent: agents authenticate
  * with a registration token, auto-register their desktop as a Server, and send
- * heartbeats so Chista tracks online/offline status. (Reachability via a reverse
+ * heartbeats so Asha tracks online/offline status. (Reachability via a reverse
  * tunnel is a separate, follow-up piece.)
  */
 @Injectable()
@@ -103,7 +103,7 @@ export class ServerAgentService {
   // ── Reverse tunnel (WireGuard reachability) ─────────────────────────────────
 
   private tunnelConfigured(): boolean {
-    return Boolean(this.env.CHISTA_WG_ENDPOINT && this.env.CHISTA_WG_SERVER_PUBLIC_KEY);
+    return Boolean(this.env.ASHA_WG_ENDPOINT && this.env.ASHA_WG_SERVER_PUBLIC_KEY);
   }
 
   /** Assign the next free /24 host address from the configured tunnel subnet. */
@@ -113,7 +113,7 @@ export class ServerAgentService {
       select: { tunnelIp: true },
     });
     const used = new Set(rows.map((r) => r.tunnelIp));
-    const prefix = this.env.CHISTA_WG_SUBNET.split('/')[0]!.split('.').slice(0, 3).join('.'); // /24
+    const prefix = this.env.ASHA_WG_SUBNET.split('/')[0]!.split('.').slice(0, 3).join('.'); // /24
     for (let host = 2; host < 255; host += 1) {
       const ip = `${prefix}.${host}`;
       if (!used.has(ip)) return ip;
@@ -130,7 +130,7 @@ export class ServerAgentService {
   async requestTunnel(token: string, hostname: string) {
     const { orgId } = await this.tokens.validate(token);
     if (!this.tunnelConfigured()) {
-      throw new BadRequestException('Reverse tunnel is not configured on this Chista server');
+      throw new BadRequestException('Reverse tunnel is not configured on this Asha server');
     }
     const server = await prisma.server.findFirst({ where: { orgId, hostname } });
     if (!server) throw new UnauthorizedException('Server not registered — call register first');
@@ -151,9 +151,9 @@ export class ServerAgentService {
     const config = renderWgClientConfig({
       privateKey: keys.privateKey,
       address: tunnelIp,
-      serverPublicKey: this.env.CHISTA_WG_SERVER_PUBLIC_KEY,
-      endpoint: this.env.CHISTA_WG_ENDPOINT,
-      allowedIps: this.env.CHISTA_WG_ALLOWED_IPS,
+      serverPublicKey: this.env.ASHA_WG_SERVER_PUBLIC_KEY,
+      endpoint: this.env.ASHA_WG_ENDPOINT,
+      allowedIps: this.env.ASHA_WG_ALLOWED_IPS,
     });
     return { tunnelIp, config };
   }

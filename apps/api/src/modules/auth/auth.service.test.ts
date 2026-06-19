@@ -17,8 +17,8 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
-vi.mock('@chista/crypto', () => ({
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/crypto', () => ({
   hashToken: (t: string) => `hash:${t}`,
   randomToken: () => 'fam-new',
 }));

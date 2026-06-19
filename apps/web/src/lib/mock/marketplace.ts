@@ -26,16 +26,16 @@ export const REGISTRY_SEED: ApiRegistry[] = [
     lastSyncedAt: hoursAgo(9),
   },
   {
-    id: 'reg-chista',
-    name: 'Chista Official',
-    url: 'https://registry.chista.io/index.json',
+    id: 'reg-asha',
+    name: 'Asha Official',
+    url: 'https://registry.asha.io/index.json',
     type: 'FIRST_PARTY',
     enabled: true,
     lastSyncedAt: hoursAgo(28),
   },
 ];
 
-type RegId = 'reg-kasm' | 'reg-lsio' | 'reg-chista';
+type RegId = 'reg-kasm' | 'reg-lsio' | 'reg-asha';
 type Seed = [name: string, friendly: string, image: string, cats: string[], gib: number, reg: RegId, desc: string];
 
 // gib → MB; rounded for display ("9.0 GiB").
@@ -86,9 +86,9 @@ const RAW: Seed[] = [
   ['qbittorrent', 'qBittorrent', 'lscr.io/linuxserver/qbittorrent:latest', ['Productivity'], 0.4, 'reg-lsio', 'BitTorrent client.'],
   ['nextcloud', 'Nextcloud', 'lscr.io/linuxserver/nextcloud:latest', ['Productivity'], 0.7, 'reg-lsio', 'Self-hosted file sync & share.'],
   ['heimdall', 'Heimdall', 'lscr.io/linuxserver/heimdall:latest', ['Productivity'], 0.3, 'reg-lsio', 'Application dashboard.'],
-  // ── Chista Official ───────────────────────────────────────────────────────
-  ['chista-terminal', 'Chista Terminal', 'chista/terminal:1.0.0', ['Development'], 0.9, 'reg-chista', 'Hardened Ubuntu terminal.'],
-  ['chista-desktop', 'Chista Desktop', 'chista/desktop:1.0.0', ['Desktops'], 3.0, 'reg-chista', 'Branded Chista XFCE desktop.'],
+  // ── Asha Official ───────────────────────────────────────────────────────
+  ['asha-terminal', 'Asha Terminal', 'asha/terminal:1.0.0', ['Development'], 0.9, 'reg-asha', 'Hardened Ubuntu terminal.'],
+  ['asha-desktop', 'Asha Desktop', 'asha/desktop:1.0.0', ['Desktops'], 3.0, 'reg-asha', 'Branded Asha XFCE desktop.'],
 ];
 
 const REG_BY_ID = new Map(REGISTRY_SEED.map((r) => [r.id, r] as const));

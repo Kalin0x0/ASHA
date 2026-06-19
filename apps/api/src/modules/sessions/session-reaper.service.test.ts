@@ -8,7 +8,7 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({ prisma: prismaMock }));
+vi.mock('@asha/db', () => ({ prisma: prismaMock }));
 
 import { SessionReaperService } from './session-reaper.service';
 
@@ -84,8 +84,8 @@ describe('SessionReaperService', () => {
     expect(sessions.destroy).not.toHaveBeenCalled();
   });
 
-  it('reaps PAUSED sessions older than CHISTA_MAX_PAUSED_MINUTES', async () => {
-    process.env.CHISTA_MAX_PAUSED_MINUTES = '60';
+  it('reaps PAUSED sessions older than ASHA_MAX_PAUSED_MINUTES', async () => {
+    process.env.ASHA_MAX_PAUSED_MINUTES = '60';
     prismaMock.session.findMany.mockResolvedValueOnce([
       { id: 'p1', orgId: 'o1', zoneId: 'z1', containerId: 'c1' },
     ]);
@@ -99,11 +99,11 @@ describe('SessionReaperService', () => {
         where: expect.objectContaining({ status: 'PAUSED', pausedAt: { not: null, lt: expect.any(Date) } }),
       }),
     );
-    delete process.env.CHISTA_MAX_PAUSED_MINUTES;
+    delete process.env.ASHA_MAX_PAUSED_MINUTES;
   });
 
-  it('skips paused reaping when CHISTA_MAX_PAUSED_MINUTES is unset', async () => {
-    delete process.env.CHISTA_MAX_PAUSED_MINUTES;
+  it('skips paused reaping when ASHA_MAX_PAUSED_MINUTES is unset', async () => {
+    delete process.env.ASHA_MAX_PAUSED_MINUTES;
 
     const n = await svc.reapPaused();
 
@@ -112,7 +112,7 @@ describe('SessionReaperService', () => {
   });
 
   it('fails launches stuck in a pre-RUNNING state past the launch timeout', async () => {
-    process.env.CHISTA_LAUNCH_TIMEOUT_SECONDS = '300';
+    process.env.ASHA_LAUNCH_TIMEOUT_SECONDS = '300';
     prismaMock.session.findMany.mockResolvedValueOnce([
       { id: 'stuck1', orgId: 'o1', zoneId: 'z1', containerId: null },
       { id: 'stuck2', orgId: 'o1', zoneId: 'z1', containerId: 'c2' },
@@ -131,14 +131,14 @@ describe('SessionReaperService', () => {
         }),
       }),
     );
-    delete process.env.CHISTA_LAUNCH_TIMEOUT_SECONDS;
+    delete process.env.ASHA_LAUNCH_TIMEOUT_SECONDS;
   });
 
   it('skips stuck-launch reaping when the timeout is disabled (<= 0)', async () => {
-    process.env.CHISTA_LAUNCH_TIMEOUT_SECONDS = '0';
+    process.env.ASHA_LAUNCH_TIMEOUT_SECONDS = '0';
     const n = await svc.reapStuckLaunches();
     expect(n).toBe(0);
     expect(prismaMock.session.findMany).not.toHaveBeenCalled();
-    delete process.env.CHISTA_LAUNCH_TIMEOUT_SECONDS;
+    delete process.env.ASHA_LAUNCH_TIMEOUT_SECONDS;
   });
 });

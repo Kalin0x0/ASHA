@@ -28,7 +28,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
-import { ChistaMark } from '@/components/brand/logo';
+import { AshaMark } from '@/components/brand/logo';
 import { SessionWatermark } from '@/components/composite/session-watermark';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -134,7 +134,7 @@ export default function StreamingViewerPage() {
     if (isRemoteDesktop && session) router.replace(`/connect/${session.kasmId}`);
   }, [isRemoteDesktop, session, router]);
   // The stream URL may point at a host the browser can't resolve (e.g. the
-  // default chista.local). Detect it so we can show a clear error rather than
+  // default asha.local). Detect it so we can show a clear error rather than
   // letting the <iframe> fail with a raw browser DNS error.
   const unreachable =
     isRunning &&
@@ -290,7 +290,7 @@ export default function StreamingViewerPage() {
         </Tooltip>
 
         <div className="flex min-w-0 items-center gap-2.5">
-          <ChistaMark className="size-7 shrink-0" />
+          <AshaMark className="size-7 shrink-0" />
           <div className="min-w-0 leading-tight">
             <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
               {workspaceName}
@@ -579,7 +579,7 @@ function LiveStream({
     // ("lastActiveAt") and pop its own error dialog. We can't patch the
     // third-party bundle, but on a same-origin session we can swallow that error
     // and hide the dialog *inside the KasmVNC iframe* — this never touches
-    // Chista's own UI, and is a no-op if the frame blocks access.
+    // Asha's own UI, and is a no-op if the frame blocks access.
     try {
       const win = iframeRef.current?.contentWindow as (Window & typeof globalThis) | null | undefined;
       const doc = iframeRef.current?.contentDocument;
@@ -704,7 +704,7 @@ function Provisioning({ status, workspaceName }: { status: string | undefined; w
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-8 bg-aurora">
       <div className="flex flex-col items-center gap-4">
         <div className="relative">
-          <ChistaMark className="size-14 animate-pulse" />
+          <AshaMark className="size-14 animate-pulse" />
           <span className="absolute -inset-4 rounded-full ring-1 ring-gold-500/20 animate-pulse-ring" />
         </div>
         <div className="text-center">
@@ -786,7 +786,7 @@ function Disconnected({
 
 /**
  * The session is RUNNING but its stream URL points at a host the browser can't
- * resolve (typically the default chista.local). Shown instead of letting the
+ * resolve (typically the default asha.local). Shown instead of letting the
  * <iframe> fail with a raw "server IP address could not be found" DNS error.
  */
 function UnreachableHost({ url, onBack }: { url: string; onBack: () => void }) {
@@ -876,7 +876,7 @@ function PlaceholderStream({ workspaceName, clock }: { workspaceName: string; cl
     <div className="absolute inset-0 pt-12">
       <div className="relative size-full bg-[radial-gradient(120%_120%_at_30%_10%,#23234a_0%,#14141f_55%,#0e0e1a_100%)]">
         <div className="absolute inset-0 bg-grid opacity-30" />
-        <ChistaMark className="absolute left-1/2 top-1/2 size-72 -translate-x-1/2 -translate-y-1/2 opacity-[0.05]" />
+        <AshaMark className="absolute left-1/2 top-1/2 size-72 -translate-x-1/2 -translate-y-1/2 opacity-[0.05]" />
 
         <div className="absolute left-1/2 top-1/2 w-[min(880px,86vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-white/10 shadow-[var(--shadow-lifted)]">
           <div className="flex items-center gap-2 bg-anthracite-800/90 px-4 py-2.5 backdrop-blur">
@@ -903,7 +903,7 @@ NEXT_PUBLIC_DEMO_STREAM_URL=https://localhost:6901`}
 
         <div className="absolute inset-x-0 bottom-0 flex h-11 items-center gap-3 bg-anthracite-800/80 px-4 backdrop-blur-xl">
           <button className="flex items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-white/5">
-            <ChistaMark className="size-4" /> {t('status.start')}
+            <AshaMark className="size-4" /> {t('status.start')}
           </button>
           <div className="ms-auto flex items-center gap-3 text-xs text-muted-foreground">
             <Wifi className="size-3.5 text-success" />

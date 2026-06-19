@@ -5,7 +5,7 @@ import {
   createWebhookSchema,
   type UpdateWebhookDto,
   updateWebhookSchema,
-} from '@chista/contracts';
+} from '@asha/contracts';
 import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { WebhooksService } from './webhooks.service';

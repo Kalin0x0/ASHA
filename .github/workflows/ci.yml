@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # prisma generate only validates that the var resolves; it never connects.
-      DATABASE_URL: postgresql://chista:chista@localhost:5432/chista?schema=public
+      DATABASE_URL: postgresql://asha:asha@localhost:5432/asha?schema=public
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4

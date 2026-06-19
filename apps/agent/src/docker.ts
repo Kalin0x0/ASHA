@@ -3,15 +3,15 @@ import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import net from 'node:net';
 import Docker from 'dockerode';
-import type { ProvisionCommand, SessionSidecar, SessionStatSample, StreamProfile } from '@chista/events';
-import { routerName, sessionTraefikLabels } from '@chista/proxy-labels';
+import type { ProvisionCommand, SessionSidecar, SessionStatSample, StreamProfile } from '@asha/events';
+import { routerName, sessionTraefikLabels } from '@asha/proxy-labels';
 import { agentEnv } from './env.js';
 
 // Host directory where sidecar config files are written.
 // When the agent runs inside Docker, this must be bind-mounted from the host
 // so the path is also reachable by Docker sibling containers.
-const SIDECAR_DIR = process.env.CHISTA_SIDECAR_DIR ?? '/var/lib/chista/sidecars';
-const RECORDING_DIR = process.env.CHISTA_RECORDING_DIR ?? '/var/lib/chista/recordings';
+const SIDECAR_DIR = process.env.ASHA_SIDECAR_DIR ?? '/var/lib/asha/sidecars';
+const RECORDING_DIR = process.env.ASHA_RECORDING_DIR ?? '/var/lib/asha/recordings';
 
 const socketPath =
   process.platform === 'win32' && !process.env.DOCKER_SOCKET
@@ -119,11 +119,11 @@ function gpuEnv(cmd: ProvisionCommand): Record<string, string> {
     return {
       NVIDIA_VISIBLE_DEVICES: 'all',
       NVIDIA_DRIVER_CAPABILITIES: 'all',
-      CHISTA_HW_ENCODER: 'nvenc',
+      ASHA_HW_ENCODER: 'nvenc',
     };
   }
   // vaapi
-  return { CHISTA_HW_ENCODER: 'vaapi', LIBVA_DRIVER_NAME: 'iHD' };
+  return { ASHA_HW_ENCODER: 'vaapi', LIBVA_DRIVER_NAME: 'iHD' };
 }
 
 export async function provisionContainer(cmd: ProvisionCommand): Promise<ProvisionResult> {
@@ -147,11 +147,11 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
       network: agentEnv.sessionNetwork,
       forwardAuthMiddleware: 'sess-auth@file',
     }),
-    'chista.session.id': cmd.sessionId,
-    'chista.org.id': cmd.orgId,
+    'asha.session.id': cmd.sessionId,
+    'asha.org.id': cmd.orgId,
     [`traefik.http.services.${router}.loadbalancer.server.scheme`]:
       cmd.protocol === 'KASMVNC' ? 'https' : 'http',
-    [`traefik.http.services.${router}.loadbalancer.serverstransport`]: 'chista-insecure@file',
+    [`traefik.http.services.${router}.loadbalancer.serverstransport`]: 'asha-insecure@file',
   };
 
   // KasmVNC's web server requires HTTP Basic Auth (kasm_user:VNC_PW), but the
@@ -172,7 +172,7 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
   // disabling securityOpts are gated behind a deployment-level env so org admins
   // (who author dockerConfig) cannot grant themselves host-escape on a host that
   // also runs other tenants' sessions.
-  const allowPrivileged = process.env.CHISTA_ALLOW_PRIVILEGED === 'true';
+  const allowPrivileged = process.env.ASHA_ALLOW_PRIVILEGED === 'true';
   const CAP_DENYLIST = new Set([
     'SYS_ADMIN', 'SYS_PTRACE', 'SYS_MODULE', 'SYS_RAWIO', 'SYS_BOOT', 'SYS_TIME',
     'DAC_READ_SEARCH', 'DAC_OVERRIDE', 'NET_ADMIN', 'NET_RAW', 'MKNOD', 'AUDIT_CONTROL',
@@ -193,7 +193,7 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
       : { Name: 'no' };
 
   const container = await docker.createContainer({
-    name: `chista-sess-${cmd.kasmId}`,
+    name: `asha-sess-${cmd.kasmId}`,
     Image: cmd.runConfig.dockerImage,
     // System env (VNC_PW + GPU hints) spread LAST so admin dockerConfig.env
     // cannot override the per-session password or encoder selection.
@@ -210,7 +210,7 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
         ? { Binds: cmd.runConfig.volumes.map((v) => `${v.source}:${v.target}${v.readOnly ? ':ro' : ''}`) }
         : {}),
       // Workspace hardening knobs — sanitized above (denylisted caps / privileged
-      // / seccomp-apparmor-disabling dropped unless CHISTA_ALLOW_PRIVILEGED).
+      // / seccomp-apparmor-disabling dropped unless ASHA_ALLOW_PRIVILEGED).
       ...(safeCapAdd.length ? { CapAdd: safeCapAdd } : {}),
       ...(cmd.runConfig.capDrop?.length ? { CapDrop: cmd.runConfig.capDrop } : {}),
       ...(safeSecurityOpt.length ? { SecurityOpt: safeSecurityOpt } : {}),
@@ -251,7 +251,7 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     // learns the container id (provisionContainer rejects), so it can't call
     // destroyContainer later — tear the container + any sidecars down here to
     // avoid leaking a running container.
-    await destroyContainer(`chista-sess-${cmd.kasmId}`).catch(() => undefined);
+    await destroyContainer(`asha-sess-${cmd.kasmId}`).catch(() => undefined);
     throw e;
   }
 }
@@ -261,12 +261,12 @@ async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCom
   mkdirSync(dir, { recursive: true });
 
   const entries: Array<{ name: string; spec: SessionSidecar }> = [
-    ...(sidecars.squid ? [{ name: `chista-squid-${kasmId}`, spec: sidecars.squid }] : []),
-    ...(sidecars.wireguard ? [{ name: `chista-wg-${kasmId}`, spec: sidecars.wireguard }] : []),
-    ...(sidecars.neko ? [{ name: `chista-neko-${kasmId}`, spec: sidecars.neko }] : []),
-    ...(sidecars.audio ? [{ name: `chista-audio-${kasmId}`, spec: sidecars.audio }] : []),
-    ...(sidecars.printing ? [{ name: `chista-print-${kasmId}`, spec: sidecars.printing }] : []),
-    ...(sidecars.storage ?? []).map((spec, i) => ({ name: `chista-storage-${kasmId}-${i}`, spec })),
+    ...(sidecars.squid ? [{ name: `asha-squid-${kasmId}`, spec: sidecars.squid }] : []),
+    ...(sidecars.wireguard ? [{ name: `asha-wg-${kasmId}`, spec: sidecars.wireguard }] : []),
+    ...(sidecars.neko ? [{ name: `asha-neko-${kasmId}`, spec: sidecars.neko }] : []),
+    ...(sidecars.audio ? [{ name: `asha-audio-${kasmId}`, spec: sidecars.audio }] : []),
+    ...(sidecars.printing ? [{ name: `asha-print-${kasmId}`, spec: sidecars.printing }] : []),
+    ...(sidecars.storage ?? []).map((spec, i) => ({ name: `asha-storage-${kasmId}-${i}`, spec })),
   ];
 
   for (const { name, spec } of entries) {
@@ -305,7 +305,7 @@ async function launchSidecars(kasmId: string, sidecars: NonNullable<ProvisionCom
             }
           : {}),
       },
-      Labels: { 'chista.sidecar.kasmId': kasmId },
+      Labels: { 'asha.sidecar.kasmId': kasmId },
     });
     await sc.start();
     } catch {
@@ -318,10 +318,10 @@ export async function destroyContainer(idOrName: string): Promise<void> {
   const container = docker.getContainer(idOrName);
   // Resolve kasmId from the container NAME before removal — destroy is usually
   // called with the opaque container id, from which kasmId can't be derived.
-  let kasmId = idOrName.startsWith('chista-sess-') ? idOrName.slice('chista-sess-'.length) : idOrName;
+  let kasmId = idOrName.startsWith('asha-sess-') ? idOrName.slice('asha-sess-'.length) : idOrName;
   try {
     const nm = ((await container.inspect()).Name ?? '').replace(/^\//, '');
-    if (nm.startsWith('chista-sess-')) kasmId = nm.slice('chista-sess-'.length);
+    if (nm.startsWith('asha-sess-')) kasmId = nm.slice('asha-sess-'.length);
   } catch {
     // Container already gone; fall back to the derived id.
   }
@@ -334,7 +334,7 @@ async function destroySidecars(kasmId: string): Promise<void> {
   // Label sweep catches every sidecar for this session, including the
   // index-named storage (rclone) sidecars.
   const containers = await docker
-    .listContainers({ all: true, filters: JSON.stringify({ label: [`chista.sidecar.kasmId=${kasmId}`] }) })
+    .listContainers({ all: true, filters: JSON.stringify({ label: [`asha.sidecar.kasmId=${kasmId}`] }) })
     .catch(() => []);
   await Promise.allSettled(
     containers.map(async (info) => {
@@ -359,13 +359,13 @@ export async function unpauseContainer(idOrName: string): Promise<void> {
 
 /**
  * Push a new screen geometry into the running session. KasmVNC/Neko images read
- * CHISTA_RESIZE from a helper; we exec `chista-resize` if present, otherwise this
+ * ASHA_RESIZE from a helper; we exec `asha-resize` if present, otherwise this
  * is a best-effort no-op (the browser-side client also negotiates geometry).
  */
 export async function resizeContainer(idOrName: string, width: number, height: number): Promise<void> {
   try {
     const exec = await docker.getContainer(idOrName).exec({
-      Cmd: ['/bin/sh', '-c', `command -v chista-resize >/dev/null 2>&1 && chista-resize ${width} ${height} || true`],
+      Cmd: ['/bin/sh', '-c', `command -v asha-resize >/dev/null 2>&1 && asha-resize ${width} ${height} || true`],
       AttachStdout: false,
       AttachStderr: false,
     });
@@ -377,14 +377,14 @@ export async function resizeContainer(idOrName: string, width: number, height: n
 
 /**
  * Push a live stream-control profile into the running session. DLP-capable
- * KasmVNC builds read it via a `chista-stream` helper; otherwise this is a
+ * KasmVNC builds read it via a `asha-stream` helper; otherwise this is a
  * best-effort no-op (the browser-side client also applies quality/fps/clipboard).
  */
 export async function applyStreamProfile(idOrName: string, profile: StreamProfile): Promise<void> {
   try {
     const json = JSON.stringify(profile).replace(/'/g, '');
     const exec = await docker.getContainer(idOrName).exec({
-      Cmd: ['/bin/sh', '-c', `command -v chista-stream >/dev/null 2>&1 && chista-stream '${json}' || true`],
+      Cmd: ['/bin/sh', '-c', `command -v asha-stream >/dev/null 2>&1 && asha-stream '${json}' || true`],
       AttachStdout: false,
       AttachStderr: false,
     });
@@ -396,7 +396,7 @@ export async function applyStreamProfile(idOrName: string, profile: StreamProfil
 
 /**
  * Start a best-effort recorder sidecar that shares the session container's network
- * namespace and writes to the recordings dir. Pluggable via CHISTA_RECORDER_IMAGE;
+ * namespace and writes to the recordings dir. Pluggable via ASHA_RECORDER_IMAGE;
  * when unset this is a no-op (the manager still tracks the Recording row, so a
  * recorder image can be wired in later without app changes).
  */
@@ -405,14 +405,14 @@ export async function startRecorder(
   sessionId: string,
   recordingId: string,
 ): Promise<void> {
-  const image = process.env.CHISTA_RECORDER_IMAGE;
+  const image = process.env.ASHA_RECORDER_IMAGE;
   if (!image) return;
   try {
     const out = join(RECORDING_DIR, recordingId);
     mkdirSync(out, { recursive: true });
     const c = await docker.createContainer({
       Image: image,
-      name: `chista-rec-${sessionId}`,
+      name: `asha-rec-${sessionId}`,
       Env: [`RECORDING_ID=${recordingId}`, 'OUTPUT_DIR=/recordings'],
       HostConfig: {
         NetworkMode: `container:${sessionContainerId}`,
@@ -429,7 +429,7 @@ export async function startRecorder(
 /** Stop + remove the recorder sidecar for a session, if present. */
 export async function stopRecorder(sessionId: string): Promise<void> {
   try {
-    const c = docker.getContainer(`chista-rec-${sessionId}`);
+    const c = docker.getContainer(`asha-rec-${sessionId}`);
     await c.stop({ t: 5 }).catch(() => undefined);
     await c.remove({ force: true }).catch(() => undefined);
   } catch {

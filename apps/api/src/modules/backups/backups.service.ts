@@ -3,8 +3,8 @@ import { mkdir, readdir, stat, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import type { Env } from '@chista/config';
-import { prisma } from '@chista/db';
+import type { Env } from '@asha/config';
+import { prisma } from '@asha/db';
 import { ENV } from '../../common/env.module';
 
 /**
@@ -32,7 +32,7 @@ export class BackupsService {
   /** Run a single backup now and record the result. */
   async runBackup() {
     await mkdir(this.env.BACKUP_DIR, { recursive: true });
-    const filename = `chista-${new Date().toISOString().replace(/[:.]/g, '-')}.dump`;
+    const filename = `asha-${new Date().toISOString().replace(/[:.]/g, '-')}.dump`;
     const filepath = join(this.env.BACKUP_DIR, filename);
 
     let bytes = 0;

@@ -1,7 +1,7 @@
 {
   "users": {
     "title": "Users",
-    "description": "People with access to this Chista deployment.",
+    "description": "People with access to this Asha deployment.",
     "newUser": "New user",
     "stats": {
       "totalUsers": "Total Users",
@@ -168,7 +168,7 @@
       "empty": "No mappings yet — users authenticate but join no groups automatically.",
       "attribute": "Attribute",
       "value": "Value",
-      "chistaGroup": "Chista group",
+      "ashaGroup": "Asha group",
       "selectGroup": "Select group…"
     },
     "toasts": {

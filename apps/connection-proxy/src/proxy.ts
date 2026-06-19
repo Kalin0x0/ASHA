@@ -1,5 +1,5 @@
 import type { IncomingMessage } from 'node:http';
-import { createLogger } from '@chista/logger';
+import { createLogger } from '@asha/logger';
 import type WebSocket from 'ws';
 import { AuthError, verifyToken } from './auth.js';
 import { handleGuacamole } from './handlers/guacamole.js';

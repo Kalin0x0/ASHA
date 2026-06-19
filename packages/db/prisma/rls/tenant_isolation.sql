@@ -1,5 +1,5 @@
 -- ============================================================================
--- Chista — Postgres Row-Level Security backstop for multi-tenant isolation
+-- Asha — Postgres Row-Level Security backstop for multi-tenant isolation
 -- ============================================================================
 --
 -- PURPOSE
@@ -30,14 +30,14 @@
 --      psql "$DATABASE_URL" -f packages/db/prisma/rls/tenant_isolation.sql
 --
 -- 2. Create an application-scoped Postgres role (recommended for production):
---      CREATE ROLE chista_app LOGIN PASSWORD '...';
---      GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO chista_app;
+--      CREATE ROLE asha_app LOGIN PASSWORD '...';
+--      GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO asha_app;
 --      ALTER DEFAULT PRIVILEGES IN SCHEMA public
---        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO chista_app;
+--        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO asha_app;
 --      -- RLS is only enforced for non-owner roles (without FORCE ROW LEVEL SECURITY).
 --      -- If using the same role as the schema owner, add FORCE ROW LEVEL SECURITY per table.
 --
--- 3. Set DATABASE_URL to connect as chista_app.
+-- 3. Set DATABASE_URL to connect as asha_app.
 --
 -- NOTES
 -- -----

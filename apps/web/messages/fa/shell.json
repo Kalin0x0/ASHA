@@ -94,7 +94,7 @@
     "viewLiveSessions": "مشاهده نشست‌های زنده",
     "toggleTheme": "تغییر تم",
     "toSelect": "برای انتخاب",
-    "brand": "Chista Command",
+    "brand": "Asha Command",
     "launchError": "شروع نشست ممکن نشد"
   },
   "comingSoon": {
@@ -103,7 +103,7 @@
   },
   "notFound": {
     "title": "صفحه پیدا نشد",
-    "description": "این مسیر در استقرار Chista شما وجود ندارد.",
+    "description": "این مسیر در استقرار Asha شما وجود ندارد.",
     "backToDashboard": "بازگشت به داشبورد"
   }
 }

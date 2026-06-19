@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import type { CreateWorkspaceDto, UpdateWorkspaceDto } from '@chista/contracts';
-import { prisma } from '@chista/db';
+import type { CreateWorkspaceDto, UpdateWorkspaceDto } from '@asha/contracts';
+import { prisma } from '@asha/db';
 
 // Container/Server/Zone are all surfaced so the catalog can show what a
 // workspace runs on (Docker image, RDP/VNC/SSH server, deployment zone).

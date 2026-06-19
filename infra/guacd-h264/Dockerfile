@@ -1,4 +1,4 @@
-# Chista guacd with H.264 / GFX-AVC444 support.
+# Asha guacd with H.264 / GFX-AVC444 support.
 #
 # The official guacamole/guacd images bundle a FreeRDP compiled WITHOUT H.264
 # (WITH_GFX_H264=OFF, WITH_FFMPEG=OFF), so modern Windows RDP using the GFX
@@ -8,7 +8,7 @@
 # WITH_FFMPEG=TRUE) — so the RDP plugin (libguac-client-rdp) links libavcodec/
 # libswscale and can decode the GFX/H.264 stream.
 #
-# Build:  docker build -t chista-guacd-h264:1.5.5 infra/guacd-h264
+# Build:  docker build -t asha-guacd-h264:1.5.5 infra/guacd-h264
 # Used by the `guacd` service in docker-compose.yml.
 FROM debian:bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends \

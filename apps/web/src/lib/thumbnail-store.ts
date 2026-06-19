@@ -35,6 +35,6 @@ export const useThumbnails = create<ThumbnailState>()(
           return { thumbs: next };
         }),
     }),
-    { name: 'chista-workspace-thumbs' },
+    { name: 'asha-workspace-thumbs' },
   ),
 );
