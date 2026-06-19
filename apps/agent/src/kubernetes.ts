@@ -337,6 +337,22 @@ export async function stopRecorder(_sessionId: string): Promise<void> {
   // No-op.
 }
 
+/**
+ * Image caching is owned by each node's kubelet in the K8s driver, so the agent
+ * cannot reclaim host disk centrally — these are no-ops kept for interface parity
+ * with docker.ts (the manager still records the registry-level remove/reinstall).
+ */
+export async function removeImage(
+  _image: string,
+  _opts: { prune?: boolean } = {},
+): Promise<{ removed: boolean; freedBytes: number }> {
+  return { removed: false, freedBytes: 0 };
+}
+
+export async function pullImage(_image: string): Promise<void> {
+  // No-op: the kubelet pulls images on pod scheduling per imagePullPolicy.
+}
+
 /** Host devices to pass through, including the VAAPI render node when selected. */
 function gpuDevices(cmd: ProvisionCommand): string[] {
   const devices = [...(cmd.runConfig.devices ?? [])];

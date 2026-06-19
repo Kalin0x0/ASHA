@@ -95,7 +95,13 @@ export function useImages(): ManagedImage[] {
 export function useDeleteImage() {
   return useCallback(async (id: string) => {
     store.deleteImage(id);
+    return { ok: true as const, hostImageRemoved: true, sharedWithOtherImages: false };
   }, []);
+}
+
+export function useReinstallImage() {
+  // Reinstall re-pulls onto the agents (a live-backend concept); no-op in mock mode.
+  return useCallback(async (id: string) => ({ ok: true as const, imageId: id, dockerImage: '' }), []);
 }
 
 export function useSetImagePullPolicy() {
@@ -193,5 +199,20 @@ export function useSyncRegistry() {
 export function useInstallEntry() {
   return useCallback(async (id: string) => {
     store.installEntry(id);
+  }, []);
+}
+
+export function useReinstallEntry() {
+  // Reinstall re-pulls onto the agents (live-backend concept); re-mark installed in mock.
+  return useCallback(async (id: string) => {
+    store.installEntry(id);
+    return { ok: true as const, imageId: id, dockerImage: '' };
+  }, []);
+}
+
+export function useUninstallEntry() {
+  return useCallback(async (id: string) => {
+    store.deleteImage(id);
+    return { ok: true as const, hostImageRemoved: true, sharedWithOtherImages: false };
   }, []);
 }

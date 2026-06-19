@@ -111,13 +111,17 @@
     "ramLabel": "RAM (GB)",
     "gpuLabel": "GPU",
     "uninstall": "Deinstallieren",
+    "reinstall": "Neu installieren",
     "deleteTitle": "Image deinstallieren",
-    "deleteDescription": "{name} deinstallieren? Der Image-Eintrag und verknüpfte Workspaces werden entfernt.",
+    "deleteDescription": "{name} deinstallieren? Der Image-Eintrag und verknüpfte Workspaces werden entfernt, und das zwischengespeicherte Image wird vom Host gelöscht, um Speicherplatz freizugeben.",
     "toasts": {
       "policyChanged": "Pull-Policy aktualisiert",
       "policyFailed": "Pull-Policy konnte nicht aktualisiert werden",
       "deleted": "{name} deinstalliert",
+      "deletedDisk": "{name} deinstalliert — Speicherplatz auf dem Host freigegeben",
       "deleteFailed": "Image konnte nicht deinstalliert werden",
+      "reinstalled": "{name} neu installiert",
+      "reinstallFailed": "Image konnte nicht neu installiert werden",
       "resourcesSaved": "Ressourcen aktualisiert",
       "resourcesFailed": "Ressourcen konnten nicht aktualisiert werden"
     }
@@ -149,6 +153,8 @@
       "noDescription": "Keine Beschreibung.",
       "install": "Installieren",
       "installed": "Installiert",
+      "reinstall": "Neu installieren",
+      "remove": "Entfernen",
       "emptyLive": "Keine Marketplace-Apps. Fügen Sie eine Registry hinzu und synchronisieren Sie sie.",
       "emptyMock": "Verbinden Sie das Live-Backend, um den Marketplace zu durchsuchen."
     },
@@ -162,7 +168,13 @@
       "installedDescription": "Image + Workspace erstellt.",
       "installFailed": "Installation fehlgeschlagen",
       "removed": "Registry entfernt",
-      "removeFailed": "Registry konnte nicht entfernt werden"
+      "removeFailed": "Registry konnte nicht entfernt werden",
+      "reinstalledTitle": "{name} neu installiert",
+      "reinstalledDescription": "Aktualisiert und erneut auf die Agents geladen.",
+      "reinstallFailed": "Neuinstallation fehlgeschlagen",
+      "imageRemovedDisk": "{name} entfernt — Speicherplatz auf dem Host freigegeben.",
+      "imageRemovedShared": "{name} entfernt (Image behalten — von einem anderen Workspace genutzt).",
+      "imageRemoveFailed": "Image konnte nicht entfernt werden"
     },
     "tabs": {
       "available": "Verfügbar",

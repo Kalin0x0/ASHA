@@ -1,6 +1,7 @@
 import os from 'node:os';
 import {
   type DestroyCommand,
+  type ImageCommand,
   type ProvisionCommand,
   RedisChannels,
   type SessionControlCommand,
@@ -29,6 +30,8 @@ const {
   applyStreamProfile,
   startRecorder,
   stopRecorder,
+  removeImage,
+  pullImage,
 } = driver;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -63,7 +66,8 @@ async function main(): Promise<void> {
   const provisionChannel = RedisChannels.provision(zoneName);
   const destroyChannel = RedisChannels.destroy(zoneName);
   const controlChannel = RedisChannels.control(zoneName);
-  await sub.subscribe(provisionChannel, destroyChannel, controlChannel).catch(() => undefined);
+  const imageChannel = RedisChannels.image(zoneName);
+  await sub.subscribe(provisionChannel, destroyChannel, controlChannel, imageChannel).catch(() => undefined);
 
   sub.on('message', (channel: string, message: string) => {
     void (async () => {
@@ -74,6 +78,8 @@ async function main(): Promise<void> {
           await handleDestroy(agentId, JSON.parse(message) as DestroyCommand, containerBySession, sessionByContainer);
         } else if (channel === controlChannel) {
           await handleControl(agentId, JSON.parse(message) as SessionControlCommand, containerBySession);
+        } else if (channel === imageChannel) {
+          await handleImage(JSON.parse(message) as ImageCommand);
         }
       } catch (e) {
         log.error(`message handling failed: ${(e as Error).message}`);
@@ -175,6 +181,22 @@ async function handleControl(
 
   } catch (e) {
     log.error(`control ${cmd.action} failed: ${(e as Error).message}`);
+  }
+}
+
+async function handleImage(cmd: ImageCommand): Promise<void> {
+  try {
+    if (cmd.action === 'REMOVE') {
+      const res = await removeImage(cmd.dockerImage, { prune: cmd.prune });
+      const mb = Math.round(res.freedBytes / 2 ** 20);
+      if (res.removed) log.info({ image: cmd.dockerImage, freedMb: mb }, 'image removed from host');
+      else log.info({ image: cmd.dockerImage }, 'image already absent — nothing to reclaim');
+    } else if (cmd.action === 'PULL') {
+      await pullImage(cmd.dockerImage);
+      log.info({ image: cmd.dockerImage }, 'image pulled');
+    }
+  } catch (e) {
+    log.error(`image ${cmd.action} for ${cmd.dockerImage} failed: ${(e as Error).message}`);
   }
 }
 

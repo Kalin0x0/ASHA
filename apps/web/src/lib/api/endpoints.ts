@@ -175,6 +175,17 @@ export const installMarketplaceEntry = (entryId: string, createWorkspace: boolea
     `/marketplace/${entryId}/install`,
     { method: 'POST', body: { createWorkspace } },
   );
+/** Reinstall the image installed from a registry entry (refresh metadata + re-pull). */
+export const reinstallMarketplaceEntry = (entryId: string) =>
+  apiFetch<{ ok: true; imageId: string; dockerImage: string }>(`/marketplace/${entryId}/reinstall`, {
+    method: 'POST',
+  });
+/** Uninstall the image installed from a registry entry, reclaiming host disk. */
+export const uninstallMarketplaceEntry = (entryId: string) =>
+  apiFetch<{ ok: true; hostImageRemoved: boolean; sharedWithOtherImages: boolean }>(
+    `/marketplace/${entryId}/uninstall`,
+    { method: 'POST' },
+  );
 
 // ── Licensing ──────────────────────────────────────────────────────────────────
 export interface ApiLicenseUsage {
@@ -215,8 +226,14 @@ export interface ApiImageRow {
   workspaces: ApiImageWorkspace[];
 }
 export const getImages = () => apiFetch<ApiImageRow[]>('/images');
+/** Remove (uninstall) an image. `hostImageRemoved` reports whether host disk was reclaimed. */
 export const deleteImageEntry = (id: string) =>
-  apiFetch<{ ok: true }>(`/images/${id}`, { method: 'DELETE' });
+  apiFetch<{ ok: true; hostImageRemoved: boolean; sharedWithOtherImages: boolean }>(`/images/${id}`, {
+    method: 'DELETE',
+  });
+/** Reinstall an image: refresh its registry metadata + re-pull it onto the agents. */
+export const reinstallImageEntry = (id: string) =>
+  apiFetch<{ ok: true; imageId: string; dockerImage: string }>(`/images/${id}/reinstall`, { method: 'POST' });
 export const setImagePullPolicy = (id: string, pullPolicy: ApiImageRow['pullPolicy']) =>
   apiFetch<ApiImageRow>(`/images/${id}/pull-policy`, { method: 'PATCH', body: { pullPolicy } });
 

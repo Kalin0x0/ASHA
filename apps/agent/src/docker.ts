@@ -30,13 +30,8 @@ function parseShm(input?: string): number | undefined {
   return n * mult;
 }
 
-async function ensureImage(image: string): Promise<void> {
-  try {
-    await docker.getImage(image).inspect();
-    return;
-  } catch {
-    // not present locally → pull
-  }
+/** Pull an image, resolving once the layer stream completes. */
+async function pullImageRaw(image: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     (docker as unknown as {
       pull: (img: string, opts: object, cb: (err: unknown, stream: NodeJS.ReadableStream) => void) => void;
@@ -45,6 +40,59 @@ async function ensureImage(image: string): Promise<void> {
       docker.modem.followProgress(stream, (e: unknown) => (e ? reject(e) : resolve()));
     });
   });
+}
+
+async function ensureImage(image: string): Promise<void> {
+  try {
+    await docker.getImage(image).inspect();
+    return;
+  } catch {
+    // not present locally → pull
+  }
+  await pullImageRaw(image);
+}
+
+/**
+ * Force a (re-)pull of an image so a re-installed workspace is ready before its
+ * first launch and picks up the latest tag contents. Used by the registry
+ * "reinstall" action.
+ */
+export async function pullImage(image: string): Promise<void> {
+  await pullImageRaw(image);
+}
+
+/**
+ * Remove a cached Docker image from the host to reclaim disk space (registry
+ * "remove"/uninstall). Returns the bytes freed. A missing image (already gone)
+ * is treated as success. Dangling layers left behind are pruned unless disabled.
+ */
+export async function removeImage(
+  image: string,
+  opts: { prune?: boolean } = {},
+): Promise<{ removed: boolean; freedBytes: number }> {
+  let freedBytes = 0;
+  try {
+    const info = (await docker.getImage(image).inspect()) as { Size?: number };
+    freedBytes = typeof info.Size === 'number' ? info.Size : 0;
+  } catch {
+    // Not present locally — nothing to reclaim.
+    return { removed: false, freedBytes: 0 };
+  }
+  // force:false keeps us safe if a container still references it (the API
+  // pre-flight already guards active sessions; this is belt-and-braces).
+  await docker.getImage(image).remove({ force: false });
+  let prunedBytes = 0;
+  if (opts.prune !== false) {
+    try {
+      const res = (await docker.pruneImages({ filters: JSON.stringify({ dangling: ['true'] }) })) as {
+        SpaceReclaimed?: number;
+      };
+      prunedBytes = typeof res.SpaceReclaimed === 'number' ? res.SpaceReclaimed : 0;
+    } catch {
+      // pruning is best-effort hygiene; ignore failures.
+    }
+  }
+  return { removed: true, freedBytes: freedBytes + prunedBytes };
 }
 
 export interface ProvisionResult {

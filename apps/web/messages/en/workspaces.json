@@ -111,13 +111,17 @@
     "ramLabel": "RAM (GB)",
     "gpuLabel": "GPU",
     "uninstall": "Uninstall",
+    "reinstall": "Reinstall",
     "deleteTitle": "Uninstall image",
-    "deleteDescription": "Uninstall {name}? Its image record and linked workspaces are removed.",
+    "deleteDescription": "Uninstall {name}? Its image record and linked workspaces are removed, and the cached image is deleted from the host to reclaim disk space.",
     "toasts": {
       "policyChanged": "Pull policy updated",
       "policyFailed": "Couldn't update pull policy",
       "deleted": "Uninstalled {name}",
+      "deletedDisk": "Uninstalled {name} — host disk reclaimed",
       "deleteFailed": "Couldn't uninstall the image",
+      "reinstalled": "Reinstalled {name}",
+      "reinstallFailed": "Couldn't reinstall the image",
       "resourcesSaved": "Resources updated",
       "resourcesFailed": "Couldn't update resources"
     }
@@ -149,6 +153,8 @@
       "noDescription": "No description.",
       "install": "Install",
       "installed": "Installed",
+      "reinstall": "Reinstall",
+      "remove": "Remove",
       "emptyLive": "No marketplace apps. Add a registry and sync it.",
       "emptyMock": "Connect the live backend to browse the marketplace."
     },
@@ -162,7 +168,13 @@
       "installedDescription": "Image + workspace created.",
       "installFailed": "Install failed",
       "removed": "Registry removed",
-      "removeFailed": "Could not remove registry"
+      "removeFailed": "Could not remove registry",
+      "reinstalledTitle": "Reinstalled {name}",
+      "reinstalledDescription": "Refreshed and re-pulled onto the agents.",
+      "reinstallFailed": "Reinstall failed",
+      "imageRemovedDisk": "{name} removed — host disk reclaimed.",
+      "imageRemovedShared": "{name} removed (image kept — shared by another workspace).",
+      "imageRemoveFailed": "Could not remove image"
     },
     "tabs": {
       "available": "Available",
