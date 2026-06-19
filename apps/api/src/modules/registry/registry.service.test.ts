@@ -119,6 +119,27 @@ describe('RegistryService.install', () => {
     expect(prismaMock.workspace.create).not.toHaveBeenCalled();
   });
 
+  it('defaults LinuxServer.io (lscr.io) images to the 3001 KasmVNC port', async () => {
+    prismaMock.registryEntry.findFirst.mockResolvedValue({
+      id: 'e1',
+      name: 'kali-linux',
+      friendlyName: 'Kali Linux',
+      description: null,
+      dockerImage: 'lscr.io/linuxserver/kali-linux:latest',
+      categories: [],
+      iconUrl: null,
+      raw: {},
+    });
+    prismaMock.image.create.mockResolvedValue({ id: 'img3' });
+    prismaMock.registryEntry.update.mockResolvedValue({});
+    await svc.install('org1', 'u1', 'e1', { createWorkspace: false });
+    expect(prismaMock.image.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ runConfigDefaults: expect.objectContaining({ ports: [3001] }) }),
+      }),
+    );
+  });
+
   it('404s for an entry outside the org', async () => {
     prismaMock.registryEntry.findFirst.mockResolvedValue(null);
     await expect(svc.install('org1', 'u1', 'ghost', { createWorkspace: false })).rejects.toThrow(/not found/);
