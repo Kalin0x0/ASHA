@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Sparkles, Star } from 'lucide-react';
+import { Search, SearchX, Sparkles, Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -185,7 +185,9 @@ export default function PortalHome() {
 
             {filtered.length === 0 ? (
               <div className="flex flex-col items-center gap-4 py-24 text-center animate-fade-up">
-                <div className="text-4xl">🔍</div>
+                <span className="flex size-14 items-center justify-center rounded-2xl border border-border-subtle bg-[var(--surface-1)] text-muted-foreground">
+                  <SearchX className="size-6" aria-hidden />
+                </span>
                 <p className="text-muted-foreground">{t('launcher.noResults')}</p>
                 <button
                   type="button"

@@ -1,12 +1,13 @@
 'use client';
 
-import { Pause, Play, Trash2 } from 'lucide-react';
+import { Loader2, Pause, Play, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
 import { useConfirm } from '@/components/ui/confirm';
+import { useAuth } from '@/lib/api/auth-context';
 import { CURRENT_USER } from '@/lib/current-user';
 import { usePauseSession, useResumeSession, useSessions, useTerminateSession, useWorkspaces } from '@/lib/hooks';
 import { useThumbnails } from '@/lib/thumbnail-store';
@@ -29,18 +30,48 @@ export function MySessionsStrip() {
   const tc = useTranslations('common');
   const confirm = useConfirm();
   const router = useRouter();
+  const { user } = useAuth();
   const sessions = useSessions();
   const workspaces = useWorkspaces();
   const thumbs = useThumbnails((s) => s.thumbs);
   const terminate = useTerminateSession();
   const pause = usePauseSession();
   const resume = useResumeSession();
+  // Per-card in-flight action, so Stop/Delete show a spinner + disable instead
+  // of looking inert while the mutation round-trips (cleared once the session
+  // reflects the new state — see the effect below).
+  const [busy, setBusy] = useState<Record<string, 'stop' | 'delete'>>({});
+
+  // The signed-in identity. Live mode resolves it from the auth session; mock
+  // mode (no login) falls back to the fixed seed user so the strip still works.
+  // NOTE: this used to read CURRENT_USER unconditionally — in live mode that
+  // mock id never matched any real session, so the strip rendered nothing and
+  // users never saw their own open workspaces.
+  const meId = user?.id ?? CURRENT_USER.id;
 
   const wsByName = useMemo(() => new Map(workspaces.map((w) => [w.friendlyName, w])), [workspaces]);
   const mine = useMemo(
-    () => sessions.filter((s) => s.user.id === CURRENT_USER.id && ACTIVE.includes(s.status)),
-    [sessions],
+    () => sessions.filter((s) => s.user.id === meId && ACTIVE.includes(s.status)),
+    [sessions, meId],
   );
+
+  // Drop the busy flag once the action has landed: a stopped session reaches
+  // PAUSED, a deleted one leaves the active set entirely.
+  useEffect(() => {
+    setBusy((prev) => {
+      const entries = Object.entries(prev);
+      if (entries.length === 0) return prev;
+      const next: Record<string, 'stop' | 'delete'> = {};
+      let changed = false;
+      for (const [id, action] of entries) {
+        const s = mine.find((m) => m.id === id);
+        const settled = action === 'stop' ? !s || s.status === 'PAUSED' : !s;
+        if (settled) changed = true;
+        else next[id] = action;
+      }
+      return changed ? next : prev;
+    });
+  }, [mine]);
 
   if (mine.length === 0) return null;
 
@@ -51,6 +82,7 @@ export function MySessionsStrip() {
     openViewer(s);
   };
   const onStop = (s: SessionRow) => {
+    setBusy((b) => ({ ...b, [s.id]: 'stop' }));
     pause(s.id);
     toast.success(t('mySessions.stoppedToast'));
   };
@@ -63,6 +95,7 @@ export function MySessionsStrip() {
       }))
     )
       return;
+    setBusy((b) => ({ ...b, [s.id]: 'delete' }));
     terminate(s.id);
     toast.success(t('mySessions.endedToast'));
   };
@@ -83,6 +116,7 @@ export function MySessionsStrip() {
           const thumb = thumbs[s.kasmId] ?? (ws ? thumbs[ws.id] : undefined);
           const running = s.status === 'RUNNING' || s.status === 'DEGRADED';
           const paused = s.status === 'PAUSED';
+          const cardBusy = busy[s.id];
           const label = running
             ? tc('sessionStatus.RUNNING')
             : paused
@@ -142,30 +176,35 @@ export function MySessionsStrip() {
                     <button
                       type="button"
                       onClick={() => onStop(s)}
+                      disabled={Boolean(cardBusy)}
+                      aria-busy={cardBusy === 'stop'}
                       aria-label={t('mySessions.stopAria', { name: s.workspaceName })}
                       title={t('mySessions.stop')}
-                      className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-foreground ring-gold-focus"
+                      className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-secondary hover:text-foreground ring-gold-focus disabled:pointer-events-none disabled:opacity-50"
                     >
-                      <Pause className="size-4" />
+                      {cardBusy === 'stop' ? <Loader2 className="size-4 animate-spin" /> : <Pause className="size-4" />}
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={() => onResume(s)}
+                    disabled={cardBusy === 'delete'}
                     aria-label={t('mySessions.resumeAria', { name: s.workspaceName })}
                     title={t('mySessions.resume')}
-                    className="inline-flex size-8 items-center justify-center rounded-lg bg-gold-500/90 text-anthracite-950 transition-colors hover:bg-gold-500 ring-gold-focus"
+                    className="inline-flex size-8 items-center justify-center rounded-lg bg-gold-500/90 text-anthracite-950 transition-colors hover:bg-gold-500 ring-gold-focus disabled:pointer-events-none disabled:opacity-50"
                   >
                     <Play className="size-4 fill-anthracite-950" />
                   </button>
                   <button
                     type="button"
                     onClick={() => void onDelete(s)}
+                    disabled={Boolean(cardBusy)}
+                    aria-busy={cardBusy === 'delete'}
                     aria-label={t('mySessions.deleteAria', { name: s.workspaceName })}
                     title={t('mySessions.delete')}
-                    className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-destructive/15 hover:text-destructive ring-gold-focus"
+                    className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground/70 transition-colors hover:bg-destructive/15 hover:text-destructive ring-gold-focus disabled:pointer-events-none disabled:opacity-50"
                   >
-                    <Trash2 className="size-4" />
+                    {cardBusy === 'delete' ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                   </button>
                 </div>
               </div>
