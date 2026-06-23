@@ -36,6 +36,34 @@ export class SchedulerService {
     return null;
   }
 
+  /**
+   * The zone (in this org) whose least-loaded ONLINE agent currently has a fresh
+   * heartbeat and spare capacity, or null if the org has no live agent anywhere.
+   *
+   * Used at launch time to resolve an *agent-less* default/junk zone to one that
+   * can actually run the workspace — so a session is never created in a zone with
+   * no agent only to silently time out. This is a READ-ONLY probe: it does NOT
+   * reserve capacity (the real atomic reserve happens later in `pickAgent`).
+   */
+  async pickZoneWithLiveAgent(orgId: string) {
+    const freshAfter = new Date(Date.now() - HEARTBEAT_STALE_MS);
+    const agents = await prisma.agent.findMany({
+      where: { orgId, status: 'ONLINE', lastHeartbeatAt: { gte: freshAfter } },
+      select: { zoneId: true, currentSessions: true, maxSessions: true, loadPercent: true },
+    });
+    const ranked = agents
+      .filter((a) => a.zoneId && (a.maxSessions === 0 || a.currentSessions < a.maxSessions))
+      .sort((a, b) => a.loadPercent - b.loadPercent);
+    for (const a of ranked) {
+      const zone = await prisma.deploymentZone.findFirst({
+        where: { id: a.zoneId as string, orgId },
+        select: { id: true, name: true },
+      });
+      if (zone) return zone;
+    }
+    return null;
+  }
+
   /** Least-loaded ONLINE agent in a single zone, with an atomic capacity reserve. */
   private async pickInZone(zoneId: string) {
     const freshAfter = new Date(Date.now() - HEARTBEAT_STALE_MS);

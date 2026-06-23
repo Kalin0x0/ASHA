@@ -49,13 +49,15 @@ const USER = { sub: 'user1', orgId: 'org1', email: 'user1@x.io', isSystemAdmin: 
 
 describe('SessionsService.create', () => {
   let svc: SessionsService;
-  let scheduler: { pickAgent: ReturnType<typeof vi.fn> };
+  let scheduler: { pickAgent: ReturnType<typeof vi.fn>; pickZoneWithLiveAgent: ReturnType<typeof vi.fn> };
   let redis: { publish: ReturnType<typeof vi.fn> };
   let audit: { record: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    scheduler = { pickAgent: vi.fn() };
+    // Default: no live-agent zone surfaced → resolution falls through to the org
+    // default zone (the `deploymentZone.findFirst` mock below).
+    scheduler = { pickAgent: vi.fn(), pickZoneWithLiveAgent: vi.fn().mockResolvedValue(null) };
     redis = { publish: vi.fn().mockResolvedValue(undefined) };
     audit = { record: vi.fn().mockResolvedValue(undefined) };
     svc = new SessionsService(scheduler as never, redis as never, audit as never);
@@ -129,14 +131,42 @@ describe('SessionsService.create', () => {
     expect(audit.record).toHaveBeenCalled();
   });
 
-  it('leaves the session unscheduled (no provision) when no agent is available', async () => {
+  it('fails fast (ERROR + 503, no silent timeout) when no agent is available', async () => {
     scheduler.pickAgent.mockResolvedValue(null);
 
-    await svc.create(USER, { workspaceId: 'ws1' });
+    // Regression guard for the recurring "Launch timed out before the workspace
+    // became ready" hang: when no agent can take the session we surface the real
+    // reason immediately instead of leaving it REQUESTED to time out.
+    await expect(svc.create(USER, { workspaceId: 'ws1' })).rejects.toThrow(
+      /no deployment agent is online/i,
+    );
 
+    // Marked ERROR with an actionable reason — never SCHEDULED, never provisioned.
+    expect(prismaMock.session.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'ERROR' }) }),
+    );
     expect(redis.publish).not.toHaveBeenCalled();
     expect(prismaMock.session.update).not.toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'SCHEDULED' }) }),
+    );
+  });
+
+  it('resolves an agent-less default zone to a zone that has a live agent', async () => {
+    // The org default zone has no agent; pickZoneWithLiveAgent surfaces the zone
+    // where an agent actually lives, so the session is created there (not in a
+    // dead zone) and provisions normally. This is the durable, self-healing fix.
+    scheduler.pickZoneWithLiveAgent.mockResolvedValue({ id: 'zoneLive', name: 'live' });
+    scheduler.pickAgent.mockResolvedValue({ id: 'agent1', zoneId: 'zoneLive' });
+
+    await svc.create(USER, { workspaceId: 'ws1' });
+
+    expect(scheduler.pickAgent).toHaveBeenCalledWith('zoneLive');
+    expect(prismaMock.session.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ zoneId: 'zoneLive' }) }),
+    );
+    expect(redis.publish).toHaveBeenCalledWith(
+      'asha:zone:live:provision',
+      expect.objectContaining({ zone: 'live' }),
     );
   });
 

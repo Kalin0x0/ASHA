@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     agent: { findMany: vi.fn(), updateMany: vi.fn() },
-    deploymentZone: { findUnique: vi.fn(), findMany: vi.fn() },
+    deploymentZone: { findUnique: vi.fn(), findMany: vi.fn(), findFirst: vi.fn() },
   },
 }));
 
@@ -96,5 +96,43 @@ describe('SchedulerService.pickAgent', () => {
     expect(prismaMock.deploymentZone.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ orgId: 'org1', id: { not: 'zoneA' } }) }),
     );
+  });
+});
+
+describe('SchedulerService.pickZoneWithLiveAgent', () => {
+  let svc: SchedulerService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    svc = new SchedulerService();
+  });
+
+  it('returns the zone of the least-loaded live agent in the org', async () => {
+    prismaMock.agent.findMany.mockResolvedValue([
+      agent({ id: 'busy', zoneId: 'zoneBusy', loadPercent: 70 }),
+      agent({ id: 'idle', zoneId: 'zoneIdle', loadPercent: 3 }),
+    ]);
+    prismaMock.deploymentZone.findFirst.mockResolvedValue({ id: 'zoneIdle', name: 'idle' });
+
+    const zone = await svc.pickZoneWithLiveAgent('org1');
+
+    expect(zone).toEqual({ id: 'zoneIdle', name: 'idle' });
+    // Scoped to ONLINE agents in THIS org (tenant isolation).
+    expect(prismaMock.agent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ orgId: 'org1', status: 'ONLINE' }) }),
+    );
+    // Resolves the least-loaded agent's zone first.
+    expect(prismaMock.deploymentZone.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'zoneIdle', orgId: 'org1' } }),
+    );
+  });
+
+  it('returns null when the org has no live agent with capacity', async () => {
+    prismaMock.agent.findMany.mockResolvedValue([
+      agent({ id: 'full', zoneId: 'z1', maxSessions: 1, currentSessions: 1 }),
+    ]);
+
+    expect(await svc.pickZoneWithLiveAgent('org1')).toBeNull();
+    expect(prismaMock.deploymentZone.findFirst).not.toHaveBeenCalled();
   });
 });
