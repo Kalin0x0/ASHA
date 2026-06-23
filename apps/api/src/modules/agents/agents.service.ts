@@ -100,13 +100,28 @@ export class AgentsService {
         where: { id: agentId },
         select: { drainRequested: true },
       });
+      // `currentSessions` is the scheduler's capacity signal. Derive it from the
+      // AUTHORITATIVE DB count of this agent's non-terminal sessions rather than
+      // trusting the agent's self-reported tally (`dto.currentSessions`). That
+      // tally is the size of an in-process Map that only shrinks on an explicit
+      // DESTROY; a missed destroy (agent offline when it was published, a session
+      // reaped straight in the DB, or a container removed out-of-band) leaves a
+      // phantom entry forever. The reported count then creeps above maxSessions
+      // and the scheduler permanently filters the agent out — so every new launch
+      // fails with "no agent available" / hangs until the launch-timeout. Counting
+      // real sessions makes capacity self-healing and immune to orphaned
+      // containers and leaked map entries. The atomic reserve in
+      // SchedulerService still guards concurrent launches between heartbeats.
+      const currentSessions = await prisma.session.count({
+        where: { agentId, status: { notIn: ['ERROR', 'DESTROYED', 'TERMINATING'] } },
+      });
       await prisma.agent.update({
         where: { id: agentId },
         data: {
           status: agent?.drainRequested ? 'DRAINING' : 'ONLINE',
           memFreeMb: dto.memFreeMb,
           loadPercent: dto.loadPercent,
-          currentSessions: dto.currentSessions,
+          currentSessions,
           version: dto.version,
           lastHeartbeatAt: new Date(),
         },
