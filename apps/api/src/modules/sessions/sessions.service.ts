@@ -1,4 +1,11 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import type { CreateSessionDto } from '@asha/contracts';
 import { prisma } from '@asha/db';
 import {
@@ -77,14 +84,25 @@ export class SessionsService {
       return prisma.session.findUnique({ where: { id: conn.sessionId } });
     }
 
-    // Zone precedence: explicit request → the workspace's preferred zone → the
-    // org default → any zone.
+    // Zone precedence: explicit request → the workspace's preferred zone → a zone
+    // that currently has a LIVE agent → the org default → any zone. Every lookup
+    // is scoped to the launching user's org (tenant isolation) so a launch can
+    // never resolve to another org's — or a stale/junk — zone.
+    //
+    // Preferring a zone with a live agent is what stops the recurring failure:
+    // historically a workspace with no explicit zone fell back to whichever zone
+    // was flagged `isDefault`, and if an admin (or a bad seed) left that flag on a
+    // zone with no online agent, the session was created there, no agent ever
+    // picked it up, and it silently sat until the reaper failed it with the
+    // opaque "Launch timed out before the workspace became ready".
+    const orgId = user.orgId;
     const zonePref = dto.zoneId ?? workspace.zoneId ?? null;
     const zone =
       (zonePref
-        ? await prisma.deploymentZone.findUnique({ where: { id: zonePref } })
-        : await prisma.deploymentZone.findFirst({ where: { isDefault: true } })) ??
-      (await prisma.deploymentZone.findFirst({}));
+        ? await prisma.deploymentZone.findFirst({ where: { id: zonePref, orgId } })
+        : ((await this.scheduler.pickZoneWithLiveAgent(orgId)) ??
+          (await prisma.deploymentZone.findFirst({ where: { orgId, isDefault: true } })))) ??
+      (await prisma.deploymentZone.findFirst({ where: { orgId } }));
     if (!zone) throw new BadRequestException('No deployment zone available');
 
     const protocol = workspace.image?.protocol ?? 'KASMVNC';
@@ -144,6 +162,28 @@ export class SessionsService {
         customAttributes: (dto.launchValues ?? {}) as Record<string, unknown>,
       };
       await this.dispatchProvision(session.id, provisionZoneName, workspace, protocol, tokenCtx, user.sub);
+    } else {
+      // No ONLINE agent in ANY of the org's zones could take this session. Fail
+      // LOUDLY and immediately instead of leaving it REQUESTED to time out after
+      // minutes with the opaque "Launch timed out before the workspace became
+      // ready": mark it ERROR with an actionable reason and surface a 503 so the
+      // user — and the UI — know exactly what's wrong and what to do.
+      const reason =
+        'No deployment agent is online to run this workspace. Ask an administrator to ' +
+        'check that an agent is connected and healthy, then launch again.';
+      await prisma.session.update({
+        where: { id: session.id },
+        data: { status: 'ERROR', errorMessage: reason },
+      });
+      await this.audit.record({
+        orgId: user.orgId,
+        actorUserId: user.sub,
+        action: 'session.create',
+        targetType: 'Session',
+        targetId: session.id,
+        metadata: { workspace: workspace.name, outcome: 'no-agent-available' },
+      });
+      throw new ServiceUnavailableException(reason);
     }
 
     await this.audit.record({
