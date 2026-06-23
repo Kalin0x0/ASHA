@@ -7,6 +7,14 @@ import { SessionsService } from './sessions.service';
 const ACTIVE_STATUSES = ['REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED'] as const;
 
 /**
+ * Statuses the global abandoned-session reaper targets: a container/connection
+ * that actually came up (RUNNING/DEGRADED) but whose viewer has gone silent.
+ * Pre-RUNNING states are handled by the launch-timeout reaper, and PAUSED is
+ * left to its own dedicated cap so an intentionally-paused session is not killed.
+ */
+const ABANDONABLE_STATUSES = ['RUNNING', 'DEGRADED'] as const;
+
+/**
  * Periodically terminates sessions that have outlived their hard duration cap
  * (`expiresAt`) or have gone idle past their workspace's `idleTimeoutMinutes`.
  * Idle is measured from `lastKeepaliveAt` (refreshed by the viewer heartbeat).
@@ -52,6 +60,42 @@ export class SessionReaperService {
       this.logger.warn(`Failed ${stuck.length} launch(es) stuck past ${secs}s`);
     }
     return stuck.length;
+  }
+
+  /**
+   * Safety-net idle reaper: terminate ANY session that came up but whose viewer
+   * has gone silent (no `lastKeepaliveAt` refresh) for longer than a global
+   * ceiling (`ASHA_SESSION_MAX_IDLE_MINUTES`, default 120; <= 0 disables).
+   *
+   * The per-workspace `reapIdle` only covers workspaces that set
+   * `idleTimeoutMinutes`; server-backed (RDP/VNC/SSH) sessions and workspaces
+   * with no idle timeout would otherwise live forever. Abandoned sessions pile
+   * up until the org's licensed concurrent-session cap is hit — at which point
+   * NO new session (container OR server) can launch, which presents to the user
+   * as "the container won't start". The viewer refreshes lastKeepaliveAt
+   * continuously, so a gap this large means the session is genuinely abandoned.
+   * destroy() also dispatches the agent destroy, reclaiming the container and
+   * (via the heartbeat's authoritative recount) the scheduling slot.
+   */
+  @Interval('session-abandoned-reaper', 60_000)
+  async reapAbandoned(): Promise<number> {
+    const max = Number(process.env.ASHA_SESSION_MAX_IDLE_MINUTES ?? 120);
+    if (!Number.isFinite(max) || max <= 0) return 0;
+    const cutoff = new Date(Date.now() - max * 60_000);
+    const due = await prisma.session.findMany({
+      where: {
+        status: { in: [...ABANDONABLE_STATUSES] },
+        lastKeepaliveAt: { lt: cutoff },
+      },
+      select: { id: true, orgId: true, zoneId: true, containerId: true },
+    });
+    for (const s of due) {
+      await this.sessions.destroy(s, 'idle_timeout');
+    }
+    if (due.length > 0) {
+      this.logger.warn(`Reaped ${due.length} abandoned session(s) idle past ${max}m (no keepalive)`);
+    }
+    return due.length;
   }
 
   /**

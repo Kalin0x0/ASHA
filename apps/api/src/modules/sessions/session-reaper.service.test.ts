@@ -141,4 +141,35 @@ describe('SessionReaperService', () => {
     expect(prismaMock.session.findMany).not.toHaveBeenCalled();
     delete process.env.ASHA_LAUNCH_TIMEOUT_SECONDS;
   });
+
+  it('reaps RUNNING/DEGRADED sessions abandoned past ASHA_SESSION_MAX_IDLE_MINUTES (default 120)', async () => {
+    delete process.env.ASHA_SESSION_MAX_IDLE_MINUTES; // exercise the default
+    prismaMock.session.findMany.mockResolvedValueOnce([
+      { id: 'ab1', orgId: 'o1', zoneId: 'z1', containerId: 'c1' },
+      { id: 'ab2', orgId: 'o1', zoneId: 'z1', containerId: null }, // e.g. a server/RDP session
+    ]);
+
+    const n = await svc.reapAbandoned();
+
+    expect(n).toBe(2);
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 'ab1' }), 'idle_timeout');
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 'ab2' }), 'idle_timeout');
+    // Targets only came-up-but-silent sessions; never PAUSED or pre-RUNNING.
+    expect(prismaMock.session.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: ['RUNNING', 'DEGRADED'] },
+          lastKeepaliveAt: { lt: expect.any(Date) },
+        }),
+      }),
+    );
+  });
+
+  it('skips abandoned reaping when ASHA_SESSION_MAX_IDLE_MINUTES <= 0', async () => {
+    process.env.ASHA_SESSION_MAX_IDLE_MINUTES = '0';
+    const n = await svc.reapAbandoned();
+    expect(n).toBe(0);
+    expect(prismaMock.session.findMany).not.toHaveBeenCalled();
+    delete process.env.ASHA_SESSION_MAX_IDLE_MINUTES;
+  });
 });
