@@ -7,7 +7,7 @@ import type { RdpFileOptions } from '@/lib/api/endpoints';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
 import { downloadRdpFile } from '@/lib/rdp';
 import { formatRelativeTime } from '@/lib/utils';
-import type { ActivityItem, Agent, BugFixRow, BugReportInput, BugReportRow, BugResolveInput, BugStats, BugStatus, CreateFeedbackInput, CreateUserInput, CreateWorkspaceInput, FeedbackItem, ManagedImage, RecordingRow, ServerOption, SessionRow, UpdateFeedbackInput, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
+import type { ActivityItem, Agent, BugFixRow, BugReportInput, BugReportRow, BugResolveInput, BugStats, BugStatus, CreateFeedbackInput, CreateUserInput, CreateWorkspaceInput, FeedbackItem, MaintenanceRunRow, MaintenanceTaskInput, MaintenanceTaskRow, ManagedImage, RecordingRow, ServerOption, SessionRow, UpdateFeedbackInput, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
 
 const SESSIONS_KEY = ['sessions'] as const;
 const WORKSPACES_KEY = ['workspaces'] as const;
@@ -280,6 +280,71 @@ export function useUpdateFeedback() {
     },
     [mutateAsync],
   );
+}
+
+// ── Maintenance / automation scheduler ───────────────────────────────────────
+
+const MAINTENANCE_KEY = ['maintenance'] as const;
+
+export function useMaintenanceTasks(): MaintenanceTaskRow[] {
+  const { data } = useQuery({
+    queryKey: MAINTENANCE_KEY,
+    queryFn: api.getMaintenanceTasks,
+    refetchInterval: 15_000,
+  });
+  return data ?? [];
+}
+
+export function useMaintenanceRuns(id: string): MaintenanceRunRow[] {
+  const { data } = useQuery({
+    queryKey: [...MAINTENANCE_KEY, id, 'runs'],
+    queryFn: () => api.getMaintenanceRuns(id),
+    enabled: Boolean(id),
+    refetchInterval: 10_000,
+  });
+  return data ?? [];
+}
+
+export function useCreateMaintenanceTask() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.createMaintenanceTask,
+    onSuccess: () => qc.invalidateQueries({ queryKey: MAINTENANCE_KEY }),
+  });
+  return useCallback((input: MaintenanceTaskInput) => mutateAsync(input), [mutateAsync]);
+}
+
+export function useUpdateMaintenanceTask() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<MaintenanceTaskInput> }) =>
+      api.updateMaintenanceTask(id, patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: MAINTENANCE_KEY }),
+  });
+  return useCallback(
+    (id: string, patch: Partial<MaintenanceTaskInput>) => mutateAsync({ id, patch }),
+    [mutateAsync],
+  );
+}
+
+export function useDeleteMaintenanceTask() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.deleteMaintenanceTask,
+    onSuccess: () => qc.invalidateQueries({ queryKey: MAINTENANCE_KEY }),
+  });
+  return useCallback((id: string) => mutateAsync(id), [mutateAsync]);
+}
+
+export function useRunMaintenanceTask() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.runMaintenanceTask,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: MAINTENANCE_KEY });
+    },
+  });
+  return useCallback((id: string) => mutateAsync(id), [mutateAsync]);
 }
 
 const REGISTRIES_KEY = ['registries'] as const;

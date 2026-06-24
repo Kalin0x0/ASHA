@@ -38,6 +38,7 @@ export const PERMISSION_CATALOG: readonly PermissionDef[] = [
   { key: 'POOL_MANAGE', category: 'Infrastructure', description: 'Manage server pools' },
   { key: 'AUTOSCALE_MANAGE', category: 'Infrastructure', description: 'Manage autoscale configs' },
   { key: 'PROVIDER_MANAGE', category: 'Infrastructure', description: 'Manage VM/DNS providers' },
+  { key: 'MAINTENANCE_MANAGE', category: 'Infrastructure', description: 'Manage scheduled maintenance & automation tasks' },
   { key: 'STORAGE_MANAGE', category: 'Storage', description: 'Manage storage & file mappings' },
   { key: 'CONNECTIVITY_MANAGE', category: 'Connectivity', description: 'Manage proxies/egress/filtering' },
   { key: 'SETTINGS_MANAGE', category: 'Settings', description: 'Manage global settings' },

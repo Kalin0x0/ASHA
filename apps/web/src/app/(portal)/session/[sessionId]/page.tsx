@@ -877,7 +877,7 @@ function PlaceholderStream({ workspaceName, clock }: { workspaceName: string; cl
     <div className="absolute inset-0 pt-12">
       <div className="relative size-full overflow-hidden bg-aurora">
         <div className="absolute inset-0 bg-grid opacity-20" />
-        <ChistaMark className="absolute left-1/2 top-1/2 size-[560px] -translate-x-1/2 -translate-y-1/2 opacity-[0.03]" />
+        <AshaMark className="absolute left-1/2 top-1/2 size-[560px] -translate-x-1/2 -translate-y-1/2 opacity-[0.03]" />
 
         {/* Central setup panel — high-contrast so it's unmistakable */}
         <div className="absolute left-1/2 top-1/2 w-[min(560px,90vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-gold-500/30 bg-anthracite-900 shadow-[0_0_0_1px_rgba(212,175,55,0.08),0_24px_64px_rgba(0,0,0,0.6)]">
@@ -919,7 +919,7 @@ NEXT_PUBLIC_DEMO_STREAM_URL=https://localhost:6901`}
         {/* Mock taskbar */}
         <div className="absolute inset-x-0 bottom-0 flex h-10 items-center gap-3 border-t border-white/5 bg-anthracite-800/80 px-4 backdrop-blur-sm">
           <button className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-muted-foreground/70 hover:bg-white/5 hover:text-muted-foreground transition-colors">
-            <ChistaMark className="size-3.5" /> {t('status.start')}
+            <AshaMark className="size-3.5" /> {t('status.start')}
           </button>
           <div className="ms-auto flex items-center gap-3 text-xs text-muted-foreground">
             <Wifi className="size-3 text-success" />

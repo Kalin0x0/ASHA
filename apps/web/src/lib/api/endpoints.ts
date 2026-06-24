@@ -8,6 +8,11 @@ import type {
   BugStatus,
   BugFixRow,
   ClientErrorInput,
+  MaintenanceCatalogEntry,
+  MaintenanceRunRow,
+  MaintenanceRunResult,
+  MaintenanceTaskInput,
+  MaintenanceTaskRow,
   SessionStatus,
 } from '@/lib/types';
 import type { AuthTokens, AuthUser } from './auth-store';
@@ -1136,3 +1141,17 @@ export const resolveBugReport = (id: string, body: BugResolveInput) =>
 /** Fire-and-forget intake for an automatically-captured client error. */
 export const ingestClientError = (body: ClientErrorInput & { appVersion?: string }) =>
   apiFetch<{ errorCode: string }>('/bug-reports/ingest', { method: 'POST', body });
+
+// ── Maintenance / automation scheduler ────────────────────────────────────────
+
+export const getMaintenanceTasks = () => apiFetch<MaintenanceTaskRow[]>('/maintenance');
+export const getMaintenanceCatalog = () => apiFetch<MaintenanceCatalogEntry[]>('/maintenance/catalog');
+export const getMaintenanceRuns = (id: string) => apiFetch<MaintenanceRunRow[]>(`/maintenance/${id}/runs`);
+export const createMaintenanceTask = (body: MaintenanceTaskInput) =>
+  apiFetch<MaintenanceTaskRow>('/maintenance', { method: 'POST', body });
+export const updateMaintenanceTask = (id: string, body: Partial<MaintenanceTaskInput>) =>
+  apiFetch<MaintenanceTaskRow>(`/maintenance/${id}`, { method: 'PATCH', body });
+export const deleteMaintenanceTask = (id: string) =>
+  apiFetch<{ ok: true }>(`/maintenance/${id}`, { method: 'DELETE' });
+export const runMaintenanceTask = (id: string) =>
+  apiFetch<MaintenanceRunResult>(`/maintenance/${id}/run`, { method: 'POST' });

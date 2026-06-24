@@ -95,6 +95,52 @@ export async function removeImage(
   return { removed: true, freedBytes: freedBytes + prunedBytes };
 }
 
+/**
+ * Maintenance: `docker restart` every sibling container belonging to the given
+ * compose service(s) on this host — used by the scheduler to restart the
+ * RDP/VNC/SSH bridge (connection-proxy + guacd, the "terminal server") without
+ * the API needing the Docker socket. Scoped to the `asha` compose project so it
+ * can never touch unrelated containers. Best-effort per container.
+ */
+export async function restartComposeService(services: string[]): Promise<{ restarted: string[] }> {
+  const restarted: string[] = [];
+  for (const service of services) {
+    const list = await docker
+      .listContainers({
+        all: true,
+        filters: JSON.stringify({
+          label: ['com.docker.compose.project=asha', `com.docker.compose.service=${service}`],
+        }),
+      })
+      .catch(() => [] as Array<{ Id: string; Names?: string[] }>);
+    for (const info of list) {
+      try {
+        await docker.getContainer(info.Id).restart({ t: 10 });
+        restarted.push((info.Names?.[0] ?? info.Id).replace(/^\//, ''));
+      } catch {
+        // Best-effort: a container that's mid-restart / already gone is skipped.
+      }
+    }
+  }
+  return { restarted };
+}
+
+/**
+ * Maintenance: reclaim DANGLING image layers on the agent host (disk hygiene).
+ * Deliberately dangling-only — never an `-a` prune, which would delete images
+ * backing installed-but-currently-stopped workspaces. Returns bytes reclaimed.
+ */
+export async function pruneDanglingImages(): Promise<{ reclaimedBytes: number }> {
+  try {
+    const res = (await docker.pruneImages({ filters: JSON.stringify({ dangling: ['true'] }) })) as {
+      SpaceReclaimed?: number;
+    };
+    return { reclaimedBytes: typeof res.SpaceReclaimed === 'number' ? res.SpaceReclaimed : 0 };
+  } catch {
+    return { reclaimedBytes: 0 };
+  }
+}
+
 export interface ProvisionResult {
   containerId: string;
   internalHost: string;

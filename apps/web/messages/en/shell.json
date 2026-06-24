@@ -52,6 +52,7 @@
       "database": "Database",
       "configImportExport": "Config Import/Export",
       "reporting": "Reporting",
+      "automation": "Automation",
       "bugReports": "Bug Reports",
       "knowledgeBase": "Fix Memory",
       "auditLog": "Audit Log",

@@ -14,6 +14,6 @@ import { SessionsService } from './sessions.service';
   imports: [ConnectivityModule, WebhooksModule, LicensingModule, StorageModule, ServersModule],
   controllers: [SessionsController],
   providers: [SessionsService, SchedulerService, SessionsGateway, SessionReaperService],
-  exports: [SessionsGateway, SessionsService],
+  exports: [SessionsGateway, SessionsService, SessionReaperService],
 })
 export class SessionsModule {}

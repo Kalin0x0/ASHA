@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { prisma, runUnscoped } from '@chista/db';
+import { prisma, runUnscoped } from '@asha/db';
 import type { AuthUser } from '../../common/decorators';
 
 export type BugSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';

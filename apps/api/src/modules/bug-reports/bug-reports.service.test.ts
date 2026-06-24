@@ -21,7 +21,7 @@ const { prismaMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@chista/db', () => ({
+vi.mock('@asha/db', () => ({
   prisma: prismaMock,
   // runUnscoped just executes the callback in tests.
   runUnscoped: <T>(fn: () => T) => fn(),
