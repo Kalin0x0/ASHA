@@ -62,7 +62,7 @@ export class AgentsService {
           version: dto.version,
           cpuCores: dto.cpuCores,
           memTotalMb: dto.memTotalMb,
-          maxSessions: Math.max(1, Math.floor(dto.cpuCores / 2)),
+          maxSessions: dto.maxSessions ?? Math.max(1, Math.floor(dto.cpuCores / 2)),
           lastHeartbeatAt: new Date(),
         },
         create: {
@@ -74,7 +74,7 @@ export class AgentsService {
           version: dto.version,
           cpuCores: dto.cpuCores,
           memTotalMb: dto.memTotalMb,
-          maxSessions: Math.max(1, Math.floor(dto.cpuCores / 2)),
+          maxSessions: dto.maxSessions ?? Math.max(1, Math.floor(dto.cpuCores / 2)),
           lastHeartbeatAt: new Date(),
         },
       });

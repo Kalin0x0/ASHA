@@ -33,6 +33,7 @@ export const manager = {
       hostname: agentEnv.hostname,
       zone: agentEnv.zone,
       cpuCores: agentEnv.cpuCores,
+      maxSessions: agentEnv.maxSessions,
       memTotalMb: agentEnv.memTotalMb,
       version: agentEnv.version,
     });

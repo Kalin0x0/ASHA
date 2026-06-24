@@ -250,6 +250,9 @@ export const agentRegisterSchema = z.object({
   hostname: z.string().min(1),
   zone: z.string().min(1),
   cpuCores: z.number().int().min(1),
+  // Optional capacity override (ASHA_AGENT_MAX_SESSIONS on the agent). When
+  // absent, the manager derives maxSessions from cpuCores.
+  maxSessions: z.number().int().min(1).optional(),
   memTotalMb: z.number().int().min(1),
   version: z.string().default('0.1.0'),
 });
