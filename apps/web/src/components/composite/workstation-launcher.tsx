@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { CategoryRail } from '@/components/composite/category-rail';
 import { FavoritesRail } from '@/components/composite/favorites-rail';
 import { LaunchDialog } from '@/components/composite/launch-dialog';
+import { OpenSessions } from '@/components/composite/my-sessions-strip';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
 import { Input } from '@/components/ui/input';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
@@ -171,11 +172,15 @@ export function WorkstationLauncher() {
         </div>
       </div>
 
-      {/* ── Body: category rail + content ──────────────────────────── */}
+      {/* ── Body: open-sessions rail + category rail + content ─────────── */}
       <div className="mx-auto max-w-[1500px] px-4 py-8 lg:px-8">
         <div className="flex gap-8">
-          <aside className="hidden w-56 shrink-0 lg:block">
-            <div className="sticky top-[calc(var(--spacing-topbar)+1.5rem)]">
+          {/* Kasm-style left rail: the user's OPEN desktops (live preview +
+              resume / stop / remove) sit at the top, the category navigator
+              below them. */}
+          <aside className="hidden w-[300px] shrink-0 lg:block">
+            <div className="sticky top-[calc(var(--spacing-topbar)+1.5rem)] flex max-h-[calc(100vh-var(--spacing-topbar)-3rem)] flex-col gap-7 overflow-y-auto pe-1">
+              <OpenSessions orientation="vertical" />
               <CategoryRail
                 categories={categories}
                 total={enabledAll.length}
@@ -186,6 +191,9 @@ export function WorkstationLauncher() {
           </aside>
 
           <div className="min-w-0 flex-1 space-y-10">
+            {/* Narrow viewports have no left rail → open sessions as a top strip. */}
+            <OpenSessions orientation="horizontal" className="lg:hidden" />
+
             {filtered.length === 0 ? (
               <div className="flex flex-col items-center gap-4 py-24 text-center animate-fade-up">
                 <span className="flex size-14 items-center justify-center rounded-2xl border border-border-subtle bg-[var(--surface-1)] text-muted-foreground">
