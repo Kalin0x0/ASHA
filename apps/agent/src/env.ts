@@ -1,5 +1,10 @@
 import os from 'node:os';
 
+// Optional hard override for this agent's scheduling capacity. When unset, the
+// manager derives maxSessions from cpuCores (cores/2). Set ASHA_AGENT_MAX_SESSIONS
+// to run more (or fewer) concurrent desktops than the CPU-based default.
+const maxSessionsOverride = Number(process.env.ASHA_AGENT_MAX_SESSIONS);
+
 export const agentEnv = {
   managerUrl: process.env.ASHA_MANAGER_URL ?? 'http://localhost:4000',
   zone: process.env.ASHA_ZONE ?? 'default',
@@ -14,6 +19,10 @@ export const agentEnv = {
   domain: process.env.ASHA_TRAEFIK_DOMAIN ?? 'asha.local',
   hostname: process.env.ASHA_AGENT_HOSTNAME ?? os.hostname(),
   cpuCores: os.cpus().length,
+  maxSessions:
+    Number.isFinite(maxSessionsOverride) && maxSessionsOverride > 0
+      ? Math.floor(maxSessionsOverride)
+      : undefined,
   memTotalMb: Math.round(os.totalmem() / 1024 / 1024),
   version: '0.1.0',
 };

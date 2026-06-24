@@ -155,6 +155,14 @@ services:
       ASHA_SESSION_NETWORK: asha-sessions
       ASHA_TRAEFIK_DOMAIN: ${ASHA_BASE_DOMAIN:-asha.local}
       ASHA_AGENT_ENROLLMENT_TOKEN: ${ASHA_AGENT_ENROLLMENT_TOKEN:-dev-enrollment-token-change-me}
+      # STABLE identity: enrollment upserts on (org, hostname). Without a fixed
+      # hostname the container's random id is used, so every recreate enrolls a
+      # NEW row and leaves the old one as an OFFLINE phantom. A stable name makes
+      # the agent reuse its registration across restarts — no phantoms.
+      ASHA_AGENT_HOSTNAME: ${ASHA_AGENT_HOSTNAME:-asha-agent}
+      # Optional capacity override: how many concurrent desktops this agent runs.
+      # Empty → the manager derives it from CPU cores (cores/2).
+      ASHA_AGENT_MAX_SESSIONS: ${ASHA_AGENT_MAX_SESSIONS:-}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on: [api, redis]
