@@ -53,7 +53,7 @@
       "confirm": "حذف"
     },
     "toasts": {
-      "launchTitle": "نشست در حال اجراست",
+      "launchTitle": "نشست در حال راه‌اندازی است",
       "launchDescription": "در حال تخصیص ایجنت و راه‌اندازی کانتینر.",
       "created": "فضای کاری {name} ایجاد شد",
       "createFailed": "ایجاد فضای کاری ممکن نشد",
@@ -161,20 +161,20 @@
     "toasts": {
       "loadFailed": "بارگذاری رجیستری‌ها ناموفق بود",
       "added": "رجیستری افزوده شد — در حال همگام‌سازی…",
-      "addFailed": "افزودن رجیستری ممکن نبود",
+      "addFailed": "افزودن رجیستری ممکن نشد",
       "synced": "{count, plural, one {# فضای کاری همگام‌سازی شد} other {# فضای کاری همگام‌سازی شد}}",
       "syncFailed": "همگام‌سازی ناموفق بود",
       "installedTitle": "{name} نصب شد",
       "installedDescription": "ایمیج + فضای کاری ایجاد شد.",
       "installFailed": "نصب ناموفق بود",
       "removed": "رجیستری حذف شد",
-      "removeFailed": "حذف رجیستری ممکن نبود",
+      "removeFailed": "حذف رجیستری ممکن نشد",
       "reinstalledTitle": "{name} دوباره نصب شد",
       "reinstalledDescription": "به‌روزرسانی شد و دوباره روی ایجنت‌ها بارگیری شد.",
       "reinstallFailed": "نصب مجدد ناموفق بود",
       "imageRemovedDisk": "{name} حذف شد — فضای دیسک میزبان آزاد شد.",
       "imageRemovedShared": "{name} حذف شد (ایمیج نگه داشته شد — توسط فضای کاری دیگری استفاده می‌شود).",
-      "imageRemoveFailed": "حذف ایمیج ممکن نبود"
+      "imageRemoveFailed": "حذف ایمیج ممکن نشد"
     },
     "tabs": {
       "available": "در دسترس",

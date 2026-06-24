@@ -25,12 +25,21 @@ export class SessionReaperService {
 
   constructor(private readonly sessions: SessionsService) {}
 
+  /**
+   * Sessions left in TERMINATING longer than this are force-finalized to
+   * DESTROYED. Covers the case where an agent received the destroy event but
+   * died (or lost connectivity) before it could stop the container and ack —
+   * without this, such sessions linger in TERMINATING forever.
+   */
+  private static readonly TERMINATING_GRACE_MS = 2 * 60_000;
+
   @Interval('session-reaper', 60_000)
   async reap() {
     const expired = await this.reapExpired();
     const idle = await this.reapIdle();
-    if (expired + idle > 0) {
-      this.logger.log(`Reaped ${expired} expired and ${idle} idle session(s)`);
+    const stuck = await this.reapStuckTerminating();
+    if (expired + idle + stuck > 0) {
+      this.logger.log(`Reaped ${expired} expired, ${idle} idle and ${stuck} stuck-terminating session(s)`);
     }
   }
 
@@ -58,6 +67,23 @@ export class SessionReaperService {
     }
     if (stuck.length > 0) {
       this.logger.warn(`Failed ${stuck.length} launch(es) stuck past ${secs}s`);
+    }
+    return stuck.length;
+  }
+
+  /**
+   * Force-finalize sessions wedged in TERMINATING past the grace period. The
+   * normal path waits for the agent's DESTROYED ack; this is the backstop for
+   * when that ack never comes (agent crash / network partition).
+   */
+  private async reapStuckTerminating(): Promise<number> {
+    const cutoff = new Date(Date.now() - SessionReaperService.TERMINATING_GRACE_MS);
+    const stuck = await prisma.session.findMany({
+      where: { status: 'TERMINATING', updatedAt: { lt: cutoff } },
+      select: { id: true, kasmId: true, agentId: true },
+    });
+    for (const s of stuck) {
+      await this.sessions.finalizeDestroyed(s);
     }
     return stuck.length;
   }
@@ -170,7 +196,7 @@ export class SessionReaperService {
       // pausedAt (set on PAUSE, cleared on RESUME) — NOT updatedAt, which
       // background stats writes churn every few seconds.
       where: { status: 'PAUSED', pausedAt: { not: null, lt: cutoff } },
-      select: { id: true, orgId: true, zoneId: true, containerId: true },
+      select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
     });
     for (const s of due) {
       await this.sessions.destroy(s, 'paused_timeout');
@@ -185,7 +211,7 @@ export class SessionReaperService {
   private async reapExpired(): Promise<number> {
     const due = await prisma.session.findMany({
       where: { status: { in: [...ACTIVE_STATUSES] }, expiresAt: { not: null, lte: new Date() } },
-      select: { id: true, orgId: true, zoneId: true, containerId: true },
+      select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
     });
     for (const s of due) {
       await this.sessions.destroy(s, 'expired');
@@ -212,7 +238,7 @@ export class SessionReaperService {
           status: { in: [...ACTIVE_STATUSES] },
           lastKeepaliveAt: { lt: cutoff },
         },
-        select: { id: true, orgId: true, zoneId: true, containerId: true },
+        select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
       });
       for (const s of idle) {
         await this.sessions.destroy(s, 'idle_timeout');

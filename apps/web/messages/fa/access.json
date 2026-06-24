@@ -5,13 +5,13 @@
     "newUser": "کاربر جدید",
     "stats": {
       "totalUsers": "کل کاربران",
-      "withTwoFactor": "با ۲FA"
+      "withTwoFactor": "با 2FA"
     },
     "searchPlaceholder": "جستجوی کاربران…",
     "table": {
       "user": "کاربر",
       "groups": "گروه‌ها",
-      "twoFactor": "۲FA",
+      "twoFactor": "2FA",
       "lastLogin": "آخرین ورود"
     },
     "create": {

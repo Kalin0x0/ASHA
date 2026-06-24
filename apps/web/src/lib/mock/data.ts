@@ -1,6 +1,8 @@
 import type {
   Agent,
   ActivityItem,
+  BugFixRow,
+  BugReportRow,
   FeedbackItem,
   HistoryRow,
   ImageRow,
@@ -74,6 +76,8 @@ export interface MockData {
   history: HistoryRow[];
   images: ImageRow[];
   recordings: RecordingRow[];
+  bugReports: BugReportRow[];
+  bugFixes: BugFixRow[];
   feedback: FeedbackItem[];
   registries: ApiRegistry[];
   marketplace: ApiMarketplaceEntry[];
@@ -123,6 +127,95 @@ const FEEDBACK_SEED: FeedbackItem[] = [
     notes: [],
     createdAt: hoursAgo(2),
     updatedAt: hoursAgo(2),
+  },
+];
+
+// A documented fix already in the "memory" — mirrors the DB seed so the admin
+// pages are populated in mock mode (the default for `pnpm dev` UI work).
+const SEED_BUG_FIXES: BugFixRow[] = [
+  {
+    id: 'fix-1',
+    title: 'Users/Groups page crashes on null groups relation',
+    rootCause:
+      'The users list endpoint did not include the groups relation in its Prisma select, so the web mapper called .map() on undefined and threw a TypeError.',
+    resolution:
+      'Added groups to the API SAFE_SELECT and guarded the mapper with (u.groups ?? []) so a missing relation degrades to an empty list instead of crashing.',
+    prevention:
+      'When a UI field maps over a relation, ensure the API selects that relation and the mapper null-guards it. Add a smoke test that renders the page in live mode.',
+    filesTouched: ['apps/api/src/modules/users/users.service.ts', 'apps/web/src/lib/api/map.ts'],
+    commitRef: null,
+    authoredBy: 'AI',
+    authorName: 'Claude Code',
+    tags: ['web', 'api', 'null-safety'],
+    reusedCount: 1,
+    createdAt: new Date(Date.now() - 6 * 24 * 3600 * 1000).toISOString(),
+    reportCount: 1,
+  },
+];
+
+const SEED_BUG_REPORTS: BugReportRow[] = [
+  {
+    id: 'bug-1',
+    source: 'USER',
+    status: 'RESOLVED',
+    severity: 'HIGH',
+    title: 'Access → Users and Groups show an error message',
+    description:
+      'Opening Access → Users (or Groups) renders a red error instead of the table. Happens every time on a fresh login.',
+    errorCode: 'ERR-USRGRP01',
+    errorName: null,
+    stackTrace: null,
+    component: 'web',
+    route: '/users',
+    httpStatus: null,
+    reporterEmail: 'admin@chista.local',
+    occurrences: 3,
+    createdAt: new Date(Date.now() - 6 * 24 * 3600 * 1000).toISOString(),
+    lastSeenAt: new Date(Date.now() - 6 * 24 * 3600 * 1000).toISOString(),
+    resolvedAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString(),
+    fix: SEED_BUG_FIXES[0]!,
+  },
+  {
+    id: 'bug-2',
+    source: 'AUTOMATIC',
+    status: 'OPEN',
+    severity: 'CRITICAL',
+    title: 'TypeError: Cannot read properties of undefined (reading "id")',
+    description: 'Unhandled exception captured automatically by the API exception filter.',
+    errorCode: 'ERR-9F2C71A4',
+    errorName: 'TypeError',
+    stackTrace:
+      'TypeError: Cannot read properties of undefined (reading "id")\n    at SessionsService.connection (sessions.service.ts:212:31)\n    at SessionsController.connection (sessions.controller.ts:88:24)',
+    component: 'api',
+    route: '/api/v1/sessions/abc123/connection',
+    httpStatus: 500,
+    reporterEmail: null,
+    occurrences: 7,
+    createdAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+    lastSeenAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+    resolvedAt: null,
+    fix: null,
+  },
+  {
+    id: 'bug-3',
+    source: 'USER',
+    status: 'OPEN',
+    severity: 'MEDIUM',
+    title: 'Language switcher does not persist after refresh on Safari',
+    description:
+      'Selecting Farsi switches the UI, but after a hard refresh it falls back to English. Only reproduces on Safari 17.',
+    errorCode: 'ERR-LOCALE07',
+    errorName: null,
+    stackTrace: null,
+    component: 'web',
+    route: '/dashboard',
+    httpStatus: null,
+    reporterEmail: 'leyla.hosseini@chista.local',
+    occurrences: 1,
+    createdAt: new Date(Date.now() - 26 * 3600 * 1000).toISOString(),
+    lastSeenAt: new Date(Date.now() - 26 * 3600 * 1000).toISOString(),
+    resolvedAt: null,
+    fix: null,
   },
 ];
 
@@ -300,6 +393,9 @@ export function buildInitialData(): MockData {
   // until a real session is recorded against an S3-configured deployment.
   const recordings: RecordingRow[] = [];
 
+  const bugReports = SEED_BUG_REPORTS.map((b) => ({ ...b }));
+  const bugFixes = SEED_BUG_FIXES.map((f) => ({ ...f }));
+
   return {
     workspaces,
     zones,
@@ -311,6 +407,8 @@ export function buildInitialData(): MockData {
     history,
     images,
     recordings,
+    bugReports,
+    bugFixes,
     feedback: FEEDBACK_SEED.map((f) => ({ ...f, notes: [...f.notes] })),
     registries: (() => {
       const counts = registryEntryCounts();

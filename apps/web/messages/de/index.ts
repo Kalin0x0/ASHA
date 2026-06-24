@@ -18,6 +18,7 @@ import sessions from './sessions.json';
 import settings from './settings.json';
 import shell from './shell.json';
 import storage from './storage.json';
+import support from './support.json';
 import viewer from './viewer.json';
 import workspaces from './workspaces.json';
 
@@ -37,6 +38,7 @@ const messages = {
   settings,
   shell,
   storage,
+  support,
   viewer,
   workspaces,
 };

@@ -5,6 +5,9 @@ import type { RdpFileOptions } from '@/lib/api/endpoints';
 import { store } from '@/lib/mock/store';
 import { buildMockRdpFile, downloadRdpFile } from '@/lib/rdp';
 import type {
+  BugReportInput,
+  BugResolveInput,
+  BugStatus,
   CreateFeedbackInput,
   CreateUserInput,
   CreateWorkspaceInput,
@@ -14,6 +17,8 @@ import type {
   Workspace,
 } from '@/lib/types';
 // ServerOption is returned directly from the mock store (see useServers).
+
+const ACTIVE: BugStatus[] = ['OPEN', 'TRIAGED', 'IN_PROGRESS'];
 
 function useVersion(): number {
   return useSyncExternalStore(store.subscribe, store.getVersion, store.getServerVersion);
@@ -116,6 +121,61 @@ export function useSessionHistory() {
 export function useRecordings() {
   // No recordings are seeded in mock mode; the page shows its empty state.
   return useSnapshot(() => store.getData().recordings);
+}
+
+export function useBugReports() {
+  return useSnapshot(() => store.getData().bugReports);
+}
+
+export function useBugReport(id: string) {
+  return useSnapshot(() => {
+    const b = store.getData().bugReports.find((x) => x.id === id);
+    if (!b) return undefined;
+    // Surface a prior fix from the memory matching the same title.
+    const knownFix = !b.fix
+      ? store.getData().bugFixes.find((f) => f.title === b.title) ?? null
+      : null;
+    return { ...b, knownFix };
+  }, [id]);
+}
+
+export function useBugFixes() {
+  return useSnapshot(() => store.getData().bugFixes);
+}
+
+export function useBugStats() {
+  return useSnapshot(() => {
+    const reports = store.getData().bugReports;
+    const isActive = (s: BugStatus) => ACTIVE.includes(s);
+    return {
+      open: reports.filter((b) => isActive(b.status)).length,
+      critical: reports.filter((b) => b.severity === 'CRITICAL' && isActive(b.status)).length,
+      automatic: reports.filter((b) => b.source === 'AUTOMATIC').length,
+      resolved: reports.filter((b) => b.status === 'RESOLVED').length,
+      knowledgeEntries: store.getData().bugFixes.length,
+    };
+  });
+}
+
+export function useSubmitBug() {
+  return useCallback(async (input: BugReportInput) => {
+    store.submitBug(input);
+  }, []);
+}
+
+export function useUpdateBug() {
+  return useCallback(
+    async (id: string, patch: { status?: BugStatus; severity?: BugReportInput['severity'] }) => {
+      store.updateBug(id, patch);
+    },
+    [],
+  );
+}
+
+export function useResolveBug() {
+  return useCallback(async (id: string, input: BugResolveInput) => {
+    store.resolveBug(id, input);
+  }, []);
 }
 
 export function useTerminateSession() {
