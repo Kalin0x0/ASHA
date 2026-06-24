@@ -122,39 +122,59 @@ export function WorkstationLauncher() {
   return (
     <div>
       {/* ── Hero band ──────────────────────────────────────────────── */}
-      {/* Transparent so the app wallpaper (with its theme-aware scrim) shows
-          through; the floating orbs add depth without hurting legibility. */}
-      <div className="relative overflow-hidden border-b border-border-subtle">
-        <div className="pointer-events-none absolute right-[10%] top-[15%] size-64 rounded-full bg-gold-500/8 blur-[80px] animate-float" aria-hidden />
-        <div className="pointer-events-none absolute left-[5%] bottom-0 size-48 rounded-full bg-info-500/6 blur-[60px] animate-float delay-300" aria-hidden />
+      {/* Premium-minimal command surface: transparent so the wallpaper shows
+          through; one gold bloom + a start-side scrim keep the headline legible
+          while the search bar is the prominent hero action. */}
+      <div className="gold-hairline relative overflow-hidden border-b border-border-subtle">
+        {/* Single restrained gold bloom, anchored top-end, behind everything —
+            the one accent. No second hue, no competing orb. */}
+        <div
+          className="pointer-events-none absolute -end-24 -top-28 size-80 rounded-full bg-gold-500/10 blur-[90px] animate-float"
+          aria-hidden
+        />
+        {/* Legibility scrim — a soft column behind the text only, fading out
+            toward the empty side so the wallpaper stays photo-forward there. */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-background/70 via-background/30 to-transparent"
+          aria-hidden
+        />
 
-        <div className="relative mx-auto max-w-[1500px] px-4 py-12 lg:px-8">
-          <div className="animate-fade-up">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-gold-500/20 bg-gold-500/8 px-3 py-1">
-              <Sparkles className="size-3.5 text-gold-300" />
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-gold-300">
-                {t('launcher.eyebrow')}
-              </span>
+        <div className="relative mx-auto max-w-[1500px] px-4 pb-6 pt-7 lg:px-8 lg:pt-8">
+          {/* Identity + search share one tight baseline: headline on the start,
+              the search command surface on the end — search IS the hero action. */}
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+            <div className="animate-fade-up min-w-0">
+              <div className="mb-2 inline-flex items-center gap-1.5">
+                <Sparkles className="size-3 text-gold-300" aria-hidden />
+                <span className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-gold-300">
+                  {t('launcher.eyebrow')}
+                </span>
+              </div>
+              <h1 className="font-display text-[1.9rem] font-semibold leading-[1.06] tracking-tight text-balance sm:text-[2.1rem]">
+                {t.rich('launcher.title', {
+                  gradient: (chunks) => <span className="text-gradient-gold">{chunks}</span>,
+                })}
+              </h1>
+              <p className="mt-1.5 max-w-md text-[13.5px] leading-snug text-muted-foreground">
+                {t('launcher.subtitle')}
+              </p>
             </div>
-            <h1 className="font-display text-[2.6rem] font-medium leading-[1.04] tracking-tight sm:text-6xl">
-              {t.rich('launcher.title', {
-                gradient: (chunks) => <span className="text-gradient-gold">{chunks}</span>,
-              })}
-            </h1>
-            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base">
-              {t('launcher.subtitle')}
-            </p>
-          </div>
 
-          {/* Search */}
-          <div className="relative mt-8 max-w-lg animate-fade-up delay-100">
-            <Search className="absolute start-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground transition-colors" />
-            <Input
-              placeholder={t('launcher.searchPlaceholder')}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="h-12 rounded-xl ps-11 pe-4 text-[15px] shadow-[var(--shadow-ambient)] transition-shadow duration-300 focus-visible:shadow-[var(--gold-glow)]"
-            />
+            {/* Search — the prominent, beautifully-styled hero action. Glass
+                command surface, gold focus glow, a quiet ⌘K affordance. */}
+            <div className="animate-fade-up delay-100 relative w-full shrink-0 lg:w-[clamp(20rem,34vw,30rem)]">
+              <Search
+                className="pointer-events-none absolute start-4 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                placeholder={t('launcher.searchPlaceholder')}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label={t('launcher.searchPlaceholder')}
+                className="h-12 rounded-xl border-border-subtle bg-surface-1/60 ps-11 pe-4 text-[15px] backdrop-blur-md shadow-[var(--shadow-ambient)] transition-[box-shadow,border-color] duration-200 hover:border-border focus-visible:border-gold-500/40 focus-visible:shadow-[var(--gold-glow)]"
+              />
+            </div>
           </div>
 
           {/* Category pills — mobile / tablet only (the rail handles desktop) */}
