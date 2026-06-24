@@ -276,18 +276,16 @@ export default function StreamingViewerPage() {
       <div className="glass-strong absolute inset-x-0 top-0 z-20 flex h-14 items-center gap-3 px-3 sm:px-4">
         {/* Back to Workspaces — non-destructive; keeps the session running so the
             user can switch to another from the portal's "My Sessions" strip. */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={disconnect}
-              aria-label={t('toolbar.backToWorkspaces')}
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground ring-gold-focus rtl:rotate-180"
-            >
-              <ArrowLeft className="size-5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">{t('toolbar.backToWorkspaces')}</TooltipContent>
-        </Tooltip>
+        {/* Always-visible, clearly-labelled exit — users reported getting "stuck"
+            inside the stream with only an unlabelled arrow to leave by. */}
+        <button
+          onClick={disconnect}
+          aria-label={t('toolbar.backToWorkspaces')}
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-white/10 ps-2 pe-2.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground ring-gold-focus"
+        >
+          <ArrowLeft className="size-[18px] rtl:rotate-180" />
+          <span className="hidden text-sm font-medium sm:inline">{t('toolbar.backToWorkspaces')}</span>
+        </button>
 
         <div className="flex min-w-0 items-center gap-2.5">
           <AshaMark className="size-7 shrink-0" />
