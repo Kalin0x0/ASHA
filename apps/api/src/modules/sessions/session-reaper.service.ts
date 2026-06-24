@@ -125,6 +125,35 @@ export class SessionReaperService {
   }
 
   /**
+   * Deregister agent records that have been OFFLINE far longer than any
+   * plausible restart (`ASHA_AGENT_PRUNE_DAYS`, default 7; <= 0 disables).
+   *
+   * Every agent-container restart enrolls a FRESH registration (a new row); the
+   * previous one is flipped OFFLINE by reapStaleAgents but never removed, so
+   * dead "phantom" rows pile up in the fleet view / "online X/Y" count over time
+   * (one per reboot, redeploy or crash). This prunes the long-dead ones. The
+   * Session→Agent FK is `onDelete: SetNull`, so removing an agent only clears
+   * the (historical) agentId on its already-terminated sessions — nothing live
+   * is affected, and ONLINE/DRAINING agents are never touched.
+   */
+  @Interval('agent-prune-reaper', 3_600_000)
+  async pruneDeadAgents(): Promise<number> {
+    const days = Number(process.env.ASHA_AGENT_PRUNE_DAYS ?? 7);
+    if (!Number.isFinite(days) || days <= 0) return 0;
+    const cutoff = new Date(Date.now() - days * 86_400_000);
+    const res = await prisma.agent.deleteMany({
+      where: {
+        status: 'OFFLINE',
+        OR: [{ lastHeartbeatAt: { lt: cutoff } }, { lastHeartbeatAt: null, createdAt: { lt: cutoff } }],
+      },
+    });
+    if (res.count > 0) {
+      this.logger.warn(`Pruned ${res.count} dead agent registration(s) (OFFLINE since > ${days}d)`);
+    }
+    return res.count;
+  }
+
+  /**
    * Terminate sessions that have been PAUSED longer than the configured cap
    * (`ASHA_MAX_PAUSED_MINUTES`). A paused container retains disk + RAM state
    * but still holds host resources, so deployments can bound how long that
