@@ -252,6 +252,36 @@ enum AssignmentScope {
   WORKSPACE
 }
 
+// ── Bug reporting & the "fix memory" ─────────────────────────────────────────
+// How a report entered the system.
+enum BugSource {
+  USER       // a human filed it from the portal / admin UI
+  AUTOMATIC  // captured by the API exception filter or web error boundary on an unexpected crash
+}
+
+enum BugSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BugStatus {
+  OPEN
+  TRIAGED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  WONT_FIX
+  DUPLICATE
+}
+
+// Who authored a fix-memory entry — an AI agent (e.g. Claude Code) or a person.
+enum FixAuthorKind {
+  AI
+  HUMAN
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Tenancy / topology
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1498,4 +1528,92 @@ model Feedback {
 
   @@index([orgId])
   @@index([status])
+}
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║  Bug reports + the central "fix memory"                                    ║
+// ║                                                                            ║
+// ║  BugReport is the single intake for both human-filed bugs (source=USER)    ║
+// ║  and machine-captured crashes (source=AUTOMATIC — written by the API       ║
+// ║  exception filter and the web error boundary with an error code + log).    ║
+// ║  A stable `fingerprint` groups recurrences and links a report to a BugFix. ║
+// ║                                                                            ║
+// ║  BugFix is the durable memory: when something is resolved an AI (or a      ║
+// ║  human) records WHAT it was (rootCause) and HOW it was fixed (resolution). ║
+// ║  Future reports with the same fingerprint surface the prior fix so the     ║
+// ║  same problem never has to be diagnosed twice.                             ║
+// ║                                                                            ║
+// ║  orgId is nullable (like AuditLog) so unauthenticated crashes can still be ║
+// ║  captured; both models are scoped at the service layer, not the Prisma     ║
+// ║  tenant extension.                                                         ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+model BugReport {
+  id            String      @id @default(cuid())
+  orgId         String?
+  source        BugSource   @default(USER)
+  status        BugStatus   @default(OPEN)
+  severity      BugSeverity @default(MEDIUM)
+  title         String
+  description   String      @db.Text
+  /// Stable, human-quotable code derived from the fingerprint (e.g. ERR-1A2B3C4D).
+  errorCode     String?
+  /// Exception class / name for automatic captures (e.g. TypeError).
+  errorName     String?
+  stackTrace    String?     @db.Text
+  /// sha256 grouping key — dedupes recurrences and matches a BugReport to a BugFix.
+  fingerprint   String?
+  /// Where it happened: 'web' | 'api' | 'agent'.
+  component     String?
+  /// Route / URL where it surfaced.
+  route         String?
+  httpStatus    Int?
+  userAgent     String?
+  appVersion    String?
+  reportedById  String?
+  reporterEmail String?
+  metadata      Json        @default("{}")
+  /// Recurrence counter — incremented instead of inserting a duplicate row.
+  occurrences   Int         @default(1)
+  fixId         String?
+  firstSeenAt   DateTime    @default(now())
+  lastSeenAt    DateTime    @default(now())
+  resolvedAt    DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  fix BugFix? @relation(fields: [fixId], references: [id])
+
+  @@index([orgId, status])
+  @@index([source, status])
+  @@index([fingerprint])
+  @@index([errorCode])
+}
+
+model BugFix {
+  id           String        @id @default(cuid())
+  orgId        String?
+  /// Matches BugReport.fingerprint so a recurrence finds this fix automatically.
+  fingerprint  String?
+  /// Short name of the problem this fix addresses.
+  title        String
+  /// What it actually was — the diagnosis.
+  rootCause    String        @db.Text
+  /// How it was fixed — the remediation.
+  resolution   String        @db.Text
+  /// Optional: how to keep it from recurring.
+  prevention   String?       @db.Text
+  filesTouched String[]      @default([])
+  commitRef    String?
+  authoredBy   FixAuthorKind @default(AI)
+  /// Display name of the author (e.g. "Claude Code" or a person's name).
+  authorName   String?
+  tags         String[]      @default([])
+  /// How many later reports this fix has matched — a recurrence signal.
+  reusedCount  Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  reports BugReport[]
+
+  @@index([orgId])
+  @@index([fingerprint])
 }

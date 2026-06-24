@@ -91,7 +91,7 @@
     },
     "status": {
       "AVAILABLE": "Verfügbar",
-      "RECORDING": "Aufnahme",
+      "RECORDING": "Wird aufgezeichnet",
       "FINALIZING": "Finalisierung",
       "FAILED": "Fehlgeschlagen"
     },

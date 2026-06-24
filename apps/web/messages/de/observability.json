@@ -31,7 +31,7 @@
     "liveOnlyNotice": "Metriken sind nur mit Live-Backend verfügbar. Starten Sie mit",
     "metricLabels": {
       "cpu": "CPU-Auslastung",
-      "memory": "Speicherauslastung",
+      "memory": "RAM-Auslastung",
       "sessions": "Gleichzeitige Sitzungen",
       "load": "Agent-Last"
     },

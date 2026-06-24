@@ -8,6 +8,7 @@ const { prismaMock } = vi.hoisted(() => ({
     workspace: { findUnique: vi.fn() },
     deploymentZone: { findUnique: vi.fn(), findFirst: vi.fn() },
     session: { create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn() },
+    agent: { findFirst: vi.fn(), updateMany: vi.fn() },
     volumeMapping: { findMany: vi.fn() },
     fileMapping: { findMany: vi.fn() },
     userGroup: { findMany: vi.fn() },
@@ -201,24 +202,25 @@ describe('SessionsService.create', () => {
 
 describe('SessionsService.terminate', () => {
   let svc: SessionsService;
-  let redis: { publish: ReturnType<typeof vi.fn> };
+  let redis: { publish: ReturnType<typeof vi.fn>; del: ReturnType<typeof vi.fn> };
   let audit: { record: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    redis = { publish: vi.fn().mockResolvedValue(undefined) };
+    redis = { publish: vi.fn().mockResolvedValue(undefined), del: vi.fn().mockResolvedValue(undefined) };
     audit = { record: vi.fn().mockResolvedValue(undefined) };
     svc = new SessionsService({} as never, redis as never, audit as never);
+    prismaMock.session.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.deploymentZone.findUnique.mockResolvedValue({ id: 'zone1', name: 'default' });
   });
 
-  it('marks TERMINATING and publishes a destroy command on the zone channel', async () => {
-    prismaMock.session.findFirst.mockResolvedValue({ id: 'sess1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1' });
-    prismaMock.deploymentZone.findUnique.mockResolvedValue({ id: 'zone1', name: 'default' });
-    prismaMock.session.updateMany.mockResolvedValue({ count: 1 });
+  it('stays TERMINATING and publishes a destroy command when a live agent will tear it down', async () => {
+    prismaMock.session.findFirst.mockResolvedValue({ id: 'sess1', orgId: 'org1', zoneId: 'zone1', containerId: 'c1', kasmId: 'k1', agentId: 'agent1' });
+    // The assigned agent is ONLINE, so the destroy event will be acked → no immediate finalize.
+    prismaMock.agent.findFirst.mockResolvedValue({ id: 'agent1' });
 
     const res = await svc.terminate('sess1', USER);
 
-    // destroy() is idempotent: the TERMINATING transition is a guarded updateMany.
     expect(prismaMock.session.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: 'TERMINATING', terminationReason: 'admin_terminate' } }),
     );
@@ -226,7 +228,40 @@ describe('SessionsService.terminate', () => {
       'asha:zone:default:destroy',
       expect.objectContaining({ sessionId: 'sess1', containerId: 'c1' }),
     );
+    // No DESTROYED transition while a live agent owns the teardown.
+    expect(prismaMock.session.updateMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'DESTROYED' }) }),
+    );
     expect(res).toEqual({ ok: true });
+  });
+
+  it('finalizes straight to DESTROYED when no container was ever provisioned', async () => {
+    // The orphan case from the screenshot: agentId null, containerId null.
+    prismaMock.session.findFirst.mockResolvedValue({ id: 'sess2', orgId: 'org1', zoneId: 'zone1', containerId: null, kasmId: 'k2', agentId: null });
+
+    await svc.terminate('sess2', USER);
+
+    expect(prismaMock.session.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'DESTROYED' }) }),
+    );
+    // Nothing held a slot (agentId null), so no agent decrement.
+    expect(prismaMock.agent.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('finalizes to DESTROYED and releases the slot when the assigned agent is offline', async () => {
+    prismaMock.session.findFirst.mockResolvedValue({ id: 'sess3', orgId: 'org1', zoneId: 'zone1', containerId: 'c3', kasmId: 'k3', agentId: 'agent9' });
+    // Assigned agent is not ONLINE → nobody will process the destroy event.
+    prismaMock.agent.findFirst.mockResolvedValue(null);
+
+    await svc.terminate('sess3', USER);
+
+    expect(prismaMock.session.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'DESTROYED' }) }),
+    );
+    expect(prismaMock.agent.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ id: 'agent9' }), data: { currentSessions: { decrement: 1 } } }),
+    );
+    expect(redis.del).toHaveBeenCalledWith('chista:proxy:session:k3');
   });
 
   it('throws when the session does not exist', async () => {

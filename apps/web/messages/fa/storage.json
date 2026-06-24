@@ -29,7 +29,7 @@
       "endpoint": "Endpoint (اختیاری)",
       "webdavUrl": "WebDAV URL",
       "username": "نام کاربری",
-      "password": "گذرواژه",
+      "password": "رمز عبور",
       "clientId": "Client ID",
       "clientSecret": "Client Secret",
       "refreshToken": "Refresh Token",

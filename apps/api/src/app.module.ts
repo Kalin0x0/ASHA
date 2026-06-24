@@ -13,6 +13,7 @@ import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthProvidersModule } from './modules/auth-providers/auth-providers.module';
 import { BackupsModule } from './modules/backups/backups.module';
+import { BugReportsModule } from './modules/bug-reports/bug-reports.module';
 import { CastingModule } from './modules/casting/casting.module';
 import { ConnectivityModule } from './modules/connectivity/connectivity.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
@@ -109,6 +110,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     ScimModule,
     ApiKeysModule,
     SettingsModule,
+    BugReportsModule,
   ],
   providers: [
     // ThrottlerGuard runs first so rate-limit rejections short-circuit auth

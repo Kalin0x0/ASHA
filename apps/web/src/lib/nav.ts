@@ -4,6 +4,8 @@ import {
   BadgeCheck,
   BookOpen,
   Boxes,
+  BrainCircuit,
+  Bug,
   Cable,
   Cast,
   Cloud,
@@ -161,6 +163,8 @@ export const navGroups: NavGroup[] = [
     icon: Activity,
     items: [
       { key: 'reporting', href: '/observability/reporting', icon: TrendingUp },
+      { key: 'bugReports', href: '/observability/bug-reports', icon: Bug },
+      { key: 'knowledgeBase', href: '/observability/knowledge-base', icon: BrainCircuit },
       { key: 'auditLog', href: '/observability/audit-log', icon: ScrollText },
       { key: 'metrics', href: '/observability/metrics', icon: Activity },
       { key: 'feedback', href: '/observability/feedback', icon: MessageSquareWarning },

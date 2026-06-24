@@ -15,15 +15,19 @@ import { SessionReaperService } from './session-reaper.service';
 
 describe('SessionReaperService', () => {
   let svc: SessionReaperService;
-  let sessions: { destroy: ReturnType<typeof vi.fn>; failStuckLaunch: ReturnType<typeof vi.fn> };
+  let sessions: { destroy: ReturnType<typeof vi.fn>; failStuckLaunch: ReturnType<typeof vi.fn>; finalizeDestroyed: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
     sessions = {
       destroy: vi.fn().mockResolvedValue(undefined),
       failStuckLaunch: vi.fn().mockResolvedValue(undefined),
+      finalizeDestroyed: vi.fn().mockResolvedValue(undefined),
     };
     svc = new SessionReaperService(sessions as never);
+    // Default empty result so the stuck-TERMINATING sweep (the last findMany in
+    // reap()) is a no-op unless a test sets it explicitly.
+    prismaMock.session.findMany.mockResolvedValue([]);
   });
 
   it('terminates expired sessions with reason "expired"', async () => {
@@ -66,7 +70,8 @@ describe('SessionReaperService', () => {
 
     expect(sessions.destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 'idle1' }), 'idle_timeout');
     // idle query is scoped to the workspace with a cutoff derived from its timeout
-    expect(prismaMock.session.findMany).toHaveBeenLastCalledWith(
+    // (not necessarily the last findMany — the stuck-TERMINATING sweep runs after).
+    expect(prismaMock.session.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           workspaceId: 'ws1',
@@ -83,6 +88,23 @@ describe('SessionReaperService', () => {
     await svc.reap();
 
     expect(sessions.destroy).not.toHaveBeenCalled();
+  });
+
+  it('force-finalizes sessions stuck in TERMINATING past the grace period', async () => {
+    prismaMock.session.findMany
+      .mockResolvedValueOnce([]) // no expired
+      .mockResolvedValueOnce([{ id: 'stuck1', kasmId: 'k1', agentId: 'a1' }]); // stuck terminating
+    prismaMock.workspace.findMany.mockResolvedValue([]); // no idle timeouts
+
+    await svc.reap();
+
+    expect(sessions.finalizeDestroyed).toHaveBeenCalledWith(expect.objectContaining({ id: 'stuck1' }));
+    // The sweep targets TERMINATING rows older than the grace cutoff.
+    expect(prismaMock.session.findMany).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'TERMINATING', updatedAt: { lt: expect.any(Date) } }),
+      }),
+    );
   });
 
   it('reaps PAUSED sessions older than ASHA_MAX_PAUSED_MINUTES', async () => {

@@ -7,7 +7,7 @@ import type { RdpFileOptions } from '@/lib/api/endpoints';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
 import { downloadRdpFile } from '@/lib/rdp';
 import { formatRelativeTime } from '@/lib/utils';
-import type { ActivityItem, Agent, CreateFeedbackInput, CreateUserInput, CreateWorkspaceInput, FeedbackItem, ManagedImage, RecordingRow, ServerOption, SessionRow, UpdateFeedbackInput, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
+import type { ActivityItem, Agent, BugFixRow, BugReportInput, BugReportRow, BugResolveInput, BugStats, BugStatus, CreateFeedbackInput, CreateUserInput, CreateWorkspaceInput, FeedbackItem, ManagedImage, RecordingRow, ServerOption, SessionRow, UpdateFeedbackInput, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
 
 const SESSIONS_KEY = ['sessions'] as const;
 const WORKSPACES_KEY = ['workspaces'] as const;
@@ -516,6 +516,79 @@ export function useRecordings(): RecordingRow[] {
       })),
     [data],
   );
+}
+
+// ── Bug reports + fix memory ──────────────────────────────────────────────────
+
+const BUGS_KEY = ['bug-reports'] as const;
+const BUG_FIXES_KEY = ['bug-fixes'] as const;
+const BUG_STATS_KEY = ['bug-stats'] as const;
+
+export function useBugReports(): BugReportRow[] {
+  const { data } = useQuery({ queryKey: BUGS_KEY, queryFn: () => api.getBugReports(), refetchInterval: 15_000 });
+  return data ?? [];
+}
+
+export function useBugReport(id: string): BugReportRow | undefined {
+  const { data } = useQuery({
+    queryKey: ['bug-report', id],
+    queryFn: () => api.getBugReport(id),
+    enabled: Boolean(id),
+  });
+  return data ?? undefined;
+}
+
+export function useBugFixes(): BugFixRow[] {
+  const { data } = useQuery({ queryKey: BUG_FIXES_KEY, queryFn: () => api.getBugKnowledge() });
+  return data ?? [];
+}
+
+export function useBugStats(): BugStats {
+  const { data } = useQuery({ queryKey: BUG_STATS_KEY, queryFn: api.getBugStats, refetchInterval: 15_000 });
+  return data ?? { open: 0, critical: 0, automatic: 0, resolved: 0, knowledgeEntries: 0 };
+}
+
+function useInvalidateBugs() {
+  const qc = useQueryClient();
+  return useCallback(() => {
+    void qc.invalidateQueries({ queryKey: BUGS_KEY });
+    void qc.invalidateQueries({ queryKey: BUG_FIXES_KEY });
+    void qc.invalidateQueries({ queryKey: BUG_STATS_KEY });
+  }, [qc]);
+}
+
+export function useSubmitBug() {
+  const invalidate = useInvalidateBugs();
+  const { mutateAsync } = useMutation({ mutationFn: api.submitBugReport, onSuccess: invalidate });
+  return useCallback(async (input: BugReportInput) => {
+    await mutateAsync(input);
+  }, [mutateAsync]);
+}
+
+export function useUpdateBug() {
+  const invalidate = useInvalidateBugs();
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: { status?: BugStatus; severity?: BugReportInput['severity'] } }) =>
+      api.updateBugReport(id, patch),
+    onSuccess: invalidate,
+  });
+  return useCallback(
+    async (id: string, patch: { status?: BugStatus; severity?: BugReportInput['severity'] }) => {
+      await mutateAsync({ id, patch });
+    },
+    [mutateAsync],
+  );
+}
+
+export function useResolveBug() {
+  const invalidate = useInvalidateBugs();
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: BugResolveInput }) => api.resolveBugReport(id, input),
+    onSuccess: invalidate,
+  });
+  return useCallback(async (id: string, input: BugResolveInput) => {
+    await mutateAsync({ id, input });
+  }, [mutateAsync]);
 }
 
 export function useTerminateSession() {
