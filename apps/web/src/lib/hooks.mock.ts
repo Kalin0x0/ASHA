@@ -11,6 +11,9 @@ import type {
   CreateFeedbackInput,
   CreateUserInput,
   CreateWorkspaceInput,
+  MaintenanceRunRow,
+  MaintenanceTaskInput,
+  MaintenanceTaskRow,
   ManagedImage,
   UpdateFeedbackInput,
   UpdateWorkspaceInput,
@@ -232,6 +235,148 @@ export function useUpdateFeedback() {
     async (id: string, patch: UpdateFeedbackInput) => store.updateFeedback(id, patch),
     [],
   );
+}
+
+// ── Maintenance / automation scheduler (isolated dev-only mock store) ─────────
+
+const mtListeners = new Set<() => void>();
+let mtVersion = 0;
+let mtSeq = 1;
+const mtNow = () => new Date().toISOString();
+const mtEmit = () => {
+  mtVersion += 1;
+  for (const l of mtListeners) l();
+};
+const mtSubscribe = (cb: () => void) => {
+  mtListeners.add(cb);
+  return () => {
+    mtListeners.delete(cb);
+  };
+};
+const mtGetVersion = () => mtVersion;
+const mtNextId = (prefix: string) => {
+  mtSeq += 1;
+  return `${prefix}-${mtSeq}`;
+};
+
+let mtTasks: MaintenanceTaskRow[] = [
+  {
+    id: 'mt-seed-1',
+    name: 'Nightly dead-session cleanup',
+    type: 'REAP_DEAD_SESSIONS',
+    enabled: true,
+    scheduleKind: 'DAILY',
+    intervalMinutes: null,
+    atMinuteOfDay: 3 * 60,
+    weekday: null,
+    params: {},
+    lastRunAt: null,
+    lastStatus: null,
+    lastSummary: null,
+    lastError: null,
+    nextRunAt: mtNow(),
+    runCount: 0,
+    createdAt: mtNow(),
+    updatedAt: mtNow(),
+    runs: [],
+  },
+];
+
+function useMt<T>(select: () => T): T {
+  const v = useSyncExternalStore(mtSubscribe, mtGetVersion, () => 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(select, [v]);
+}
+
+export function useMaintenanceTasks(): MaintenanceTaskRow[] {
+  return useMt(() => mtTasks);
+}
+
+export function useMaintenanceRuns(id: string): MaintenanceRunRow[] {
+  return useMt(() => mtTasks.find((t) => t.id === id)?.runs ?? []);
+}
+
+export function useCreateMaintenanceTask() {
+  return useCallback(async (input: MaintenanceTaskInput) => {
+    const now = mtNow();
+    const task: MaintenanceTaskRow = {
+      id: mtNextId('mt'),
+      name: input.name,
+      type: input.type,
+      enabled: input.enabled ?? true,
+      scheduleKind: input.scheduleKind,
+      intervalMinutes: input.intervalMinutes ?? null,
+      atMinuteOfDay: input.atMinuteOfDay ?? null,
+      weekday: input.weekday ?? null,
+      params: input.params ?? {},
+      lastRunAt: null,
+      lastStatus: null,
+      lastSummary: null,
+      lastError: null,
+      nextRunAt: now,
+      runCount: 0,
+      createdAt: now,
+      updatedAt: now,
+      runs: [],
+    };
+    mtTasks = [...mtTasks, task];
+    mtEmit();
+    return task;
+  }, []);
+}
+
+export function useUpdateMaintenanceTask() {
+  return useCallback(async (id: string, patch: Partial<MaintenanceTaskInput>) => {
+    let updated = mtTasks.find((t) => t.id === id) ?? mtTasks[0];
+    mtTasks = mtTasks.map((t) => {
+      if (t.id !== id) return t;
+      updated = { ...t, ...patch, params: patch.params ?? t.params, updatedAt: mtNow() };
+      return updated;
+    });
+    mtEmit();
+    return updated;
+  }, []);
+}
+
+export function useDeleteMaintenanceTask() {
+  return useCallback(async (id: string) => {
+    mtTasks = mtTasks.filter((t) => t.id !== id);
+    mtEmit();
+    return { ok: true as const };
+  }, []);
+}
+
+export function useRunMaintenanceTask() {
+  return useCallback(async (id: string) => {
+    const now = mtNow();
+    const run: MaintenanceRunRow = {
+      id: mtNextId('run'),
+      taskId: id,
+      status: 'OK',
+      trigger: 'MANUAL',
+      startedAt: now,
+      finishedAt: now,
+      durationMs: 12,
+      summary: 'Mock run complete',
+      affected: 0,
+      error: null,
+      actorUserId: null,
+    };
+    mtTasks = mtTasks.map((t) =>
+      t.id === id
+        ? {
+            ...t,
+            lastRunAt: now,
+            lastStatus: 'OK',
+            lastSummary: run.summary,
+            runCount: t.runCount + 1,
+            runs: [run, ...(t.runs ?? [])].slice(0, 20),
+          }
+        : t,
+    );
+    mtEmit();
+    return { run: run.id, status: 'OK', affected: 0, summary: run.summary };
+  }, []);
 }
 
 export function useRegistries() {

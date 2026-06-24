@@ -52,6 +52,7 @@
       "database": "Datenbank",
       "configImportExport": "Konfig-Import/-Export",
       "reporting": "Berichte",
+      "automation": "Automatisierung",
       "bugReports": "Fehlermeldungen",
       "knowledgeBase": "Lösungsspeicher",
       "auditLog": "Audit-Log",

@@ -34,13 +34,15 @@ export class SessionReaperService {
   private static readonly TERMINATING_GRACE_MS = 2 * 60_000;
 
   @Interval('session-reaper', 60_000)
-  async reap() {
+  async reap(): Promise<number> {
     const expired = await this.reapExpired();
     const idle = await this.reapIdle();
     const stuck = await this.reapStuckTerminating();
-    if (expired + idle + stuck > 0) {
+    const total = expired + idle + stuck;
+    if (total > 0) {
       this.logger.log(`Reaped ${expired} expired, ${idle} idle and ${stuck} stuck-terminating session(s)`);
     }
+    return total;
   }
 
   /**

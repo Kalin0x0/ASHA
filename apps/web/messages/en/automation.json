@@ -1,0 +1,134 @@
+{
+  "page": {
+    "title": "Automation & Maintenance",
+    "description": "Schedule recurring housekeeping — clean up dead sessions, prune offline agents, and restart the agent fleet or the remote-desktop bridge — and run any task on demand.",
+    "new": "New task"
+  },
+  "stats": {
+    "active": "Active tasks",
+    "cleanup": "Cleanup",
+    "restart": "Restart & disk",
+    "lastRun": "Last run"
+  },
+  "table": {
+    "task": "Task",
+    "schedule": "Schedule",
+    "lastRun": "Last run",
+    "nextRun": "Next run",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "types": {
+    "REAP_DEAD_SESSIONS": {
+      "label": "Clean dead sessions",
+      "description": "Finalize sessions stuck in terminating, expired, or idle."
+    },
+    "REAP_ABANDONED_SESSIONS": {
+      "label": "Clean abandoned sessions",
+      "description": "Terminate sessions whose viewer went silent past the idle ceiling."
+    },
+    "PRUNE_DEAD_AGENTS": {
+      "label": "Prune dead agents",
+      "description": "Remove agent registrations that have been offline far too long."
+    },
+    "RESTART_AGENTS": {
+      "label": "Restart agents",
+      "description": "Restart every agent process — its container policy brings it back fresh."
+    },
+    "RESTART_CONNECTION_PROXY": {
+      "label": "Restart terminal server",
+      "description": "Restart the RDP/VNC/SSH bridge (connection-proxy + guacd)."
+    },
+    "PRUNE_AGENT_IMAGES": {
+      "label": "Reclaim disk (images)",
+      "description": "Prune dangling Docker image layers on the agent host."
+    }
+  },
+  "categories": {
+    "CLEANUP": "Cleanup",
+    "RESTART": "Restart & disk"
+  },
+  "schedule": {
+    "INTERVAL": "Interval",
+    "DAILY": "Daily",
+    "WEEKLY": "Weekly",
+    "everyMinutes": "Every {n} min",
+    "everyHours": "Every {n} h",
+    "dailyAt": "Daily at {time}",
+    "weeklyAt": "{day} at {time}",
+    "intervalLabel": "Run every (minutes)",
+    "timeLabel": "Time of day",
+    "weekdayLabel": "Day of week"
+  },
+  "weekdays": {
+    "0": "Sunday",
+    "1": "Monday",
+    "2": "Tuesday",
+    "3": "Wednesday",
+    "4": "Thursday",
+    "5": "Friday",
+    "6": "Saturday"
+  },
+  "weekdaysShort": {
+    "0": "Sun",
+    "1": "Mon",
+    "2": "Tue",
+    "3": "Wed",
+    "4": "Thu",
+    "5": "Fri",
+    "6": "Sat"
+  },
+  "status": {
+    "RUNNING": "Running",
+    "OK": "OK",
+    "FAILED": "Failed",
+    "SKIPPED": "Skipped",
+    "never": "Never run",
+    "disabled": "Disabled",
+    "idle": "Scheduled"
+  },
+  "actions": {
+    "runNow": "Run now",
+    "edit": "Edit",
+    "delete": "Delete",
+    "enable": "Enable",
+    "disable": "Disable",
+    "save": "Save",
+    "create": "Create task",
+    "cancel": "Cancel",
+    "confirmDelete": "Delete this task?",
+    "confirmDeleteHint": "This removes the schedule and its run history. This cannot be undone."
+  },
+  "dialog": {
+    "createTitle": "New maintenance task",
+    "editTitle": "Edit task",
+    "description": "Pick what to run and how often. You can always trigger it on demand.",
+    "name": "Name",
+    "namePlaceholder": "e.g. Nightly dead-session cleanup",
+    "type": "Task",
+    "scheduleKind": "Schedule",
+    "enabled": "Enabled",
+    "enabledHint": "Disabled tasks keep their config but never run on a schedule."
+  },
+  "empty": {
+    "title": "No automated tasks yet",
+    "description": "Create your first maintenance task to keep the platform tidy on a schedule."
+  },
+  "runs": {
+    "title": "Recent runs",
+    "started": "Started",
+    "status": "Status",
+    "duration": "Duration",
+    "result": "Result",
+    "empty": "No runs yet.",
+    "scheduled": "Scheduled",
+    "manual": "Manual"
+  },
+  "toast": {
+    "created": "Task created",
+    "updated": "Task updated",
+    "deleted": "Task deleted",
+    "ran": "Run complete",
+    "error": "Something went wrong"
+  }
+}

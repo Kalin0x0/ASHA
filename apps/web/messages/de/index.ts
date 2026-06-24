@@ -5,6 +5,7 @@
  */
 import access from './access.json';
 import auth from './auth.json';
+import automation from './automation.json';
 import common from './common.json';
 import connectivity from './connectivity.json';
 import dashboard from './dashboard.json';
@@ -25,6 +26,7 @@ import workspaces from './workspaces.json';
 const messages = {
   access,
   auth,
+  automation,
   common,
   connectivity,
   dashboard,

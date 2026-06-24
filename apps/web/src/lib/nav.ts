@@ -7,6 +7,7 @@ import {
   BrainCircuit,
   Bug,
   Cable,
+  CalendarClock,
   Cast,
   Cloud,
   Code2,
@@ -163,6 +164,7 @@ export const navGroups: NavGroup[] = [
     icon: Activity,
     items: [
       { key: 'reporting', href: '/observability/reporting', icon: TrendingUp },
+      { key: 'automation', href: '/observability/automation', icon: CalendarClock },
       { key: 'bugReports', href: '/observability/bug-reports', icon: Bug },
       { key: 'knowledgeBase', href: '/observability/knowledge-base', icon: BrainCircuit },
       { key: 'auditLog', href: '/observability/audit-log', icon: ScrollText },

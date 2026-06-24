@@ -351,3 +351,76 @@ export interface DashboardSnapshot {
   topWorkspaces: { name: string; sessions: number; icon?: string }[];
   utilization: { cpu: number; mem: number; gpu: number; storage: number };
 }
+
+// ── Maintenance / automation scheduler ───────────────────────────────────────
+
+export type MaintenanceTaskType =
+  | 'REAP_DEAD_SESSIONS'
+  | 'REAP_ABANDONED_SESSIONS'
+  | 'PRUNE_DEAD_AGENTS'
+  | 'RESTART_AGENTS'
+  | 'RESTART_CONNECTION_PROXY'
+  | 'PRUNE_AGENT_IMAGES';
+export type ScheduleKind = 'INTERVAL' | 'DAILY' | 'WEEKLY';
+export type MaintenanceRunStatus = 'RUNNING' | 'OK' | 'FAILED' | 'SKIPPED';
+export type MaintenanceTrigger = 'SCHEDULE' | 'MANUAL';
+
+export interface MaintenanceRunRow {
+  id: string;
+  taskId: string;
+  status: MaintenanceRunStatus;
+  trigger: MaintenanceTrigger;
+  startedAt: string;
+  finishedAt: string | null;
+  durationMs: number | null;
+  summary: string | null;
+  affected: number | null;
+  error: string | null;
+  actorUserId: string | null;
+}
+
+export interface MaintenanceTaskRow {
+  id: string;
+  name: string;
+  type: MaintenanceTaskType;
+  enabled: boolean;
+  scheduleKind: ScheduleKind;
+  intervalMinutes: number | null;
+  atMinuteOfDay: number | null;
+  weekday: number | null;
+  params: Record<string, unknown>;
+  lastRunAt: string | null;
+  lastStatus: MaintenanceRunStatus | null;
+  lastSummary: string | null;
+  lastError: string | null;
+  nextRunAt: string | null;
+  runCount: number;
+  createdAt: string;
+  updatedAt: string;
+  /** Recent runs (present on detail / list-with-last-run responses). */
+  runs?: MaintenanceRunRow[];
+}
+
+export interface MaintenanceTaskInput {
+  name: string;
+  type: MaintenanceTaskType;
+  enabled?: boolean;
+  scheduleKind: ScheduleKind;
+  intervalMinutes?: number;
+  atMinuteOfDay?: number;
+  weekday?: number;
+  params?: Record<string, unknown>;
+}
+
+export interface MaintenanceCatalogEntry {
+  type: MaintenanceTaskType;
+  category: 'CLEANUP' | 'RESTART';
+  dispatch: boolean;
+}
+
+export interface MaintenanceRunResult {
+  run?: string;
+  status: string;
+  affected: number;
+  summary: string;
+}

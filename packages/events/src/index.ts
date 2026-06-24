@@ -17,6 +17,13 @@ export const RedisChannels = {
   agentStatus: 'asha:agent:status',
   /** Agent → manager: batched resource stats. */
   agentStats: 'asha:agent:stats',
+  /**
+   * Manager → agents (broadcast): host-maintenance commands the API can't run
+   * itself because only the agent holds the Docker socket — restart the agent
+   * process, restart a sibling service (connection-proxy/guacd), or prune
+   * dangling image layers. Every agent subscribes; `target` filters who acts.
+   */
+  agentCommand: 'asha:agent:command',
   /** Manager fan-out to an org's connected dashboards. */
   orgSessions: (orgId: string) => `asha:org:${orgId}:sessions`,
   /** Session-share chat/control fan-out. */
@@ -202,6 +209,29 @@ export interface ImageCommand {
   dockerImage: string;
   /** REMOVE only: also prune dangling layers left behind. Defaults to true. */
   prune?: boolean;
+}
+
+/**
+ * Manager → agent host-maintenance command (broadcast on {@link RedisChannels.agentCommand}).
+ * Used by the maintenance scheduler for actions that require the Docker socket
+ * the API doesn't have:
+ *   • RESTART_SELF     — the agent exits cleanly; its `restart: unless-stopped`
+ *                        policy brings it back fresh (re-enrolls on boot).
+ *   • RESTART_SERVICE  — `docker restart` sibling containers, resolved by their
+ *                        compose-service label (e.g. connection-proxy, guacd).
+ *   • PRUNE_IMAGES     — reclaim DANGLING image layers only (never a full prune).
+ * `target` scopes which agent acts: a specific agentId, or '*' for all agents.
+ * RESTART_SERVICE must target a SINGLE agent so a co-located service is not
+ * restarted N times by N agents on the same host.
+ */
+export interface AgentCommand {
+  action: 'RESTART_SELF' | 'RESTART_SERVICE' | 'PRUNE_IMAGES';
+  /** Agent id to act, or '*' for every agent. */
+  target: string;
+  /** RESTART_SERVICE: compose-service name(s) to `docker restart`. */
+  services?: string[];
+  /** Correlation id for cross-process logging. */
+  nonce?: string;
 }
 
 export type SessionLifecycleStatus =

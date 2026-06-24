@@ -1,5 +1,6 @@
 import os from 'node:os';
 import {
+  type AgentCommand,
   type DestroyCommand,
   type ImageCommand,
   type ProvisionCommand,
@@ -67,7 +68,12 @@ async function main(): Promise<void> {
   const destroyChannel = RedisChannels.destroy(zoneName);
   const controlChannel = RedisChannels.control(zoneName);
   const imageChannel = RedisChannels.image(zoneName);
-  await sub.subscribe(provisionChannel, destroyChannel, controlChannel, imageChannel).catch(() => undefined);
+  // Broadcast maintenance channel — shared by ALL agents (not zone-scoped); the
+  // command's `target` decides whether this agent acts.
+  const commandChannel = RedisChannels.agentCommand;
+  await sub
+    .subscribe(provisionChannel, destroyChannel, controlChannel, imageChannel, commandChannel)
+    .catch(() => undefined);
 
   sub.on('message', (channel: string, message: string) => {
     void (async () => {
@@ -80,6 +86,8 @@ async function main(): Promise<void> {
           await handleControl(agentId, JSON.parse(message) as SessionControlCommand, containerBySession);
         } else if (channel === imageChannel) {
           await handleImage(JSON.parse(message) as ImageCommand);
+        } else if (channel === commandChannel) {
+          await handleAgentCommand(agentId, JSON.parse(message) as AgentCommand);
         }
       } catch (e) {
         log.error(`message handling failed: ${(e as Error).message}`);
@@ -197,6 +205,47 @@ async function handleImage(cmd: ImageCommand): Promise<void> {
     }
   } catch (e) {
     log.error(`image ${cmd.action} for ${cmd.dockerImage} failed: ${(e as Error).message}`);
+  }
+}
+
+/**
+ * Host-maintenance command handler (scheduler-driven). Only the agent holds the
+ * Docker socket, so restarts/prunes the API can't do itself land here. `target`
+ * filters which agent acts ('*' = all). RESTART_SERVICE/PRUNE_IMAGES are
+ * Docker-specific, so they're skipped on the Kubernetes driver.
+ */
+async function handleAgentCommand(agentId: string, cmd: AgentCommand): Promise<void> {
+  if (cmd.target && cmd.target !== '*' && cmd.target !== agentId) return;
+
+  if (cmd.action === 'RESTART_SELF') {
+    // Exit cleanly; the container's `restart: unless-stopped` policy brings it
+    // back fresh (it re-enrolls with the manager on boot). Short delay so the
+    // log line flushes and any in-flight ack completes.
+    log.warn({ agentId, nonce: cmd.nonce }, 'maintenance: restarting agent process on request');
+    setTimeout(() => process.exit(0), 750);
+    return;
+  }
+
+  if (process.env.ASHA_DRIVER === 'kubernetes') {
+    log.warn(`maintenance: ${cmd.action} is Docker-only — ignored on the kubernetes driver`);
+    return;
+  }
+  const dockerDriver = await import('./docker.js');
+
+  try {
+    if (cmd.action === 'RESTART_SERVICE') {
+      const services = cmd.services?.length ? cmd.services : ['connection-proxy', 'guacd'];
+      const { restarted } = await dockerDriver.restartComposeService(services);
+      log.info({ services, restarted, nonce: cmd.nonce }, 'maintenance: restarted service container(s)');
+    } else if (cmd.action === 'PRUNE_IMAGES') {
+      const { reclaimedBytes } = await dockerDriver.pruneDanglingImages();
+      log.info(
+        { reclaimedMb: Math.round(reclaimedBytes / 2 ** 20), nonce: cmd.nonce },
+        'maintenance: pruned dangling images',
+      );
+    }
+  } catch (e) {
+    log.error(`maintenance command ${cmd.action} failed: ${(e as Error).message}`);
   }
 }
 

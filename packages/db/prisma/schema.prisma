@@ -1617,3 +1617,104 @@ model BugFix {
   @@index([orgId])
   @@index([fingerprint])
 }
+
+// ── Maintenance / Automation scheduler ───────────────────────────────────────
+// Admin-configurable, recurring housekeeping the platform runs on a schedule:
+// reaping dead/abandoned sessions, pruning long-dead agent rows, and (via the
+// agent's Docker socket) restarting the agent fleet or the RDP/VNC/SSH bridge
+// and reclaiming dangling image layers. The built-in reapers still run on their
+// own fixed intervals; these rows add operator control (custom cadence, manual
+// "run now", run history) and the restart/prune actions the reapers don't do.
+// `orgId` scopes ownership/RBAC; the effects are host-wide (single co-located
+// Docker host), matching the existing system-wide reaper model.
+model MaintenanceTask {
+  id              String                @id @default(cuid())
+  orgId           String?
+  name            String
+  type            MaintenanceTaskType
+  enabled         Boolean               @default(true)
+  scheduleKind    ScheduleKind          @default(INTERVAL)
+  /// INTERVAL mode: run every N minutes (>= 1).
+  intervalMinutes Int?
+  /// DAILY/WEEKLY mode: minutes since local midnight (0–1439) → the HH:MM to run at.
+  atMinuteOfDay   Int?
+  /// WEEKLY mode: day of week, 0=Sunday … 6=Saturday.
+  weekday         Int?
+  /// Task-specific options (e.g. which services to restart).
+  params          Json                  @default("{}")
+  lastRunAt       DateTime?
+  lastStatus      MaintenanceRunStatus?
+  /// Short human summary of the last run (e.g. "Reaped 12 session(s)").
+  lastSummary     String?               @db.Text
+  lastError       String?               @db.Text
+  /// Best-effort next fire time, stamped when the job is (re)scheduled.
+  nextRunAt       DateTime?
+  runCount        Int                   @default(0)
+  createdById     String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  runs MaintenanceRun[]
+
+  @@index([orgId, enabled])
+  @@index([type])
+}
+
+model MaintenanceRun {
+  id          String               @id @default(cuid())
+  taskId      String
+  orgId       String?
+  status      MaintenanceRunStatus @default(RUNNING)
+  trigger     MaintenanceTrigger   @default(SCHEDULE)
+  startedAt   DateTime             @default(now())
+  finishedAt  DateTime?
+  durationMs  Int?
+  /// Human summary of what happened.
+  summary     String?              @db.Text
+  /// Count of items affected (sessions reaped, agents restarted, MB reclaimed…).
+  affected    Int?
+  error       String?              @db.Text
+  /// User who triggered a MANUAL run (null for scheduled runs).
+  actorUserId String?
+
+  task MaintenanceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, startedAt])
+  @@index([orgId])
+}
+
+enum MaintenanceTaskType {
+  /// Force-finalize stuck-TERMINATING + expired + idle sessions ("clean dead live sessions").
+  REAP_DEAD_SESSIONS
+  /// Terminate sessions whose viewer went silent past the global idle ceiling.
+  REAP_ABANDONED_SESSIONS
+  /// Deregister agent rows that have been OFFLINE far longer than any restart.
+  PRUNE_DEAD_AGENTS
+  /// Restart the agent process(es) — the container's restart policy revives them.
+  RESTART_AGENTS
+  /// Restart the RDP/VNC/SSH bridge (connection-proxy + guacd) — the "terminal server".
+  RESTART_CONNECTION_PROXY
+  /// Reclaim dangling Docker image layers on the agent host (disk hygiene).
+  PRUNE_AGENT_IMAGES
+}
+
+enum ScheduleKind {
+  /// Every N minutes (intervalMinutes).
+  INTERVAL
+  /// Once a day at atMinuteOfDay (server-local HH:MM).
+  DAILY
+  /// Once a week on `weekday` at atMinuteOfDay.
+  WEEKLY
+}
+
+enum MaintenanceRunStatus {
+  RUNNING
+  OK
+  FAILED
+  SKIPPED
+}
+
+enum MaintenanceTrigger {
+  SCHEDULE
+  MANUAL
+}
