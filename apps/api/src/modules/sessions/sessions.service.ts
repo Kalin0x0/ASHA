@@ -453,9 +453,16 @@ export class SessionsService {
    * Tear down a session and notify the owning agent. Shared by admin-initiated
    * termination and the automated reaper; `actorUserId` is omitted for
    * system-initiated reasons (expiry / idle).
+   *
+   * If there is a running container on a live agent, the session goes to
+   * TERMINATING and waits for that agent to actually stop+remove the container
+   * and ack DESTROYED. If there is nothing to tear down — no container was ever
+   * provisioned, or the assigned agent is offline and will never receive the
+   * destroy event — the session is finalized to DESTROYED immediately so it
+   * doesn't linger in TERMINATING forever (and pile up in the sessions list).
    */
   async destroy(
-    session: { id: string; orgId: string; zoneId: string; containerId: string | null },
+    session: { id: string; orgId: string; zoneId: string; containerId: string | null; kasmId?: string; agentId?: string | null },
     reason: string,
     actorUserId?: string,
   ) {
@@ -481,6 +488,41 @@ export class SessionsService {
       metadata: { reason },
     });
     await this.webhooks?.dispatch(session.orgId, 'session.terminated', { sessionId: session.id, reason });
+
+    // Decide whether a live agent will actually process the destroy event. If
+    // not, finalize now — otherwise the session is stuck in TERMINATING with no
+    // one to ack it. A null containerId means no container was ever started; an
+    // offline/absent agent means the published event falls on deaf ears.
+    const agentLive = session.agentId
+      ? await prisma.agent.findFirst({ where: { id: session.agentId, status: 'ONLINE' }, select: { id: true } })
+      : null;
+    if (!session.containerId || !agentLive) {
+      await this.finalizeDestroyed(session);
+    }
+  }
+
+  /**
+   * Move a session into the terminal DESTROYED state and run the same cleanup
+   * an agent's DESTROYED ack would: release the scheduler slot it held and drop
+   * the proxy cache entry. Used when no agent will tear the session down (see
+   * `destroy`) and by the reaper backstop for sessions stuck in TERMINATING.
+   * Idempotent — a no-op once the row is already DESTROYED.
+   */
+  async finalizeDestroyed(session: { id: string; kasmId?: string; agentId?: string | null }) {
+    const { count } = await prisma.session.updateMany({
+      where: { id: session.id, status: { not: 'DESTROYED' } },
+      data: { status: 'DESTROYED', destroyedAt: new Date() },
+    });
+    if (count === 0) return;
+    if (session.agentId) {
+      await prisma.agent.updateMany({
+        where: { id: session.agentId, currentSessions: { gt: 0 } },
+        data: { currentSessions: { decrement: 1 } },
+      });
+    }
+    if (session.kasmId) {
+      await this.redis.del(`chista:proxy:session:${session.kasmId}`).catch(() => undefined);
+    }
   }
 
   /**
