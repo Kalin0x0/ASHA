@@ -5,6 +5,7 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     session: { findMany: vi.fn() },
     workspace: { findMany: vi.fn() },
+    agent: { deleteMany: vi.fn() },
   },
 }));
 
@@ -171,5 +172,34 @@ describe('SessionReaperService', () => {
     expect(n).toBe(0);
     expect(prismaMock.session.findMany).not.toHaveBeenCalled();
     delete process.env.ASHA_SESSION_MAX_IDLE_MINUTES;
+  });
+
+  it('prunes OFFLINE agent registrations stale past ASHA_AGENT_PRUNE_DAYS (default 7)', async () => {
+    delete process.env.ASHA_AGENT_PRUNE_DAYS; // exercise the default
+    prismaMock.agent.deleteMany.mockResolvedValueOnce({ count: 12 });
+
+    const n = await svc.pruneDeadAgents();
+
+    expect(n).toBe(12);
+    // Only OFFLINE rows, by stale heartbeat (or never-heartbeated + old) — never ONLINE/DRAINING.
+    expect(prismaMock.agent.deleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: 'OFFLINE',
+          OR: [
+            { lastHeartbeatAt: { lt: expect.any(Date) } },
+            { lastHeartbeatAt: null, createdAt: { lt: expect.any(Date) } },
+          ],
+        }),
+      }),
+    );
+  });
+
+  it('skips agent pruning when ASHA_AGENT_PRUNE_DAYS <= 0', async () => {
+    process.env.ASHA_AGENT_PRUNE_DAYS = '0';
+    const n = await svc.pruneDeadAgents();
+    expect(n).toBe(0);
+    expect(prismaMock.agent.deleteMany).not.toHaveBeenCalled();
+    delete process.env.ASHA_AGENT_PRUNE_DAYS;
   });
 });
