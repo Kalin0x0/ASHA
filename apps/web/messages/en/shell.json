@@ -1,6 +1,7 @@
 {
   "nav": {
     "groups": {
+      "workstation": "Workstation",
       "overview": "Overview",
       "workspaces": "Workspaces",
       "sessions": "Sessions",
@@ -13,6 +14,7 @@
       "developer": "Developer"
     },
     "items": {
+      "workstation": "Workstation",
       "dashboard": "Dashboard",
       "catalog": "Catalog",
       "images": "Images",

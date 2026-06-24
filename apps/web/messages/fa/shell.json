@@ -1,6 +1,7 @@
 {
   "nav": {
     "groups": {
+      "workstation": "ایستگاه کاری",
       "overview": "نمای کلی",
       "workspaces": "فضاهای کاری",
       "sessions": "نشست‌ها",
@@ -13,6 +14,7 @@
       "developer": "توسعه‌دهنده"
     },
     "items": {
+      "workstation": "ایستگاه کاری",
       "dashboard": "داشبورد",
       "catalog": "کاتالوگ",
       "images": "ایمیج‌ها",

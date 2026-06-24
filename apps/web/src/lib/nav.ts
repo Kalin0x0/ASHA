@@ -70,6 +70,11 @@ export interface NavGroup {
 
 export const navGroups: NavGroup[] = [
   {
+    key: 'workstation',
+    icon: AppWindow,
+    items: [{ key: 'workstation', href: '/workstation', icon: AppWindow }],
+  },
+  {
     key: 'overview',
     icon: LayoutDashboard,
     items: [{ key: 'dashboard', href: '/dashboard', icon: LayoutDashboard }],
