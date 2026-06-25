@@ -402,7 +402,20 @@ export class SessionsService {
       ...(Object.keys(dlp).length > 0 ? { dlp } : {}),
       ...(Object.keys(sidecars).length > 0 ? { sidecars } : {}),
     };
-    await this.redis.publish(RedisChannels.provision(zoneName), command);
+    const published = await this.redis.publish(RedisChannels.provision(zoneName), command);
+    if (!published) {
+      // The message bus is down — the agent will NEVER receive this command.
+      // Fail loudly now so the caller gets a 503 instead of the session sitting
+      // in SCHEDULED until the launch-timeout reaper fails it minutes later.
+      await prisma.session.update({
+        where: { id: sessionId },
+        data: {
+          status: 'ERROR',
+          errorMessage: 'Provisioning is temporarily unavailable (message bus down). Please try again shortly.',
+        },
+      });
+      throw new ServiceUnavailableException('Provisioning is temporarily unavailable. Please try again shortly.');
+    }
     await prisma.session.update({ where: { id: sessionId }, data: { status: 'PROVISIONING' } });
   }
 
@@ -521,7 +534,11 @@ export class SessionsService {
       });
     }
     if (session.kasmId) {
-      await this.redis.del(`chista:proxy:session:${session.kasmId}`).catch(() => undefined);
+      // NB: the key prefix is `asha:` — it MUST match what the agent/servers
+      // write and the connection-proxy reads (see agents.service / session-store).
+      // A stale `chista:` prefix here meant terminated sessions' proxy records
+      // were never deleted and lingered until their TTL.
+      await this.redis.del(`asha:proxy:session:${session.kasmId}`).catch(() => undefined);
     }
   }
 

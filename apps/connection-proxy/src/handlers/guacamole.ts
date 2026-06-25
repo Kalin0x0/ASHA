@@ -173,7 +173,34 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
   // until it completes, so every ws.send() carries only whole instructions.
   let pendingOut = '';
 
+  // Availability: bound BOTH the TCP connect to guacd AND the guacd↔target
+  // handshake. Without these, a slow/unreachable guacd or RDP host leaves the
+  // browser spinning on "Connecting" forever (guacd never errors, just never
+  // replies). Fail fast with a clear, reconnect-friendly message instead.
+  const CONNECT_TIMEOUT_MS = Number(process.env.GUACD_CONNECT_TIMEOUT_MS ?? 10_000);
+  const HANDSHAKE_TIMEOUT_MS = Number(process.env.GUACD_HANDSHAKE_TIMEOUT_MS ?? 25_000);
+  const failFast = (code: number, reason: string) => {
+    log.warn({ sessionId: session.sessionId, protocol }, reason);
+    if (ws.readyState === ws.OPEN) ws.close(code, reason);
+    if (!guacd.destroyed) guacd.destroy();
+  };
+  const connectTimer = setTimeout(
+    () => failFast(4504, 'Remote gateway (guacd) did not respond in time — please reconnect.'),
+    CONNECT_TIMEOUT_MS,
+  );
+  let handshakeTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
+    if (!connected) failFast(4504, 'The remote desktop did not finish starting — please reconnect.');
+  }, HANDSHAKE_TIMEOUT_MS);
+  const clearTimers = () => {
+    clearTimeout(connectTimer);
+    if (handshakeTimer) {
+      clearTimeout(handshakeTimer);
+      handshakeTimer = undefined;
+    }
+  };
+
   guacd.once('connect', () => {
+    clearTimeout(connectTimer);
     log.debug({ sessionId: session.sessionId, protocol }, 'guacd connected — starting handshake');
     guacd.write(encodeInstruction('select', protocol));
   });
@@ -220,6 +247,13 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
         };
         const values = paramNames.map((name) => overrides[name] ?? resolveParam(name, session));
 
+        // If guacd half-closed between the `args` reply and these writes, the
+        // writes would silently buffer/no-op → a black screen with no error.
+        // Guard once before the handshake-completion writes.
+        if (!guacd.writable) {
+          failFast(1011, 'guacd connection closed during handshake — please reconnect.');
+          break;
+        }
         guacd.write(
           encodeInstruction('size', String(reqDims.width), String(reqDims.height), String(DEFAULT_DPI)),
         );
@@ -237,6 +271,10 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
         guacd.write(encodeInstruction('connect', version, ...values));
 
         connected = true;
+        if (handshakeTimer) {
+          clearTimeout(handshakeTimer);
+          handshakeTimer = undefined;
+        }
         log.info(
           { sessionId: session.sessionId, protocol, params: paramNames.length },
           'guacd handshake complete — bridging',
@@ -249,11 +287,13 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
   });
 
   guacd.on('error', (e) => {
+    clearTimers();
     log.warn({ err: e.message, sessionId: session.sessionId }, 'guacd error');
     if (ws.readyState === ws.OPEN) ws.close(1011, `guacd error: ${e.message}`);
   });
 
   guacd.on('close', () => {
+    clearTimers();
     if (ws.readyState === ws.OPEN) ws.close(1000);
   });
 
@@ -275,10 +315,12 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
   });
 
   ws.on('close', () => {
+    clearTimers();
     if (!guacd.destroyed) guacd.destroy();
   });
 
   ws.on('error', () => {
+    clearTimers();
     if (!guacd.destroyed) guacd.destroy();
   });
 

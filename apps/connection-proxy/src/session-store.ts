@@ -46,6 +46,18 @@ export class SessionStore {
   constructor() {
     this.redis = new Redis(proxyEnv.redisUrl, { maxRetriesPerRequest: 3, lazyConnect: true });
     this.redis.on('error', (e) => log.warn({ err: e.message }, 'redis error'));
+    // Keep `healthy` in sync with the LIVE connection so /health (and any
+    // healthcheck consuming it) reflects a Redis drop, not just the initial
+    // connect. Previously `healthy` only ever flipped true once in connect().
+    this.redis.on('ready', () => {
+      this.healthy = true;
+    });
+    this.redis.on('close', () => {
+      this.healthy = false;
+    });
+    this.redis.on('end', () => {
+      this.healthy = false;
+    });
   }
 
   private healthy = false;
@@ -64,20 +76,28 @@ export class SessionStore {
   }
 
   async get(kasmId: string): Promise<SessionRecord | null> {
-    const now = Date.now();
     const cached = this.cache.get(kasmId);
-    if (cached && cached.expiresAt > now) return cached.record;
+    if (cached && cached.expiresAt > Date.now()) return cached.record;
 
-    const raw = await this.redis.get(REDIS_KEY(kasmId)).catch(() => null);
-    if (!raw) return null;
-
-    try {
-      const record = JSON.parse(raw) as SessionRecord;
-      this.cache.set(kasmId, { record, expiresAt: now + proxyEnv.sessionCacheTtl });
-      return record;
-    } catch {
-      return null;
+    // Bounded poll: the agent writes the proxy record when the session reaches
+    // RUNNING, but a viewer can open the WebSocket a few hundred ms before that
+    // write lands (the session-list poll sees the kasmId first). Retrying briefly
+    // masks that sub-second race so it never surfaces to the user as a 4004
+    // "session not found" (~750ms worst case before giving up).
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const raw = await this.redis.get(REDIS_KEY(kasmId)).catch(() => null);
+      if (raw) {
+        try {
+          const record = JSON.parse(raw) as SessionRecord;
+          this.cache.set(kasmId, { record, expiresAt: Date.now() + proxyEnv.sessionCacheTtl });
+          return record;
+        } catch {
+          return null;
+        }
+      }
+      if (attempt < 5) await new Promise((r) => setTimeout(r, 150));
     }
+    return null;
   }
 
   /** Called by the agent when a session reaches RUNNING state. */

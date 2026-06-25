@@ -140,5 +140,10 @@ export function handleSSH(ws: WebSocket, _req: IncomingMessage, session: Session
     // Containers come and go; don't pin host keys (the network path is already
     // trusted: proxy ↔ container on the internal session network).
     readyTimeout: 15_000,
+    // Detect a dead SSH host mid-session (~90s) and tear the WS down with a
+    // clear message, instead of freezing the terminal until the OS TCP timeout
+    // (several minutes). readyTimeout only covers the initial handshake.
+    keepaliveInterval: 30_000,
+    keepaliveCountMax: 3,
   });
 }

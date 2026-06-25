@@ -29,6 +29,7 @@ import { getAccessToken } from '@/lib/api/auth-store';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
 import { useSessions, useWorkspaces } from '@/lib/hooks';
 import { useThumbnails } from '@/lib/thumbnail-store';
+import { useKeepalive } from '@/lib/use-keepalive';
 import { cn } from '@/lib/utils';
 
 // X11 keysyms for the control-menu shortcuts.
@@ -75,6 +76,10 @@ function ToolBtn({
   );
 }
 
+// Cap on automatic reconnect attempts before the viewer falls back to a manual
+// "Reconnect" button.
+const MAX_AUTO_RECONNECTS = 8;
+
 type ViewState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 /** Full-viewport Guacamole (RDP/VNC/SSH) remote-desktop viewer. The proxy drives
@@ -105,6 +110,9 @@ export default function ConnectPage() {
   // Forced resolution (null = fit the viewport). Changing it reconnects.
   const [resOverride, setResOverride] = useState<{ w: number; h: number } | null>(null);
   const [resMenuOpen, setResMenuOpen] = useState(false);
+  // Auto-reconnect bookkeeping: capped exponential backoff on a transient drop
+  // or a "not ready yet" race. Reset to 0 once solidly connected.
+  const [autoAttempts, setAutoAttempts] = useState(0);
 
   // Resolve the session → workspace so the toolbar shows the name + description.
   const session = useSessions().find((s) => s.kasmId === kasmId);
@@ -114,6 +122,10 @@ export default function ConnectPage() {
   const workspaceDescription = ws?.description;
   const protocolLabel = session?.connectionType ?? 'RDP';
   const connected = state === 'connected';
+
+  // Keep the session alive while connected so the idle reaper never terminates a
+  // desktop the user is actively using (previously NOTHING refreshed keepalive).
+  useKeepalive(session?.id, connected);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -295,6 +307,29 @@ export default function ConnectPage() {
     setState('connecting');
     setAttempt((a) => a + 1);
   }, []);
+
+  // Reset the auto-reconnect counter once we're solidly connected.
+  useEffect(() => {
+    if (state === 'connected') setAutoAttempts(0);
+  }, [state]);
+
+  // Auto-reconnect with capped exponential backoff on an unexpected drop OR a
+  // "not ready yet" failure: the agent may not have published the proxy record
+  // the instant the viewer opened, and guacd / connection-proxy can be briefly
+  // restarted (e.g. by a maintenance task). Stops once the session is terminal
+  // or the cap is reached, after which the manual "Reconnect" button takes over.
+  const sessionStatus = session?.status;
+  useEffect(() => {
+    if (state !== 'disconnected' && state !== 'error') return;
+    if (sessionStatus && ['ERROR', 'DESTROYED', 'TERMINATING', 'PAUSED'].includes(sessionStatus)) return;
+    if (autoAttempts >= MAX_AUTO_RECONNECTS) return;
+    const delay = Math.min(1000 * 2 ** autoAttempts, 8000);
+    const timer = setTimeout(() => {
+      setAutoAttempts((a) => a + 1);
+      reconnect();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [state, autoAttempts, sessionStatus, reconnect]);
 
   /** Send Ctrl+Alt+Del — essential for the Windows lock/login screen. */
   const sendCtrlAltDel = useCallback(() => {

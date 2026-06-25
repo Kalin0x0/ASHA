@@ -20,12 +20,21 @@ export class HealthController {
   @Public()
   @Get('ready')
   async ready() {
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      return { status: 'ready', db: 'up' };
-    } catch {
-      return { status: 'degraded', db: 'down' };
-    }
+    // Readiness must reflect BOTH the DB and Redis: with Redis down there is no
+    // pub/sub, so no session can be provisioned — "ready" would be a lie.
+    const [db, redis] = await Promise.all([
+      prisma.$queryRaw`SELECT 1`.then(() => true).catch(() => false),
+      this.redis.client
+        .ping()
+        .then((p) => p === 'PONG')
+        .catch(() => false),
+    ]);
+    const ready = db && redis;
+    return {
+      status: ready ? 'ready' : 'degraded',
+      db: db ? 'up' : 'down',
+      redis: redis ? 'up' : 'down',
+    };
   }
 
   /** Deep component-level diagnostics (DB, Redis, agents, sessions) for ops/SRE. */
