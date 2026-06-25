@@ -1,6 +1,7 @@
 'use client';
 
 import { AppWindow, Bell, ChevronRight, LogOut, Menu, Search, Settings, User } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -66,14 +67,13 @@ export function Topbar() {
         </kbd>
       </button>
 
-      {/* Switch to the end-user Workstation */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => router.push('/')}
-        className="hidden gap-1.5 sm:inline-flex"
-      >
-        <AppWindow className="size-4" /> {t('workstation')}
+      {/* Switch to the end-user Workstation — a real <Link> so Next prefetches
+          the portal route and the swap is a clean navigation (no imperative
+          push during the route-group transition). */}
+      <Button asChild variant="ghost" size="sm" className="hidden gap-1.5 sm:inline-flex">
+        <Link href="/">
+          <AppWindow className="size-4" /> {t('workstation')}
+        </Link>
       </Button>
 
       <InstallButton className="hidden md:inline-flex" />
