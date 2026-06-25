@@ -79,6 +79,11 @@ function ToolBtn({
 // Cap on automatic reconnect attempts before the viewer falls back to a manual
 // "Reconnect" button.
 const MAX_AUTO_RECONNECTS = 8;
+// If the stream hasn't reached 'connected' within this window, surface a clear
+// error instead of an endless "Establishing connection" spinner. Covers a stuck
+// remote RDP/NLA handshake (e.g. missing/blocked credentials) that the proxy's
+// own guacd timeout can't see once the proxy↔guacd handshake itself completed.
+const CONNECT_WATCHDOG_MS = 30_000;
 
 type ViewState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -330,6 +335,20 @@ export default function ConnectPage() {
     }, delay);
     return () => clearTimeout(timer);
   }, [state, autoAttempts, sessionStatus, reconnect]);
+
+  // Connect watchdog: a 'connecting' state that never reaches 'connected' (the
+  // remote RDP/NLA handshake is stuck) becomes a clear error rather than an
+  // endless spinner.
+  useEffect(() => {
+    if (state !== 'connecting') return;
+    const timer = setTimeout(() => {
+      setErrMsg(
+        'The remote desktop did not respond in time. Check that the server is reachable and its credentials are configured, then try again.',
+      );
+      setState('error');
+    }, CONNECT_WATCHDOG_MS);
+    return () => clearTimeout(timer);
+  }, [state, attempt]);
 
   /** Send Ctrl+Alt+Del — essential for the Windows lock/login screen. */
   const sendCtrlAltDel = useCallback(() => {

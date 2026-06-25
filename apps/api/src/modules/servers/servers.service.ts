@@ -148,6 +148,21 @@ export class ServersService {
     const connectionType = CONN_BY_SERVER[server.connectionType] ?? 'GUAC_RDP';
     const port = PORT_BY_SERVER[server.connectionType] ?? 3389;
 
+    // NLA (CredSSP) REQUIRES a username + password up front. Connecting with
+    // empty credentials makes guacd hang on the handshake forever — the browser
+    // sits on "Establishing connection" with no error. Fail fast with an
+    // actionable message instead of creating a session that can never connect.
+    if (connectionType === 'GUAC_RDP') {
+      const sec = (creds.security ?? 'any').toLowerCase();
+      const needsCreds = sec === 'nla' || sec === 'nla-ext';
+      if (needsCreds && (!creds.username || !creds.password)) {
+        throw new BadRequestException(
+          'This RDP server uses NLA security but has no username/password configured. ' +
+            'Add the Windows credentials to the server (Infrastructure → Servers), or switch its security mode, then connect again.',
+        );
+      }
+    }
+
     const session = await prisma.session.create({
       data: {
         orgId: user.orgId,
