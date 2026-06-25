@@ -21,37 +21,40 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const { user } = useAuth();
 
   return (
-    <AuthGate>
-      <div className="relative flex min-h-screen flex-col">
-        <AppBackground />
-        <header className="sticky top-0 z-30 flex h-[var(--spacing-topbar)] items-center gap-4 border-b border-border-subtle glass-rail px-4 lg:px-8">
-          <Link href="/" className="flex items-center ring-gold-focus rounded-md">
-            <Logo />
-          </Link>
-          <nav className="ml-6 hidden items-center gap-1 text-sm sm:flex">
-            <span className="rounded-md px-3 py-1.5 font-medium text-foreground">{t('header.myWorkspaces')}</span>
-          </nav>
-          <div className="ms-auto flex items-center gap-3">
-            <InstallButton className="hidden sm:inline-flex" />
-            <FavoriteQuickLaunch />
-            {user?.isSystemAdmin && (
-              <Button asChild variant="ghost" size="sm" className="gap-1.5">
-                <Link href="/dashboard">
-                  <LayoutDashboard className="size-4" /> {t('header.admin')}
-                </Link>
-              </Button>
-            )}
-            <BackgroundPicker />
-            <ThemeToggle />
-            <Avatar className="size-8">
-              <AvatarFallback>SN</AvatarFallback>
-            </Avatar>
-          </div>
-        </header>
+    <div className="relative flex min-h-screen flex-col">
+      <AppBackground />
+      {/* Portal chrome lives OUTSIDE <AuthGate> so the way back to the admin
+          area (and the rest of the header) is always rendered — never hidden
+          behind a transient auth-loading frame. Only the page body is gated. */}
+      <header className="sticky top-0 z-30 flex h-[var(--spacing-topbar)] items-center gap-4 border-b border-border-subtle glass-rail px-4 lg:px-8">
+        <Link href="/" className="flex items-center ring-gold-focus rounded-md">
+          <Logo />
+        </Link>
+        <nav className="ml-6 hidden items-center gap-1 text-sm sm:flex">
+          <span className="rounded-md px-3 py-1.5 font-medium text-foreground">{t('header.myWorkspaces')}</span>
+        </nav>
+        <div className="ms-auto flex items-center gap-3">
+          <InstallButton className="hidden sm:inline-flex" />
+          <FavoriteQuickLaunch />
+          {user?.isSystemAdmin && (
+            <Button asChild variant="ghost" size="sm" className="gap-1.5">
+              <Link href="/dashboard">
+                <LayoutDashboard className="size-4" /> {t('header.admin')}
+              </Link>
+            </Button>
+          )}
+          <BackgroundPicker />
+          <ThemeToggle />
+          <Avatar className="size-8">
+            <AvatarFallback>SN</AvatarFallback>
+          </Avatar>
+        </div>
+      </header>
+      <AuthGate>
         <MockThumbnailSeeder />
         <main className="relative z-10 flex-1">{children}</main>
         <FeedbackWidget />
-      </div>
-    </AuthGate>
+      </AuthGate>
+    </div>
   );
 }
