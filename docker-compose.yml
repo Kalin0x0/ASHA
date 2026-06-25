@@ -88,6 +88,9 @@ services:
   api:
     build: { context: ., dockerfile: apps/api/Dockerfile }
     restart: unless-stopped
+    # Give the API time to finish in-flight requests/publishes on SIGTERM
+    # (graceful shutdown) so a redeploy doesn't orphan a just-created session.
+    stop_grace_period: 30s
     environment:
       NODE_ENV: production
       API_PORT: '4000'
@@ -110,7 +113,10 @@ services:
       ASHA_MAX_PAUSED_MINUTES: ${ASHA_MAX_PAUSED_MINUTES:-0}
     depends_on:
       postgres: { condition: service_healthy }
-      redis: { condition: service_started }
+      # Gate on redis HEALTHY (not just started): with Redis down there is no
+      # pub/sub, so no session can be provisioned — the API must not come up
+      # "ready" without it.
+      redis: { condition: service_healthy }
       db-migrate: { condition: service_completed_successfully }
     networks: [asha-edge, asha-core]
     labels:
@@ -171,6 +177,14 @@ services:
   connection-proxy:
     build: { context: ., dockerfile: apps/connection-proxy/Dockerfile }
     restart: unless-stopped
+    # /health flips to 503 when Redis is down (session lookups would fail), so
+    # this surfaces a degraded proxy in `docker compose ps` / to Traefik.
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:4100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
       PROXY_PORT: "4100"
       REDIS_URL: redis://redis:6379
@@ -204,4 +218,13 @@ services:
     image: asha-guacd-h264:1.5.5
     build: ./infra/guacd-h264
     restart: unless-stopped
+    # debian:bookworm ships bash, so a /dev/tcp probe needs no extra tooling.
+    # Surfaces a dead guacd in `docker compose ps`; the connection-proxy also
+    # fails fast with a clear message on its own guacd connect-timeout.
+    healthcheck:
+      test: ['CMD', 'bash', '-c', 'exec 3<>/dev/tcp/localhost/4822']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks: [asha-core]

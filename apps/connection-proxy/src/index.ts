@@ -50,6 +50,16 @@ async function main(): Promise<void> {
 
   const shutdown = async (): Promise<void> => {
     log.info('Shutting down');
+    // Tell every live viewer this is a RESTART (1012), not a crash, so the
+    // browser distinguishes it and auto-reconnects once the proxy is back —
+    // important for the maintenance "restart terminal server" action.
+    for (const client of wss.clients) {
+      try {
+        client.close(1012, 'Service restarting');
+      } catch {
+        /* already closing */
+      }
+    }
     wss.close();
     store.quit();
     httpServer.close();

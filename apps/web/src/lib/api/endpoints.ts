@@ -134,6 +134,10 @@ export const resumeSession = (id: string) =>
   apiFetch<{ ok: true }>(`/sessions/${id}/resume`, { method: 'POST' });
 export const resizeSession = (id: string, width: number, height: number) =>
   apiFetch<{ ok: true }>(`/sessions/${id}/resize`, { method: 'POST', body: { width, height } });
+/** Refresh the session's lastKeepaliveAt so the idle reaper doesn't terminate an
+ *  actively-used desktop. Called periodically by the viewers while connected. */
+export const sessionKeepalive = (id: string) =>
+  apiFetch<{ ok: true }>(`/sessions/${id}/keepalive`, { method: 'POST' });
 
 export interface ApiSessionConnection {
   connectionUrl: string | null;

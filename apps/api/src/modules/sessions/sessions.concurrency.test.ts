@@ -39,14 +39,23 @@ const USER = { sub: 'user1', orgId: 'org1', email: 'user1@x.io', isSystemAdmin: 
 
 describe('SessionsService.create — group concurrency limit', () => {
   let svc: SessionsService;
-  let scheduler: { pickAgent: ReturnType<typeof vi.fn> };
+  let scheduler: { pickAgent: ReturnType<typeof vi.fn>; pickZoneWithLiveAgent: ReturnType<typeof vi.fn> };
   let redis: { publish: ReturnType<typeof vi.fn> };
   let audit: { record: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    scheduler = { pickAgent: vi.fn().mockResolvedValue(null) };
-    redis = { publish: vi.fn().mockResolvedValue(undefined) };
+    // A live agent + zone resolver so a launch that passes the group-cap gate
+    // actually completes. create() now fail-fasts (ERROR + 503) when no agent is
+    // available, so the "allows a launch" cases must schedule onto a real agent;
+    // the "forbids at cap" case throws at the gate before scheduling is reached.
+    scheduler = {
+      pickAgent: vi.fn().mockResolvedValue({ id: 'agent1' }),
+      pickZoneWithLiveAgent: vi.fn().mockResolvedValue(null),
+    };
+    // publish resolves true = command reached the bus; provision now treats a
+    // falsy result as "message bus down" and fail-fasts.
+    redis = { publish: vi.fn().mockResolvedValue(true) };
     audit = { record: vi.fn().mockResolvedValue(undefined) };
     svc = new SessionsService(scheduler as never, redis as never, audit as never);
 

@@ -44,6 +44,7 @@ import {
 } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 import { useSession, useTerminateSession, useWorkspaces } from '@/lib/hooks';
+import { useKeepalive } from '@/lib/use-keepalive';
 import { isLikelyUnreachableUrl } from '@/lib/stream';
 import { cn } from '@/lib/utils';
 
@@ -127,6 +128,9 @@ export default function StreamingViewerPage() {
   const isPaused = status === 'PAUSED' || paused;
   const isRunning = status === 'RUNNING' || status === 'DEGRADED';
   const isError = status === 'ERROR' || status === 'DESTROYED' || status === 'TERMINATING';
+  // Keep the session alive while it's live so the idle reaper doesn't terminate
+  // a desktop the user is actively watching/using.
+  useKeepalive(session?.id, isRunning);
   const connectionUrl = session?.connectionUrl;
   // Remote-desktop sessions (RDP/VNC/SSH) render on the guacd canvas at /connect,
   // not in an embedded iframe — the stored connectionUrl points at the proxy's

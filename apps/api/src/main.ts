@@ -73,6 +73,18 @@ async function bootstrap() {
   const devDocument = SwaggerModule.createDocument(app, devConfig, { include: [DevApiModule] });
   SwaggerModule.setup('api/dev-docs', app, devDocument);
 
+  // Graceful shutdown: run OnModuleDestroy hooks (e.g. RedisService disconnect)
+  // and let in-flight requests/publishes finish before the process exits. Without
+  // this, every `docker compose up -d` redeploy kills the API mid-publish and can
+  // orphan a just-created session in PROVISIONING.
+  app.enableShutdownHooks();
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.once(signal, () => {
+      new Logger('Bootstrap').log(`Received ${signal} — shutting down gracefully`);
+      void app.close().then(() => process.exit(0));
+    });
+  }
+
   await app.listen(env.API_PORT);
   new Logger('Bootstrap').log(
     `Asha API listening on :${env.API_PORT} — docs at /api/docs, developer SDK contract at /api/dev-docs`,

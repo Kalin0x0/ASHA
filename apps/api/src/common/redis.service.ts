@@ -27,12 +27,23 @@ export class RedisService implements OnModuleDestroy {
     this.client.connect().catch(() => this.logger.warn('Redis unreachable — running without pub/sub'));
   }
 
-  async publish(channel: string, message: unknown): Promise<void> {
-    if (!this.connected) return;
+  /**
+   * Publish a JSON message. Returns whether it was actually sent: `false` when
+   * Redis is disconnected or the publish throws. Callers that publish a
+   * user-facing command (e.g. provision) MUST check this and fail loudly rather
+   * than reporting success while the agent never receives the command.
+   */
+  async publish(channel: string, message: unknown): Promise<boolean> {
+    if (!this.connected) {
+      this.logger.error(`publish skipped — Redis not connected (channel ${channel})`);
+      return false;
+    }
     try {
       await this.client.publish(channel, JSON.stringify(message));
+      return true;
     } catch (e) {
-      this.logger.warn(`publish failed: ${(e as Error).message}`);
+      this.logger.error(`publish failed on ${channel}: ${(e as Error).message}`);
+      return false;
     }
   }
 

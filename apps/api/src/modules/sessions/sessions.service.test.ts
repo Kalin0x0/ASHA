@@ -59,7 +59,7 @@ describe('SessionsService.create', () => {
     // Default: no live-agent zone surfaced → resolution falls through to the org
     // default zone (the `deploymentZone.findFirst` mock below).
     scheduler = { pickAgent: vi.fn(), pickZoneWithLiveAgent: vi.fn().mockResolvedValue(null) };
-    redis = { publish: vi.fn().mockResolvedValue(undefined) };
+    redis = { publish: vi.fn().mockResolvedValue(true) };
     audit = { record: vi.fn().mockResolvedValue(undefined) };
     svc = new SessionsService(scheduler as never, redis as never, audit as never);
 
@@ -152,6 +152,22 @@ describe('SessionsService.create', () => {
     );
   });
 
+  it('fails fast (ERROR + 503) when the provision command cannot be published (message bus down)', async () => {
+    scheduler.pickAgent.mockResolvedValue({ id: 'agent1' });
+    redis.publish.mockResolvedValue(false); // Redis down → publish reports failure
+
+    await expect(svc.create(USER, { workspaceId: 'ws1' })).rejects.toThrow(/temporarily unavailable/i);
+
+    // Scheduled onto the agent, but the dead bus is surfaced immediately as ERROR
+    // rather than leaving the session in SCHEDULED to time out minutes later.
+    expect(prismaMock.session.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'ERROR' }) }),
+    );
+    expect(prismaMock.session.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: 'PROVISIONING' } }),
+    );
+  });
+
   it('resolves an agent-less default zone to a zone that has a live agent', async () => {
     // The org default zone has no agent; pickZoneWithLiveAgent surfaces the zone
     // where an agent actually lives, so the session is created there (not in a
@@ -207,7 +223,7 @@ describe('SessionsService.terminate', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    redis = { publish: vi.fn().mockResolvedValue(undefined), del: vi.fn().mockResolvedValue(undefined) };
+    redis = { publish: vi.fn().mockResolvedValue(true), del: vi.fn().mockResolvedValue(undefined) };
     audit = { record: vi.fn().mockResolvedValue(undefined) };
     svc = new SessionsService({} as never, redis as never, audit as never);
     prismaMock.session.updateMany.mockResolvedValue({ count: 1 });
@@ -261,7 +277,7 @@ describe('SessionsService.terminate', () => {
     expect(prismaMock.agent.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: 'agent9' }), data: { currentSessions: { decrement: 1 } } }),
     );
-    expect(redis.del).toHaveBeenCalledWith('chista:proxy:session:k3');
+    expect(redis.del).toHaveBeenCalledWith('asha:proxy:session:k3');
   });
 
   it('throws when the session does not exist', async () => {
@@ -277,7 +293,7 @@ describe('SessionsService pause / resume / resize', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    redis = { publish: vi.fn().mockResolvedValue(undefined) };
+    redis = { publish: vi.fn().mockResolvedValue(true) };
     audit = { record: vi.fn().mockResolvedValue(undefined) };
     svc = new SessionsService({} as never, redis as never, audit as never);
     prismaMock.deploymentZone.findUnique.mockResolvedValue({ id: 'zone1', name: 'default' });
@@ -332,7 +348,7 @@ describe('SessionsService ownership (non-admin)', () => {
     vi.clearAllMocks();
     svc = new SessionsService(
       {} as never,
-      { publish: vi.fn().mockResolvedValue(undefined) } as never,
+      { publish: vi.fn().mockResolvedValue(true) } as never,
       { record: vi.fn().mockResolvedValue(undefined) } as never,
     );
     prismaMock.workspace.findUnique.mockResolvedValue({ dlp: {} });

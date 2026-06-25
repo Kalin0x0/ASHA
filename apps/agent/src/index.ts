@@ -71,9 +71,29 @@ async function main(): Promise<void> {
   // Broadcast maintenance channel — shared by ALL agents (not zone-scoped); the
   // command's `target` decides whether this agent acts.
   const commandChannel = RedisChannels.agentCommand;
-  await sub
-    .subscribe(provisionChannel, destroyChannel, controlChannel, imageChannel, commandChannel)
-    .catch(() => undefined);
+  const channels = [provisionChannel, destroyChannel, controlChannel, imageChannel, commandChannel];
+  // Resilient subscribe: retry until it succeeds. A swallowed first-subscribe
+  // failure (the old `.catch(() => undefined)`) left the agent silently DEAF —
+  // heartbeats kept it ONLINE so the scheduler placed sessions on it, and every
+  // launch then timed out with "Launch timed out before the workspace was ready".
+  const subscribeAll = async (): Promise<void> => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await sub.subscribe(...channels);
+        log.info({ zone: zoneName }, 'subscribed to provision/destroy/control/image/command channels');
+        return;
+      } catch (e) {
+        const delay = Math.min(5000 * attempt, 60_000);
+        log.error(`redis subscribe failed (attempt ${attempt}): ${(e as Error).message} — retrying in ${delay}ms`);
+        await sleep(delay);
+      }
+    }
+  };
+  await subscribeAll();
+  // ioredis auto-resubscribes on reconnect, but re-run explicitly on every
+  // (re)connect so a drop before the first successful subscribe can never leave
+  // the agent permanently deaf to provision commands.
+  sub.on('ready', () => void subscribeAll());
 
   sub.on('message', (channel: string, message: string) => {
     void (async () => {
