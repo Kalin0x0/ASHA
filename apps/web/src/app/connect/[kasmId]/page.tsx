@@ -83,7 +83,7 @@ const MAX_AUTO_RECONNECTS = 8;
 // error instead of an endless "Establishing connection" spinner. Covers a stuck
 // remote RDP/NLA handshake (e.g. missing/blocked credentials) that the proxy's
 // own guacd timeout can't see once the proxy↔guacd handshake itself completed.
-const CONNECT_WATCHDOG_MS = 30_000;
+const CONNECT_WATCHDOG_MS = 18_000;
 
 type ViewState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -318,14 +318,15 @@ export default function ConnectPage() {
     if (state === 'connected') setAutoAttempts(0);
   }, [state]);
 
-  // Auto-reconnect with capped exponential backoff on an unexpected drop OR a
-  // "not ready yet" failure: the agent may not have published the proxy record
-  // the instant the viewer opened, and guacd / connection-proxy can be briefly
-  // restarted (e.g. by a maintenance task). Stops once the session is terminal
-  // or the cap is reached, after which the manual "Reconnect" button takes over.
+  // Auto-reconnect with capped exponential backoff — ONLY on a clean mid-session
+  // drop ('disconnected'), e.g. a transient network blip or a connection-proxy /
+  // guacd restart. A hard 'error' (authentication failure, unreachable host,
+  // connect-watchdog timeout) is NOT retried automatically: it is shown clearly
+  // with a manual "Try again", so a real failure never hides behind an endless
+  // "Connecting" spinner. Stops once the session is terminal or the cap is hit.
   const sessionStatus = session?.status;
   useEffect(() => {
-    if (state !== 'disconnected' && state !== 'error') return;
+    if (state !== 'disconnected') return;
     if (sessionStatus && ['ERROR', 'DESTROYED', 'TERMINATING', 'PAUSED'].includes(sessionStatus)) return;
     if (autoAttempts >= MAX_AUTO_RECONNECTS) return;
     const delay = Math.min(1000 * 2 ** autoAttempts, 8000);
