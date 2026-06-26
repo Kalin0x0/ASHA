@@ -217,6 +217,13 @@ export default function ConnectPage() {
     };
     // Keyboard → server (whole document so shortcuts reach the desktop).
     const keyboard = new Guacamole.Keyboard(document);
+    // Clipboard paste plumbing (see onPaste below): track Ctrl/Cmd so we can let
+    // Ctrl/Cmd+V reach the browser `paste` event (which delivers the clipboard
+    // text with NO permission prompt). `pendingPasteV` is a safety net so the V
+    // keystroke is never lost if the paste event doesn't fire.
+    const PASTE_MODS = new Set([0xffe3, 0xffe4, 0xffe7, 0xffe8]); // L/R Ctrl, L/R Meta(Cmd)
+    let modActive = false;
+    let pendingPasteV: ReturnType<typeof setTimeout> | null = null;
     // In view-only monitor mode we deliberately attach NO input handlers, so the
     // admin can watch without sending a single keystroke or click to the user.
     if (!monitor) {
@@ -224,9 +231,31 @@ export default function ConnectPage() {
       mouse.onmouseup = sendMouse;
       mouse.onmousemove = sendMouse;
       keyboard.onkeydown = (keysym) => {
+        if (PASTE_MODS.has(keysym)) modActive = true;
+        // Ctrl/Cmd+V: don't send V yet — let the browser `paste` event fire and
+        // push the local clipboard to the desktop first; the paste handler then
+        // injects V. Fallback timer re-sends V if the paste event never arrives,
+        // so the keystroke is never lost (worst case = old remote clipboard).
+        if (modActive && (keysym === 0x76 || keysym === 0x56)) {
+          if (pendingPasteV) clearTimeout(pendingPasteV);
+          pendingPasteV = setTimeout(() => {
+            pendingPasteV = null;
+            const c = clientRef.current;
+            if (c) {
+              c.sendKeyEvent(1, keysym);
+              c.sendKeyEvent(0, keysym);
+            }
+          }, 60);
+          return false; // allow the browser default so the paste event fires
+        }
         client.sendKeyEvent(1, keysym);
+        return true;
       };
-      keyboard.onkeyup = (keysym) => client.sendKeyEvent(0, keysym);
+      keyboard.onkeyup = (keysym) => {
+        if (PASTE_MODS.has(keysym)) modActive = false;
+        client.sendKeyEvent(0, keysym);
+        return true;
+      };
     }
 
     // ── Bidirectional clipboard bridge (local OS ↔ remote desktop) ──────────
@@ -267,7 +296,21 @@ export default function ConnectPage() {
     // presses Ctrl+V inside the desktop.
     const onPaste = (e: ClipboardEvent) => {
       const text = e.clipboardData?.getData('text/plain');
-      if (text) pushToRemote(text);
+      if (!text) return;
+      if (pendingPasteV) {
+        clearTimeout(pendingPasteV);
+        pendingPasteV = null;
+      }
+      pushToRemote(text);
+      // Inject V now that the clipboard is pushed (Ctrl/Cmd is already held on the
+      // remote from the physical key) so the desktop pastes the up-to-date text.
+      if (!monitor) {
+        const c = clientRef.current;
+        if (c) {
+          c.sendKeyEvent(1, 0x76);
+          c.sendKeyEvent(0, 0x76);
+        }
+      }
     };
     document.addEventListener('paste', onPaste);
     // Proactively keep the remote clipboard in sync with the local one — on focus,
@@ -304,6 +347,7 @@ export default function ConnectPage() {
       document.removeEventListener('visibilitychange', syncFromLocal);
       document.removeEventListener('paste', onPaste);
       clearInterval(clipPoll);
+      if (pendingPasteV) clearTimeout(pendingPasteV);
       display.onresize = null;
       keyboard.onkeydown = null;
       keyboard.onkeyup = null;

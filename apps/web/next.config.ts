@@ -36,7 +36,10 @@ const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   // Disable features not used by the app
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
+  // Explicitly grant clipboard to this origin (self) so the remote-desktop
+  // viewers — and the same-origin KasmVNC <iframe> (which forwards it via its
+  // allow="clipboard-read; clipboard-write") — can read/write the OS clipboard.
+  { key: 'Permissions-Policy', value: 'clipboard-read=(self), clipboard-write=(self), camera=(), microphone=(), geolocation=(), payment=()' },
   { key: 'X-DNS-Prefetch-Control', value: 'on' },
   // HSTS: 1 year, includeSubDomains — only sent over HTTPS by the browser
   { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
