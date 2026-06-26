@@ -93,6 +93,13 @@ function resolveParam(name: string, session: SessionRecord): string {
       return session.remoteAppDir ?? '';
     case 'remote-app-args':
       return session.remoteAppArgs ?? '';
+    // Clipboard redirection — keep BOTH directions enabled so copy/paste works
+    // between the local browser and the remote desktop. guacd defaults these to
+    // enabled, but we set them explicitly so they can never be silently off.
+    case 'disable-copy':
+      return 'false';
+    case 'disable-paste':
+      return 'false';
     default:
       return '';
   }

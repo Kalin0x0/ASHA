@@ -104,6 +104,9 @@ export default function ConnectPage() {
   const [panelOpen, setPanelOpen] = useState(false);
   // Set while connected: pushes a string to the remote clipboard (local → remote).
   const sendClipboardRef = useRef<((text: string) => void) | null>(null);
+  // Last clipboard text synced in EITHER direction — guards against echoing the
+  // remote's own clipboard back to it (would loop) and re-sending unchanged text.
+  const lastClipRef = useRef<string>('');
   const [state, setState] = useState<ViewState>('connecting');
   const [errMsg, setErrMsg] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -226,8 +229,9 @@ export default function ConnectPage() {
       keyboard.onkeyup = (keysym) => client.sendKeyEvent(0, keysym);
     }
 
-    // Clipboard: remote → local. When the remote clipboard changes, mirror it
-    // into the OS clipboard so "copy on the desktop → paste locally" works.
+    // ── Bidirectional clipboard bridge (local OS ↔ remote desktop) ──────────
+    // Remote → local: when the desktop's clipboard changes, mirror it into the
+    // OS clipboard so "copy on the desktop → paste locally" works.
     client.onclipboard = (stream, mimetype) => {
       if (!mimetype.startsWith('text/')) return;
       const reader = new Guacamole.StringReader(stream);
@@ -236,36 +240,53 @@ export default function ConnectPage() {
         data += t;
       };
       reader.onend = () => {
+        lastClipRef.current = data; // remember so the sync below doesn't echo it back
         navigator.clipboard.writeText(data).catch(() => {
-          /* clipboard write denied — ignore */
+          /* OS clipboard write blocked (unfocused / no permission) — ignore */
         });
       };
     };
-    // Clipboard: local → remote. Used by the toolbar "Paste" button and the
-    // best-effort focus sync below.
-    sendClipboardRef.current = (text: string) => {
+    // Local → remote: push text into the desktop's clipboard. Guarded so the
+    // remote's OWN clipboard is never echoed back (would loop) and unchanged text
+    // isn't re-sent.
+    const pushToRemote = (text: string) => {
+      if (!text || text === lastClipRef.current) return;
+      lastClipRef.current = text;
       try {
         const out = client.createClipboardStream('text/plain');
         const writer = new Guacamole.StringWriter(out);
         writer.sendText(text);
         writer.sendEnd();
       } catch {
-        /* not connected */
+        /* not connected yet */
       }
     };
-    // When the window regains focus, push the local clipboard to the remote so a
-    // plain Ctrl+V inside the desktop works too (best-effort; may be blocked).
-    const onFocus = () => {
+    sendClipboardRef.current = pushToRemote;
+    // The browser `paste` event carries the clipboard text synchronously WITHOUT a
+    // permission prompt — the most reliable local→remote capture when the user
+    // presses Ctrl+V inside the desktop.
+    const onPaste = (e: ClipboardEvent) => {
+      const text = e.clipboardData?.getData('text/plain');
+      if (text) pushToRemote(text);
+    };
+    document.addEventListener('paste', onPaste);
+    // Proactively keep the remote clipboard in sync with the local one — on focus,
+    // tab-visibility change, and a light poll while focused — so a plain Ctrl+V
+    // inside the desktop pastes the up-to-date text without the per-keystroke race.
+    // Best-effort: needs clipboard-read permission (granted once via the toolbar
+    // Paste button or the browser prompt); the paste event + toolbar work without it.
+    const syncFromLocal = () => {
+      if (typeof document === 'undefined' || !document.hasFocus()) return;
       navigator.clipboard
         .readText()
-        .then((t) => {
-          if (t) sendClipboardRef.current?.(t);
-        })
+        .then((t) => pushToRemote(t))
         .catch(() => {
-          /* clipboard read denied — the toolbar Paste button still works */
+          /* read blocked — covered by the paste event / toolbar Paste button */
         });
     };
-    window.addEventListener('focus', onFocus);
+    window.addEventListener('focus', syncFromLocal);
+    document.addEventListener('visibilitychange', syncFromLocal);
+    const clipPoll = window.setInterval(syncFromLocal, 1500);
 
     setState('connecting');
     setErrMsg('');
@@ -279,7 +300,10 @@ export default function ConnectPage() {
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer);
       window.removeEventListener('resize', onWindowResize);
-      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('focus', syncFromLocal);
+      document.removeEventListener('visibilitychange', syncFromLocal);
+      document.removeEventListener('paste', onPaste);
+      clearInterval(clipPoll);
       display.onresize = null;
       keyboard.onkeydown = null;
       keyboard.onkeyup = null;
