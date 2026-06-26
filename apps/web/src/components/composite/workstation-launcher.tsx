@@ -12,7 +12,7 @@ import { OpenSessions } from '@/components/composite/my-sessions-strip';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
 import { Input } from '@/components/ui/input';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
-import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
+import { useLaunchableWorkspaces, useLaunchSession } from '@/lib/hooks';
 import type { Workspace } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -26,7 +26,7 @@ export function WorkstationLauncher() {
   const t = useTranslations('portal');
   const tc = useTranslations('common');
   const router = useRouter();
-  const workspaces = useWorkspaces();
+  const workspaces = useLaunchableWorkspaces();
   const launch = useLaunchSession();
   const favorites = useFavorites();
   const [query, setQuery] = useState('');

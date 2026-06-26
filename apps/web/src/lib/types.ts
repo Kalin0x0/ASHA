@@ -54,6 +54,9 @@ export interface Workspace {
   /** Deployment zone name, when set (server zone or preferred zone). */
   zoneName?: string;
   activeSessions: number;
+  /** Access grants — empty/undefined on BOTH ⇒ visible to everyone. */
+  assignedGroupIds?: string[];
+  assignedUserIds?: string[];
 }
 
 export interface SessionRow {

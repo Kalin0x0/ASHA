@@ -9,7 +9,7 @@ import { useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
-import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
+import { useLaunchableWorkspaces, useLaunchSession } from '@/lib/hooks';
 import { navGroups } from '@/lib/nav';
 import { useUIStore } from '@/lib/ui-store';
 
@@ -17,7 +17,7 @@ export function CommandPalette() {
   const router = useRouter();
   const { commandOpen, setCommandOpen } = useUIStore();
   const { setTheme, resolvedTheme } = useTheme();
-  const workspaces = useWorkspaces();
+  const workspaces = useLaunchableWorkspaces();
   const favorites = useFavorites();
   const launch = useLaunchSession();
   const t = useTranslations('shell.palette');

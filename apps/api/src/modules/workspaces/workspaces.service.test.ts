@@ -3,10 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
-    workspace: { findFirst: vi.fn(), create: vi.fn() },
+    workspace: { findFirst: vi.fn(), create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     image: { create: vi.fn() },
     server: { findFirst: vi.fn() },
     deploymentZone: { findFirst: vi.fn() },
+    userGroup: { findMany: vi.fn() },
+    user: { findMany: vi.fn() },
+    group: { findMany: vi.fn() },
   },
 }));
 
@@ -89,5 +92,100 @@ describe('WorkspacesService.create', () => {
       svc.create('org1', { ...base, name: 'win11', friendlyName: 'Windows 11', type: 'SERVER' } as never),
     ).rejects.toThrow(/server/i);
     expect(prismaMock.workspace.create).not.toHaveBeenCalled();
+  });
+});
+
+const admin = { sub: 'admin1', orgId: 'org1', email: 'a@x', isSystemAdmin: true } as never;
+const userA = { sub: 'userA', orgId: 'org1', email: 'u@x', isSystemAdmin: false } as never;
+
+describe('WorkspacesService — access control', () => {
+  let svc: WorkspacesService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    svc = new WorkspacesService();
+    prismaMock.workspace.findMany.mockResolvedValue([]);
+    prismaMock.workspace.findUnique.mockResolvedValue({ id: 'ws1' });
+  });
+
+  it('launchableForUser: a system admin sees ALL enabled workspaces (no access filter)', async () => {
+    await svc.launchableForUser(admin);
+    expect(prismaMock.userGroup.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.workspace.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { enabled: true } }),
+    );
+  });
+
+  it('launchableForUser: a normal user is filtered to unassigned + direct + group grants', async () => {
+    prismaMock.userGroup.findMany.mockResolvedValue([{ groupId: 'g1' }, { groupId: 'g2' }]);
+    await svc.launchableForUser(userA);
+    expect(prismaMock.workspace.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          enabled: true,
+          OR: expect.arrayContaining([
+            { groups: { none: {} }, assignedUsers: { none: {} } },
+            { assignedUsers: { some: { userId: 'userA' } } },
+            { groups: { some: { id: { in: ['g1', 'g2'] } } } },
+          ]),
+        }),
+      }),
+    );
+  });
+
+  it('launchableForUser: a user in no groups still sees unassigned + direct grants', async () => {
+    prismaMock.userGroup.findMany.mockResolvedValue([]);
+    await svc.launchableForUser(userA);
+    expect(prismaMock.workspace.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: expect.arrayContaining([
+            { groups: { none: {} }, assignedUsers: { none: {} } },
+            { assignedUsers: { some: { userId: 'userA' } } },
+          ]),
+        }),
+      }),
+    );
+  });
+
+  it('setAssignments: replaces group + user grants, org-scoped', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
+    prismaMock.user.findMany.mockResolvedValue([{ id: 'userA' }]);
+    prismaMock.group.findMany.mockResolvedValue([{ id: 'g1' }]);
+    prismaMock.workspace.update.mockResolvedValue({});
+
+    await svc.setAssignments('org1', 'ws1', { userIds: ['userA'], groupIds: ['g1'] });
+
+    expect(prismaMock.workspace.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'ws1' },
+        data: expect.objectContaining({
+          groups: { set: [{ id: 'g1' }] },
+          assignedUsers: { deleteMany: {}, create: [{ orgId: 'org1', userId: 'userA' }] },
+        }),
+      }),
+    );
+  });
+
+  it('setAssignments: empty arrays clear all grants (visible to everyone)', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
+    prismaMock.workspace.update.mockResolvedValue({});
+
+    await svc.setAssignments('org1', 'ws1', { userIds: [], groupIds: [] });
+
+    expect(prismaMock.user.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.workspace.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          groups: { set: [] },
+          assignedUsers: { deleteMany: {}, create: [] },
+        }),
+      }),
+    );
+  });
+
+  it('setAssignments: 404 when the workspace is not in the caller org', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue(null);
+    await expect(svc.setAssignments('org1', 'nope', { userIds: [], groupIds: [] })).rejects.toThrow(/not found/i);
   });
 });

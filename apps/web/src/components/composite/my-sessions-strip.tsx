@@ -9,7 +9,7 @@ import { AppIcon } from '@/components/composite/app-icon';
 import { useConfirm } from '@/components/ui/confirm';
 import { useAuth } from '@/lib/api/auth-context';
 import { CURRENT_USER } from '@/lib/current-user';
-import { usePauseSession, useResumeSession, useSessions, useTerminateSession, useWorkspaces } from '@/lib/hooks';
+import { useLaunchableWorkspaces, usePauseSession, useResumeSession, useSessions, useTerminateSession } from '@/lib/hooks';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import type { SessionRow, SessionStatus, Workspace } from '@/lib/types';
 import { cn, formatDuration } from '@/lib/utils';
@@ -42,7 +42,7 @@ export function OpenSessions({
   const router = useRouter();
   const { user } = useAuth();
   const sessions = useSessions();
-  const workspaces = useWorkspaces();
+  const workspaces = useLaunchableWorkspaces();
   const thumbs = useThumbnails((s) => s.thumbs);
   const terminate = useTerminateSession();
   const pause = usePauseSession();
