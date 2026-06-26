@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import * as api from '@/lib/api/endpoints';
-import type { RdpFileOptions } from '@/lib/api/endpoints';
+import type { ApiGroup, RdpFileOptions } from '@/lib/api/endpoints';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
 import { downloadRdpFile } from '@/lib/rdp';
 import { formatRelativeTime } from '@/lib/utils';
@@ -98,6 +98,45 @@ export function useWorkspaces(): Workspace[] {
 
 export function useWorkspace(id: string): Workspace | undefined {
   return useWorkspaces().find((w) => w.id === id);
+}
+
+const LAUNCHABLE_WORKSPACES_KEY = ['workspaces', 'launchable'] as const;
+const GROUPS_KEY = ['groups'] as const;
+
+/** Only the workspaces the CURRENT user may launch (server-side access filter). */
+export function useLaunchableWorkspaces(): Workspace[] {
+  const { data } = useQuery({ queryKey: LAUNCHABLE_WORKSPACES_KEY, queryFn: api.getLaunchableWorkspaces });
+  const sessions = useSessionsQuery().data;
+  return useMemo(() => {
+    const active = new Map<string, number>();
+    for (const s of sessions ?? []) {
+      if (s.status === 'RUNNING' || s.status === 'DEGRADED') {
+        active.set(s.workspaceId, (active.get(s.workspaceId) ?? 0) + 1);
+      }
+    }
+    return (data ?? []).map((w) => mapWorkspace(w, active.get(w.id) ?? 0));
+  }, [data, sessions]);
+}
+
+export function useGroups(): ApiGroup[] {
+  const { data } = useQuery({ queryKey: GROUPS_KEY, queryFn: api.getGroups });
+  return data ?? [];
+}
+
+export function useSetWorkspaceAssignments() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, userIds, groupIds }: { id: string; userIds: string[]; groupIds: string[] }) =>
+      api.setWorkspaceAssignments(id, { userIds, groupIds }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: WORKSPACES_KEY });
+      void qc.invalidateQueries({ queryKey: LAUNCHABLE_WORKSPACES_KEY });
+    },
+  });
+  return useCallback(
+    (id: string, userIds: string[], groupIds: string[]) => mutateAsync({ id, userIds, groupIds }),
+    [mutateAsync],
+  );
 }
 
 export function useZones(): Zone[] {

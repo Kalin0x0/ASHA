@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import type { RdpFileOptions } from '@/lib/api/endpoints';
+import type { ApiGroup, RdpFileOptions } from '@/lib/api/endpoints';
 import { store } from '@/lib/mock/store';
 import { buildMockRdpFile, downloadRdpFile } from '@/lib/rdp';
 import type {
@@ -69,6 +69,24 @@ export function useWorkspaces() {
 
 export function useWorkspace(id: string) {
   return useSnapshot(() => store.getData().workspaces.find((w) => w.id === id), [id]);
+}
+
+// Mock mode has no backend access control — the launchable set is the full set.
+export function useLaunchableWorkspaces() {
+  return useSnapshot(() => store.getData().workspaces);
+}
+
+// Mock groups for the assignment UI (no backend).
+export function useGroups(): ApiGroup[] {
+  return [
+    { id: 'seed-group-all', name: 'All Users', description: null, priority: 1000, isDefault: true },
+    { id: 'seed-group-admins', name: 'Administrators', description: null, priority: 1, isDefault: false },
+  ];
+}
+
+export function useSetWorkspaceAssignments() {
+  // No-op in mock mode (no backend to persist grants to).
+  return useCallback(async (_id: string, _userIds: string[], _groupIds: string[]) => undefined, []);
 }
 
 export function useUsers() {

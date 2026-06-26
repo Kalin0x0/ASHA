@@ -1,13 +1,18 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import type { CreateWorkspaceDto, UpdateWorkspaceDto } from '@asha/contracts';
 import { prisma } from '@asha/db';
+import type { AuthUser } from '../../common/decorators';
 
 // Container/Server/Zone are all surfaced so the catalog can show what a
 // workspace runs on (Docker image, RDP/VNC/SSH server, deployment zone).
+// Access grants (groups + direct users) are included so the admin UI can show
+// who a workspace is assigned to; empty on both ⇒ visible to everyone.
 const WORKSPACE_INCLUDE = {
   image: true,
   server: { include: { zone: true } },
   zone: true,
+  groups: { select: { id: true, name: true } },
+  assignedUsers: { select: { userId: true } },
 } as const;
 
 @Injectable()
@@ -18,6 +23,33 @@ export class WorkspacesService {
 
   launchable() {
     return prisma.workspace.findMany({ where: { enabled: true }, include: WORKSPACE_INCLUDE });
+  }
+
+  /**
+   * Workspaces the given user may launch. An enabled workspace with NO group AND
+   * no direct-user grants is visible to everyone; any grant restricts it to the
+   * listed users plus members of its assigned groups. System admins see all so
+   * they can use (and verify) every workspace.
+   */
+  async launchableForUser(user: AuthUser) {
+    if (user.isSystemAdmin) return this.launchable();
+    const memberships = await prisma.userGroup.findMany({
+      where: { userId: user.sub },
+      select: { groupId: true },
+    });
+    const groupIds = memberships.map((m) => m.groupId);
+    return prisma.workspace.findMany({
+      where: {
+        enabled: true,
+        OR: [
+          { groups: { none: {} }, assignedUsers: { none: {} } }, // unassigned ⇒ everyone
+          { assignedUsers: { some: { userId: user.sub } } }, // direct grant
+          ...(groupIds.length ? [{ groups: { some: { id: { in: groupIds } } } }] : []), // via group
+        ],
+      },
+      include: WORKSPACE_INCLUDE,
+      orderBy: { friendlyName: 'asc' },
+    });
   }
 
   async get(id: string) {
@@ -117,6 +149,37 @@ export class WorkspacesService {
       },
     });
     if (res.count === 0) throw new NotFoundException('Workspace not found');
+    return this.get(id);
+  }
+
+  /**
+   * Replace a workspace's access grants. Empty arrays for BOTH ⇒ visible to
+   * everyone. Groups use the GroupWorkspaces relation; users the WorkspaceUser
+   * join. Only ids that belong to the caller's org are linked (defensive).
+   */
+  async setAssignments(orgId: string, id: string, dto: { userIds: string[]; groupIds: string[] }) {
+    const workspace = await prisma.workspace.findFirst({ where: { id, orgId }, select: { id: true } });
+    if (!workspace) throw new NotFoundException('Workspace not found');
+
+    const [validUsers, validGroups] = await Promise.all([
+      dto.userIds.length
+        ? prisma.user.findMany({ where: { id: { in: dto.userIds }, orgId }, select: { id: true } })
+        : Promise.resolve([] as { id: string }[]),
+      dto.groupIds.length
+        ? prisma.group.findMany({ where: { id: { in: dto.groupIds }, orgId }, select: { id: true } })
+        : Promise.resolve([] as { id: string }[]),
+    ]);
+
+    await prisma.workspace.update({
+      where: { id },
+      data: {
+        groups: { set: validGroups.map((g) => ({ id: g.id })) },
+        assignedUsers: {
+          deleteMany: {},
+          create: validUsers.map((u) => ({ orgId, userId: u.id })),
+        },
+      },
+    });
     return this.get(id);
   }
 

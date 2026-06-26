@@ -349,6 +349,7 @@ model User {
   apiKeys         ApiKey[]
   settings        UserSetting[]
   groups          UserGroup[]
+  assignedWorkspaces WorkspaceUser[]
   sessions        Session[]
   fileMappings    FileMapping[]
 
@@ -514,6 +515,24 @@ model UserGroup {
   @@index([groupId])
 }
 
+/// Direct workspace→user grant. A workspace with NO group grants AND no user
+/// grants is visible to EVERYONE; any grant restricts it to the listed users
+/// plus the members of its assigned groups (Workspace.groups / GroupWorkspaces).
+model WorkspaceUser {
+  id          String   @id @default(cuid())
+  orgId       String
+  workspaceId String
+  userId      String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([orgId])
+  @@index([userId])
+}
+
 model GroupRole {
   groupId String
   roleId  String
@@ -635,7 +654,8 @@ model Workspace {
   launchForms LaunchForm[]
   castings    CastingConfig[]
   stagings    SessionStaging[]
-  groups      Group[]       @relation("GroupWorkspaces")
+  groups        Group[]         @relation("GroupWorkspaces")
+  assignedUsers WorkspaceUser[]
 
   @@unique([orgId, name])
   @@index([orgId])

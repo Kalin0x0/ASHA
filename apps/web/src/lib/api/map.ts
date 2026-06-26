@@ -52,6 +52,8 @@ export function mapWorkspace(w: ApiWorkspace, activeSessions = 0): Workspace {
     serverName: w.server?.hostname,
     zoneName: w.zone?.name ?? w.server?.zone?.name,
     activeSessions,
+    assignedGroupIds: (w.groups ?? []).map((g) => g.id),
+    assignedUserIds: (w.assignedUsers ?? []).map((a) => a.userId),
   };
 }
 

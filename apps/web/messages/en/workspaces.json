@@ -47,6 +47,16 @@
       "enabled": "Enabled",
       "enabledHint": "Disabled workspaces stay in the catalog but can't be launched."
     },
+    "access": {
+      "title": "Access",
+      "everyone": "Everyone",
+      "everyoneHint": "Any user can see and launch this.",
+      "restricted": "Restricted",
+      "restrictedHint": "Only the selected users / groups.",
+      "users": "Users",
+      "groups": "Groups",
+      "none": "None available"
+    },
     "delete": {
       "title": "Delete workspace?",
       "description": "“{name}” will be removed from the catalog. This can't be undone.",

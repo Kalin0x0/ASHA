@@ -20,9 +20,12 @@ import { Input, Label } from '@/components/ui/input';
 import {
   useCreateWorkspace,
   useDeleteWorkspace,
+  useGroups,
   useLaunchSession,
   useServers,
+  useSetWorkspaceAssignments,
   useUpdateWorkspace,
+  useUsers,
   useWorkspaces,
   useZones,
 } from '@/lib/hooks';
@@ -58,6 +61,9 @@ export default function WorkspacesPage() {
   const createWorkspace = useCreateWorkspace();
   const updateWorkspace = useUpdateWorkspace();
   const deleteWorkspace = useDeleteWorkspace();
+  const setAssignments = useSetWorkspaceAssignments();
+  const users = useUsers();
+  const groups = useGroups();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [launchingId, setLaunchingId] = useState<string | null>(null);
@@ -68,6 +74,10 @@ export default function WorkspacesPage() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [form, setForm] = useState(blankForm);
   const [customCat, setCustomCat] = useState(false);
+  // Access control: 'everyone' (no grants) vs 'restricted' (selected users/groups).
+  const [accessMode, setAccessMode] = useState<'everyone' | 'restricted'>('everyone');
+  const [assignUserIds, setAssignUserIds] = useState<string[]>([]);
+  const [assignGroupIds, setAssignGroupIds] = useState<string[]>([]);
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
   const selectedServer = servers.find((s) => s.id === form.serverId);
   const editing = editingId !== null;
@@ -83,6 +93,9 @@ export default function WorkspacesPage() {
       setEditingId(null);
       setForm(blankForm);
       setCustomCat(false);
+      setAccessMode('everyone');
+      setAssignUserIds([]);
+      setAssignGroupIds([]);
     }
   };
 
@@ -90,6 +103,9 @@ export default function WorkspacesPage() {
     setEditingId(null);
     setForm(blankForm);
     setCustomCat(false);
+    setAccessMode('everyone');
+    setAssignUserIds([]);
+    setAssignGroupIds([]);
     setOpen(true);
   };
 
@@ -112,6 +128,11 @@ export default function WorkspacesPage() {
       gpu: String(ws.gpu ?? 0),
       enabled: ws.enabled,
     });
+    const uids = ws.assignedUserIds ?? [];
+    const gids = ws.assignedGroupIds ?? [];
+    setAssignUserIds(uids);
+    setAssignGroupIds(gids);
+    setAccessMode(uids.length > 0 || gids.length > 0 ? 'restricted' : 'everyone');
     setCustomCat(false);
     setOpen(true);
   };
@@ -127,6 +148,9 @@ export default function WorkspacesPage() {
       toast.error(t('catalog.create.serverRequired'));
       return;
     }
+    // 'everyone' ⇒ clear all grants; 'restricted' ⇒ persist the selected sets.
+    const grantUserIds = accessMode === 'restricted' ? assignUserIds : [];
+    const grantGroupIds = accessMode === 'restricted' ? assignGroupIds : [];
     setSubmitting(true);
     try {
       if (editing) {
@@ -140,10 +164,11 @@ export default function WorkspacesPage() {
           gpu: Number(form.gpu) || 0,
           enabled: form.enabled,
         });
+        await setAssignments(editingId!, grantUserIds, grantGroupIds);
         toast.success(t('catalog.toasts.updated', { name: friendlyName }));
       } else {
         const isContainer = form.type === 'CONTAINER';
-        await createWorkspace({
+        const created = await createWorkspace({
           friendlyName,
           name: form.name.trim() || undefined,
           description: form.description.trim() || undefined,
@@ -157,6 +182,9 @@ export default function WorkspacesPage() {
           memMb: isContainer && form.memGb ? Math.round(Number(form.memGb) * 1024) || undefined : undefined,
           gpu: isContainer ? Number(form.gpu) || 0 : 0,
         });
+        if (created?.id && (grantUserIds.length > 0 || grantGroupIds.length > 0)) {
+          await setAssignments(created.id, grantUserIds, grantGroupIds);
+        }
         toast.success(t('catalog.toasts.created', { name: friendlyName }));
       }
       closeDialog(false);
@@ -449,6 +477,88 @@ export default function WorkspacesPage() {
                 )}
               </div>
             )}
+
+            {/* Access control — who may see & launch this workspace */}
+            <div className="space-y-2">
+              <Label>{t('catalog.access.title')}</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAccessMode('everyone')}
+                  className={cn(
+                    'rounded-md border px-3 py-2 text-start ring-gold-focus transition-colors',
+                    accessMode === 'everyone' ? 'border-gold-500/50 bg-gold-500/10' : 'border-border-subtle hover:border-border',
+                  )}
+                >
+                  <span className="block text-sm font-medium">{t('catalog.access.everyone')}</span>
+                  <span className="block text-[11px] text-muted-foreground">{t('catalog.access.everyoneHint')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAccessMode('restricted')}
+                  className={cn(
+                    'rounded-md border px-3 py-2 text-start ring-gold-focus transition-colors',
+                    accessMode === 'restricted' ? 'border-gold-500/50 bg-gold-500/10' : 'border-border-subtle hover:border-border',
+                  )}
+                >
+                  <span className="block text-sm font-medium">{t('catalog.access.restricted')}</span>
+                  <span className="block text-[11px] text-muted-foreground">{t('catalog.access.restrictedHint')}</span>
+                </button>
+              </div>
+
+              {accessMode === 'restricted' && (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      {t('catalog.access.users')}
+                    </p>
+                    <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border-subtle p-2">
+                      {users.length === 0 ? (
+                        <p className="text-xs text-muted-foreground/70">{t('catalog.access.none')}</p>
+                      ) : (
+                        users.map((u) => (
+                          <label key={u.id} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              className="size-3.5 accent-gold-500"
+                              checked={assignUserIds.includes(u.id)}
+                              onChange={(e) =>
+                                setAssignUserIds((p) => (e.target.checked ? [...p, u.id] : p.filter((x) => x !== u.id)))
+                              }
+                            />
+                            <span className="truncate">{u.name || u.email}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      {t('catalog.access.groups')}
+                    </p>
+                    <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border-subtle p-2">
+                      {groups.length === 0 ? (
+                        <p className="text-xs text-muted-foreground/70">{t('catalog.access.none')}</p>
+                      ) : (
+                        groups.map((g) => (
+                          <label key={g.id} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              className="size-3.5 accent-gold-500"
+                              checked={assignGroupIds.includes(g.id)}
+                              onChange={(e) =>
+                                setAssignGroupIds((p) => (e.target.checked ? [...p, g.id] : p.filter((x) => x !== g.id)))
+                              }
+                            />
+                            <span className="truncate">{g.name}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Enabled toggle — edit only */}
             {editing && (

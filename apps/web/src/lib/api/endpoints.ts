@@ -66,6 +66,9 @@ export interface ApiWorkspace {
   image: ApiImage | null;
   server: { hostname: string; connectionType: string; zone?: { name: string } | null } | null;
   zone: { name: string } | null;
+  // Access grants (empty on BOTH ⇒ visible to everyone).
+  groups?: { id: string; name: string }[];
+  assignedUsers?: { userId: string }[];
 }
 
 export interface ApiAgent {
@@ -288,6 +291,9 @@ export const updateWorkspace = (id: string, body: UpdateWorkspaceBody) =>
   apiFetch<ApiWorkspace>(`/workspaces/${id}`, { method: 'PATCH', body });
 export const deleteWorkspace = (id: string) =>
   apiFetch<{ ok: true }>(`/workspaces/${id}`, { method: 'DELETE' });
+/** Replace a workspace's access grants (users + groups). Empty arrays ⇒ everyone. */
+export const setWorkspaceAssignments = (id: string, body: { userIds: string[]; groupIds: string[] }) =>
+  apiFetch<ApiWorkspace>(`/workspaces/${id}/assignments`, { method: 'PATCH', body });
 export const getAgents = () => apiFetch<ApiAgent[]>('/agents');
 export const getZones = () => apiFetch<ApiZone[]>('/zones');
 export const getUsers = () => apiFetch<ApiUser[]>('/users');

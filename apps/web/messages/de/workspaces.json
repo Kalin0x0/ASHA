@@ -47,6 +47,16 @@
       "enabled": "Aktiviert",
       "enabledHint": "Deaktivierte Workspaces bleiben im Katalog, können aber nicht gestartet werden."
     },
+    "access": {
+      "title": "Zugriff",
+      "everyone": "Alle",
+      "everyoneHint": "Jeder Benutzer kann dies sehen und starten.",
+      "restricted": "Eingeschränkt",
+      "restrictedHint": "Nur die ausgewählten Benutzer / Gruppen.",
+      "users": "Benutzer",
+      "groups": "Gruppen",
+      "none": "Keine verfügbar"
+    },
     "delete": {
       "title": "Workspace löschen?",
       "description": "{name} wird aus dem Katalog entfernt. Das kann nicht rückgängig gemacht werden.",

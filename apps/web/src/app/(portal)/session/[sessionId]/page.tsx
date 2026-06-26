@@ -43,7 +43,7 @@ import {
   resumeSession,
 } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
-import { useSession, useTerminateSession, useWorkspaces } from '@/lib/hooks';
+import { useLaunchableWorkspaces, useSession, useTerminateSession } from '@/lib/hooks';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { isLikelyUnreachableUrl } from '@/lib/stream';
 import { cn } from '@/lib/utils';
@@ -117,7 +117,7 @@ export default function StreamingViewerPage() {
 
   const workspaceName = session?.workspaceName ?? t('status.workspaceFallback');
   // Resolve the workspace's description to show under the title in the control bar.
-  const workspaces = useWorkspaces();
+  const workspaces = useLaunchableWorkspaces();
   const workspaceDescription = workspaces.find((w) => w.friendlyName === session?.workspaceName)?.description;
   // The viewer is a fullscreen takeover — render it through a portal to <body> so
   // it escapes the portal layout's stacking context (otherwise the "My Workspaces"

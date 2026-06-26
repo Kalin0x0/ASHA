@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
-import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
+import { useLaunchableWorkspaces, useLaunchSession } from '@/lib/hooks';
 
 /**
  * Compact favorites strip for the portal header — one-click launch of a
@@ -20,7 +20,7 @@ import { useLaunchSession, useWorkspaces } from '@/lib/hooks';
 export function FavoriteQuickLaunch({ limit = 4 }: { limit?: number }) {
   const t = useTranslations('portal');
   const router = useRouter();
-  const workspaces = useWorkspaces();
+  const workspaces = useLaunchableWorkspaces();
   const launch = useLaunchSession();
   const favorites = useFavorites();
   const [launchingId, setLaunchingId] = useState<string | null>(null);

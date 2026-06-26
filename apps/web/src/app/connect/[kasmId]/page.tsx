@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getAccessToken } from '@/lib/api/auth-store';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
-import { useSessions, useWorkspaces } from '@/lib/hooks';
+import { useLaunchableWorkspaces, useSessions } from '@/lib/hooks';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { cn } from '@/lib/utils';
@@ -121,7 +121,7 @@ export default function ConnectPage() {
 
   // Resolve the session → workspace so the toolbar shows the name + description.
   const session = useSessions().find((s) => s.kasmId === kasmId);
-  const workspaces = useWorkspaces();
+  const workspaces = useLaunchableWorkspaces();
   const ws = workspaces.find((w) => w.friendlyName === session?.workspaceName);
   const workspaceName = session?.workspaceName ?? 'Remote desktop';
   const workspaceDescription = ws?.description;
