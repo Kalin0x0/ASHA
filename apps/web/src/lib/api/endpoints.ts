@@ -282,7 +282,10 @@ export interface CreateWorkspaceBody {
 export const createWorkspace = (body: CreateWorkspaceBody) =>
   apiFetch<ApiWorkspace>('/workspaces', { method: 'POST', body });
 export type UpdateWorkspaceBody = Partial<
-  Pick<CreateWorkspaceBody, 'friendlyName' | 'description' | 'iconUrl' | 'coresLimit' | 'memLimitMb' | 'gpuCount'> & {
+  Pick<
+    CreateWorkspaceBody,
+    'friendlyName' | 'description' | 'iconUrl' | 'type' | 'serverId' | 'zoneId' | 'coresLimit' | 'memLimitMb' | 'gpuCount'
+  > & {
     categories: string[];
     enabled: boolean;
   }

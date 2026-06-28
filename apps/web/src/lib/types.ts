@@ -26,6 +26,9 @@ export interface UpdateWorkspaceInput {
   description?: string;
   category?: string;
   iconUrl?: string;
+  type?: WorkspaceType;
+  serverId?: string;
+  zoneId?: string;
   cores?: number;
   memMb?: number;
   gpu?: number;
