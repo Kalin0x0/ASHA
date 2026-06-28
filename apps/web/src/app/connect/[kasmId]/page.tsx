@@ -250,7 +250,13 @@ export default function ConnectPage() {
               c.sendKeyEvent(0, keysym);
             }
           }, 60);
-          return false; // allow the browser default so the paste event fires
+          // IMPORTANT: in guacamole-common-js, returning false from onkeydown
+          // makes the library call e.preventDefault() (press() returns false →
+          // defaultPrevented = !false = true), which CANCELS the browser's
+          // default Ctrl+V action and therefore SUPPRESSES the `paste` event we
+          // depend on. Return true so the default is NOT prevented and the
+          // permission-free `paste` event actually fires into the focused sink.
+          return true;
         }
         client.sendKeyEvent(1, keysym);
         return true;
