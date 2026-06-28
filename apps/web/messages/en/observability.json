@@ -1,0 +1,63 @@
+{
+  "reporting": {
+    "title": "Reporting",
+    "description": "Platform-wide usage analytics: session volume over time, top workspaces, and capacity.",
+    "loadError": "Failed to load reporting data",
+    "liveOnlyNotice": "Reporting is live-backend only. Run with",
+    "totalSessions": "Total sessions",
+    "activeNow": "Active now",
+    "agentsOnline": "Agents online",
+    "recordings": "Recordings",
+    "sessionsTrendTitle": "Sessions — last {days} days",
+    "noSessionData": "No session data in range.",
+    "topWorkspaces": "Top workspaces",
+    "noWorkspaceUsage": "No workspace usage yet."
+  },
+  "auditLog": {
+    "title": "Audit Log",
+    "description": "Immutable record of administrative and security-relevant actions across the organization.",
+    "loadError": "Failed to load audit log",
+    "liveOnlyNotice": "The audit log is live-backend only. Run with",
+    "filterPlaceholder": "Filter by action (e.g. session, apikey, vmprovider)…",
+    "noEntriesTitle": "No audit entries match",
+    "noEntriesDescription": "Try a different filter term.",
+    "backendNotConnectedTitle": "Backend not connected",
+    "backendNotConnectedDescription": "Run with NEXT_PUBLIC_API_MODE=live to view the audit log."
+  },
+  "metrics": {
+    "title": "Metrics",
+    "description": "Time-series of platform metrics sampled from agents and the control plane.",
+    "loadError": "Failed to load metric",
+    "liveOnlyNotice": "Metrics are live-backend only. Run with",
+    "metricLabels": {
+      "cpu": "CPU utilization",
+      "memory": "Memory utilization",
+      "sessions": "Concurrent sessions",
+      "load": "Agent load"
+    },
+    "rangeLabels": {
+      "h6": "6h",
+      "h24": "24h",
+      "h72": "3d",
+      "h168": "7d"
+    },
+    "noSamples": "No samples for this metric in the selected range."
+  },
+  "logForwarding": {
+    "title": "Log Forwarding",
+    "description": "Stream session and audit events to your SIEM via Fluent Bit — syslog, Splunk HEC, Elasticsearch, Loki, or generic HTTP.",
+    "loadError": "Failed to load log forwarders",
+    "liveOnlyNotice": "Log forwarding is live-backend only. Run with",
+    "forwarders": "Forwarders",
+    "configuredForwarders": "Configured forwarders",
+    "emptyList": "No log forwarders configured yet.",
+    "addForwarder": "Add forwarder",
+    "endpointUrl": "Endpoint URL",
+    "createdToast": "Log forwarder added",
+    "createdToastDescription": "Disabled by default — enable after verifying.",
+    "createError": "Could not add forwarder",
+    "updateError": "Could not update forwarder",
+    "deletedToast": "Forwarder removed",
+    "deleteError": "Could not remove forwarder"
+  }
+}

@@ -1,0 +1,641 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================================
+   LAYER 1 — PRIMITIVES  (raw scales → become Tailwind utilities)
+   ============================================================================ */
+@theme {
+  /* Anthracite — blue-leaning charcoal neutral base */
+  --color-anthracite-950: #0e0e1a;
+  --color-anthracite-900: #14141f;
+  --color-anthracite-850: #181826;
+  --color-anthracite-800: #1a1a2e; /* BRAND base */
+  --color-anthracite-750: #1f1f38;
+  --color-anthracite-700: #242442;
+  --color-anthracite-600: #2d2d50;
+  --color-anthracite-500: #3a3a63;
+  --color-anthracite-400: #4b4b7a;
+  --color-anthracite-300: #6b6b94;
+  --color-anthracite-200: #9a9ab8;
+  --color-anthracite-100: #c4c4d6;
+  --color-anthracite-50: #e8e8f0;
+
+  /* Gold — warm, AA-tuned accent */
+  --color-gold-950: #2e2410;
+  --color-gold-900: #4a3a16;
+  --color-gold-800: #6b541f;
+  --color-gold-700: #8f7129;
+  --color-gold-600: #b8923a;
+  --color-gold-500: #d4af37; /* BRAND accent */
+  --color-gold-400: #e0c25c;
+  --color-gold-300: #ecd584; /* AA text on dark */
+  --color-gold-200: #f3e3ad;
+  --color-gold-100: #f9f1d6;
+  --color-gold-50: #fdf9ec;
+
+  /* Semantic hues — harmonized toward gold */
+  --color-success-600: #4aa37c;
+  --color-success-500: #5fb88f;
+  --color-success-400: #7fcaa6;
+  --color-warn-600: #c9933b;
+  --color-warn-500: #e0a84a;
+  --color-warn-400: #edbd6e;
+  --color-error-600: #bd564d;
+  --color-error-500: #d2685f;
+  --color-error-400: #e08980;
+  --color-info-600: #587bb0;
+  --color-info-500: #6a8fc4;
+  --color-info-400: #8aa8d6;
+
+  /* Chart palette (gold-anchored) */
+  --color-chart-1: #d4af37;
+  --color-chart-2: #6a8fc4;
+  --color-chart-3: #5fb88f;
+  --color-chart-4: #b07fc4;
+  --color-chart-5: #e0a84a;
+  --color-chart-6: #c4708f;
+
+  /* Radii */
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-2xl: 30px;
+
+  /* Fonts (CSS vars injected by next/font in layout) */
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', monospace;
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Layout */
+  --spacing-sidebar: 264px;
+  --spacing-sidebar-collapsed: 76px;
+  --spacing-topbar: 60px;
+}
+
+/* ============================================================================
+   LAYER 2 — SEMANTIC  (shadcn-compatible names; default = DARK / brand)
+   ============================================================================ */
+:root,
+.dark {
+  --background: var(--color-anthracite-900);
+  --foreground: var(--color-anthracite-50);
+
+  --surface-1: var(--color-anthracite-800);
+  --surface-2: var(--color-anthracite-700);
+  --surface-3: var(--color-anthracite-600);
+
+  --card: var(--color-anthracite-800);
+  --card-foreground: var(--color-anthracite-50);
+  --popover: var(--color-anthracite-700);
+  --popover-foreground: var(--color-anthracite-50);
+
+  --primary: var(--color-gold-500);
+  --primary-foreground: var(--color-anthracite-950);
+  --secondary: var(--color-anthracite-700);
+  --secondary-foreground: var(--color-anthracite-50);
+  --muted: var(--color-anthracite-750);
+  --muted-foreground: var(--color-anthracite-200);
+  --accent: var(--color-anthracite-700);
+  --accent-foreground: var(--color-gold-300);
+
+  --success: var(--color-success-500);
+  --warning: var(--color-warn-500);
+  --destructive: var(--color-error-500);
+  --destructive-foreground: var(--color-anthracite-50);
+  --info: var(--color-info-500);
+
+  --border: var(--color-anthracite-500);
+  --border-subtle: var(--color-anthracite-700);
+  --input: var(--color-anthracite-600);
+  --ring: var(--color-gold-500);
+
+  --highlight-top: rgba(255, 255, 255, 0.06);
+  --gold-glow: 0 0 0 1px rgba(212, 175, 55, 0.25), 0 0 28px -6px rgba(212, 175, 55, 0.4);
+  /* Layered, soft shadows for premium depth (close + mid + far casts). */
+  --shadow-ambient: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px -6px rgba(0, 0, 0, 0.5),
+    0 16px 40px -18px rgba(0, 0, 0, 0.6);
+  --shadow-lifted: 0 2px 6px rgba(0, 0, 0, 0.45), 0 14px 32px -10px rgba(0, 0, 0, 0.6),
+    0 34px 72px -26px rgba(0, 0, 0, 0.78);
+  --grain-opacity: 0.022;
+}
+
+.light {
+  --background: #f4f4f7;
+  --foreground: var(--color-anthracite-900);
+
+  --surface-1: #ffffff;
+  --surface-2: #ffffff;
+  --surface-3: #ffffff;
+
+  --card: #ffffff;
+  --card-foreground: var(--color-anthracite-900);
+  --popover: #ffffff;
+  --popover-foreground: var(--color-anthracite-900);
+
+  --primary: var(--color-gold-700);
+  --primary-foreground: #ffffff;
+  --secondary: #ececf2;
+  --secondary-foreground: var(--color-anthracite-900);
+  --muted: #ececf2;
+  --muted-foreground: #5b5b73;
+  --accent: #f3ead3;
+  --accent-foreground: var(--color-gold-800);
+
+  /* Saturated status hues must go deeper on white to clear AA as text
+     (the -500/-600 ramp is tuned for dark surfaces). */
+  --success: #1f7a52;
+  --warning: #936a15;
+  --destructive: #b23b30;
+  --destructive-foreground: #ffffff;
+  --info: #3f63a0;
+
+  --border: #d9d9e3;
+  --border-subtle: #e8e8ef;
+  --input: #d4d4e0;
+  --ring: var(--color-gold-600);
+
+  --highlight-top: rgba(255, 255, 255, 0.9);
+  --gold-glow: 0 0 0 1px rgba(184, 146, 58, 0.3), 0 0 22px -8px rgba(184, 146, 58, 0.32);
+  /* Soft, airy shadows on light — layered but low-opacity so cards float. */
+  --shadow-ambient: 0 1px 2px rgba(16, 16, 30, 0.05), 0 6px 16px -8px rgba(16, 16, 30, 0.1),
+    0 16px 40px -20px rgba(16, 16, 30, 0.12);
+  --shadow-lifted: 0 2px 6px rgba(16, 16, 30, 0.07), 0 14px 32px -12px rgba(16, 16, 30, 0.14),
+    0 30px 64px -26px rgba(16, 16, 30, 0.2);
+  --grain-opacity: 0;
+}
+
+/* ============================================================================
+   LAYER 3 — bridge semantic vars into the Tailwind color namespace
+   ============================================================================ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-info: var(--info);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius: var(--radius-md);
+}
+
+/* ============================================================================
+   BASE
+   ============================================================================ */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    /* cv11 = single-storey a · ss01 = stylistic alternates · refined kerning */
+    font-feature-settings: 'cv11', 'ss01', 'calt', 'kern';
+    letter-spacing: -0.006em;
+    line-height: 1.55;
+  }
+
+  /* Display sans — Space Grotesk: modern, geometric, distinctive. */
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.022em;
+    line-height: 1.14;
+    font-feature-settings: 'ss01', 'calt';
+  }
+
+  /* Persian (RTL) — Vazirmatn covers UI and display; Latin glyph features and
+     negative tracking don't apply to Arabic-script text. */
+  html[lang='fa'] body,
+  html[lang='fa'] h1,
+  html[lang='fa'] h2,
+  html[lang='fa'] h3,
+  html[lang='fa'] h4,
+  html[lang='fa'] .font-display {
+    font-family: 'Vazirmatn Variable', var(--font-sans);
+    letter-spacing: 0;
+    font-feature-settings: 'kern';
+  }
+  html[lang='fa'] body {
+    line-height: 1.8;
+  }
+
+  h1,
+  .font-display-xl {
+    letter-spacing: -0.032em;
+    line-height: 1.08;
+  }
+
+  /* tabular figures for all numeric data */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum', 'cv11';
+  }
+
+  ::selection {
+    background-color: rgba(212, 175, 55, 0.28);
+    color: var(--color-anthracite-50);
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Themed scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-anthracite-600) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-anthracite-600);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-anthracite-500);
+  }
+}
+
+/* ============================================================================
+   COMPONENTS — signature surfaces & accents
+   ============================================================================ */
+@layer components {
+  /* Elevation — depth via luminosity, not heavy shadows */
+  .elev-0 {
+    background-color: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+  }
+  .elev-1 {
+    background-color: var(--surface-2);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-ambient), inset 0 1px 0 var(--highlight-top);
+  }
+  .elev-2 {
+    background-color: var(--surface-3);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lifted), inset 0 1px 0 var(--highlight-top);
+  }
+  .elev-gold {
+    box-shadow: var(--gold-glow), var(--shadow-ambient), inset 0 1px 0 var(--highlight-top);
+    border-color: rgba(212, 175, 55, 0.4);
+  }
+
+  /* Glass — overlays only */
+  .glass {
+    background-color: color-mix(in srgb, var(--surface-1) 72%, transparent);
+    backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid var(--border-subtle);
+  }
+  .glass-strong {
+    background-color: color-mix(in srgb, var(--surface-2) 85%, transparent);
+    backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid var(--border);
+  }
+
+  /* Aurora Glass — primary card & rail surfaces that float over the aurora base */
+  .glass-card {
+    background-color: color-mix(in srgb, var(--surface-1) 82%, transparent);
+    backdrop-filter: blur(18px) saturate(150%);
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-ambient), inset 0 1px 0 var(--highlight-top);
+  }
+  .glass-rail {
+    background-color: color-mix(in srgb, var(--surface-1) 68%, transparent);
+    backdrop-filter: blur(22px) saturate(150%);
+  }
+
+  .gold-hairline {
+    position: relative;
+  }
+  .gold-hairline::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(212, 175, 55, 0.6),
+      transparent
+    );
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(135deg, var(--color-gold-300), var(--color-gold-500) 55%, var(--color-gold-700));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .ring-gold-focus:focus-visible {
+    box-shadow: var(--gold-glow);
+  }
+}
+
+/* ============================================================================
+   UTILITIES — backgrounds, grain, animations
+   ============================================================================ */
+@layer utilities {
+  /* Animated aurora mesh — anthracite base with deep-gold + steel blooms */
+  .bg-aurora {
+    background-color: var(--color-anthracite-950);
+    background-image:
+      radial-gradient(60% 55% at 18% 20%, rgba(212, 175, 55, 0.18), transparent 60%),
+      radial-gradient(55% 50% at 82% 26%, rgba(106, 143, 196, 0.14), transparent 62%),
+      radial-gradient(50% 48% at 72% 78%, rgba(176, 127, 196, 0.12), transparent 64%),
+      radial-gradient(72% 62% at 38% 108%, rgba(212, 175, 55, 0.1), transparent 72%);
+    background-size: 200% 200%;
+    animation: aurora-drift 32s var(--ease-in-out-soft) infinite alternate;
+  }
+
+  /* User-selectable launcher wallpaper. Shares the aurora's gentle drift; the
+     coloured blooms are supplied inline per preset (see lib/backgrounds.ts) so
+     the catalog stays data-driven while the motion stays in the design system. */
+  .bg-wallpaper {
+    background-color: var(--color-anthracite-950);
+    background-size: 200% 200%;
+    animation: aurora-drift 36s var(--ease-in-out-soft) infinite alternate;
+  }
+
+  /* Wallpaper legibility overlays — theme-aware via --background (dark tint in
+     dark mode, light tint in light mode) so text + glass chrome stay readable
+     over any wallpaper, in either theme. `scrim` is the stronger blanket for
+     photo wallpapers; `vignette` is the subtle edge-darkening for blooms. */
+  .wallpaper-scrim {
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--background) 80%, transparent),
+      color-mix(in srgb, var(--background) 46%, transparent) 24%,
+      color-mix(in srgb, var(--background) 46%, transparent) 76%,
+      color-mix(in srgb, var(--background) 84%, transparent)
+    );
+  }
+  .wallpaper-vignette {
+    background: radial-gradient(
+      120% 120% at 50% 0%,
+      transparent 40%,
+      color-mix(in srgb, var(--background) 70%, transparent) 100%
+    );
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  /* Film grain overlay (apply to a fixed, pointer-events-none element) */
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .animate-shimmer {
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  .animate-pulse-ring {
+    animation: pulse-ring 2.4s var(--ease-out-soft) infinite;
+  }
+  .animate-rise {
+    animation: rise 0.4s var(--ease-out-soft) both;
+  }
+  .animate-fade-up {
+    animation: fade-up 0.5s var(--ease-out-soft) both;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.4s var(--ease-out-soft) both;
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .delay-100 { animation-delay: 100ms; }
+  .delay-150 { animation-delay: 150ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+  .delay-500 { animation-delay: 500ms; }
+  .delay-600 { animation-delay: 600ms; }
+
+  /* Gradient border — wrap element with position:relative */
+  .grad-border-gold {
+    position: relative;
+    border: none !important;
+  }
+  .grad-border-gold::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      rgba(212, 175, 55, 0.6) 0%,
+      rgba(212, 175, 55, 0.1) 40%,
+      rgba(212, 175, 55, 0.0) 60%,
+      rgba(212, 175, 55, 0.4) 100%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+@keyframes aurora-drift {
+  0% {
+    background-position: 0% 0%, 100% 0%, 50% 100%;
+  }
+  100% {
+    background-position: 30% 20%, 70% 30%, 40% 80%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(212, 175, 55, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-aurora,
+  .bg-wallpaper,
+  .animate-shimmer,
+  .animate-pulse-ring,
+  .animate-rise,
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-float {
+    animation: none !important;
+  }
+}
+
+/* ============================================================================
+   LIGHT-THEME OVERRIDES
+   Several surfaces/accents use raw dark-tuned primitives (the aurora base and
+   pale `text-gold-2/3/400`) that are illegible on a light background. These are
+   UNLAYERED so they win over the Tailwind utility classes, and scoped to
+   `.light` so dark mode is untouched. They map onto the same deep gold the light
+   theme already uses for its accent foreground (gold-800), keeping AA contrast.
+   ============================================================================ */
+.light .bg-aurora {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(60% 55% at 18% 20%, rgba(212, 175, 55, 0.1), transparent 60%),
+    radial-gradient(55% 50% at 82% 26%, rgba(106, 143, 196, 0.1), transparent 62%),
+    radial-gradient(50% 48% at 72% 78%, rgba(176, 127, 196, 0.08), transparent 64%),
+    radial-gradient(72% 62% at 38% 108%, rgba(212, 175, 55, 0.07), transparent 72%);
+}
+
+/* Wallpaper base is dark by default; in light mode use the light background so
+   text stays readable over the colour-bloom presets. */
+.light .bg-wallpaper {
+  background-color: var(--background);
+}
+
+/* Pale gold as TEXT is unreadable on light surfaces → use the deep accent gold.
+   (Gold used as a background/fill keeps its own utility; this only retargets
+   the text-color utilities.) */
+.light .text-gold-200,
+.light .text-gold-300,
+.light .text-gold-400,
+.light .text-gold-500,
+.light .text-gold-600 {
+  color: var(--color-gold-800);
+}
+
+/* The gold gradient text (KPIs, hero) — its light end (gold-300) vanishes on
+   white; shift the whole ramp deeper for light mode. */
+.light .text-gradient-gold {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-gold-600),
+    var(--color-gold-700) 55%,
+    var(--color-gold-800)
+  );
+}
+
+/* Pale semantic-hue text (info/warn/success/error -300/-400) is used for small
+   emphasis/chips; deepen each to its readable hue so it clears AA on white tints
+   while staying semantically coloured. */
+.light .text-success-300,
+.light .text-success-400 { color: #1f7a52; }
+.light .text-warn-300,
+.light .text-warn-400 { color: #936a15; }
+.light .text-error-300,
+.light .text-error-400 { color: #b23b30; }
+.light .text-info-300,
+.light .text-info-400 { color: #3f63a0; }
+
+/* RingGauge centre value is inline-coloured with the pale ramp end (great on
+   dark, illegible on white) — force the neutral foreground on light. */
+.light .gauge-value {
+  color: var(--foreground) !important;
+}
+
+/* Elements that are deliberately dark in BOTH themes (the streaming cockpit,
+   dark chips over imagery) opt back in to light-on-dark gold via `.on-dark`. */
+.light .on-dark .text-gold-200,
+.light .on-dark .text-gold-300,
+.light .on-dark .text-gold-400 {
+  color: var(--color-gold-300);
+}

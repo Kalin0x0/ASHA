@@ -1,0 +1,121 @@
+{
+  "proxies": {
+    "title": "Verbindungs-Proxys",
+    "description": "Guacamole-(guacd-)Endpunkte, die RDP-/VNC-Sitzungen in den Browser übertragen. Registrieren Sie die guacd-Hosts, die Ihre Zonen bedienen.",
+    "liveOnly": "Die Verwaltung von Verbindungs-Proxys ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "proxies": "Proxys"
+    },
+    "registeredTitle": "Registrierte Proxys",
+    "empty": "Noch keine Verbindungs-Proxys konfiguriert.",
+    "types": {
+      "GUACAMOLE": "Guacamole"
+    },
+    "addTitle": "Proxy hinzufügen",
+    "addButton": "Proxy hinzufügen",
+    "form": {
+      "host": "Host",
+      "port": "Port"
+    },
+    "toasts": {
+      "loadFailed": "Verbindungs-Proxys konnten nicht geladen werden",
+      "created": "Verbindungs-Proxy hinzugefügt",
+      "createFailed": "Proxy konnte nicht hinzugefügt werden",
+      "updateFailed": "Proxy konnte nicht aktualisiert werden",
+      "removed": "Proxy entfernt",
+      "removeFailed": "Proxy konnte nicht entfernt werden"
+    }
+  },
+  "webFiltering": {
+    "title": "Web-Filterung",
+    "description": "Squid-basierte Inhaltsfilterung für ausgehenden Sitzungsverkehr. Blockieren Sie Website-Kategorien; die Richtlinie wird in eine Squid-Konfiguration umgesetzt und pro Sitzung angewendet.",
+    "liveOnly": "Web-Filterung ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "policies": "Filterrichtlinien"
+    },
+    "policiesTitle": "Richtlinien",
+    "empty": "Noch keine Web-Filterrichtlinien konfiguriert.",
+    "policyMeta": "{count, plural, one {# Kategorie blockiert} other {# Kategorien blockiert}} · TTL {ttl}s",
+    "categories": {
+      "ads": "Werbung",
+      "malware": "Malware",
+      "adult": "Erwachseneninhalte",
+      "social": "Soziale Medien",
+      "gambling": "Glücksspiel",
+      "streaming": "Streaming",
+      "phishing": "Phishing"
+    },
+    "addTitle": "Richtlinie hinzufügen",
+    "addButton": "Richtlinie hinzufügen",
+    "form": {
+      "blockedCategories": "Blockierte Kategorien"
+    },
+    "toasts": {
+      "loadFailed": "Web-Filter konnten nicht geladen werden",
+      "created": "Web-Filter erstellt",
+      "createdDescription": "Standardmäßig deaktiviert – nach Prüfung aktivieren.",
+      "createFailed": "Filter konnte nicht erstellt werden",
+      "updateFailed": "Filter konnte nicht aktualisiert werden",
+      "removed": "Filter entfernt",
+      "removeFailed": "Filter konnte nicht entfernt werden"
+    }
+  },
+  "browserIsolation": {
+    "title": "Browser-Isolation",
+    "description": "Rendern Sie riskante Webinhalte in einem verwerfbaren Neko-Browser-Container, der nur Pixel an den Benutzer streamt – lokal wird nichts ausgeführt.",
+    "liveOnly": "Browser-Isolation ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "profiles": "Profile"
+    },
+    "profilesTitle": "Isolationsprofile",
+    "empty": "Noch keine Browser-Isolationsprofile konfiguriert.",
+    "via": "über {proxy}",
+    "direct": "direkt",
+    "addTitle": "Profil hinzufügen",
+    "addButton": "Profil hinzufügen",
+    "form": {
+      "forwardProxy": "Forward-Proxy (optional)"
+    },
+    "toasts": {
+      "loadFailed": "Browser-Isolationskonfigurationen konnten nicht geladen werden",
+      "created": "Isolationsprofil erstellt",
+      "createdDescription": "Standardmäßig deaktiviert – nach Prüfung aktivieren.",
+      "createFailed": "Profil konnte nicht erstellt werden",
+      "updateFailed": "Profil konnte nicht aktualisiert werden",
+      "removed": "Profil entfernt",
+      "removeFailed": "Profil konnte nicht entfernt werden"
+    }
+  },
+  "egress": {
+    "title": "Egress",
+    "description": "Leiten Sie ausgehenden Sitzungsverkehr über dedizierte Gateways (WireGuard-Tunnel oder Forward-Proxys) – für feste Quell-IPs und Compliance.",
+    "liveOnly": "Egress-Verwaltung ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "gateways": "Gateways"
+    },
+    "gatewaysTitle": "Gateways",
+    "empty": "Noch keine Egress-Gateways konfiguriert.",
+    "providers": {
+      "wireguard": "WireGuard",
+      "http_proxy": "HTTP-Proxy",
+      "socks5": "SOCKS5"
+    },
+    "copyConfig": "WireGuard-Konfiguration kopieren",
+    "addTitle": "Gateway hinzufügen",
+    "addButton": "Gateway hinzufügen",
+    "form": {
+      "endpoint": "Endpunkt (optional)"
+    },
+    "toasts": {
+      "loadFailed": "Egress-Gateways konnten nicht geladen werden",
+      "created": "Egress-Gateway hinzugefügt",
+      "createdDescription": "Standardmäßig deaktiviert – nach Prüfung aktivieren.",
+      "createFailed": "Gateway konnte nicht hinzugefügt werden",
+      "updateFailed": "Gateway konnte nicht aktualisiert werden",
+      "configCopied": "WireGuard-Konfiguration kopiert",
+      "configCopyFailed": "WireGuard-Konfiguration konnte nicht abgerufen werden",
+      "removed": "Gateway entfernt",
+      "removeFailed": "Gateway konnte nicht entfernt werden"
+    }
+  }
+}

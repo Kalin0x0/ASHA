@@ -1,0 +1,208 @@
+{
+  "catalog": {
+    "title": "Workspaces",
+    "description": "The catalog of containerized desktops, browsers, and applications users can launch.",
+    "newWorkspace": "New workspace",
+    "searchPlaceholder": "Search workspaces…",
+    "create": {
+      "title": "Create workspace",
+      "description": "Add a Docker app/desktop or a server-backed (RDP/VNC/SSH) machine — Windows desktops, servers and more.",
+      "machineType": "Machine type",
+      "types": {
+        "container": "Docker container",
+        "containerHint": "Streamed app/desktop image",
+        "server": "Server / VM",
+        "serverHint": "RDP/VNC/SSH machine (Windows, etc.)"
+      },
+      "friendlyName": "Name",
+      "friendlyNamePlaceholder": "Windows 11",
+      "slug": "Slug",
+      "slugHint": "URL-safe id; derived from the name if left blank.",
+      "descriptionField": "Description",
+      "category": "Category",
+      "categoryPlaceholder": "Choose a category…",
+      "newCategory": "+ New category…",
+      "iconUrl": "Icon",
+      "iconUrlHint": "Auto-detected from the app. Paste an image URL to override.",
+      "dockerImage": "Docker image",
+      "dockerImageHint": "e.g. kasmweb/brave:1.16.0 — creates and links an image so the workspace is launchable.",
+      "vcpu": "vCPU",
+      "ramGb": "RAM (GB)",
+      "gpu": "GPU",
+      "zone": "Zone",
+      "defaultZone": "Default zone",
+      "server": "Server",
+      "selectServer": "Select a server…",
+      "noServers": "No servers registered yet. Add one under Infrastructure → Servers.",
+      "serverZone": "{protocol} · zone {zone}",
+      "serverHintLong": "Pick a registered RDP/VNC/SSH machine — its zone is used automatically.",
+      "serverRequired": "Choose a server for a server-backed workspace.",
+      "submit": "Create workspace",
+      "nameRequired": "A workspace name is required."
+    },
+    "edit": {
+      "title": "Edit workspace",
+      "description": "Update the name, description, category, icon and resources.",
+      "submit": "Save changes",
+      "enabled": "Enabled",
+      "enabledHint": "Disabled workspaces stay in the catalog but can't be launched."
+    },
+    "access": {
+      "title": "Access",
+      "everyone": "Everyone",
+      "everyoneHint": "Any user can see and launch this.",
+      "restricted": "Restricted",
+      "restrictedHint": "Only the selected users / groups.",
+      "users": "Users",
+      "groups": "Groups",
+      "none": "None available"
+    },
+    "delete": {
+      "title": "Delete workspace?",
+      "description": "“{name}” will be removed from the catalog. This can't be undone.",
+      "confirm": "Delete"
+    },
+    "toasts": {
+      "launchTitle": "Session launching",
+      "launchDescription": "Allocating an agent and starting the container.",
+      "created": "Workspace {name} created",
+      "createFailed": "Could not create the workspace",
+      "updated": "Workspace {name} updated",
+      "updateFailed": "Could not update the workspace",
+      "deleted": "Workspace {name} deleted",
+      "deleteFailed": "Could not delete the workspace"
+    }
+  },
+  "images": {
+    "title": "Workspace Images",
+    "description": "Container images pulled and cached on agents. New images are pulled automatically when a workspace is first launched.",
+    "stats": {
+      "images": "Images",
+      "cachedSize": "Cached size (GB)",
+      "workspacesCovered": "Workspaces covered",
+      "workspaces": "Workspaces",
+      "pinned": "Pinned"
+    },
+    "searchPlaceholder": "Search by name, registry or tag…",
+    "table": {
+      "image": "Image",
+      "registry": "Registry",
+      "tag": "Tag",
+      "usedBy": "Used by",
+      "size": "Size",
+      "pulled": "Pulled"
+    },
+    "status": {
+      "available": "Available",
+      "pulling": "Pulling",
+      "error": "Error"
+    },
+    "age": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "daysAgo": "{days}d ago"
+    },
+    "empty": "No images match your search.",
+    "emptyTitle": "No images installed",
+    "emptyDescription": "Install images from the Registry marketplace — they appear here to manage.",
+    "pinned": "Pinned",
+    "pullPolicy": "Pull policy",
+    "pullPolicies": {
+      "ALWAYS": "Always",
+      "IF_NOT_PRESENT": "If not present",
+      "NEVER": "Never"
+    },
+    "resources": "Resources",
+    "vcpu": "{n} vCPU",
+    "noLimit": "No limit",
+    "editResources": "Resources",
+    "editResourcesTitle": "Edit resources",
+    "cpuLabel": "vCPU",
+    "ramLabel": "RAM (GB)",
+    "gpuLabel": "GPU",
+    "uninstall": "Uninstall",
+    "reinstall": "Reinstall",
+    "deleteTitle": "Uninstall image",
+    "deleteDescription": "Uninstall {name}? Its image record and linked workspaces are removed, and the cached image is deleted from the host to reclaim disk space.",
+    "toasts": {
+      "policyChanged": "Pull policy updated",
+      "policyFailed": "Couldn't update pull policy",
+      "deleted": "Uninstalled {name}",
+      "deletedDisk": "Uninstalled {name} — host disk reclaimed",
+      "deleteFailed": "Couldn't uninstall the image",
+      "reinstalled": "Reinstalled {name}",
+      "reinstallFailed": "Couldn't reinstall the image",
+      "resourcesSaved": "Resources updated",
+      "resourcesFailed": "Couldn't update resources"
+    }
+  },
+  "registry": {
+    "title": "Image Registry",
+    "description": "Connect open-format workspace registries, sync their catalogs, and install workspaces from the marketplace.",
+    "liveOnly": "Registry management is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code> to connect to the API.",
+    "stats": {
+      "registries": "Registries",
+      "marketplaceApps": "Marketplace apps",
+      "installed": "Installed",
+      "available": "Available",
+      "catalogSize": "Catalog size"
+    },
+    "form": {
+      "namePlaceholder": "Asha Community",
+      "urlLabel": "Index URL (JSON)"
+    },
+    "empty": "No registries configured yet.",
+    "type": {
+      "FIRST_PARTY": "First-party",
+      "THIRD_PARTY": "Third-party"
+    },
+    "appCount": "{count, plural, one {# app} other {# apps}}",
+    "marketplace": {
+      "title": "Marketplace",
+      "searchPlaceholder": "Search apps…",
+      "noDescription": "No description.",
+      "install": "Install",
+      "installed": "Installed",
+      "reinstall": "Reinstall",
+      "remove": "Remove",
+      "emptyLive": "No marketplace apps. Add a registry and sync it.",
+      "emptyMock": "Connect the live backend to browse the marketplace."
+    },
+    "toasts": {
+      "loadFailed": "Failed to load registries",
+      "added": "Registry added — syncing…",
+      "addFailed": "Could not add registry",
+      "synced": "Synced {count, plural, one {# workspace} other {# workspaces}}",
+      "syncFailed": "Sync failed",
+      "installedTitle": "Installed {name}",
+      "installedDescription": "Image + workspace created.",
+      "installFailed": "Install failed",
+      "removed": "Registry removed",
+      "removeFailed": "Could not remove registry",
+      "reinstalledTitle": "Reinstalled {name}",
+      "reinstalledDescription": "Refreshed and re-pulled onto the agents.",
+      "reinstallFailed": "Reinstall failed",
+      "imageRemovedDisk": "{name} removed — host disk reclaimed.",
+      "imageRemovedShared": "{name} removed (image kept — shared by another workspace).",
+      "imageRemoveFailed": "Could not remove image"
+    },
+    "tabs": {
+      "available": "Available",
+      "installed": "Installed",
+      "registries": "Registries"
+    },
+    "allCategories": "All",
+    "availableEmpty": "No images match your search.",
+    "installedEmpty": "No images installed yet — install one from the Available tab.",
+    "removeImageConfirm": "This also deletes the cached image from the host to reclaim disk space, and removes its workspaces. This cannot be undone.",
+    "card": {
+      "source": "Source"
+    },
+    "sources": {
+      "addTitle": "Add a registry source",
+      "addHint": "Point Asha at any open-format workspace registry index (JSON). Add as many sources as you like.",
+      "syncedAt": "Synced {time}",
+      "never": "Never synced"
+    }
+  }
+}

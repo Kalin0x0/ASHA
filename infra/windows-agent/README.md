@@ -1,0 +1,121 @@
+# Asha host agent (Windows) — availability
+
+A tiny agent you install on a Windows desktop/server so Asha knows it exists
+and whether it's online. It:
+
+- **auto-registers** the host as a Asha *Server* (so it appears in
+  Infrastructure → Servers and as a launchable Windows desktop), and
+- **heartbeats** every 30 s so Asha shows it **● Online** (and flips it to
+  Offline if the host goes away).
+- optionally **enables Remote Desktop** (`-EnableRdp`) so the box is RDP-ready.
+
+> This is the *availability* layer. Making a host **reachable** when it sits
+> behind NAT/a firewall (a reverse tunnel) is a separate, follow-up component —
+> today the RDP connection still goes directly to the host's address, so it must
+> be routable from your users / the Asha proxy (LAN, VPN or public).
+
+## 1. Get a registration token
+
+In Asha: **Infrastructure → Servers → "Install agent"** (copy the ready-made
+command **and download the scripts**), or **Access → Authentication →
+Registration tokens → mint**.
+
+> The scripts are also served for download from the admin panel at `/agent/*.ps1`
+> (a copy lives in `apps/web/public/agent/`). If you change a script here, update
+> that copy too.
+
+## 2. Install on the Windows host (admin PowerShell)
+
+```powershell
+# from this folder, on the target machine:
+powershell -ExecutionPolicy Bypass -File install.ps1 `
+  -AshaUrl "https://asha.example.com" -Token "cra_xxxxxxxx" -EnableRdp
+```
+
+That copies the agent to `%ProgramData%\Asha` and registers a Scheduled Task
+(`AshaAgent`) that runs at boot as SYSTEM and restarts on failure.
+
+### Run once in the foreground (without installing)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File asha-agent.ps1 `
+  -AshaUrl "https://asha.example.com" -Token "cra_xxxxxxxx"
+```
+
+## Install remotely, by IP (no RDP needed)
+
+RDP is a remote *desktop* protocol, not an install channel. To deploy by IP over
+the network, use **`remote-install.ps1`** (PowerShell Remoting / WinRM) from any
+Windows admin box that can reach the targets — it pushes the agent to each host
+and installs it:
+
+```powershell
+$cred = Get-Credential                              # admin on the targets
+./remote-install.ps1 -ComputerName 10.0.0.5,10.0.0.6 `
+  -AshaUrl "https://asha.example.com" -Token "cra_xxxx" -Credential $cred -EnableRdp
+```
+
+Prerequisites on each target: WinRM enabled (`Enable-PSRemoting -Force`) and admin
+creds. For **workgroup** hosts addressed by IP, trust them on the admin box first:
+
+```powershell
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value '10.0.0.5,10.0.0.6' -Force
+```
+
+## Reachability behind NAT — reverse tunnel (WireGuard)
+
+If a host can't be reached directly (NAT/firewall, no port-forwarding), run the
+agent with **`-Tunnel`**. It asks Asha for a WireGuard config, brings up an
+**outbound** tunnel, and Asha repoints the server's address at the host's
+tunnel IP — so sessions reach it over the tunnel.
+
+```powershell
+./install.ps1 -AshaUrl "https://asha.example.com" -Token "cra_xxxx" -EnableRdp -Tunnel
+```
+
+Requirements:
+- **WireGuard for Windows** installed on the host (the agent imports the config;
+  without it, the config is written to `%ProgramData%\Asha\asha-tunnel.conf`
+  to import manually).
+- A **WireGuard server** reachable by the hosts, and these env vars on Asha:
+  - `ASHA_WG_ENDPOINT` — e.g. `tunnel.example.com:51820`
+  - `ASHA_WG_SERVER_PUBLIC_KEY`
+  - `ASHA_WG_SUBNET` (default `10.77.0.0/24`) · `ASHA_WG_ALLOWED_IPS`
+- Apply the server-side peers to your WireGuard server — fetch them from
+  `GET /agent/server/wg-peers` (admin) and add them (or `wg syncconf`).
+
+> Asha is the control plane (issues tunnel IPs + peer keys); the WireGuard
+> data plane (the wg server + routing to the tunnel subnet) is your infra.
+
+## VM-provisioned desktops (the VMware/Parallels-style path)
+
+VMware Tools / Parallels Tools install through the **hypervisor's** guest channel,
+which only applies to VMs that hypervisor manages. The equivalent for Asha-
+provisioned VMs (vSphere / Proxmox / Hyper-V via the VM providers) is to **bake
+the agent into the golden template** — install it once with `-EnableRdp` in the
+template image, and every cloned desktop boots already registered and Online. No
+per-host step needed.
+
+## Parameters
+
+| Param | Default | Notes |
+| --- | --- | --- |
+| `-AshaUrl` | — | Your Asha base URL (API is reachable at `<url>/agent/server/*`). |
+| `-Token` | — | A Asha registration token (`cra_…`). |
+| `-Hostname` | `$env:COMPUTERNAME` | The server name shown in Asha. |
+| `-Address` | first routable IPv4 | The address Asha/RDP connects to. |
+| `-ConnectionType` | `RDP` | `RDP` \| `VNC` \| `SSH`. |
+| `-IntervalSeconds` | `30` | Heartbeat interval. |
+| `-EnableRdp` | off | Enable Remote Desktop + firewall rule. |
+
+## Uninstall
+
+```powershell
+Unregister-ScheduledTask -TaskName 'AshaAgent' -Confirm:$false
+Remove-Item "$env:ProgramData\Asha" -Recurse -Force
+```
+
+## Endpoints used (auth: `x-registration-token` header)
+
+- `POST /agent/server/register` → `{ hostname, address, connectionType, os, version }`
+- `POST /agent/server/heartbeat` → `{ hostname, version }`

@@ -1,0 +1,121 @@
+{
+  "proxies": {
+    "title": "Connection Proxies",
+    "description": "Guacamole (guacd) endpoints that bridge RDP/VNC sessions to the browser. Register the guacd hosts that serve your zones.",
+    "liveOnly": "Connection proxy management is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "proxies": "Proxies"
+    },
+    "registeredTitle": "Registered proxies",
+    "empty": "No connection proxies configured yet.",
+    "types": {
+      "GUACAMOLE": "Guacamole"
+    },
+    "addTitle": "Add proxy",
+    "addButton": "Add proxy",
+    "form": {
+      "host": "Host",
+      "port": "Port"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load connection proxies",
+      "created": "Connection proxy added",
+      "createFailed": "Could not add proxy",
+      "updateFailed": "Could not update proxy",
+      "removed": "Proxy removed",
+      "removeFailed": "Could not remove proxy"
+    }
+  },
+  "webFiltering": {
+    "title": "Web Filtering",
+    "description": "Squid-based content filtering for session egress. Block categories of sites; the policy is rendered to a Squid config and applied per session.",
+    "liveOnly": "Web filtering is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "policies": "Filter policies"
+    },
+    "policiesTitle": "Policies",
+    "empty": "No web filter policies configured yet.",
+    "policyMeta": "{count, plural, one {# category blocked} other {# categories blocked}} · TTL {ttl}s",
+    "categories": {
+      "ads": "ads",
+      "malware": "malware",
+      "adult": "adult",
+      "social": "social",
+      "gambling": "gambling",
+      "streaming": "streaming",
+      "phishing": "phishing"
+    },
+    "addTitle": "Add policy",
+    "addButton": "Add policy",
+    "form": {
+      "blockedCategories": "Blocked categories"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load web filters",
+      "created": "Web filter created",
+      "createdDescription": "Disabled by default — enable after review.",
+      "createFailed": "Could not create filter",
+      "updateFailed": "Could not update filter",
+      "removed": "Filter removed",
+      "removeFailed": "Could not remove filter"
+    }
+  },
+  "browserIsolation": {
+    "title": "Browser Isolation",
+    "description": "Render risky web content in a disposable Neko browser container, streaming only pixels back to the user — nothing executes locally.",
+    "liveOnly": "Browser isolation is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "profiles": "Profiles"
+    },
+    "profilesTitle": "Isolation profiles",
+    "empty": "No browser isolation profiles configured yet.",
+    "via": "via {proxy}",
+    "direct": "direct",
+    "addTitle": "Add profile",
+    "addButton": "Add profile",
+    "form": {
+      "forwardProxy": "Forward proxy (optional)"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load browser isolation configs",
+      "created": "Isolation profile created",
+      "createdDescription": "Disabled by default — enable after review.",
+      "createFailed": "Could not create profile",
+      "updateFailed": "Could not update profile",
+      "removed": "Profile removed",
+      "removeFailed": "Could not remove profile"
+    }
+  },
+  "egress": {
+    "title": "Egress",
+    "description": "Route session outbound traffic through dedicated gateways (WireGuard tunnels or forward proxies) for fixed source IPs and compliance.",
+    "liveOnly": "Egress management is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "gateways": "Gateways"
+    },
+    "gatewaysTitle": "Gateways",
+    "empty": "No egress gateways configured yet.",
+    "providers": {
+      "wireguard": "WireGuard",
+      "http_proxy": "HTTP proxy",
+      "socks5": "SOCKS5"
+    },
+    "copyConfig": "Copy WireGuard config",
+    "addTitle": "Add gateway",
+    "addButton": "Add gateway",
+    "form": {
+      "endpoint": "Endpoint (optional)"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load egress gateways",
+      "created": "Egress gateway added",
+      "createdDescription": "Disabled by default — enable after review.",
+      "createFailed": "Could not add gateway",
+      "updateFailed": "Could not update gateway",
+      "configCopied": "WireGuard config copied",
+      "configCopyFailed": "Could not fetch WireGuard config",
+      "removed": "Gateway removed",
+      "removeFailed": "Could not remove gateway"
+    }
+  }
+}

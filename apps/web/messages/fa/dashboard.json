@@ -1,0 +1,54 @@
+{
+  "greeting": {
+    "morning": "صبح بخیر",
+    "afternoon": "ظهر بخیر",
+    "evening": "عصر بخیر"
+  },
+  "hero": {
+    "eyebrow": "نمای کلی",
+    "live": "زنده",
+    "activeSessionsCaption": "نشست‌های فعال در همهٔ نواحی، در همین لحظه.",
+    "launchWorkspace": "اجرای فضای کاری",
+    "sessionsLastHour": "نشست‌ها · ساعت گذشته"
+  },
+  "stats": {
+    "onlineAgents": "ایجنت‌های آنلاین",
+    "cpu": "CPU",
+    "memory": "حافظه"
+  },
+  "gauges": {
+    "cpu": "CPU",
+    "mem": "RAM",
+    "gpu": "GPU",
+    "disk": "DISK"
+  },
+  "cards": {
+    "resourceUtilization": {
+      "title": "مصرف منابع",
+      "subtitle": "میانگین کل کلاستر"
+    },
+    "agentFleet": {
+      "title": "ناوگان ایجنت‌ها",
+      "subtitle": "سلامت لحظه‌ای هر میزبان",
+      "viewAll": "مشاهدهٔ همه",
+      "empty": "هیچ ایجنتی ثبت نشده است"
+    },
+    "topWorkspaces": {
+      "title": "فضاهای کاری برتر",
+      "subtitle": "بر اساس نشست‌های هم‌زمان"
+    },
+    "liveActivity": {
+      "title": "فعالیت زنده",
+      "empty": "فعالیت اخیری وجود ندارد"
+    }
+  },
+  "charts": {
+    "sessionsTooltip": "نشست‌ها",
+    "value": "مقدار",
+    "gaugeAria": "{label}: {value} درصد",
+    "noWorkspaceActivity": "هنوز فعالیتی در فضاهای کاری ثبت نشده است"
+  },
+  "agentCard": {
+    "specs": "{cores, plural, one {# هسته} other {# هسته}} · {gb} GB"
+  }
+}

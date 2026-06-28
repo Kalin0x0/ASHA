@@ -1,0 +1,230 @@
+name: asha
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Asha — single-node stack. `docker compose up -d --build`.
+# Add `127.0.0.1 asha.local` to your hosts file, then open https://asha.local
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  asha-edge: { name: asha-edge }
+  asha-core: { name: asha-core }
+  asha-sessions: { name: asha-sessions }
+
+volumes:
+  pg-data: {}
+  redis-data: {}
+  # Persists ACME/Let's Encrypt certificates across restarts (see traefik below).
+  traefik-acme: {}
+
+services:
+  traefik:
+    # v3.7.x ships a Docker API client that negotiates with Docker Engine 25+/29+.
+    # Older v3.3 fails against newer engines with "client version 1.24 is too old",
+    # reads no container labels, and routes nothing (every request returns 404).
+    image: traefik:v3.7.1
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=asha-edge
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --api.dashboard=true
+      # Production TLS: uncomment to issue + auto-renew Let's Encrypt certs into
+      # the persisted /letsencrypt volume, then add
+      # `--label traefik.http.routers.<r>.tls.certresolver=le` (or set it on the
+      # session router labels). Dev uses Traefik's default self-signed cert.
+      # - --certificatesresolvers.le.acme.tlschallenge=true
+      # - --certificatesresolvers.le.acme.email=admin@asha.local
+      # - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - traefik-acme:/letsencrypt
+    networks: [asha-edge, asha-sessions]
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-asha}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-asha_dev_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-asha}
+    volumes: [pg-data:/var/lib/postgresql/data]
+    networks: [asha-core]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-asha}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes: [redis-data:/data]
+    networks: [asha-core]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  db-migrate:
+    build: { context: ., dockerfile: packages/db/Dockerfile }
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-asha}:${POSTGRES_PASSWORD:-asha_dev_change_me}@postgres:5432/${POSTGRES_DB:-asha}?schema=public
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [asha-core]
+    restart: 'no'
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    restart: unless-stopped
+    # Give the API time to finish in-flight requests/publishes on SIGTERM
+    # (graceful shutdown) so a redeploy doesn't orphan a just-created session.
+    stop_grace_period: 30s
+    environment:
+      NODE_ENV: production
+      API_PORT: '4000'
+      DATABASE_URL: postgresql://${POSTGRES_USER:-asha}:${POSTGRES_PASSWORD:-asha_dev_change_me}@postgres:5432/${POSTGRES_DB:-asha}?schema=public
+      REDIS_URL: redis://redis:6379
+      # Both the primary (asha) and the legacy (chista) domain are served in
+      # parallel — allow both as CORS origins.
+      CORS_ORIGIN: https://${ASHA_BASE_DOMAIN:-asha.local},https://${ASHA_BASE_DOMAIN_ALT:-chista.local}
+      ASHA_PUBLIC_URL: https://${ASHA_BASE_DOMAIN:-asha.local}
+      ASHA_BASE_DOMAIN: ${ASHA_BASE_DOMAIN:-asha.local}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me-please-32++chars}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me-please-32++chars}
+      SESSION_TOKEN_SECRET: ${SESSION_TOKEN_SECRET:-dev-session-token-secret-change-me-32++chars}
+      # Shared secret the manager validates the agent's enrollment against. Must be
+      # the SAME value the agent receives (see the agent service below); otherwise
+      # the agent gets 401 "Invalid agent token" and never registers, so sessions
+      # hang at "Allocating an agent".
+      ASHA_AGENT_ENROLLMENT_TOKEN: ${ASHA_AGENT_ENROLLMENT_TOKEN:-dev-enrollment-token-change-me}
+      # Auto-terminate sessions PAUSED longer than this many minutes (0 = never).
+      ASHA_MAX_PAUSED_MINUTES: ${ASHA_MAX_PAUSED_MINUTES:-0}
+    depends_on:
+      postgres: { condition: service_healthy }
+      # Gate on redis HEALTHY (not just started): with Redis down there is no
+      # pub/sub, so no session can be provisioned — the API must not come up
+      # "ready" without it.
+      redis: { condition: service_healthy }
+      db-migrate: { condition: service_completed_successfully }
+    networks: [asha-edge, asha-core]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=asha-edge
+      - traefik.http.routers.api.rule=(Host(`${ASHA_BASE_DOMAIN:-asha.local}`) || Host(`${ASHA_BASE_DOMAIN_ALT:-chista.local}`)) && (PathPrefix(`/api`) || PathPrefix(`/ws`))
+      - traefik.http.routers.api.entrypoints=websecure
+      - traefik.http.routers.api.tls=true
+      - traefik.http.routers.api.priority=10
+      - traefik.http.services.api.loadbalancer.server.port=4000
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Same-origin relative URLs so the bundle works identically on BOTH the
+        # asha and the legacy chista domain (no baked-in host → no cross-origin).
+        NEXT_PUBLIC_API_URL: /api/v1
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
+        NEXT_PUBLIC_API_MODE: ${NEXT_PUBLIC_API_MODE:-mock}
+    restart: unless-stopped
+    depends_on: [api]
+    networks: [asha-edge]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=asha-edge
+      - traefik.http.routers.web.rule=Host(`${ASHA_BASE_DOMAIN:-asha.local}`) || Host(`${ASHA_BASE_DOMAIN_ALT:-chista.local}`)
+      - traefik.http.routers.web.entrypoints=websecure
+      - traefik.http.routers.web.tls=true
+      - traefik.http.routers.web.priority=1
+      - traefik.http.services.web.loadbalancer.server.port=3000
+
+  agent:
+    build: { context: ., dockerfile: apps/agent/Dockerfile }
+    restart: unless-stopped
+    environment:
+      ASHA_MANAGER_URL: http://api:4000
+      ASHA_ZONE: default
+      REDIS_URL: redis://redis:6379
+      DOCKER_SOCKET: /var/run/docker.sock
+      ASHA_SESSION_NETWORK: asha-sessions
+      ASHA_TRAEFIK_DOMAIN: ${ASHA_BASE_DOMAIN:-asha.local}
+      ASHA_AGENT_ENROLLMENT_TOKEN: ${ASHA_AGENT_ENROLLMENT_TOKEN:-dev-enrollment-token-change-me}
+      # STABLE identity: enrollment upserts on (org, hostname). Without a fixed
+      # hostname the container's random id is used, so every recreate enrolls a
+      # NEW row and leaves the old one as an OFFLINE phantom. A stable name makes
+      # the agent reuse its registration across restarts — no phantoms.
+      ASHA_AGENT_HOSTNAME: ${ASHA_AGENT_HOSTNAME:-asha-agent}
+      # Optional capacity override: how many concurrent desktops this agent runs.
+      # Empty → the manager derives it from CPU cores (cores/2).
+      ASHA_AGENT_MAX_SESSIONS: ${ASHA_AGENT_MAX_SESSIONS:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on: [api, redis]
+    networks: [asha-core, asha-sessions]
+
+  connection-proxy:
+    build: { context: ., dockerfile: apps/connection-proxy/Dockerfile }
+    restart: unless-stopped
+    # /health flips to 503 when Redis is down (session lookups would fail), so
+    # this surfaces a degraded proxy in `docker compose ps` / to Traefik.
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:4100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      PROXY_PORT: "4100"
+      REDIS_URL: redis://redis:6379
+      ASHA_API_URL: http://api:4000
+      # Must equal the API's JWT_ACCESS_SECRET — the proxy verifies the user's
+      # access token before bridging RDP/VNC/SSH sessions.
+      JWT_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me-please-32++chars}
+      # Set GUACD_HOST to the guacamole/guacd container once you enable RDP/VNC
+      GUACD_HOST: ${GUACD_HOST:-guacd}
+      GUACD_PORT: ${GUACD_PORT:-4822}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=asha-edge
+      - traefik.http.routers.proxy.rule=(Host(`${ASHA_BASE_DOMAIN:-asha.local}`) || Host(`${ASHA_BASE_DOMAIN_ALT:-chista.local}`)) && PathPrefix(`/proxy`)
+      - traefik.http.routers.proxy.entrypoints=websecure
+      - traefik.http.routers.proxy.tls=true
+      - traefik.http.middlewares.proxy-strip.stripprefix.prefixes=/proxy
+      - traefik.http.routers.proxy.middlewares=proxy-strip
+      - traefik.http.services.proxy.loadbalancer.server.port=4100
+    depends_on: [api, redis, guacd]
+    networks: [asha-core, asha-edge]
+
+  # Guacamole daemon — performs the actual RDP/VNC negotiation. The
+  # connection-proxy bridges browser WebSockets to this over the Guacamole
+  # protocol (GUACD_HOST/GUACD_PORT). Only needed for RDP/VNC workspaces;
+  # KasmVNC sessions don't use it.
+  guacd:
+    # Custom build with H.264/GFX-AVC444 support (Debian FreeRDP w/ libavcodec);
+    # the official guacamole/guacd lacks it → black screen on modern Windows RDP.
+    # Build: docker build -t asha-guacd-h264:1.5.5 infra/guacd-h264
+    image: asha-guacd-h264:1.5.5
+    build: ./infra/guacd-h264
+    restart: unless-stopped
+    # debian:bookworm ships bash, so a /dev/tcp probe needs no extra tooling.
+    # Surfaces a dead guacd in `docker compose ps`; the connection-proxy also
+    # fails fast with a clear message on its own guacd connect-timeout.
+    healthcheck:
+      test: ['CMD', 'bash', '-c', 'exec 3<>/dev/tcp/localhost/4822']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks: [asha-core]

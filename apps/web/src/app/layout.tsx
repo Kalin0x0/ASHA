@@ -1,0 +1,58 @@
+import './globals.css';
+import '@fontsource-variable/vazirmatn';
+import { GeistMono } from 'geist/font/mono';
+import { GeistSans } from 'geist/font/sans';
+import type { Metadata, Viewport } from 'next';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
+import { GrainOverlay } from '@/components/decor/aurora-background';
+import { Providers } from '@/components/providers';
+import { localeDir } from '@/i18n/locales';
+import { spaceGrotesk } from '@/lib/fonts';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('common.meta');
+  return {
+    title: {
+      default: 'Asha — Container Streaming Platform',
+      template: '%s · Asha',
+    },
+    description: t('description'),
+    applicationName: 'Asha',
+    appleWebApp: {
+      capable: true,
+      title: 'Asha',
+      statusBarStyle: 'black-translucent',
+    },
+    icons: {
+      icon: [{ url: '/asha-logo.svg', type: 'image/svg+xml' }],
+      apple: '/asha-logo.svg',
+      shortcut: '/asha-logo.svg',
+    },
+  };
+}
+
+export const viewport: Viewport = {
+  themeColor: '#1a1a2e',
+};
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
+  return (
+    <html
+      lang={locale}
+      dir={localeDir(locale)}
+      suppressHydrationWarning
+      className={`${GeistSans.variable} ${GeistMono.variable} ${spaceGrotesk.variable}`}
+    >
+      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+        <NextIntlClientProvider messages={messages}>
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
+        <GrainOverlay />
+      </body>
+    </html>
+  );
+}

@@ -1,0 +1,134 @@
+{
+  "page": {
+    "title": "Automatisierung & Wartung",
+    "description": "Wiederkehrende Pflege planen — tote Sessions aufräumen, offline Agents entfernen, die Agent-Flotte oder den Remote-Desktop-Dienst neu starten — und jede Aufgabe bei Bedarf sofort ausführen.",
+    "new": "Neue Aufgabe"
+  },
+  "stats": {
+    "active": "Aktive Aufgaben",
+    "cleanup": "Aufräumen",
+    "restart": "Neustart & Speicher",
+    "lastRun": "Letzter Lauf"
+  },
+  "table": {
+    "task": "Aufgabe",
+    "schedule": "Zeitplan",
+    "lastRun": "Letzter Lauf",
+    "nextRun": "Nächster Lauf",
+    "status": "Status",
+    "actions": "Aktionen"
+  },
+  "types": {
+    "REAP_DEAD_SESSIONS": {
+      "label": "Tote Sessions aufräumen",
+      "description": "Sessions abschließen, die in Terminating hängen, abgelaufen oder inaktiv sind."
+    },
+    "REAP_ABANDONED_SESSIONS": {
+      "label": "Verlassene Sessions aufräumen",
+      "description": "Sessions beenden, deren Viewer über die Inaktivitätsgrenze hinaus stumm ist."
+    },
+    "PRUNE_DEAD_AGENTS": {
+      "label": "Tote Agents entfernen",
+      "description": "Agent-Registrierungen löschen, die viel zu lange offline sind."
+    },
+    "RESTART_AGENTS": {
+      "label": "Agents neu starten",
+      "description": "Jeden Agent-Prozess neu starten — die Container-Policy bringt ihn frisch zurück."
+    },
+    "RESTART_CONNECTION_PROXY": {
+      "label": "Terminal-Server neu starten",
+      "description": "Den RDP/VNC/SSH-Dienst neu starten (connection-proxy + guacd)."
+    },
+    "PRUNE_AGENT_IMAGES": {
+      "label": "Speicher freigeben (Images)",
+      "description": "Verwaiste Docker-Image-Layer auf dem Agent-Host entfernen."
+    }
+  },
+  "categories": {
+    "CLEANUP": "Aufräumen",
+    "RESTART": "Neustart & Speicher"
+  },
+  "schedule": {
+    "INTERVAL": "Intervall",
+    "DAILY": "Täglich",
+    "WEEKLY": "Wöchentlich",
+    "everyMinutes": "Alle {n} Min",
+    "everyHours": "Alle {n} Std",
+    "dailyAt": "Täglich um {time}",
+    "weeklyAt": "{day} um {time}",
+    "intervalLabel": "Ausführen alle (Minuten)",
+    "timeLabel": "Uhrzeit",
+    "weekdayLabel": "Wochentag"
+  },
+  "weekdays": {
+    "0": "Sonntag",
+    "1": "Montag",
+    "2": "Dienstag",
+    "3": "Mittwoch",
+    "4": "Donnerstag",
+    "5": "Freitag",
+    "6": "Samstag"
+  },
+  "weekdaysShort": {
+    "0": "So",
+    "1": "Mo",
+    "2": "Di",
+    "3": "Mi",
+    "4": "Do",
+    "5": "Fr",
+    "6": "Sa"
+  },
+  "status": {
+    "RUNNING": "Läuft",
+    "OK": "OK",
+    "FAILED": "Fehlgeschlagen",
+    "SKIPPED": "Übersprungen",
+    "never": "Nie gelaufen",
+    "disabled": "Deaktiviert",
+    "idle": "Geplant"
+  },
+  "actions": {
+    "runNow": "Jetzt ausführen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren",
+    "save": "Speichern",
+    "create": "Aufgabe erstellen",
+    "cancel": "Abbrechen",
+    "confirmDelete": "Diese Aufgabe löschen?",
+    "confirmDeleteHint": "Entfernt den Zeitplan und seinen Verlauf. Kann nicht rückgängig gemacht werden."
+  },
+  "dialog": {
+    "createTitle": "Neue Wartungsaufgabe",
+    "editTitle": "Aufgabe bearbeiten",
+    "description": "Wähle, was wie oft laufen soll. Du kannst sie jederzeit manuell auslösen.",
+    "name": "Name",
+    "namePlaceholder": "z. B. Nächtliche Aufräumung toter Sessions",
+    "type": "Aufgabe",
+    "scheduleKind": "Zeitplan",
+    "enabled": "Aktiv",
+    "enabledHint": "Deaktivierte Aufgaben behalten ihre Konfiguration, laufen aber nicht nach Zeitplan."
+  },
+  "empty": {
+    "title": "Noch keine automatisierten Aufgaben",
+    "description": "Erstelle deine erste Wartungsaufgabe, um die Plattform planmäßig sauber zu halten."
+  },
+  "runs": {
+    "title": "Letzte Läufe",
+    "started": "Gestartet",
+    "status": "Status",
+    "duration": "Dauer",
+    "result": "Ergebnis",
+    "empty": "Noch keine Läufe.",
+    "scheduled": "Geplant",
+    "manual": "Manuell"
+  },
+  "toast": {
+    "created": "Aufgabe erstellt",
+    "updated": "Aufgabe aktualisiert",
+    "deleted": "Aufgabe gelöscht",
+    "ran": "Lauf abgeschlossen",
+    "error": "Etwas ist schiefgelaufen"
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "header": {
+    "myWorkspaces": "Meine Workspaces",
+    "admin": "Admin"
+  },
+  "openIn": {
+    "title": "{name} starten",
+    "label": "Sitzung öffnen in",
+    "webNative": "Web Native",
+    "webNativeHint": "Den Desktop im Browser streamen — nichts zu installieren.",
+    "rdpClient": "RDP-Client",
+    "rdpClientHint": "Eine .rdp-Datei herunterladen und im nativen Remotedesktop-Client öffnen.",
+    "options": "Remotedesktop-Optionen",
+    "multimon": "Mehrere Monitore",
+    "multimonHint": "Alle deine Monitore nutzen — den Desktop über alle Bildschirme sehen.",
+    "clipboard": "Zwischenablage",
+    "clipboardHint": "Zwischen deinem Computer und dem Desktop kopieren und einfügen.",
+    "drives": "Lokale Laufwerke",
+    "drivesHint": "In der Sitzung auf deine lokalen Dateien und Ordner zugreifen.",
+    "printers": "Drucker",
+    "printersHint": "Vom Remotedesktop auf deine lokalen Drucker drucken.",
+    "rdpReachabilityHint": "Dein Computer verbindet sich direkt mit dem Desktop, dieser muss also erreichbar sein (LAN, VPN oder öffentlich). Der Remotedesktop-Client fragt nach deinem Passwort.",
+    "launch": "Starten",
+    "download": ".rdp herunterladen",
+    "downloaded": "RDP-Datei heruntergeladen",
+    "downloadedHint": "Öffne sie mit dem Remotedesktop-Client, um dich zu verbinden.",
+    "downloadError": "RDP-Datei konnte nicht erstellt werden."
+  },
+  "launcher": {
+    "eyebrow": "Ihre Workspaces",
+    "title": "Starten Sie einen <gradient>Workspace</gradient>",
+    "subtitle": "Ein sicherer, isolierter Desktop oder eine Anwendung — direkt in Ihren Browser gestreamt. Nichts zu installieren, nichts bleibt zurück.",
+    "searchPlaceholder": "Workspaces durchsuchen…",
+    "categoriesNavAria": "Workspace-Kategorien",
+    "categories": "Kategorien",
+    "allWorkspaces": "Alle Workspaces",
+    "allWorkspacesHeading": "Alle Workspaces",
+    "noResults": "Keine Workspaces entsprechen Ihrer Suche.",
+    "clearFilters": "Filter zurücksetzen",
+    "launchError": "Sitzung konnte nicht gestartet werden"
+  },
+  "card": {
+    "launch": "Starten",
+    "starting": "Startet…",
+    "unavailable": "Nicht verfügbar",
+    "gpu": "GPU",
+    "vcpu": "{count} vCPU",
+    "gb": "{value} GB",
+    "launchAria": "{name} starten",
+    "unavailableAria": "{name} (nicht verfügbar)",
+    "addFavorite": "Zu Favoriten hinzufügen",
+    "removeFavorite": "Aus Favoriten entfernen",
+    "actions": "Aktionen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen"
+  },
+  "mySessions": {
+    "title": "Meine Sitzungen",
+    "starting": "Startet",
+    "resume": "Fortsetzen",
+    "resumeAria": "{name} fortsetzen",
+    "endAria": "{name} beenden",
+    "endedToast": "Sitzung beendet",
+    "stop": "Stopp",
+    "stopAria": "{name} pausieren",
+    "stoppedToast": "Sitzung pausiert — Zustand bleibt erhalten",
+    "delete": "Löschen",
+    "deleteAria": "{name} löschen"
+  },
+  "favorites": {
+    "title": "Favoriten",
+    "reorderHint": "zum Sortieren ziehen",
+    "dragToReorder": "Zum Sortieren ziehen",
+    "launchTitle": "{name} starten",
+    "seeAll": "Alle Favoriten anzeigen",
+    "addedToast": "{name} zu Favoriten hinzugefügt",
+    "removedToast": "{name} aus Favoriten entfernt",
+    "workspaceFallback": "Workspace"
+  },
+  "appearance": {
+    "trigger": "Hintergrund ändern",
+    "title": "Hintergrund",
+    "subtitle": "Personalisieren Sie Ihren Launcher",
+    "reset": "Zurücksetzen",
+    "apply": "Anwenden",
+    "customLabel": "Eigene Bild-URL",
+    "removeCustom": "Eigenes Bild entfernen",
+    "appliedToast": "Hintergrund auf {name} gesetzt",
+    "customAppliedToast": "Eigener Hintergrund angewendet",
+    "presets": {
+      "woods": "Nebelwald",
+      "lake": "Bergsee",
+      "aurora": "Aurora",
+      "ember": "Glut",
+      "nebula": "Nebel",
+      "ocean": "Ozean",
+      "forest": "Wald",
+      "crimson": "Karmesin",
+      "graphite": "Graphit",
+      "void": "Leere"
+    }
+  }
+}

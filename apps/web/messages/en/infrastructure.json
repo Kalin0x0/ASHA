@@ -1,0 +1,335 @@
+{
+  "zones": {
+    "title": "Zones",
+    "description": "Deployment zones group agents and servers by region for routing and capacity isolation.",
+    "liveOnly": "Zone management is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "zones": "Zones",
+      "regions": "Regions"
+    },
+    "configuredZones": "Configured zones",
+    "empty": {
+      "title": "No zones configured",
+      "description": "Zones group agents by region for routing and capacity isolation."
+    },
+    "default": "Default",
+    "setDefault": "Set default",
+    "addZone": "Add zone",
+    "form": {
+      "region": "Region (optional)",
+      "regionPlaceholder": "Frankfurt",
+      "proxyBaseUrl": "Proxy Base URL (optional)"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load zones",
+      "created": "Zone created",
+      "createFailed": "Could not create zone",
+      "setDefaultFailed": "Could not set default",
+      "removed": "Zone removed",
+      "removeFailed": "Could not remove zone"
+    }
+  },
+  "agents": {
+    "title": "Agents",
+    "description": "Docker compute agents that provision and host session containers across your zones.",
+    "stats": {
+      "onlineAgents": "Online Agents",
+      "hostedSessions": "Hosted Sessions",
+      "avgCpu": "Avg CPU"
+    },
+    "zonesTitle": "Zones",
+    "zoneLoad": "{agents, plural, one {# agent} other {# agents}} · {sessions, plural, one {# session} other {# sessions}}"
+  },
+  "servers": {
+    "title": "Servers",
+    "description": "Static servers (RDP/VNC/SSH hosts) that back server-type workspaces. Each server caps its concurrent sessions.",
+    "liveOnly": "Server management is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "servers": "Servers",
+      "capacity": "Capacity",
+      "inUse": "In use"
+    },
+    "registeredServers": "Registered servers",
+    "empty": {
+      "title": "No servers registered",
+      "description": "Add RDP, VNC, or SSH hosts to back server-type workspaces."
+    },
+    "addServer": "Add server",
+    "form": {
+      "hostname": "Hostname",
+      "address": "Address",
+      "zone": "Zone",
+      "noZones": "No zones — create one first",
+      "connectionType": "Connection type",
+      "maxSessions": "Max sessions"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load servers",
+      "added": "Server added",
+      "addFailed": "Could not add server",
+      "removed": "Server removed",
+      "removeFailed": "Could not remove server"
+    }
+  },
+  "serverPools": {
+    "title": "Server Pools",
+    "description": "Group agents or servers into pools that can be autoscaled. Each pool may have an autoscale policy that grows/shrinks capacity.",
+    "liveOnly": "Pool management is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "pools": "Pools",
+      "autoscaled": "Autoscaled",
+      "members": "Members"
+    },
+    "poolsTitle": "Pools",
+    "empty": "No pools configured yet.",
+    "memberCount": "{count, plural, one {# member} other {# members}}",
+    "autoscaleBadge": "Autoscale: {mode}",
+    "manual": "Manual",
+    "editAutoscale": "Edit autoscale",
+    "enableAs": "Enable AS",
+    "disableAs": "Disable AS",
+    "addPool": "Add pool",
+    "form": {
+      "kind": "Kind",
+      "kindAgent": "Agent (container hosts)",
+      "kindServer": "Server (RDP/VNC hosts)"
+    },
+    "kinds": {
+      "AGENT": "Agent",
+      "SERVER": "Server"
+    },
+    "modes": {
+      "LOAD": "Load",
+      "SCHEDULE": "Schedule",
+      "ACTIVE_DIRECTORY": "Active Directory"
+    },
+    "editor": {
+      "mode": "Mode",
+      "minStandby": "Min standby",
+      "maxInstances": "Max instances",
+      "perServerLimit": "Per-server limit",
+      "savePolicy": "Save policy"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load pools",
+      "created": "Pool created",
+      "createFailed": "Could not create pool",
+      "removed": "Pool removed",
+      "removeFailed": "Could not remove pool",
+      "autoscaleEnabled": "Autoscale enabled",
+      "autoscaleDisabled": "Autoscale disabled",
+      "autoscaleUpdated": "Autoscale updated",
+      "autoscaleUpdateFailed": "Could not update autoscale",
+      "autoscaleSaveFailed": "Could not save autoscale"
+    }
+  },
+  "autoscale": {
+    "title": "AutoScale",
+    "description": "Overview of autoscale policies across server pools. Capacity grows and shrinks based on load, schedule, or AD demand.",
+    "managePools": "Manage pools",
+    "liveOnly": "AutoScale is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "autoscaledPools": "Autoscaled pools",
+      "maxInstances": "Max instances",
+      "standby": "Standby"
+    },
+    "activePolicies": "Active policies",
+    "empty": "No autoscale policies yet. Enable autoscale on a pool from <link>Server Pools</link>.",
+    "policySummary": "standby {standby} · max {max} · {perServer}/server · check-in {interval}s",
+    "kinds": {
+      "AGENT": "Agent",
+      "SERVER": "Server"
+    },
+    "modes": {
+      "LOAD": "Load",
+      "SCHEDULE": "Schedule",
+      "ACTIVE_DIRECTORY": "Active Directory"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load autoscale policies"
+    }
+  },
+  "vmProviders": {
+    "title": "VM Providers",
+    "description": "Connect cloud and hypervisor providers to back autoscaled server pools. Drivers: Proxmox VE, AWS EC2, Azure, GCP, and VMware vSphere.",
+    "liveOnly": "VM provider management is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "providers": "Providers",
+      "drivers": "Drivers"
+    },
+    "configuredProviders": "Configured providers",
+    "empty": "No VM providers configured yet.",
+    "addProvider": "Add provider",
+    "form": {
+      "displayName": "Display name",
+      "namePlaceholder": "{kind} cluster"
+    },
+    "kinds": {
+      "PROXMOX": "Proxmox",
+      "AWS": "AWS",
+      "AZURE": "Azure",
+      "GCP": "GCP",
+      "VSPHERE": "vSphere",
+      "DIGITALOCEAN": "DigitalOcean",
+      "ORACLE": "Oracle OCI",
+      "OPENSTACK": "OpenStack",
+      "NUTANIX": "Nutanix",
+      "KUBEVIRT": "KubeVirt",
+      "HARVESTER": "Harvester"
+    },
+    "fields": {
+      "PROXMOX": {
+        "apiUrl": "API URL",
+        "node": "Node",
+        "tokenId": "Token ID",
+        "tokenSecret": "Token Secret",
+        "template": "Template VMID"
+      },
+      "AWS": {
+        "accessKeyId": "Access Key ID",
+        "secretAccessKey": "Secret Access Key",
+        "region": "Region",
+        "imageId": "AMI ID",
+        "instanceType": "Instance Type"
+      },
+      "AZURE": {
+        "tenantId": "Tenant ID",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret",
+        "subscriptionId": "Subscription ID",
+        "resourceGroup": "Resource Group",
+        "location": "Location",
+        "vmSize": "VM Size"
+      },
+      "GCP": {
+        "projectId": "Project ID",
+        "zone": "Zone",
+        "serviceAccountEmail": "Service Account Email",
+        "privateKeyPem": "Private Key (PEM)",
+        "machineType": "Machine Type",
+        "sourceImage": "Source Image"
+      },
+      "VSPHERE": {
+        "vcenterUrl": "vCenter URL",
+        "username": "Username",
+        "password": "Password",
+        "template": "Template VM"
+      },
+      "DIGITALOCEAN": {
+        "apiToken": "API Token",
+        "region": "Region",
+        "size": "Droplet Size",
+        "image": "Image Slug"
+      },
+      "ORACLE": {
+        "endpoint": "API Endpoint",
+        "tenancyOcid": "Tenancy OCID",
+        "userOcid": "User OCID",
+        "fingerprint": "Key Fingerprint",
+        "privateKeyPem": "API Private Key (PEM)",
+        "compartmentOcid": "Compartment OCID",
+        "availabilityDomain": "Availability Domain",
+        "shape": "Shape",
+        "subnetOcid": "Subnet OCID",
+        "imageOcid": "Image OCID"
+      },
+      "OPENSTACK": {
+        "authUrl": "Keystone Auth URL",
+        "username": "Username",
+        "password": "Password",
+        "projectName": "Project Name",
+        "novaUrl": "Nova Compute URL",
+        "flavorRef": "Flavor ID",
+        "imageRef": "Image ID",
+        "networkId": "Network ID (optional)"
+      },
+      "NUTANIX": {
+        "prismCentralUrl": "Prism Central URL",
+        "username": "Username",
+        "password": "Password",
+        "clusterUuid": "Cluster UUID",
+        "subnetUuid": "Subnet UUID",
+        "imageUuid": "Image UUID"
+      },
+      "KUBEVIRT": {
+        "apiServer": "Kubernetes API Server",
+        "token": "ServiceAccount Token",
+        "namespace": "Namespace",
+        "image": "containerDisk Image"
+      },
+      "HARVESTER": {
+        "apiServer": "Harvester API Server",
+        "token": "Token",
+        "namespace": "Namespace",
+        "image": "Image"
+      }
+    },
+    "toasts": {
+      "loadFailed": "Failed to load VM providers",
+      "created": "{kind} provider added",
+      "createFailed": "Could not create provider",
+      "updateFailed": "Could not update provider",
+      "removed": "Provider removed",
+      "removeFailed": "Could not remove provider"
+    }
+  },
+  "dnsProviders": {
+    "title": "DNS Providers",
+    "description": "Register DNS providers so autoscaled servers and per-session hostnames get DNS records created automatically.",
+    "liveOnly": "DNS provider management is live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "providers": "Providers"
+    },
+    "configuredProviders": "Configured providers",
+    "empty": "No DNS providers configured yet.",
+    "addProvider": "Add provider",
+    "form": {
+      "displayName": "Display name",
+      "namePlaceholder": "{kind} DNS",
+      "zoneName": "Zone name (optional)"
+    },
+    "kinds": {
+      "AWS": "AWS",
+      "AZURE": "Azure",
+      "DIGITALOCEAN": "DigitalOcean",
+      "GCP": "GCP",
+      "ORACLE": "Oracle OCI"
+    },
+    "fields": {
+      "AWS": {
+        "accessKeyId": "Access Key ID",
+        "secretAccessKey": "Secret Access Key",
+        "hostedZoneId": "Hosted Zone ID"
+      },
+      "AZURE": {
+        "tenantId": "Tenant ID",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret",
+        "subscriptionId": "Subscription ID",
+        "resourceGroup": "Resource Group"
+      },
+      "DIGITALOCEAN": {
+        "apiToken": "API Token"
+      },
+      "GCP": {
+        "projectId": "Project ID",
+        "serviceAccountKey": "Service Account Key (JSON)"
+      },
+      "ORACLE": {
+        "tenancyOcid": "Tenancy OCID",
+        "userOcid": "User OCID",
+        "fingerprint": "Fingerprint",
+        "privateKeyPem": "Private Key (PEM)",
+        "compartmentOcid": "Compartment OCID"
+      }
+    },
+    "toasts": {
+      "loadFailed": "Failed to load DNS providers",
+      "created": "{kind} DNS provider added",
+      "createFailed": "Could not create provider",
+      "updateFailed": "Could not update provider",
+      "removed": "Provider removed",
+      "removeFailed": "Could not remove provider"
+    }
+  }
+}

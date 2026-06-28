@@ -1,0 +1,126 @@
+{
+  "report": {
+    "trigger": "Report a bug",
+    "title": "Report a bug",
+    "description": "Tell us what went wrong. Your report is saved to the central tracker so it can be triaged and fixed.",
+    "success": "Bug report sent",
+    "successDescription": "Thank you — your report was saved and will be triaged.",
+    "error": "Could not send the report. Please try again.",
+    "submit": "Send report",
+    "routeNote": "Captured from {route}",
+    "fields": {
+      "title": "Summary",
+      "titlePlaceholder": "Short summary of the problem",
+      "description": "What happened?",
+      "descriptionPlaceholder": "Steps to reproduce, what you expected, and what happened instead.",
+      "severity": "Severity"
+    }
+  },
+  "severity": {
+    "LOW": "Low",
+    "MEDIUM": "Medium",
+    "HIGH": "High",
+    "CRITICAL": "Critical"
+  },
+  "status": {
+    "OPEN": "Open",
+    "TRIAGED": "Triaged",
+    "IN_PROGRESS": "In progress",
+    "RESOLVED": "Resolved",
+    "CLOSED": "Closed",
+    "WONT_FIX": "Won't fix",
+    "DUPLICATE": "Duplicate"
+  },
+  "source": {
+    "USER": "Reported",
+    "AUTOMATIC": "Automatic"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred in this section and has been reported automatically.",
+    "reference": "Reference",
+    "retry": "Try again"
+  },
+  "page": {
+    "title": "Bug Reports",
+    "description": "User reports and automatically-captured crashes, in one tracker. Resolve a report to record how it was fixed.",
+    "stats": {
+      "open": "Open",
+      "critical": "Critical",
+      "automatic": "Auto-captured",
+      "resolved": "Resolved"
+    },
+    "searchPlaceholder": "Search by title, code or route…",
+    "filters": {
+      "all": "All statuses",
+      "active": "Active",
+      "allSources": "All sources"
+    },
+    "empty": {
+      "title": "No bug reports",
+      "description": "Nothing matches your filters. Reported bugs and captured crashes will appear here."
+    },
+    "table": {
+      "severity": "Severity",
+      "report": "Report",
+      "status": "Status",
+      "occurrences": "Count",
+      "lastSeen": "Last seen",
+      "hasFix": "Fix documented"
+    }
+  },
+  "detail": {
+    "component": "Component",
+    "route": "Route",
+    "occurrences": "Occurrences",
+    "firstSeen": "First seen",
+    "lastSeen": "Last seen",
+    "reporter": "Reporter",
+    "automatic": "Automatic capture",
+    "description": "Description",
+    "stackTrace": "Error log",
+    "documentedFix": "Documented fix",
+    "knownFix": "Solved before — here's how",
+    "markInProgress": "Mark in progress",
+    "wontFix": "Won't fix",
+    "resolvedNote": "Resolved {date}",
+    "reopen": "Reopen",
+    "notFound": "This report could not be found."
+  },
+  "fix": {
+    "rootCause": "Root cause",
+    "resolution": "How it was fixed",
+    "prevention": "Prevention",
+    "filesTouched": "Files touched"
+  },
+  "resolve": {
+    "open": "Resolve & document fix",
+    "heading": "Document the fix",
+    "intro": "Record what it was and how it was fixed. This is saved to the fix memory so the same problem is recognised next time.",
+    "rootCause": "Root cause",
+    "rootCausePlaceholder": "What actually caused this?",
+    "resolution": "Resolution",
+    "resolutionPlaceholder": "What change fixed it?",
+    "prevention": "Prevention (optional)",
+    "preventionPlaceholder": "How can this be avoided in future?",
+    "filesTouched": "Files touched (optional)",
+    "filesTouchedPlaceholder": "apps/api/…, apps/web/…",
+    "tags": "Tags (optional)",
+    "tagsPlaceholder": "api, null-safety",
+    "authoredByAi": "Resolved by an AI agent",
+    "submit": "Save fix & resolve",
+    "success": "Fix documented and report resolved",
+    "error": "Could not resolve the report. Please try again."
+  },
+  "knowledge": {
+    "title": "Fix Memory",
+    "description": "Every documented resolution. When a known problem reappears, the matching fix surfaces automatically so it never has to be diagnosed twice.",
+    "searchPlaceholder": "Search the fix memory…",
+    "empty": {
+      "title": "No fixes recorded yet",
+      "description": "When a bug report is resolved, its root cause and resolution are saved here."
+    },
+    "reused": "Recurred {count, plural, one {# time} other {# times}}",
+    "reusedTitle": "How many later reports matched this fix"
+  }
+}

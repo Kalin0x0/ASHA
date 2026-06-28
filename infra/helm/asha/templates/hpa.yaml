@@ -1,0 +1,68 @@
+{{- if .Values.api.hpa.enabled }}
+# ── HPA: API ─────────────────────────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: asha-api
+  labels:
+    app.kubernetes.io/name: asha-api
+    {{- include "asha.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: asha-api
+  minReplicas: {{ .Values.api.hpa.minReplicas | default 1 }}
+  maxReplicas: {{ .Values.api.hpa.maxReplicas | default 5 }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.api.hpa.targetCpuPercent | default 70 }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.api.hpa.targetMemPercent | default 80 }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+{{- end }}
+{{- if .Values.web.hpa.enabled }}
+---
+# ── HPA: Web ─────────────────────────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: asha-web
+  labels:
+    app.kubernetes.io/name: asha-web
+    {{- include "asha.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: asha-web
+  minReplicas: {{ .Values.web.hpa.minReplicas | default 1 }}
+  maxReplicas: {{ .Values.web.hpa.maxReplicas | default 3 }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.web.hpa.targetCpuPercent | default 70 }}
+{{- end }}
