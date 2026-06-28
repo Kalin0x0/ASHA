@@ -101,6 +101,10 @@ export default function ConnectPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const clientRef = useRef<GuacClient | null>(null);
+  // Hidden, focusable "clipboard sink" kept focused over the canvas so the
+  // browser fires permission-free `paste` events on Ctrl+V (a <canvas> can't be
+  // a paste target, so without this local→remote paste silently never captures).
+  const sinkRef = useRef<HTMLTextAreaElement>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   // Set while connected: pushes a string to the remote clipboard (local → remote).
   const sendClipboardRef = useRef<((text: string) => void) | null>(null);
@@ -296,6 +300,10 @@ export default function ConnectPage() {
     // presses Ctrl+V inside the desktop.
     const onPaste = (e: ClipboardEvent) => {
       const text = e.clipboardData?.getData('text/plain');
+      // Always swallow the browser default so the pasted text is never inserted
+      // into the focused sink textarea — we forward it to the remote ourselves.
+      e.preventDefault();
+      if (sinkRef.current) sinkRef.current.value = '';
       if (!text) return;
       if (pendingPasteV) {
         clearTimeout(pendingPasteV);
@@ -329,7 +337,35 @@ export default function ConnectPage() {
     };
     window.addEventListener('focus', syncFromLocal);
     document.addEventListener('visibilitychange', syncFromLocal);
-    const clipPoll = window.setInterval(syncFromLocal, 1500);
+    const clipPoll = window.setInterval(() => {
+      // Keep the off-screen sink empty so absorbed keystrokes never accumulate,
+      // then run the best-effort local→remote sync.
+      if (sinkRef.current) sinkRef.current.value = '';
+      syncFromLocal();
+    }, 1500);
+
+    // Keep the clipboard sink focused so Ctrl+V produces a `paste` event. Keyboard
+    // stays bound to `document`, so this does not affect typing/AltGr — the sink
+    // only absorbs the paste. Skipped in view-only monitor mode.
+    const focusSink = () => {
+      if (monitor) return;
+      try {
+        sinkRef.current?.focus({ preventScroll: true });
+      } catch {
+        /* element gone */
+      }
+    };
+    let refocusTimer: ReturnType<typeof setTimeout> | null = null;
+    const onSinkBlur = () => {
+      // Refocus on the next tick so a click on the desktop re-arms paste capture.
+      if (refocusTimer) clearTimeout(refocusTimer);
+      refocusTimer = setTimeout(focusSink, 0);
+    };
+    if (!monitor) {
+      sinkRef.current?.addEventListener('blur', onSinkBlur);
+      screen.addEventListener('mousedown', focusSink);
+      focusSink();
+    }
 
     setState('connecting');
     setErrMsg('');
@@ -347,6 +383,9 @@ export default function ConnectPage() {
       document.removeEventListener('visibilitychange', syncFromLocal);
       document.removeEventListener('paste', onPaste);
       clearInterval(clipPoll);
+      sinkRef.current?.removeEventListener('blur', onSinkBlur);
+      screen.removeEventListener('mousedown', focusSink);
+      if (refocusTimer) clearTimeout(refocusTimer);
       if (pendingPasteV) clearTimeout(pendingPasteV);
       display.onresize = null;
       keyboard.onkeydown = null;
@@ -602,6 +641,18 @@ export default function ConnectPage() {
             with only the cursor (a higher-z layer) visible. The grid centers the
             scaled remote display within the viewport. */}
         <div ref={screenRef} className="relative isolate z-0 grid h-full w-full place-items-center [&_canvas]:block" />
+        {/* Off-screen, focusable paste target: makes Ctrl+V fire a permission-free
+            `paste` event so the local clipboard reaches the remote desktop. */}
+        <textarea
+          ref={sinkRef}
+          aria-hidden
+          tabIndex={-1}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          className="pointer-events-none fixed bottom-0 right-0 size-px resize-none border-0 p-0 opacity-0"
+        />
         {state !== 'connected' && <Overlay state={state} errMsg={errMsg} onRetry={reconnect} />}
       </main>
 
