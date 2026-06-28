@@ -121,7 +121,7 @@ export default function WorkspacesPage() {
       category: ws.category,
       iconUrl: ws.iconUrl ?? '',
       dockerImage: ws.dockerImage,
-      serverId: '',
+      serverId: ws.serverId ?? '',
       zoneId: '',
       cores: String(ws.cores || 2),
       memGb: String(ws.memMb ? ws.memMb / 1024 : 2),
@@ -144,7 +144,7 @@ export default function WorkspacesPage() {
       toast.error(t('catalog.create.nameRequired'));
       return;
     }
-    if (!editing && form.type === 'SERVER' && !form.serverId) {
+    if (form.type === 'SERVER' && !form.serverId) {
       toast.error(t('catalog.create.serverRequired'));
       return;
     }
@@ -159,6 +159,9 @@ export default function WorkspacesPage() {
           description: form.description,
           category: form.category.trim() || undefined,
           iconUrl: form.iconUrl,
+          // Keep the placement intact (and let SERVER workspaces be re-bound).
+          type: form.type,
+          serverId: form.type === 'SERVER' ? form.serverId || undefined : undefined,
           cores: Number(form.cores) || undefined,
           memMb: form.memGb ? Math.round(Number(form.memGb) * 1024) || undefined : undefined,
           gpu: Number(form.gpu) || 0,
@@ -450,8 +453,8 @@ export default function WorkspacesPage() {
               </div>
             )}
 
-            {/* Server — create-time, server type only */}
-            {!editing && form.type === 'SERVER' && (
+            {/* Server binding — for SERVER-type workspaces (create or re-bind on edit) */}
+            {form.type === 'SERVER' && (
               <div>
                 <Label htmlFor="nw-server">{t('catalog.create.server')}</Label>
                 {servers.length === 0 ? (

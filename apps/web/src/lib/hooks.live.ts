@@ -211,6 +211,11 @@ export function useCreateWorkspace() {
         friendlyName: input.friendlyName.trim(),
         description: input.description?.trim() || undefined,
         iconUrl: input.iconUrl?.trim() || undefined,
+        // Placement: without these the API defaults type=CONTAINER and ignores
+        // the bound server, so a SERVER/RDP workspace would launch a container.
+        type: input.type,
+        serverId: input.serverId?.trim() || undefined,
+        zoneId: input.zoneId?.trim() || undefined,
         categories: input.category?.trim() ? [input.category.trim()] : [],
         coresLimit: input.cores,
         memLimitMb: input.memMb,
@@ -234,6 +239,10 @@ export function useUpdateWorkspace() {
         friendlyName: patch.friendlyName?.trim(),
         description: patch.description?.trim(),
         iconUrl: patch.iconUrl?.trim(),
+        // Allow re-binding placement on edit (e.g. fix a CONTAINER → SERVER/RDP).
+        type: patch.type,
+        serverId: patch.serverId?.trim() || undefined,
+        zoneId: patch.zoneId?.trim() || undefined,
         categories: patch.category?.trim() ? [patch.category.trim()] : undefined,
         coresLimit: patch.cores,
         memLimitMb: patch.memMb,
