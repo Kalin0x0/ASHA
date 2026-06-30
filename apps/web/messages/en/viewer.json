@@ -44,7 +44,9 @@
     "dropToUpload": "Drop files to upload to the session",
     "filesQueued": "{count, plural, one {# file queued for upload} other {# files queued for upload}}",
     "filesQueuedDescription": "Files are delivered to the session via the in-stream file channel.",
-    "backToWorkspaces": "Back to Workspaces"
+    "backToWorkspaces": "Back to Workspaces",
+    "clipboardSent": "Clipboard sent to the session",
+    "clipboardSynced": "Clipboard synced"
   },
   "status": {
     "connected": "Connected",

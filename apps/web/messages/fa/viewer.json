@@ -44,7 +44,9 @@
     "dropToUpload": "برای بارگذاری در نشست، فایل‌ها را اینجا رها کنید",
     "filesQueued": "{count, plural, one {# فایل در صف بارگذاری قرار گرفت} other {# فایل در صف بارگذاری قرار گرفتند}}",
     "filesQueuedDescription": "فایل‌ها از طریق کانال فایل داخل استریم به نشست تحویل داده می‌شوند.",
-    "backToWorkspaces": "بازگشت به فضاهای کاری"
+    "backToWorkspaces": "بازگشت به فضاهای کاری",
+    "clipboardSent": "کلیپ‌بورد به نشست ارسال شد",
+    "clipboardSynced": "کلیپ‌بورد همگام‌سازی شد"
   },
   "status": {
     "connected": "متصل",

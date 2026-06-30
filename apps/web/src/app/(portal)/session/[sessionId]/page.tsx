@@ -95,6 +95,10 @@ export default function StreamingViewerPage() {
   const session = useSession(params.sessionId);
   const terminate = useTerminateSession();
   const stageRef = useRef<HTMLDivElement>(null);
+  // Handle to the embedded KasmVNC iframe so toolbar buttons can drive its
+  // same-origin DOM controls (clipboard + settings panels). KasmVNC does NOT
+  // expose its UI object on `window`, so we go through the control-bar DOM.
+  const kasmFrameRef = useRef<HTMLIFrameElement>(null);
   const [frameReady, setFrameReady] = useState(false);
   const [clock, setClock] = useState('');
   const [webcamOpen, setWebcamOpen] = useState(false);
@@ -185,6 +189,95 @@ export default function StreamingViewerPage() {
 
   // A capability is allowed unless the policy explicitly forbids it (=== false).
   const allow = (key: keyof Dlp) => dlp[key] !== false;
+
+  // Run `cb` against the embedded KasmVNC window/document when the same-origin
+  // frame is loaded. Returns false (so callers can fall back to a toast) if the
+  // frame is missing, not yet loaded, cross-origin, or `cb` throws.
+  const withKasm = (
+    cb: (win: Window & { updateSetting?: (n: string, v: unknown) => void }, doc: Document) => void,
+  ): boolean => {
+    const frame = kasmFrameRef.current;
+    if (!frame || !frameReady) return false;
+    try {
+      const win = frame.contentWindow as (Window & { updateSetting?: (n: string, v: unknown) => void }) | null;
+      const doc = frame.contentDocument;
+      if (!win || !doc) return false;
+      cb(win, doc);
+      return true;
+    } catch {
+      return false; // cross-origin / SecurityError
+    }
+  };
+
+  // Settings → reveal KasmVNC's own settings panel via its control bar. The
+  // input carries class `noVNC_button`, so a synthetic click bubbles to the
+  // wrapper where KasmVNC bound the toggle handler (verified against the bundle).
+  const openKasmSettings = () => {
+    const ok = withKasm((_w, d) => {
+      const btn = d.getElementById('noVNC_settings_button') as HTMLElement | null;
+      if (!btn) throw new Error('no settings control');
+      btn.click();
+    });
+    if (!ok) toast(t('toolbar.settingsToast'));
+  };
+
+  // Clipboard → bridge the host clipboard into the session (local→remote) and,
+  // when only the down-direction is allowed, mirror the guest clipboard back.
+  // Drives KasmVNC's native #noVNC_clipboard_text control; respects DLP and
+  // degrades to an informational toast if the control is absent or access fails.
+  const syncClipboard = async () => {
+    if (!allow('clipboardUp') && !allow('clipboardDown')) {
+      toast(t('dlp.clipboardDisabledHint'));
+      return;
+    }
+    let host = '';
+    if (allow('clipboardUp')) {
+      try {
+        host = await navigator.clipboard.readText();
+      } catch {
+        toast(t('toolbar.clipboardToast'));
+        return;
+      }
+    }
+    const ran = withKasm((w, d) => {
+      const ta = d.getElementById('noVNC_clipboard_text') as HTMLTextAreaElement | null;
+      if (!ta) throw new Error('no clipboard control'); // forces the fallback toast
+      // Enable only the DLP-allowed directions (idempotent).
+      if (allow('clipboardUp')) {
+        const cb = d.getElementById('noVNC_setting_clipboard_up') as HTMLInputElement | null;
+        if (cb && !cb.checked) {
+          cb.checked = true;
+          cb.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+      if (allow('clipboardDown')) {
+        const cb = d.getElementById('noVNC_setting_clipboard_down') as HTMLInputElement | null;
+        if (cb && !cb.checked) {
+          cb.checked = true;
+          cb.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+      if (typeof w.updateSetting === 'function') {
+        try {
+          if (allow('clipboardUp')) w.updateSetting('clipboard_up', true);
+          if (allow('clipboardDown')) w.updateSetting('clipboard_down', true);
+        } catch {
+          /* updateSetting persists only — ignore */
+        }
+      }
+      if (allow('clipboardUp') && host) {
+        ta.value = host;
+        ta.dispatchEvent(new Event('change', { bubbles: true })); // → rfb.clipboardPasteFrom
+      } else if (allow('clipboardDown') && ta.value) {
+        void navigator.clipboard.writeText(ta.value).catch(() => {});
+      }
+    });
+    if (!ran) {
+      toast(t('toolbar.clipboardToast'));
+      return;
+    }
+    toast.success(allow('clipboardUp') && host ? t('toolbar.clipboardSent') : t('toolbar.clipboardSynced'));
+  };
 
   const togglePause = async () => {
     if (!session) return;
@@ -323,7 +416,7 @@ export default function StreamingViewerPage() {
             label={t('toolbar.clipboard')}
             disabled={!allow('clipboardUp') && !allow('clipboardDown')}
             disabledHint={t('dlp.clipboardDisabledHint')}
-            onClick={() => toast(t('toolbar.clipboardToast'))}
+            onClick={() => void syncClipboard()}
           >
             <Clipboard className="size-4" />
           </ControlButton>
@@ -413,7 +506,7 @@ export default function StreamingViewerPage() {
           <ControlButton label={t('toolbar.shareSession')} onClick={onShare}>
             <Share2 className="size-4" />
           </ControlButton>
-          <ControlButton label={t('toolbar.settings')} onClick={() => toast(t('toolbar.settingsToast'))}>
+          <ControlButton label={t('toolbar.settings')} onClick={openKasmSettings}>
             <Settings className="size-4" />
           </ControlButton>
           <ControlButton label={t('toolbar.fullscreen')} onClick={fullscreen}>
@@ -453,6 +546,7 @@ export default function StreamingViewerPage() {
               isWebRtc={isWebRtc}
               ready={frameReady}
               onReady={() => setFrameReady(true)}
+              frameRef={kasmFrameRef}
             />
           ) : (
             <PlaceholderStream workspaceName={workspaceName} clock={clock} />
@@ -551,15 +645,18 @@ function LiveStream({
   isWebRtc,
   ready,
   onReady,
+  frameRef,
 }: {
   url: string;
   workspaceName: string;
   isWebRtc: boolean;
   ready: boolean;
   onReady: () => void;
+  /** Shared with the parent so toolbar buttons can drive the KasmVNC DOM. */
+  frameRef: React.RefObject<HTMLIFrameElement | null>;
 }) {
   const t = useTranslations('viewer');
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const iframeRef = frameRef;
   const loadingText = isWebRtc
     ? t('status.negotiatingWebRtc')
     : t('status.establishingChannel');
