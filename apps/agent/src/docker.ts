@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import net from 'node:net';
 import Docker from 'dockerode';
 import type { ProvisionCommand, SessionSidecar, SessionStatSample, StreamProfile } from '@asha/events';
-import { routerName, sessionTraefikLabels } from '@asha/proxy-labels';
+import { routerName, sessionPath, sessionTraefikLabels } from '@asha/proxy-labels';
 import { agentEnv } from './env.js';
 
 // Host directory where sidecar config files are written.
@@ -211,6 +211,25 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     labels[`traefik.http.routers.${router}.middlewares`] = existing
       ? `${existing},${router}-auth`
       : `${router}-auth`;
+
+    // Audio-out: the kasmweb image runs a jsmpeg WSS relay on container :4901
+    // (TLS self-signed, Basic kasm_user:VNC_PW) carrying an MPEG-TS audio stream.
+    // Expose it as a SECOND per-session router under /session/<id>/audio so the
+    // viewer's audio player can reach it. It reuses the SAME per-session Basic
+    // header (the relay needs kasm_user:VNC_PW) and the per-session forward-auth,
+    // so it can't widen the security envelope beyond the existing 6901 stream.
+    // Higher priority than the 6901 router so the longer prefix wins.
+    const audioRouter = `${router}-audio`;
+    const audioPath = `${sessionPath(cmd.kasmId)}/audio`;
+    labels[`traefik.http.routers.${audioRouter}.rule`] = `PathPrefix(\`${audioPath}\`)`;
+    labels[`traefik.http.routers.${audioRouter}.entrypoints`] = 'websecure';
+    labels[`traefik.http.routers.${audioRouter}.tls`] = 'true';
+    labels[`traefik.http.routers.${audioRouter}.priority`] = '100';
+    labels[`traefik.http.middlewares.${audioRouter}-strip.stripprefix.prefixes`] = audioPath;
+    labels[`traefik.http.routers.${audioRouter}.middlewares`] = `${audioRouter}-strip,${router}-auth,sess-auth@file`;
+    labels[`traefik.http.services.${audioRouter}.loadbalancer.server.port`] = '4901';
+    labels[`traefik.http.services.${audioRouter}.loadbalancer.server.scheme`] = 'https';
+    labels[`traefik.http.services.${audioRouter}.loadbalancer.serverstransport`] = 'asha-insecure@file';
   }
 
   // ── Container-security sanitization (shared multi-tenant hosts) ─────────────
