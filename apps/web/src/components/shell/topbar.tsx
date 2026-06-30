@@ -12,6 +12,7 @@ import { ReportBugDialog } from '@/components/composite/report-bug-dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/api/auth-context';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,9 +28,18 @@ export function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { setCommandOpen, setMobileOpen } = useUIStore();
+  const { user, logout } = useAuth();
   const match = findNavItem(pathname);
   const t = useTranslations('shell.topbar');
   const tNav = useTranslations('shell.nav');
+
+  // Real signed-in identity (was hardcoded "Administrator / Asha Admin / AD").
+  const displayName = user?.displayName?.trim() || user?.username || user?.email || 'User';
+  const accountEmail = user?.email ?? '';
+  const initials = initialsOf(displayName, user?.email);
+  const signOut = () => {
+    void logout().finally(() => router.push('/login'));
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-[var(--spacing-topbar)] items-center gap-3 border-b border-border-subtle bg-[color-mix(in_srgb,var(--surface-1)_82%,transparent)] px-4 shadow-[0_1px_0_var(--highlight-top),0_10px_30px_-20px_rgba(0,0,0,0.6)] backdrop-blur-xl backdrop-saturate-150 lg:px-6">
@@ -116,15 +126,15 @@ export function Topbar() {
           >
             <Avatar className="size-8 ring-2 ring-border-subtle transition-all hover:ring-gold-500/40">
               <AvatarFallback className="text-[11px] font-bold bg-gradient-to-br from-gold-700 to-gold-900 text-gold-200">
-                AD
+                {initials}
               </AvatarFallback>
             </Avatar>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <div className="px-2.5 py-2.5">
-            <p className="text-sm font-semibold leading-tight">Administrator</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">Asha Admin</p>
+            <p className="truncate text-sm font-semibold leading-tight">{displayName}</p>
+            {accountEmail && <p className="mt-0.5 truncate text-xs text-muted-foreground">{accountEmail}</p>}
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => router.push('/settings/general')}>
@@ -134,13 +144,24 @@ export function Topbar() {
             <User className="size-4" /> {t('profile')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem destructive onSelect={() => router.push('/login')}>
+          <DropdownMenuItem destructive onSelect={signOut}>
             <LogOut className="size-4" /> {t('signOut')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>
   );
+}
+
+/** Two-letter initials from a display name (e.g. "Sh. Naiemi" → "SN"), falling
+ *  back to the email local-part ("sh.naiemi@…" → "SN"). */
+function initialsOf(name: string, email?: string): string {
+  const src = (name || email || '').trim();
+  const parts = src.split(/[\s._@-]+/).filter(Boolean);
+  const a = parts[0]?.[0] ?? '';
+  const b = parts[1]?.[0] ?? '';
+  if (a && b) return (a + b).toUpperCase();
+  return (src.replace(/[^A-Za-z0-9]/g, '').slice(0, 2) || '?').toUpperCase();
 }
 
 function NotificationRow({ text, at, tone }: { text: string; at: string; tone: 'ok' | 'warn' }) {
