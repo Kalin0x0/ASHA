@@ -80,6 +80,9 @@ services:
     build: { context: ., dockerfile: packages/db/Dockerfile }
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-asha}:${POSTGRES_PASSWORD:-asha_dev_change_me}@postgres:5432/${POSTGRES_DB:-asha}?schema=public
+      # Password for the seeded admin (admin@asha.local). Set in .env to override;
+      # the installer generates a strong one for public deployments.
+      ASHA_SEED_ADMIN_PASSWORD: ${ASHA_SEED_ADMIN_PASSWORD:-AshaAdmin!2026}
     depends_on:
       postgres: { condition: service_healthy }
     networks: [asha-core]
@@ -98,7 +101,7 @@ services:
       REDIS_URL: redis://redis:6379
       # Both the primary (asha) and the legacy (chista) domain are served in
       # parallel — allow both as CORS origins.
-      CORS_ORIGIN: https://${ASHA_BASE_DOMAIN:-asha.local},https://${ASHA_BASE_DOMAIN_ALT:-chista.local}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://${ASHA_BASE_DOMAIN:-asha.local},https://${ASHA_BASE_DOMAIN_ALT:-chista.local}}
       ASHA_PUBLIC_URL: https://${ASHA_BASE_DOMAIN:-asha.local}
       ASHA_BASE_DOMAIN: ${ASHA_BASE_DOMAIN:-asha.local}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me-please-32++chars}

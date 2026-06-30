@@ -124,7 +124,7 @@ curl -fsSL https://raw.githubusercontent.com/Kalin0x0/Asha/main/scripts/install.
 
 ==============================================================================
 
-  Naiemi Group  ·  VDI / DaaS Platform                       Installer  v1.0
+  Naiemi Group  ·  VDI / DaaS Platform                       Installer  v1.0.0
 ```
 </details>
 
@@ -159,7 +159,9 @@ docker compose up -d --build
 # api docs: https://asha.local/api/docs
 ```
 
-The `db-migrate` one-shot container runs `prisma migrate deploy` + seed automatically.
+The `db-migrate` one-shot container syncs the schema with `prisma db push`
+(Phase 1 — no migration history; runs with `--accept-data-loss`) and runs the
+idempotent seed automatically.
 Default admin credentials are printed by the seed (see `packages/db/prisma/seed.ts`).
 
 ### Local dev against a real API

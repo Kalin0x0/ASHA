@@ -69,7 +69,7 @@ step()  { printf '\n%b\n' "${C_GOLDB}▸ $*${C_RESET}"; }
 
 # ── Banner — the ASHA mark + Naiemi Group wordmark ───────────────────────────
 banner() {
-  clear 2>/dev/null || true
+  [ -t 1 ] && { clear 2>/dev/null || true; }
   printf '\n'
   rule
   printf '%b' "$C_GOLDB"
@@ -156,8 +156,12 @@ set_env() {
   local key="$1" val="$2" file="${3:-$ENV_FILE}" tmp
   tmp="$(mktemp)"
   if grep -qE "^${key}=" "$file" 2>/dev/null; then
-    awk -v k="$key" -v v="$val" '
-      !done && $0 ~ "^"k"=" { print k"="v; done=1; next }
+    # Value is passed via the environment (ENVIRON), NOT `awk -v`: that keeps
+    # secrets out of the process argv (/proc/<pid>/cmdline) and stops awk from
+    # interpreting backslash escapes in the value. Only the (non-secret) key
+    # goes via -v.
+    v="$val" awk -v k="$key" '
+      !done && $0 ~ "^"k"=" { print k"="ENVIRON["v"]; done=1; next }
       { print }
     ' "$file" >"$tmp"
     mv "$tmp" "$file"
@@ -309,6 +313,9 @@ configure_env() {
   else
     info "Existing .env found — preserving its secrets."
   fi
+  # Lock the file down BEFORE any secret is written into it (no world-readable
+  # window). set_env's mktemp+mv preserves these perms thereafter.
+  chmod 600 "$ENV_FILE" 2>/dev/null || true
 
   # Generate secrets only when they are still the shipped dev placeholders, so
   # re-running never rotates keys out from under a live database.
@@ -340,6 +347,19 @@ configure_env() {
 
   # Make Asha *active*: live backend, not the mock demo store.
   set_env NEXT_PUBLIC_API_MODE "$APP_MODE"
+
+  # Seeded admin password. Keep the friendly default for a *.local test box;
+  # generate a strong one for a public, internet-reachable deployment so it is
+  # never protected by the publicly-documented default. Compose passes this into
+  # the db-migrate (seed) container; show_credentials prints the live value.
+  if [ -z "$(get_env ASHA_SEED_ADMIN_PASSWORD)" ]; then
+    if is_local_domain "$DOMAIN"; then
+      set_env ASHA_SEED_ADMIN_PASSWORD "AshaAdmin!2026"
+    else
+      set_env ASHA_SEED_ADMIN_PASSWORD "$(gen_secret 18)"
+      info "Generated a strong admin password (shown at the end)."
+    fi
+  fi
 
   $SUDO chmod 600 "$ENV_FILE" 2>/dev/null || chmod 600 "$ENV_FILE" 2>/dev/null || true
   ok "Wrote ${C_WHITE}.env${C_RESET} (domain ${C_WHITE}${DOMAIN}${C_RESET}, mode ${C_WHITE}${APP_MODE}${C_RESET})."
@@ -435,15 +455,26 @@ check_ports() {
 # ── Deploy ───────────────────────────────────────────────────────────────────
 deploy() {
   step "Building and starting Asha (this can take a few minutes)…"
-  compose up -d --build
-  ok "Containers started."
+  # Bring up the core stack first. guacd is compiled from source (RDP/VNC only;
+  # the primary KasmVNC path doesn't need it), so it's built best-effort — a
+  # transient build/network failure there must not block the whole install.
+  compose up -d --build traefik postgres redis db-migrate api web agent
+  ok "Core services started."
+  if compose up -d --build guacd connection-proxy; then
+    ok "RDP/VNC bridge (guacd + connection-proxy) started."
+  else
+    warn "guacd/connection-proxy did not start — KasmVNC works; RDP/VNC is unavailable."
+    warn "Retry later with: cd ${ASHA_DIR} && ${DC} ${COMPOSE_FILES[*]} up -d --build guacd connection-proxy"
+  fi
 }
 
 wait_health() {
   step "Waiting for Asha to come online…"
+  # Resolve to the local Traefik so the check works before public DNS has
+  # propagated (and despite hairpin-NAT); -k ignores the self-signed/ACME cert.
   local url="https://${DOMAIN}/" code="" i=0 tries=60
   while [ "$i" -lt "$tries" ]; do
-    code="$(curl -ksS -o /dev/null -w '%{http_code}' --max-time 5 "$url" 2>/dev/null || echo 000)"
+    code="$(curl -ksS -o /dev/null -w '%{http_code}' --resolve "${DOMAIN}:443:127.0.0.1" --max-time 5 "$url" 2>/dev/null || echo 000)"
     case "$code" in
       2*|3*) ok "Asha is responding (HTTP ${code})."; return 0 ;;
     esac
@@ -567,11 +598,13 @@ action_update() {
   ensure_repo; resolve_compose
   : "${DOMAIN:=$(get_env ASHA_BASE_DOMAIN)}"; DOMAIN="${DOMAIN:-$DEFAULT_DOMAIN}"
   APP_MODE="$(get_env NEXT_PUBLIC_API_MODE)"; APP_MODE="${APP_MODE:-live}"
-  select_compose_files
   if [ -d "$ASHA_DIR/.git" ]; then
     step "Pulling latest source"
     ( cd "$ASHA_DIR" && $SUDO git pull --ff-only ) || warn "git pull failed — continuing with the current checkout."
   fi
+  # Regenerate the prod override AFTER pulling, so it tracks the just-updated
+  # base compose (the override's traefik command must mirror the base).
+  select_compose_files
   deploy
   wait_health || true
   ok "Update complete."
@@ -682,7 +715,9 @@ parse_args() {
       -h|--help) ACTION="help" ;;
       *) warn "Ignoring unknown argument: $1" ;;
     esac
-    shift
+    # `|| true`: a value-flag in last position already emptied $@ via its inner
+    # shift, so this trailing shift must not abort under `set -e`.
+    shift || true
   done
 }
 
@@ -707,8 +742,9 @@ main() {
   esac
 }
 
-# Run only when executed directly — sourcing (e.g. for tests) defines the
-# functions without side effects.
-if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+# Run when executed directly OR streamed over stdin (curl | bash leaves
+# BASH_SOURCE empty); skip only when sourced for tests (BASH_SOURCE set and
+# differs from $0). The :- guards keep this safe under `set -u`.
+if [ -z "${BASH_SOURCE[0]:-}" ] || [ "${BASH_SOURCE[0]:-}" = "${0}" ]; then
   main "$@"
 fi

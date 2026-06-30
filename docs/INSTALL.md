@@ -45,7 +45,7 @@ When you run it you are greeted by the Asha mark:
 
 ==============================================================================
 
-  Naiemi Group  ·  VDI / DaaS Platform                       Installer  v1.0
+  Naiemi Group  ·  VDI / DaaS Platform                       Installer  v1.0.0
 ```
 
 ---
@@ -72,7 +72,10 @@ they are not already present.
 curl -fsSL https://raw.githubusercontent.com/Kalin0x0/Asha/main/scripts/install.sh | sudo bash
 ```
 
-You'll be asked for a **domain** and a **TLS email**, then Asha builds and starts.
+This opens the branded Asha **menu** — press **[1] Install**, and you'll be asked
+for a **domain** and a **TLS email** before Asha builds and starts. To skip the
+menu and install unattended, add `--domain <fqdn> --email <addr> --yes`
+(see Option C).
 
 ### Option B — from a clone
 
@@ -111,8 +114,11 @@ sudo bash scripts/install.sh \
    the demo store).
 6. **Configures TLS** — self-signed for a `*.local` test domain, or **automatic
    Let's Encrypt** for a public FQDN (generated `docker-compose.prod.yml`).
-7. **Brings up the stack** (`docker compose up -d --build`) — Traefik, Postgres,
-   Redis, the API, the web app, the agent, the connection-proxy and guacd.
+7. **Brings up the core stack** — Traefik, Postgres, Redis, the API, the web app
+   and the agent. The RDP/VNC bridge (`guacd`, which compiles from source, plus
+   `connection-proxy`) is started **best-effort** afterwards, so a transient
+   guacd build hiccup never blocks the install — KasmVNC streaming works either
+   way.
 8. **Migrates + seeds** the database (the `db-migrate` one-shot) and **waits for
    Asha to answer**, then prints your **admin credentials**.
 
@@ -127,8 +133,9 @@ adds a `127.0.0.1 <domain>` line to `/etc/hosts` and Traefik serves a
 ### Public domain (automatic HTTPS)
 
 1. Point an **A record** for your domain at the server's public IP.
-2. Make sure inbound **80** and **443** are open (Let's Encrypt validates over
-   port 80 via the TLS-ALPN challenge on 443).
+2. Make sure inbound **443** is open — Let's Encrypt validates via the
+   **TLS-ALPN-01** challenge entirely over 443. Keep **80** open too: it serves
+   the HTTP→HTTPS redirect.
 3. Run the installer with `--domain your.domain --email you@domain`.
 
 The installer writes `docker-compose.prod.yml`, which enables the Let's Encrypt
@@ -144,16 +151,18 @@ Docker volume and auto-renewed.
 
 ## 5. After install
 
-Open `https://<your-domain>` and sign in:
+Open `https://<your-domain>` and sign in. The email is always
+`admin@asha.local`; the **installer prints the exact password** in its final
+panel:
 
-| | |
+| Deployment | Seeded admin password |
 | --- | --- |
-| **Email** | `admin@asha.local` |
-| **Password** | `AshaAdmin!2026` |
+| **`*.local`** (local test) | `AshaAdmin!2026` (the friendly default) |
+| **public FQDN** | a **strong random** password, generated and printed once |
 
-> Set a different seed password **before** the first install by exporting
-> `ASHA_SEED_ADMIN_PASSWORD` (or adding it to `.env`). **Change the admin
-> password after first sign-in** under **Settings → Security**.
+> To choose your own, set `ASHA_SEED_ADMIN_PASSWORD=…` in `.env` **before** the
+> first install (the installer keeps it and the seed container honours it).
+> **Change the admin password after first sign-in** under **Settings → Security**.
 
 API docs (Swagger) live at `https://<your-domain>/api/docs`.
 
@@ -197,6 +206,7 @@ for the full annotated list):
 | `SECRET_SEAL_KEY` | random | seals provider secrets at rest |
 | `GUAC_CRYPT_SECRET` | random (exactly 32 chars) | Guacamole token crypto |
 | `ASHA_AGENT_ENROLLMENT_TOKEN` | random | agent ↔ manager trust |
+| `ASHA_SEED_ADMIN_PASSWORD` | default (local) / random (public) | seeded admin login |
 
 ## 8. Troubleshooting
 
