@@ -44,7 +44,9 @@
     "dropToUpload": "Dateien hier ablegen, um sie in die Sitzung hochzuladen",
     "filesQueued": "{count, plural, one {# Datei für den Upload eingereiht} other {# Dateien für den Upload eingereiht}}",
     "filesQueuedDescription": "Dateien werden über den Dateikanal im Stream an die Sitzung übermittelt.",
-    "backToWorkspaces": "Zurück zu Arbeitsbereichen"
+    "backToWorkspaces": "Zurück zu Arbeitsbereichen",
+    "clipboardSent": "Zwischenablage an die Sitzung gesendet",
+    "clipboardSynced": "Zwischenablage synchronisiert"
   },
   "status": {
     "connected": "Verbunden",
