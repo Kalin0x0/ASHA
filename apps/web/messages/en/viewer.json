@@ -46,7 +46,10 @@
     "filesQueuedDescription": "Files are delivered to the session via the in-stream file channel.",
     "backToWorkspaces": "Back to Workspaces",
     "clipboardSent": "Clipboard sent to the session",
-    "clipboardSynced": "Clipboard synced"
+    "clipboardSynced": "Clipboard synced",
+    "audioOn": "Speaker on — playing session audio",
+    "audioOff": "Mute session audio",
+    "audioError": "Couldn't start session audio"
   },
   "status": {
     "connected": "Connected",

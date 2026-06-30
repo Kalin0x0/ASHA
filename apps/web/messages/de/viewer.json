@@ -46,7 +46,10 @@
     "filesQueuedDescription": "Dateien werden über den Dateikanal im Stream an die Sitzung übermittelt.",
     "backToWorkspaces": "Zurück zu Arbeitsbereichen",
     "clipboardSent": "Zwischenablage an die Sitzung gesendet",
-    "clipboardSynced": "Zwischenablage synchronisiert"
+    "clipboardSynced": "Zwischenablage synchronisiert",
+    "audioOn": "Lautsprecher an — Sitzungston läuft",
+    "audioOff": "Sitzungston stummschalten",
+    "audioError": "Sitzungston konnte nicht gestartet werden"
   },
   "status": {
     "connected": "Verbunden",
