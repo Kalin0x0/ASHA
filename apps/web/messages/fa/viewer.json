@@ -46,7 +46,10 @@
     "filesQueuedDescription": "فایل‌ها از طریق کانال فایل داخل استریم به نشست تحویل داده می‌شوند.",
     "backToWorkspaces": "بازگشت به فضاهای کاری",
     "clipboardSent": "کلیپ‌بورد به نشست ارسال شد",
-    "clipboardSynced": "کلیپ‌بورد همگام‌سازی شد"
+    "clipboardSynced": "کلیپ‌بورد همگام‌سازی شد",
+    "audioOn": "بلندگو روشن — پخش صدای نشست",
+    "audioOff": "بی‌صدا کردن صدای نشست",
+    "audioError": "صدای نشست شروع نشد"
   },
   "status": {
     "connected": "متصل",

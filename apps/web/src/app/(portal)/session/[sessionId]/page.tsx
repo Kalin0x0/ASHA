@@ -29,6 +29,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { AshaMark } from '@/components/brand/logo';
+import { getAccessToken } from '@/lib/api/auth-store';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -85,6 +86,27 @@ function stepForStatus(status: string | undefined): number {
 /** Remote-desktop protocols stream through the guacd canvas at /connect. */
 const REMOTE_DESKTOP_PROTOCOLS = new Set(['RDP', 'VNC', 'SSH']);
 
+/** Lazy-load the self-hosted jsmpeg decoder (MPEG-TS/MP2 → WebAudio) on first use. */
+function ensureJsmpeg(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  if ((window as unknown as { JSMpeg?: unknown }).JSMpeg) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const existing = document.getElementById('jsmpeg-lib') as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error('jsmpeg load failed')), { once: true });
+      return;
+    }
+    const s = document.createElement('script');
+    s.id = 'jsmpeg-lib';
+    s.src = '/vendor/jsmpeg.min.js';
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('jsmpeg load failed'));
+    document.head.appendChild(s);
+  });
+}
+
 export default function StreamingViewerPage() {
   const t = useTranslations('viewer');
   const tc = useTranslations('common');
@@ -100,6 +122,10 @@ export default function StreamingViewerPage() {
   // expose its UI object on `window`, so we go through the control-bar DOM.
   const kasmFrameRef = useRef<HTMLIFrameElement>(null);
   const [frameReady, setFrameReady] = useState(false);
+  // Audio-out: a jsmpeg player decoding the container's MPEG-TS/MP2 speaker stream
+  // (served per-session at /session/<kasmId>/audio → container :4901).
+  const audioPlayerRef = useRef<{ destroy?: () => void } | null>(null);
+  const [audioOn, setAudioOn] = useState(false);
   const [clock, setClock] = useState('');
   const [webcamOpen, setWebcamOpen] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -160,6 +186,18 @@ export default function StreamingViewerPage() {
   useEffect(() => {
     setFrameReady(false);
   }, [connectionUrl]);
+
+  // Tear down the audio player when leaving the session.
+  useEffect(() => {
+    return () => {
+      try {
+        audioPlayerRef.current?.destroy?.();
+      } catch {
+        /* noop */
+      }
+      audioPlayerRef.current = null;
+    };
+  }, []);
 
   // Launch watchdog: if the session hasn't reached RUNNING (or ERROR) within the
   // timeout, surface a clear "taking too long" state with a retry instead of an
@@ -338,6 +376,45 @@ export default function StreamingViewerPage() {
     toast.success(t('status.endedToast'));
     router.push('/');
   };
+  // Speaker (audio-out): toggle a jsmpeg player on the per-session audio route.
+  // Created inside the click so the AudioContext starts under a user gesture (no
+  // autoplay block). Degrades to a toast if the lib or stream can't load.
+  const toggleAudio = async () => {
+    if (audioOn) {
+      try {
+        audioPlayerRef.current?.destroy?.();
+      } catch {
+        /* noop */
+      }
+      audioPlayerRef.current = null;
+      setAudioOn(false);
+      return;
+    }
+    if (!allow('audioOut')) {
+      toast(t('dlp.audioDisabledHint'));
+      return;
+    }
+    const kasmId = session?.kasmId;
+    if (!kasmId) return;
+    try {
+      await ensureJsmpeg();
+      const J = (
+        window as unknown as {
+          JSMpeg?: { Player: new (url: string, opts: Record<string, unknown>) => { destroy?: () => void } };
+        }
+      ).JSMpeg;
+      if (!J) throw new Error('jsmpeg unavailable');
+      const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const token = getAccessToken() ?? '';
+      const url = `${scheme}://${window.location.host}/session/${encodeURIComponent(kasmId)}/audio?token=${encodeURIComponent(token)}`;
+      audioPlayerRef.current = new J.Player(url, { audio: true, video: false, autoplay: true });
+      setAudioOn(true);
+      toast.success(t('toolbar.audioOn'));
+    } catch {
+      toast.error(t('toolbar.audioError'));
+    }
+  };
+
   const fullscreen = () => {
     stageRef.current?.requestFullscreen?.().catch(() => {});
   };
@@ -429,12 +506,18 @@ export default function StreamingViewerPage() {
             <Upload className="size-4" />
           </ControlButton>
           <ControlButton
-            label={t('toolbar.audio')}
+            label={audioOn ? t('toolbar.audioOff') : t('toolbar.audio')}
             disabled={!allow('audioOut')}
             disabledHint={t('dlp.audioDisabledHint')}
-            onClick={() => toast(t('toolbar.audioToast'))}
+            onClick={() => void toggleAudio()}
           >
-            {allow('audioOut') ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+            {audioOn ? (
+              <Volume2 className="size-4 text-gold-400" />
+            ) : allow('audioOut') ? (
+              <Volume2 className="size-4" />
+            ) : (
+              <VolumeX className="size-4" />
+            )}
           </ControlButton>
           <ControlButton
             label={t('toolbar.virtualPrinter')}
