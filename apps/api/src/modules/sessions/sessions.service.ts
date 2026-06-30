@@ -770,11 +770,15 @@ function dlpEnv(dlp: DlpPolicy): Record<string, string> {
   const deny = (flag: boolean | undefined) => flag === false;
   if (deny(dlp.clipboardUp)) env.KASM_CLIPBOARD_UP = '0';
   if (deny(dlp.clipboardDown)) env.KASM_CLIPBOARD_DOWN = '0';
-  if (deny(dlp.uploads)) env.KASM_UPLOADS = '0';
-  if (deny(dlp.downloads)) env.KASM_DOWNLOADS = '0';
-  if (deny(dlp.printing)) env.KASM_PRINTING = '0';
-  if (deny(dlp.audioIn)) env.KASM_AUDIO_INPUT = '0';
-  if (deny(dlp.audioOut)) env.KASM_AUDIO = '0';
+  // kasmweb images gate the in-image services on KASM_SVC_* env names (each
+  // `${…:-1}`); the previous KASM_UPLOADS/KASM_PRINTING/KASM_AUDIO_INPUT/KASM_AUDIO
+  // names were no-ops, so a `false` DLP policy never actually disabled the
+  // service. Use the real service-env names so the toggles take effect.
+  if (deny(dlp.uploads)) env.KASM_SVC_UPLOADS = '0';
+  if (deny(dlp.downloads)) env.KASM_SVC_DOWNLOADS = '0';
+  if (deny(dlp.printing)) env.KASM_SVC_PRINTER = '0';
+  if (deny(dlp.audioIn)) env.KASM_SVC_AUDIO_INPUT = '0';
+  if (deny(dlp.audioOut)) env.KASM_SVC_AUDIO = '0';
   if (deny(dlp.pwa)) env.KASM_PWA = '0';
 
   // Geometric / advanced DLP — honoured by DLP-capable KasmVNC builds
