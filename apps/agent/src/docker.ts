@@ -225,6 +225,8 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     labels[`traefik.http.routers.${audioRouter}.entrypoints`] = 'websecure';
     labels[`traefik.http.routers.${audioRouter}.tls`] = 'true';
     labels[`traefik.http.routers.${audioRouter}.priority`] = '100';
+    // Explicit router→service link (required with >1 service on the container).
+    labels[`traefik.http.routers.${audioRouter}.service`] = audioRouter;
     labels[`traefik.http.middlewares.${audioRouter}-strip.stripprefix.prefixes`] = audioPath;
     labels[`traefik.http.routers.${audioRouter}.middlewares`] = `${audioRouter}-strip,${router}-auth,sess-auth@file`;
     labels[`traefik.http.services.${audioRouter}.loadbalancer.server.port`] = '4901';

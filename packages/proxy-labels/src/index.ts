@@ -50,6 +50,11 @@ export function sessionTraefikLabels(input: SessionRouteInput): Record<string, s
     [`traefik.http.routers.${router}.entrypoints`]: 'websecure',
     [`traefik.http.routers.${router}.tls`]: 'true',
     [`traefik.http.services.${router}.loadbalancer.server.port`]: String(input.internalPort),
+    // Explicit router→service link. REQUIRED once a container exposes more than
+    // one Traefik service (e.g. the audio aux-route): with multiple services the
+    // Docker provider refuses to auto-link and ALL routers on the container break
+    // ("cannot be linked automatically with multiple Services").
+    [`traefik.http.routers.${router}.service`]: router,
   };
 
   const middlewares: string[] = [];
