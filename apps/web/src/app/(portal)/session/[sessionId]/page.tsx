@@ -407,9 +407,37 @@ export default function StreamingViewerPage() {
       const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
       const token = getAccessToken() ?? '';
       const url = `${scheme}://${window.location.host}/session/${encodeURIComponent(kasmId)}/audio?token=${encodeURIComponent(token)}`;
-      audioPlayerRef.current = new J.Player(url, { audio: true, video: false, autoplay: true });
+      let established = false;
+      const player = new J.Player(url, {
+        audio: true,
+        video: false,
+        autoplay: true,
+        // Fires when the audio WebSocket actually connects — lets us tell a broken
+        // route ("never established") apart from a working stream with no sound.
+        onSourceEstablished: () => {
+          established = true;
+        },
+      }) as {
+        destroy?: () => void;
+        audioOut?: { context?: { resume?: () => void; state?: string } };
+      };
+      audioPlayerRef.current = player;
+      // jsmpeg can create the AudioContext in a suspended state even inside a user
+      // gesture → everything runs but stays silent. Resume it explicitly now.
+      try {
+        void player.audioOut?.context?.resume?.();
+      } catch {
+        /* noop */
+      }
       setAudioOn(true);
       toast.success(t('toolbar.audioOn'));
+      // Diagnose reachability: if the stream never connects, the route/auth (not the
+      // decoder) is the problem — surface it instead of failing silently.
+      window.setTimeout(() => {
+        if (audioPlayerRef.current === player && !established) {
+          toast.error(t('toolbar.audioUnreachable'));
+        }
+      }, 4000);
     } catch {
       toast.error(t('toolbar.audioError'));
     }

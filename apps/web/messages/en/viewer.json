@@ -49,7 +49,8 @@
     "clipboardSynced": "Clipboard synced",
     "audioOn": "Speaker on — playing session audio",
     "audioOff": "Mute session audio",
-    "audioError": "Couldn't start session audio"
+    "audioError": "Couldn't start session audio",
+    "audioUnreachable": "Audio route unreachable — the session stream did not connect"
   },
   "status": {
     "connected": "Connected",
