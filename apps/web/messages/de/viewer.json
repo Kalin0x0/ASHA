@@ -49,7 +49,8 @@
     "clipboardSynced": "Zwischenablage synchronisiert",
     "audioOn": "Lautsprecher an — Sitzungston läuft",
     "audioOff": "Sitzungston stummschalten",
-    "audioError": "Sitzungston konnte nicht gestartet werden"
+    "audioError": "Sitzungston konnte nicht gestartet werden",
+    "audioUnreachable": "Audio-Route nicht erreichbar — der Sitzungs-Stream hat nicht verbunden"
   },
   "status": {
     "connected": "Verbunden",
