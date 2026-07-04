@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.20',
+    date: '2026-07-04',
+    title: { en: 'The OS desktop', de: 'Der OS-Desktop' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'The end-user portal is now a macOS-style OS desktop: a thin translucent menu bar with a live clock, your open sessions as windows with working traffic lights (close / pause / open), a magnifying dock with running-app dots and a launch bounce, and a full-screen Launchpad (⌘K) with search and category filters. An empty desktop greets you with a lock-screen clock.',
+          de: 'Das Endnutzer-Portal ist jetzt ein OS-Desktop im macOS-Stil: eine schmale transluzente Menüleiste mit Live-Uhr, offene Sitzungen als Fenster mit funktionierenden Ampel-Knöpfen (Schließen / Pausieren / Öffnen), ein vergrößerndes Dock mit Punkten für laufende Apps und Start-Bounce sowie ein Vollbild-Launchpad (⌘K) mit Suche und Kategorie-Filtern. Ein leerer Desktop begrüßt mit einer Sperrbildschirm-Uhr.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.19',
     date: '2026-06-16',
     title: { en: 'New brand logo', de: 'Neues Markenlogo' },
