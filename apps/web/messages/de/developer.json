@@ -17,7 +17,23 @@
     "checkFailed": "Prüfung auf Updates fehlgeschlagen.",
     "updateAvailable": "Update verfügbar — v{version}",
     "updateAvailableHint": "Eine neuere Version von Asha ist verfügbar. Aktualisiere dein Deployment, um zu upgraden.",
-    "viewRelease": "Release ansehen"
+    "viewRelease": "Release ansehen",
+    "updateNow": "Jetzt aktualisieren",
+    "updateToVersion": "Auf v{version} aktualisieren",
+    "updatingTitle": "Asha wird aktualisiert…",
+    "updateRunNote": "Release wird geladen, Images werden gebaut, Datenbank migriert und Dienste neu gestartet.",
+    "updateDoneTitle": "Aktualisierung abgeschlossen",
+    "updateDoneHint": "Auf v{version} aktualisiert. Neu laden, um die neue Version zu laden.",
+    "updatedToast": "Auf v{version} aktualisiert",
+    "updateFailed": "Aktualisierung fehlgeschlagen",
+    "reload": "Neu laden",
+    "dismiss": "Schließen",
+    "phases": {
+      "check": "Nach Updates suchen",
+      "download": "Update wird heruntergeladen",
+      "apply": "Update anwenden & migrieren",
+      "restart": "Dienste werden neu gestartet"
+    }
   },
   "apiKeys": {
     "title": "API-Schlüssel",
