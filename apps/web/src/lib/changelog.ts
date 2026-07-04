@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.24',
+    date: '2026-07-04',
+    title: { en: 'One-click updates', de: 'Ein-Klick-Updates' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Developer → Updates now has an "Update now" button. Click it and Asha runs the platform update through its stages — fetching the release, building images, migrating the database and restarting services — with a live progress bar and a per-stage checklist, then offers a reload to load the new version.',
+          de: 'Developer → Updates hat jetzt eine Schaltfläche „Jetzt aktualisieren". Ein Klick führt das Plattform-Update durch alle Phasen aus — Release laden, Images bauen, Datenbank migrieren und Dienste neu starten — mit Live-Fortschrittsbalken und einer Phasen-Checkliste, danach kann die App neu geladen werden.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.23',
     date: '2026-07-04',
     title: { en: 'Choose your desktop style', de: 'Wähle deinen Desktop-Stil' },
