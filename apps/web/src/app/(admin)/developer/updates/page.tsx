@@ -1,8 +1,8 @@
 'use client';
 
-import { ArrowUpCircle, CheckCircle2, ExternalLink, Loader2, Plus, RefreshCw, Rocket, Wrench } from 'lucide-react';
+import { ArrowUpCircle, Check, CheckCircle2, Download, ExternalLink, Loader2, Plus, RefreshCw, Rocket, RotateCw, Wrench } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { CHANGELOG, CURRENT_VERSION, type ChangeType, localize } from '@/lib/changelog';
 import { PageHeader } from '@/components/composite/page-header';
@@ -10,6 +10,7 @@ import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { checkForUpdates, type UpdateStatus } from '@/lib/update-check';
+import { runUpdate, UPDATE_WORK_PHASES, type UpdateProgress } from '@/lib/update-run';
 import { cn } from '@/lib/utils';
 
 const TYPE_META: Record<ChangeType, { variant: BadgeProps['variant']; icon: typeof Plus; dot: string; text: string }> = {
@@ -33,6 +34,12 @@ export default function UpdatesPage() {
   const [checking, setChecking] = useState(false);
   const [status, setStatus] = useState<UpdateStatus | null>(null);
 
+  // Update run: staged progress + a terminal "done" (offer a reload).
+  const [progress, setProgress] = useState<UpdateProgress | null>(null);
+  const [updatedTo, setUpdatedTo] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const updating = progress !== null && progress.phase !== 'done';
+
   const onCheck = async () => {
     setChecking(true);
     try {
@@ -47,6 +54,24 @@ export default function UpdatesPage() {
       toast.error(t('checkFailed'));
     } finally {
       setChecking(false);
+    }
+  };
+
+  const targetVersion = status?.latest ?? CURRENT_VERSION;
+
+  const onUpdate = async () => {
+    if (updating) return;
+    setUpdatedTo(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      await runUpdate(setProgress, controller.signal);
+      setUpdatedTo(targetVersion);
+      toast.success(t('updatedToast', { version: targetVersion }));
+    } catch (err) {
+      if ((err as { name?: string })?.name === 'AbortError') return;
+      setProgress(null);
+      toast.error(t('updateFailed'));
     }
   };
 
@@ -68,18 +93,27 @@ export default function UpdatesPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 sm:ms-auto">
-          {!updateAvailable && (
+          {!updateAvailable && !progress && (
             <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(95,184,143,0.3)] bg-[rgba(95,184,143,0.1)] px-3 py-1.5 text-xs font-medium text-success">
               <CheckCircle2 className="size-4" />
               {status ? t('upToDateChecked') : t('upToDate')}
             </span>
           )}
-          <Button variant="secondary" size="sm" onClick={() => void onCheck()} disabled={checking}>
+          <Button variant="secondary" size="sm" onClick={() => void onCheck()} disabled={checking || updating}>
             {checking ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
             {t('checkForUpdates')}
           </Button>
+          <Button size="sm" onClick={() => void onUpdate()} disabled={updating || checking}>
+            {updating ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+            {updateAvailable ? t('updateToVersion', { version: targetVersion }) : t('updateNow')}
+          </Button>
         </div>
       </Card>
+
+      {/* Update run — staged progress + reload-on-done */}
+      {progress && (
+        <UpdateProgressPanel progress={progress} updatedTo={updatedTo} onReload={() => window.location.reload()} onDismiss={() => setProgress(null)} />
+      )}
 
       {/* Update-available banner */}
       {updateAvailable && status && (
@@ -158,5 +192,93 @@ export default function UpdatesPage() {
         })}
       </div>
     </div>
+  );
+}
+
+/** The staged update run: a progress bar, per-phase checklist, and — on
+ *  completion — a reload prompt so the freshly-built app bundle is picked up. */
+function UpdateProgressPanel({
+  progress,
+  updatedTo,
+  onReload,
+  onDismiss,
+}: {
+  progress: UpdateProgress;
+  updatedTo: string | null;
+  onReload: () => void;
+  onDismiss: () => void;
+}) {
+  const t = useTranslations('developer.updates');
+  const done = progress.phase === 'done';
+  const pct = Math.round(progress.ratio * 100);
+
+  return (
+    <Card elevation={1} className="gold-hairline space-y-4 p-5">
+      <div className="flex items-center gap-3">
+        <div
+          className={cn(
+            'flex size-10 shrink-0 items-center justify-center rounded-xl border',
+            done
+              ? 'border-[rgba(95,184,143,0.35)] bg-[rgba(95,184,143,0.1)] text-success'
+              : 'border-[rgba(212,175,55,0.35)] bg-gold-500/10 text-gold-300',
+          )}
+        >
+          {done ? <CheckCircle2 className="size-5" /> : <Loader2 className="size-5 animate-spin" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-foreground">{done ? t('updateDoneTitle') : t('updatingTitle')}</p>
+          <p className="text-sm text-muted-foreground">
+            {done ? t('updateDoneHint', { version: updatedTo ?? '' }) : t('updateRunNote')}
+          </p>
+        </div>
+        {done && (
+          <div className="flex shrink-0 items-center gap-2">
+            <Button size="sm" onClick={onReload}>
+              <RotateCw className="size-3.5" /> {t('reload')}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onDismiss}>
+              {t('dismiss')}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-full rounded-full bg-gold-500 transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
+      </div>
+
+      {/* Per-phase checklist */}
+      <ul className="space-y-2">
+        {UPDATE_WORK_PHASES.map((phase, i) => {
+          const state = done || progress.index > i ? 'done' : progress.index === i ? 'active' : 'pending';
+          return (
+            <li key={phase} className="flex items-center gap-2.5 text-sm">
+              <span
+                className={cn(
+                  'flex size-5 shrink-0 items-center justify-center rounded-full',
+                  state === 'done'
+                    ? 'bg-success/15 text-success'
+                    : state === 'active'
+                      ? 'bg-gold-500/15 text-gold-300'
+                      : 'bg-secondary text-muted-foreground',
+                )}
+              >
+                {state === 'done' ? (
+                  <Check className="size-3" />
+                ) : state === 'active' ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <span className="size-1.5 rounded-full bg-current" />
+                )}
+              </span>
+              <span className={cn(state === 'pending' ? 'text-muted-foreground' : 'text-foreground/90')}>
+                {t(`phases.${phase}`)}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }
