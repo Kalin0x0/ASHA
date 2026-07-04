@@ -12,6 +12,7 @@ import { OpenSessions } from '@/components/composite/my-sessions-strip';
 import { WorkspaceCard } from '@/components/composite/workspace-card';
 import { Input } from '@/components/ui/input';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
+import { launchTransition } from '@/lib/launch-overlay-store';
 import { useLaunchableWorkspaces, useLaunchSession } from '@/lib/hooks';
 import type { Workspace } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -82,8 +83,16 @@ export function WorkstationLauncher() {
       return;
     }
     setLaunchTarget(null);
-    if (ws && ws.type !== 'CONTAINER') router.push(`/connect/${session.kasmId}`);
-    else router.push(`/session/${session.id}`);
+    const path = ws && ws.type !== 'CONTAINER' ? `/connect/${session.kasmId}` : `/session/${session.id}`;
+    launchTransition(
+      {
+        name: ws?.friendlyName ?? session.workspaceName,
+        iconUrl: ws?.iconUrl,
+        dockerImage: ws?.dockerImage,
+        category: ws?.category,
+      },
+      () => router.push(path),
+    );
   };
 
   const onLaunch = (id: string) => {
