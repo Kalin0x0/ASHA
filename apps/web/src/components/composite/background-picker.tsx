@@ -1,19 +1,28 @@
 'use client';
 
-import { Check, Image as ImageIcon, RotateCcw, Wallpaper, X } from 'lucide-react';
+import { AppWindow, Check, Command, Image as ImageIcon, LayoutGrid, Moon, RotateCcw, Sun, Wallpaper, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
 import { BACKGROUNDS } from '@/lib/backgrounds';
 import { useBackground } from '@/lib/background-store';
+import { type ShellMode, useShell } from '@/lib/shell-store';
 import { cn } from '@/lib/utils';
 
+const SHELL_ICONS: Record<ShellMode, typeof AppWindow> = {
+  windows: AppWindow,
+  macos: Command,
+  classic: LayoutGrid,
+};
+
 /**
- * Launcher wallpaper picker — a Kasm-style "change your background" control that
- * lives in the portal topbar. Opens a popover of live preset swatches plus a
- * custom-image-URL field; the choice persists per browser (background-store).
+ * Launcher personalization control in the desktop chrome: switch the desktop
+ * style (Windows / macOS / Classic), the color theme (light / dark) and the
+ * wallpaper. Every choice persists per browser (shell-store, next-themes,
+ * background-store).
  */
 export function BackgroundPicker() {
   const t = useTranslations('portal');
@@ -23,6 +32,10 @@ export function BackgroundPicker() {
   const setCustomImage = useBackground((s) => s.setCustomImage);
   const reset = useBackground((s) => s.reset);
 
+  const shellMode = useShell((s) => s.mode);
+  const setShellMode = useShell((s) => s.setMode);
+  const { resolvedTheme, setTheme } = useTheme();
+
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const [url, setUrl] = useState('');
@@ -30,10 +43,17 @@ export function BackgroundPicker() {
   const activeId = mounted ? presetId : 'aurora';
   const hasCustom = mounted && !!customImageUrl;
   const isDefault = !hasCustom && activeId === 'aurora';
+  const activeShell = mounted ? shellMode : 'windows';
+  const isDark = mounted ? resolvedTheme !== 'light' : true;
 
   const applyPreset = (id: string) => {
     setPreset(id);
     toast.success(t('appearance.appliedToast', { name: t(`appearance.presets.${id}`) }));
+  };
+
+  const applyShell = (mode: ShellMode) => {
+    setShellMode(mode);
+    toast.success(t('appearance.styleAppliedToast', { name: t(`appearance.styles.${mode}`) }));
   };
 
   const applyCustom = () => {
@@ -55,8 +75,8 @@ export function BackgroundPicker() {
           <Wallpaper className="size-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent>
-        <div className="mb-2.5 flex items-start justify-between gap-2">
+      <PopoverContent className="w-72">
+        <div className="mb-3 flex items-start justify-between gap-2">
           <div>
             <p className="text-sm font-medium">{t('appearance.title')}</p>
             <p className="text-[11px] leading-snug text-muted-foreground">{t('appearance.subtitle')}</p>
@@ -72,7 +92,65 @@ export function BackgroundPicker() {
           )}
         </div>
 
-        {/* Preset swatches — each renders the exact background it applies */}
+        {/* Desktop style */}
+        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {t('appearance.desktopStyle')}
+        </p>
+        <div className="grid grid-cols-3 gap-1.5">
+          {(['windows', 'macos', 'classic'] as ShellMode[]).map((mode) => {
+            const Icon = SHELL_ICONS[mode];
+            const active = activeShell === mode;
+            return (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => applyShell(mode)}
+                aria-pressed={active}
+                className={cn(
+                  'flex flex-col items-center gap-1 rounded-lg border py-2 text-[11px] font-medium transition-all ring-gold-focus',
+                  active
+                    ? 'border-gold-500/60 bg-gold-500/15 text-foreground shadow-[0_0_0_1px_rgba(212,175,55,0.4)]'
+                    : 'border-border-subtle text-muted-foreground hover:border-white/30 hover:text-foreground',
+                )}
+              >
+                <Icon className={cn('size-4', active && 'text-gold-300')} aria-hidden />
+                {t(`appearance.styles.${mode}`)}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Theme */}
+        <p className="mb-1.5 mt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {t('appearance.theme')}
+        </p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {([
+            { key: 'light', icon: Sun, label: t('appearance.themeLight'), active: !isDark },
+            { key: 'dark', icon: Moon, label: t('appearance.themeDark'), active: isDark },
+          ] as const).map(({ key, icon: Icon, label, active }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTheme(key)}
+              aria-pressed={active}
+              className={cn(
+                'flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-medium transition-all ring-gold-focus',
+                active
+                  ? 'border-gold-500/60 bg-gold-500/15 text-foreground shadow-[0_0_0_1px_rgba(212,175,55,0.4)]'
+                  : 'border-border-subtle text-muted-foreground hover:border-white/30 hover:text-foreground',
+              )}
+            >
+              <Icon className={cn('size-3.5', active && 'text-gold-300')} aria-hidden />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Wallpaper */}
+        <p className="mb-1.5 mt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {t('appearance.wallpaper')}
+        </p>
         <div className="grid grid-cols-4 gap-2">
           {BACKGROUNDS.map((bg) => {
             const active = !hasCustom && activeId === bg.id;
@@ -110,7 +188,7 @@ export function BackgroundPicker() {
         </div>
 
         {/* Custom image URL */}
-        <div className="mt-3 border-t border-border-subtle pt-3">
+        <div className="mt-3">
           <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
             <ImageIcon className="size-3.5" /> {t('appearance.customLabel')}
           </label>

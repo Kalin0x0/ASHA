@@ -98,7 +98,18 @@
       "crimson": "زرشکی",
       "graphite": "گرافیت",
       "void": "خلأ"
-    }
+    },
+    "desktopStyle": "سبک دسکتاپ",
+    "styles": {
+      "windows": "ویندوز",
+      "macos": "مک‌اواس",
+      "classic": "کلاسیک"
+    },
+    "styleAppliedToast": "سبک دسکتاپ: {name}",
+    "theme": "پوسته",
+    "themeLight": "روشن",
+    "themeDark": "تیره",
+    "wallpaper": "تصویر پس‌زمینه"
   },
   "desktop": {
     "windows": {
@@ -120,6 +131,26 @@
     "icons": {
       "openAria": "باز کردن {name}"
     },
-    "emptyHint": "برای اجرای یک فضای کاری، شروع را بزنید"
+    "emptyHint": "برای اجرای یک فضای کاری، شروع را بزنید",
+    "menubar": {
+      "systemMenu": "منوی سیستم Asha",
+      "signOut": "خروج از حساب"
+    },
+    "greeting": {
+      "morning": "صبح بخیر",
+      "afternoon": "ظهر بخیر",
+      "evening": "عصر بخیر",
+      "hint": "برای شروع یک فضای کاری، Launchpad را باز کنید"
+    },
+    "dock": {
+      "label": "داک",
+      "launch": "اجرای {name}",
+      "launchpad": "Launchpad",
+      "launchpadAria": "باز کردن Launchpad"
+    },
+    "launchpad": {
+      "label": "Launchpad",
+      "specs": "{cores} vCPU · {gb} GB"
+    }
   }
 }

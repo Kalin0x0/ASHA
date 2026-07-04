@@ -41,12 +41,22 @@ export function sessionViewerPath(s: SessionRow): string {
   return GUAC.has(s.connectionType) ? `/connect/${s.kasmId}` : `/session/${s.id}`;
 }
 
+/** Titlebar style: macOS traffic lights, or Windows caption buttons. */
+export type WindowChrome = 'mac' | 'windows';
+
 /**
- * The user's open sessions rendered as macOS-style windows on the desktop —
- * titlebar with working traffic lights (close = end, minimize = pause,
- * zoom = open), the last-screen preview as the window content.
+ * The user's open sessions rendered as windows on the desktop. `chrome` selects
+ * the titlebar: `mac` = traffic lights (close = end, minimize = pause,
+ * zoom = open) on the start; `windows` = caption buttons on the end. The
+ * last-screen preview is the window content.
  */
-export function SessionWindows({ sessions }: { sessions: SessionRow[] }) {
+export function SessionWindows({
+  sessions,
+  chrome = 'windows',
+}: {
+  sessions: SessionRow[];
+  chrome?: WindowChrome;
+}) {
   const t = useTranslations('portal');
   const tc = useTranslations('common');
   const confirm = useConfirm();
@@ -115,6 +125,7 @@ export function SessionWindows({ sessions }: { sessions: SessionRow[] }) {
             <SessionWindow
               session={s}
               workspace={ws}
+              chrome={chrome}
               thumb={thumbs[s.kasmId] ?? (ws ? thumbs[ws.id] : undefined)}
               busy={busy[s.id]}
               onOpen={onOpen}
@@ -131,6 +142,7 @@ export function SessionWindows({ sessions }: { sessions: SessionRow[] }) {
 function SessionWindow({
   session: s,
   workspace: ws,
+  chrome,
   thumb,
   busy,
   onOpen,
@@ -139,6 +151,7 @@ function SessionWindow({
 }: {
   session: SessionRow;
   workspace: Workspace | undefined;
+  chrome: WindowChrome;
   thumb: { dataUrl: string } | undefined;
   busy: 'stop' | 'delete' | undefined;
   onOpen: (s: SessionRow) => void;
@@ -155,6 +168,10 @@ function SessionWindow({
       ? tc('sessionStatus.PAUSED')
       : t('mySessions.starting');
 
+  const minimizeLabel = t('desktop.windows.minimizeAria', { name: s.workspaceName });
+  const zoomLabel = t('desktop.windows.zoomAria', { name: s.workspaceName });
+  const closeLabel = t('desktop.windows.closeAria', { name: s.workspaceName });
+
   return (
     <LiquidGlass
       radius="rounded-xl"
@@ -162,49 +179,47 @@ function SessionWindow({
       tint="var(--glass-tint-strong)"
       className="group w-[320px] border border-white/12 transition-colors duration-200 hover:border-[rgba(212,175,55,0.4)] sm:w-[360px]"
     >
-      {/* Titlebar — Windows-style: app icon + title on the start, caption
-          buttons (minimize / maximize / close) on the end. Transparent so the
-          liquid glass refracts the wallpaper through it. */}
-      <div className="relative flex h-9 items-center border-b border-white/10">
-        <div className="flex min-w-0 items-center gap-2 ps-3">
-          <AppIcon
-            name={s.workspaceName}
-            dockerImage={ws?.dockerImage}
-            category={ws?.category}
-            iconUrl={ws?.iconUrl}
-            rounded="rounded"
-            className="size-4"
-          />
-          <span className="truncate text-xs font-medium text-foreground/90">{s.workspaceName}</span>
+      {chrome === 'mac' ? (
+        /* macOS titlebar — traffic lights on the start, centered title. */
+        <div dir="ltr" className="relative flex h-9 items-center gap-2 border-b border-white/10 px-3">
+          <div className="flex items-center gap-1.5">
+            <TrafficLight color="close" label={closeLabel} busy={busy === 'delete'} disabled={Boolean(busy)} onClick={() => void onClose(s)} />
+            <TrafficLight color="minimize" label={minimizeLabel} busy={busy === 'stop'} disabled={!running || Boolean(busy)} onClick={() => onPause(s)} />
+            <TrafficLight color="zoom" label={zoomLabel} disabled={busy === 'delete'} onClick={() => onOpen(s)} />
+          </div>
+          <span className="pointer-events-none absolute inset-x-16 truncate text-center text-xs font-medium text-foreground/90">
+            {s.workspaceName}
+          </span>
           {running && (
-            <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-              {formatDuration(s.uptimeSec)}
-            </span>
+            <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">{formatDuration(s.uptimeSec)}</span>
           )}
         </div>
-        <div className="ms-auto flex h-full items-stretch">
-          <WinControl
-            kind="minimize"
-            label={t('desktop.windows.minimizeAria', { name: s.workspaceName })}
-            busy={busy === 'stop'}
-            disabled={!running || Boolean(busy)}
-            onClick={() => onPause(s)}
-          />
-          <WinControl
-            kind="maximize"
-            label={t('desktop.windows.zoomAria', { name: s.workspaceName })}
-            disabled={busy === 'delete'}
-            onClick={() => onOpen(s)}
-          />
-          <WinControl
-            kind="close"
-            label={t('desktop.windows.closeAria', { name: s.workspaceName })}
-            busy={busy === 'delete'}
-            disabled={Boolean(busy)}
-            onClick={() => void onClose(s)}
-          />
+      ) : (
+        /* Windows titlebar — app icon + title on the start, caption buttons on the end. */
+        <div className="relative flex h-9 items-center border-b border-white/10">
+          <div className="flex min-w-0 items-center gap-2 ps-3">
+            <AppIcon
+              name={s.workspaceName}
+              dockerImage={ws?.dockerImage}
+              category={ws?.category}
+              iconUrl={ws?.iconUrl}
+              rounded="rounded"
+              className="size-4"
+            />
+            <span className="truncate text-xs font-medium text-foreground/90">{s.workspaceName}</span>
+            {running && (
+              <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                {formatDuration(s.uptimeSec)}
+              </span>
+            )}
+          </div>
+          <div className="ms-auto flex h-full items-stretch">
+            <WinControl kind="minimize" label={minimizeLabel} busy={busy === 'stop'} disabled={!running || Boolean(busy)} onClick={() => onPause(s)} />
+            <WinControl kind="maximize" label={zoomLabel} disabled={busy === 'delete'} onClick={() => onOpen(s)} />
+            <WinControl kind="close" label={closeLabel} busy={busy === 'delete'} disabled={Boolean(busy)} onClick={() => void onClose(s)} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Window content — the last-screen preview; click to jump back in */}
       <button
@@ -257,6 +272,47 @@ function SessionWindow({
         </span>
       </button>
     </LiquidGlass>
+  );
+}
+
+/** A macOS traffic-light button: colored dot, glyph on titlebar hover. */
+function TrafficLight({
+  color,
+  label,
+  onClick,
+  disabled = false,
+  busy = false,
+}: {
+  color: 'close' | 'minimize' | 'zoom';
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  busy?: boolean;
+}) {
+  const palette = {
+    close: 'bg-[#ff5f57] border-[#e0443e]',
+    minimize: 'bg-[#febc2e] border-[#d89e24]',
+    zoom: 'bg-[#28c840] border-[#1faf34]',
+  }[color];
+  const glyph = { close: '×', minimize: '−', zoom: '+' }[color];
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-busy={busy}
+      aria-label={label}
+      title={label}
+      className={cn(
+        'flex size-3 items-center justify-center rounded-full border text-[9px] font-bold leading-none text-black/0 outline-none transition-all ring-gold-focus group-hover:text-black/60',
+        palette,
+        disabled && !busy && 'opacity-40 saturate-50',
+        busy && 'animate-pulse',
+      )}
+    >
+      {busy ? '' : glyph}
+    </button>
   );
 }
 
