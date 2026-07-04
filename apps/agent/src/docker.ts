@@ -172,6 +172,32 @@ function gpuEnv(cmd: ProvisionCommand): Record<string, string> {
   return { ASHA_HW_ENCODER: 'vaapi', LIBVA_DRIVER_NAME: 'iHD' };
 }
 
+/**
+ * Start CUPS + create the virtual PDF printer queue inside a kasmweb session.
+ * The image ships start_cups.sh but nothing ever calls it (it needs root; the
+ * container's PID1 runs as kasm-user), so without this the guest has no printer.
+ * Uses a DAEMONIZING `cupsd` (NOT `cupsd -f &`, which start_cups.sh does and which
+ * gets reaped when the exec exits). Idempotent via `pgrep cupsd`. Fire-and-forget:
+ * the script finishes in ~1-2s in-container; cupsd forks and persists.
+ */
+async function bootstrapCups(container: Docker.Container): Promise<void> {
+  const script =
+    'ulimit -n 1024; ' +
+    'pgrep cupsd >/dev/null 2>&1 || /usr/sbin/cupsd; ' +
+    'for i in $(seq 1 30); do lpstat -r 2>/dev/null | grep -q "scheduler is running" && break; sleep 0.5; done; ' +
+    'lpadmin -p Kasm-Printer -E -v cups-pdf:/ -P /etc/cups/ppd/kasm.ppd 2>/dev/null; ' +
+    'lpadmin -p Kasm-Printer -o print-color-mode-default=color 2>/dev/null; ' +
+    'lpadmin -d Kasm-Printer 2>/dev/null; ' +
+    'true';
+  const exec = await container.exec({
+    User: 'root',
+    Cmd: ['bash', '-c', script],
+    AttachStdout: false,
+    AttachStderr: false,
+  });
+  await exec.start({ Detach: true });
+}
+
 export async function provisionContainer(cmd: ProvisionCommand): Promise<ProvisionResult> {
   await ensureImage(cmd.runConfig.dockerImage);
 
@@ -311,6 +337,14 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     }
 
     await waitForPort(ip, port, 30_000).catch(() => undefined);
+
+    // kasmweb images ship /etc/cups/start_cups.sh but never call it (it needs
+    // root, and PID1 runs as uid 1000 kasm-user) → cupsd never starts and the
+    // guest has NO printer queue, so "Drucker geht nicht". Bootstrap CUPS here as
+    // root (the agent has root docker). Skipped when DLP disables printing.
+    if (cmd.protocol === 'KASMVNC' && cmd.runConfig.env?.KASM_SVC_PRINTER !== '0') {
+      await bootstrapCups(container).catch(() => undefined); // best-effort, never fail a session
+    }
 
     return { containerId: container.id, internalHost: ip, port, routerName: router };
   } catch (e) {
