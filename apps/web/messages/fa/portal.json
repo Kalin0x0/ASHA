@@ -101,30 +101,25 @@
     }
   },
   "desktop": {
-    "menubar": {
-      "systemMenu": "منوی سیستم Asha",
-      "signOut": "خروج از حساب"
-    },
-    "greeting": {
-      "morning": "صبح بخیر",
-      "afternoon": "ظهر بخیر",
-      "evening": "عصر بخیر",
-      "hint": "برای شروع یک فضای کاری، Launchpad را باز کنید"
-    },
-    "dock": {
-      "label": "داک",
-      "launch": "اجرای {name}",
-      "launchpad": "Launchpad",
-      "launchpadAria": "باز کردن Launchpad"
-    },
-    "launchpad": {
-      "label": "Launchpad",
-      "specs": "{cores} vCPU · {gb} GB"
-    },
     "windows": {
       "closeAria": "پایان دادن به {name}",
       "minimizeAria": "توقف {name}",
       "zoomAria": "باز کردن {name}"
-    }
+    },
+    "taskbar": {
+      "start": "شروع",
+      "search": "جستجو"
+    },
+    "start": {
+      "title": "شروع",
+      "searchPlaceholder": "جستجوی برنامه‌ها و فضاهای کاری",
+      "pinned": "سنجاق‌شده",
+      "recommended": "پیشنهادشده",
+      "signOut": "خروج از حساب"
+    },
+    "icons": {
+      "openAria": "باز کردن {name}"
+    },
+    "emptyHint": "برای اجرای یک فضای کاری، شروع را بزنید"
   }
 }
