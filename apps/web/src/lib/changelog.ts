@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.23',
+    date: '2026-07-04',
+    title: { en: 'Choose your desktop style', de: 'Wähle deinen Desktop-Stil' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'The launcher personalization panel (the wallpaper button) now lets you switch the whole desktop between three styles — Windows, macOS and Classic — plus a light/dark theme toggle, alongside the wallpaper picker. Your choice is remembered per browser.',
+          de: 'Das Personalisierungs-Panel des Launchers (die Hintergrund-Schaltfläche) lässt dich jetzt den gesamten Desktop zwischen drei Stilen umschalten — Windows, macOS und Klassisch — plus einen Hell-/Dunkel-Umschalter, neben der Hintergrundauswahl. Deine Wahl wird pro Browser gespeichert.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.22',
     date: '2026-07-04',
     title: { en: 'Windows-style desktop', de: 'Desktop im Windows-Stil' },
