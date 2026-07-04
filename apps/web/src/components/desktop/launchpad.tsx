@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
+import { LiquidGlass } from '@/components/ui/liquid-glass';
 import { useFavorites } from '@/lib/favorites-store';
 import type { Workspace } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -109,29 +110,33 @@ export function Launchpad({
             className="mx-auto flex min-h-full max-w-5xl flex-col px-6 pb-32 pt-10"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Search pill */}
-            <div className="relative mx-auto w-full max-w-sm">
-              <Search
-                className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  // First Escape clears an active query; the window handler
-                  // then closes the Launchpad on the next press.
-                  if (e.key === 'Escape' && query) {
-                    e.stopPropagation();
-                    setQuery('');
-                  }
-                }}
-                placeholder={t('launcher.searchPlaceholder')}
-                aria-label={t('launcher.searchPlaceholder')}
-                className="h-10 w-full rounded-full border border-border-subtle bg-surface-1/60 ps-10 pe-4 text-sm outline-none backdrop-blur-md transition-[box-shadow,border-color] placeholder:text-muted-foreground focus-visible:border-gold-500/40 focus-visible:shadow-[var(--gold-glow)]"
-              />
+            {/* Search pill — a liquid-glass field */}
+            <div className="relative mx-auto w-full max-w-sm rounded-full transition-shadow duration-200 focus-within:shadow-[var(--gold-glow)]">
+              <LiquidGlass radius="rounded-full" sheen={false} className="border border-white/12">
+                <div className="relative flex items-center">
+                  <Search
+                    className="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      // First Escape clears an active query; the window handler
+                      // then closes the Launchpad on the next press.
+                      if (e.key === 'Escape' && query) {
+                        e.stopPropagation();
+                        setQuery('');
+                      }
+                    }}
+                    placeholder={t('launcher.searchPlaceholder')}
+                    aria-label={t('launcher.searchPlaceholder')}
+                    className="h-10 w-full bg-transparent ps-10 pe-4 text-sm outline-none placeholder:text-muted-foreground"
+                  />
+                </div>
+              </LiquidGlass>
             </div>
 
             {/* Category pills */}

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
+import { LiquidGlass } from '@/components/ui/liquid-glass';
 import { useConfirm } from '@/components/ui/confirm';
 import { useAuth } from '@/lib/api/auth-context';
 import { CURRENT_USER } from '@/lib/current-user';
@@ -155,9 +156,15 @@ function SessionWindow({
       : t('mySessions.starting');
 
   return (
-    <div className="group w-[320px] overflow-hidden rounded-xl border border-border-subtle glass-card shadow-[var(--shadow-ambient)] transition-all duration-200 hover:border-[rgba(212,175,55,0.35)] sm:w-[360px]">
-      {/* Titlebar — traffic lights + centered title + uptime */}
-      <div dir="ltr" className="relative flex h-9 items-center gap-2 border-b border-border-subtle bg-surface-1/70 px-3">
+    <LiquidGlass
+      radius="rounded-xl"
+      sheen={false}
+      tint="var(--glass-tint-strong)"
+      className="group w-[320px] border border-white/12 transition-colors duration-200 hover:border-[rgba(212,175,55,0.4)] sm:w-[360px]"
+    >
+      {/* Titlebar — traffic lights + centered title + uptime; transparent so the
+          liquid glass refracts the wallpaper through it. */}
+      <div dir="ltr" className="relative flex h-9 items-center gap-2 border-b border-white/10 px-3">
         <div className="flex items-center gap-1.5">
           <TrafficLight
             color="close"
@@ -240,7 +247,7 @@ function SessionWindow({
           </span>
         </span>
       </button>
-    </div>
+    </LiquidGlass>
   );
 }
 

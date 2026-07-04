@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.21',
+    date: '2026-07-04',
+    title: { en: 'Liquid glass', de: 'Liquid Glass' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'The OS desktop now uses Apple-style liquid glass: the dock, session windows and the Launchpad search field are layered frosted-glass surfaces — a blurred, refracted wallpaper behind a frost tint, a beveled "liquid" edge rim and a slow specular sheen that sweeps across. Fully theme-aware (light + dark) and RTL-correct.',
+          de: 'Der OS-Desktop nutzt jetzt Liquid Glass im Apple-Stil: Dock, Sitzungsfenster und das Launchpad-Suchfeld sind mehrschichtige Milchglas-Flächen — ein unscharf gebrochenes Hintergrundbild unter einer Frost-Tönung, ein abgeschrägter „flüssiger" Rand und ein langsamer Glanz, der darüber wandert. Vollständig theme-fähig (hell + dunkel) und RTL-korrekt.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.20',
     date: '2026-07-04',
     title: { en: 'The OS desktop', de: 'Der OS-Desktop' },

@@ -8,6 +8,7 @@ import { Launchpad } from '@/components/desktop/launchpad';
 import { SessionWindows, sessionViewerPath, useMySessions } from '@/components/desktop/session-windows';
 import { useWorkspaceLaunch } from '@/components/desktop/use-workspace-launch';
 import { LaunchDialog } from '@/components/composite/launch-dialog';
+import { GlassFilter } from '@/components/ui/liquid-glass';
 import { useResumeSession } from '@/lib/hooks';
 import type { Workspace } from '@/lib/types';
 
@@ -53,6 +54,8 @@ export function Desktop() {
 
   return (
     <div className="relative flex min-h-[calc(100dvh-var(--spacing-topbar))] flex-col">
+      {/* Shared SVG refraction filter for every liquid-glass surface. */}
+      <GlassFilter />
       {/* Desktop surface */}
       <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-36 pt-8 sm:px-8">
         {mySessions.length === 0 ? (

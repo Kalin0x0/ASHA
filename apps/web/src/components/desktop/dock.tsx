@@ -5,6 +5,7 @@ import { LayoutGrid } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useRef } from 'react';
 import { AppIcon } from '@/components/composite/app-icon';
+import { LiquidGlass } from '@/components/ui/liquid-glass';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import type { SessionRow, Workspace } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -60,11 +61,18 @@ export function Dock({
       aria-label={t('desktop.dock.label')}
       className="pointer-events-none fixed inset-x-0 bottom-3 z-30 flex justify-center px-3"
     >
-      <motion.div
-        onMouseMove={(e) => mouseX.set(e.pageX)}
-        onMouseLeave={() => mouseX.set(Infinity)}
-        className="pointer-events-auto flex max-w-full items-end gap-1.5 overflow-x-auto rounded-2xl border border-border-subtle glass-strong px-2.5 pb-2 pt-2 shadow-[var(--shadow-ambient)] backdrop-saturate-150 [scrollbar-width:none]"
+      <LiquidGlass
+        radius="rounded-[1.7rem]"
+        distort
+        clip={false}
+        tint="var(--glass-tint-strong)"
+        className="pointer-events-auto max-w-[calc(100vw-1.5rem)] border border-white/12"
       >
+        <motion.div
+          onMouseMove={(e) => mouseX.set(e.pageX)}
+          onMouseLeave={() => mouseX.set(Infinity)}
+          className="flex items-end gap-1.5 px-2.5 pb-2 pt-2"
+        >
         {items.map((ws) => (
           <DockItem
             key={ws.id}
@@ -101,7 +109,8 @@ export function Dock({
             <LayoutGrid className="size-[46%] text-gold-300" aria-hidden />
           </span>
         </DockItem>
-      </motion.div>
+        </motion.div>
+      </LiquidGlass>
     </nav>
   );
 }
