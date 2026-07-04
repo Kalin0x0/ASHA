@@ -86,6 +86,59 @@ Built from scratch or on open-source tooling — **nothing derived from any prop
 
 ## Quick start
 
+### One command on Ubuntu (recommended) — the branded installer
+
+Take a bare Ubuntu/Debian box to a **live, signed-in-ready** Asha in one line.
+The installer greets you with the Asha mark, then handles Docker, strong secrets,
+your **domain + TLS**, the full stack, and the database migrate + seed:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Kalin0x0/Asha/main/scripts/install.sh | sudo bash
+```
+
+<details>
+<summary>What you'll see</summary>
+
+```
+==============================================================================
+
+                            ######  ######
+                        ####      ##      ####
+                      ###    ##########    ###
+                     ##    ####      ####    ##
+                    ##    ##    ####    ##    ##
+                    ##    ##   ##  ##   ##    ##
+                    ##    ##    ####    ##    ##
+                     ##    ####      ####    ##
+                      ###    ##########    ###
+                        ####      ##      ####
+                            ######  ######
+
+         _    ____  _   _    _
+        / \  / ___|| | | |  / \
+       / _ \ \___ \| |_| | / _ \
+      / ___ \ ___) |  _  |/ ___ \
+     /_/   \_\____/|_| |_/_/   \_\
+
+              C O N T A I N E R   S T R E A M I N G
+
+==============================================================================
+
+  Naiemi Group  ·  VDI / DaaS Platform                       Installer  v1.0.0
+```
+</details>
+
+From a clone, or non-interactively:
+
+```bash
+sudo bash scripts/install.sh                                   # interactive menu
+sudo bash scripts/install.sh --domain asha.example.com \
+     --email ops@example.com --yes                             # unattended
+```
+
+The installer is also your control panel: `status` · `logs` · `restart` ·
+`update` · `uninstall`. **Full guide → [`docs/INSTALL.md`](docs/INSTALL.md).**
+
 ### Option A — the UI showpiece only (no Docker, fastest)
 
 The web app runs fully on deterministic mock data (`NEXT_PUBLIC_API_MODE=mock`).
@@ -106,7 +159,9 @@ docker compose up -d --build
 # api docs: https://asha.local/api/docs
 ```
 
-The `db-migrate` one-shot container runs `prisma migrate deploy` + seed automatically.
+The `db-migrate` one-shot container syncs the schema with `prisma db push`
+(Phase 1 — no migration history; runs with `--accept-data-loss`) and runs the
+idempotent seed automatically.
 Default admin credentials are printed by the seed (see `packages/db/prisma/seed.ts`).
 
 ### Local dev against a real API

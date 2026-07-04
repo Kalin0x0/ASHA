@@ -1,6 +1,6 @@
-import { WorkstationLauncher } from '@/components/composite/workstation-launcher';
+import { Desktop } from '@/components/desktop/desktop';
 
-/** Standalone end-user portal home — the launcher with no shell chrome. */
+/** End-user portal home — the Asha OS desktop (menu bar, windows, dock, Launchpad). */
 export default function PortalHome() {
-  return <WorkstationLauncher />;
+  return <Desktop />;
 }

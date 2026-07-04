@@ -124,6 +124,17 @@
   --shadow-lifted: 0 2px 6px rgba(0, 0, 0, 0.45), 0 14px 32px -10px rgba(0, 0, 0, 0.6),
     0 34px 72px -26px rgba(0, 0, 0, 0.78);
   --grain-opacity: 0.022;
+
+  /* Liquid-glass surfaces (dock, windows, Launchpad chrome). A frost tint, a
+     beveled inner rim (the "liquid" edge highlight) and a deep cast shadow. */
+  --glass-tint: rgba(255, 255, 255, 0.1);
+  --glass-tint-strong: rgba(255, 255, 255, 0.16);
+  --glass-bevel:
+    inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, 0.6),
+    inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 26px -6px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --glass-sheen: rgba(255, 255, 255, 0.16);
 }
 
 .light {
@@ -169,6 +180,16 @@
   --shadow-lifted: 0 2px 6px rgba(16, 16, 30, 0.07), 0 14px 32px -12px rgba(16, 16, 30, 0.14),
     0 30px 64px -26px rgba(16, 16, 30, 0.2);
   --grain-opacity: 0;
+
+  /* Liquid-glass surfaces — brighter frost + crisper rim on light. */
+  --glass-tint: rgba(255, 255, 255, 0.5);
+  --glass-tint-strong: rgba(255, 255, 255, 0.62);
+  --glass-bevel:
+    inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, 0.95),
+    inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+  --glass-shadow: 0 8px 26px -10px rgba(16, 16, 30, 0.28), 0 2px 8px rgba(16, 16, 30, 0.12);
+  --glass-sheen: rgba(255, 255, 255, 0.55);
 }
 
 /* ============================================================================
@@ -461,6 +482,14 @@
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
+  .animate-glass-sheen {
+    animation: glass-sheen 7s var(--ease-out-soft) infinite;
+  }
+  /* Opt-in slow wallpaper drift for the OS desktop (reduced-motion-safe). */
+  .animate-wallpaper-drift {
+    background-size: 100% 340% !important;
+    animation: moveBackground 120s linear infinite;
+  }
   .delay-100 { animation-delay: 100ms; }
   .delay-150 { animation-delay: 150ms; }
   .delay-200 { animation-delay: 200ms; }
@@ -556,6 +585,19 @@
   50%       { transform: translateY(-8px); }
 }
 
+/* Slow vertical wallpaper drift — brings the desktop to life behind the glass. */
+@keyframes moveBackground {
+  from { background-position: 0% 0%; }
+  to   { background-position: 0% -1000%; }
+}
+
+/* A specular highlight that slowly sweeps across a liquid-glass surface. */
+@keyframes glass-sheen {
+  0%        { transform: translateX(-140%) skewX(-18deg); opacity: 0; }
+  18%, 42%  { opacity: 1; }
+  60%, 100% { transform: translateX(140%) skewX(-18deg); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bg-aurora,
   .bg-wallpaper,
@@ -564,7 +606,9 @@
   .animate-rise,
   .animate-fade-up,
   .animate-fade-in,
-  .animate-float {
+  .animate-float,
+  .animate-glass-sheen,
+  .animate-wallpaper-drift {
     animation: none !important;
   }
 }
