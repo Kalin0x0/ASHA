@@ -1,6 +1,6 @@
-import { Desktop } from '@/components/desktop/desktop';
+import { DesktopShell } from '@/components/desktop/desktop-shell';
 
-/** End-user portal home — the Asha OS desktop (menu bar, windows, dock, Launchpad). */
+/** End-user portal home — renders the user's chosen desktop style (Windows / macOS / Classic). */
 export default function PortalHome() {
-  return <Desktop />;
+  return <DesktopShell />;
 }

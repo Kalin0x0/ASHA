@@ -98,7 +98,18 @@
       "crimson": "Crimson",
       "graphite": "Graphite",
       "void": "Void"
-    }
+    },
+    "desktopStyle": "Desktop style",
+    "styles": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "classic": "Classic"
+    },
+    "styleAppliedToast": "Desktop style: {name}",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "wallpaper": "Wallpaper"
   },
   "desktop": {
     "windows": {
@@ -120,6 +131,26 @@
     "icons": {
       "openAria": "Open {name}"
     },
-    "emptyHint": "Press Start to launch a workspace"
+    "emptyHint": "Press Start to launch a workspace",
+    "menubar": {
+      "systemMenu": "Asha system menu",
+      "signOut": "Sign out"
+    },
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "hint": "Open the Launchpad to start a workspace"
+    },
+    "dock": {
+      "label": "Dock",
+      "launch": "Launch {name}",
+      "launchpad": "Launchpad",
+      "launchpadAria": "Open the Launchpad"
+    },
+    "launchpad": {
+      "label": "Launchpad",
+      "specs": "{cores} vCPU · {gb} GB"
+    }
   }
 }

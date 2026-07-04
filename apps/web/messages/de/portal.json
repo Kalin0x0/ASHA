@@ -98,7 +98,18 @@
       "crimson": "Karmesin",
       "graphite": "Graphit",
       "void": "Leere"
-    }
+    },
+    "desktopStyle": "Desktop-Stil",
+    "styles": {
+      "windows": "Windows",
+      "macos": "macOS",
+      "classic": "Klassisch"
+    },
+    "styleAppliedToast": "Desktop-Stil: {name}",
+    "theme": "Design",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "wallpaper": "Hintergrund"
   },
   "desktop": {
     "windows": {
@@ -120,6 +131,26 @@
     "icons": {
       "openAria": "{name} öffnen"
     },
-    "emptyHint": "Drücke Start, um einen Workspace zu starten"
+    "emptyHint": "Drücke Start, um einen Workspace zu starten",
+    "menubar": {
+      "systemMenu": "Asha-Systemmenü",
+      "signOut": "Abmelden"
+    },
+    "greeting": {
+      "morning": "Guten Morgen",
+      "afternoon": "Guten Tag",
+      "evening": "Guten Abend",
+      "hint": "Launchpad öffnen und einen Workspace starten"
+    },
+    "dock": {
+      "label": "Dock",
+      "launch": "{name} starten",
+      "launchpad": "Launchpad",
+      "launchpadAria": "Launchpad öffnen"
+    },
+    "launchpad": {
+      "label": "Launchpad",
+      "specs": "{cores} vCPU · {gb} GB"
+    }
   }
 }
