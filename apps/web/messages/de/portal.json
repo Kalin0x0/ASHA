@@ -101,30 +101,25 @@
     }
   },
   "desktop": {
-    "menubar": {
-      "systemMenu": "Asha-Systemmenü",
-      "signOut": "Abmelden"
-    },
-    "greeting": {
-      "morning": "Guten Morgen",
-      "afternoon": "Guten Tag",
-      "evening": "Guten Abend",
-      "hint": "Launchpad öffnen und einen Workspace starten"
-    },
-    "dock": {
-      "label": "Dock",
-      "launch": "{name} starten",
-      "launchpad": "Launchpad",
-      "launchpadAria": "Launchpad öffnen"
-    },
-    "launchpad": {
-      "label": "Launchpad",
-      "specs": "{cores} vCPU · {gb} GB"
-    },
     "windows": {
       "closeAria": "{name} beenden",
       "minimizeAria": "{name} pausieren",
       "zoomAria": "{name} öffnen"
-    }
+    },
+    "taskbar": {
+      "start": "Start",
+      "search": "Suchen"
+    },
+    "start": {
+      "title": "Start",
+      "searchPlaceholder": "Nach Apps und Workspaces suchen",
+      "pinned": "Angeheftet",
+      "recommended": "Empfohlen",
+      "signOut": "Abmelden"
+    },
+    "icons": {
+      "openAria": "{name} öffnen"
+    },
+    "emptyHint": "Drücke Start, um einen Workspace zu starten"
   }
 }

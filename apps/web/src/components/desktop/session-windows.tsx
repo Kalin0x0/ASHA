@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Loader2, Play } from 'lucide-react';
+import { Loader2, Minus, Play, Square, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -162,39 +162,48 @@ function SessionWindow({
       tint="var(--glass-tint-strong)"
       className="group w-[320px] border border-white/12 transition-colors duration-200 hover:border-[rgba(212,175,55,0.4)] sm:w-[360px]"
     >
-      {/* Titlebar — traffic lights + centered title + uptime; transparent so the
+      {/* Titlebar — Windows-style: app icon + title on the start, caption
+          buttons (minimize / maximize / close) on the end. Transparent so the
           liquid glass refracts the wallpaper through it. */}
-      <div dir="ltr" className="relative flex h-9 items-center gap-2 border-b border-white/10 px-3">
-        <div className="flex items-center gap-1.5">
-          <TrafficLight
-            color="close"
-            label={t('desktop.windows.closeAria', { name: s.workspaceName })}
-            busy={busy === 'delete'}
-            disabled={Boolean(busy)}
-            onClick={() => void onClose(s)}
+      <div className="relative flex h-9 items-center border-b border-white/10">
+        <div className="flex min-w-0 items-center gap-2 ps-3">
+          <AppIcon
+            name={s.workspaceName}
+            dockerImage={ws?.dockerImage}
+            category={ws?.category}
+            iconUrl={ws?.iconUrl}
+            rounded="rounded"
+            className="size-4"
           />
-          <TrafficLight
-            color="minimize"
+          <span className="truncate text-xs font-medium text-foreground/90">{s.workspaceName}</span>
+          {running && (
+            <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+              {formatDuration(s.uptimeSec)}
+            </span>
+          )}
+        </div>
+        <div className="ms-auto flex h-full items-stretch">
+          <WinControl
+            kind="minimize"
             label={t('desktop.windows.minimizeAria', { name: s.workspaceName })}
             busy={busy === 'stop'}
             disabled={!running || Boolean(busy)}
             onClick={() => onPause(s)}
           />
-          <TrafficLight
-            color="zoom"
+          <WinControl
+            kind="maximize"
             label={t('desktop.windows.zoomAria', { name: s.workspaceName })}
             disabled={busy === 'delete'}
             onClick={() => onOpen(s)}
           />
+          <WinControl
+            kind="close"
+            label={t('desktop.windows.closeAria', { name: s.workspaceName })}
+            busy={busy === 'delete'}
+            disabled={Boolean(busy)}
+            onClick={() => void onClose(s)}
+          />
         </div>
-        <span className="pointer-events-none absolute inset-x-16 truncate text-center text-xs font-medium text-foreground/90">
-          {s.workspaceName}
-        </span>
-        {running && (
-          <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
-            {formatDuration(s.uptimeSec)}
-          </span>
-        )}
       </div>
 
       {/* Window content — the last-screen preview; click to jump back in */}
@@ -251,26 +260,26 @@ function SessionWindow({
   );
 }
 
-/** A macOS traffic-light button: colored dot, glyph on titlebar hover. */
-function TrafficLight({
-  color,
+/**
+ * A Windows-style caption button. `close` turns red on hover (the classic
+ * Windows close-red); minimize/maximize get a subtle wash. The last button
+ * (close) reaches the window's rounded top-end corner, clipped by the glass.
+ */
+function WinControl({
+  kind,
   label,
   onClick,
   disabled = false,
   busy = false,
 }: {
-  color: 'close' | 'minimize' | 'zoom';
+  kind: 'minimize' | 'maximize' | 'close';
   label: string;
   onClick: () => void;
   disabled?: boolean;
   busy?: boolean;
 }) {
-  const palette = {
-    close: 'bg-[#ff5f57] border-[#e0443e]',
-    minimize: 'bg-[#febc2e] border-[#d89e24]',
-    zoom: 'bg-[#28c840] border-[#1faf34]',
-  }[color];
-  const glyph = { close: '×', minimize: '−', zoom: '+' }[color];
+  const Icon = kind === 'minimize' ? Minus : kind === 'maximize' ? Square : X;
+  const isClose = kind === 'close';
 
   return (
     <button
@@ -281,13 +290,16 @@ function TrafficLight({
       aria-label={label}
       title={label}
       className={cn(
-        'flex size-3 items-center justify-center rounded-full border text-[9px] font-bold leading-none text-black/0 outline-none transition-all ring-gold-focus group-hover:text-black/60',
-        palette,
-        disabled && !busy && 'opacity-40 saturate-50',
-        busy && 'animate-pulse',
+        'flex w-11 items-center justify-center text-foreground/80 outline-none transition-colors ring-gold-focus',
+        isClose ? 'hover:bg-[#e81123] hover:text-white' : 'hover:bg-white/12 hover:text-foreground',
+        disabled && !busy && 'opacity-30',
       )}
     >
-      {busy ? '' : glyph}
+      {busy ? (
+        <Loader2 className="size-3.5 animate-spin" aria-hidden />
+      ) : (
+        <Icon className={kind === 'maximize' ? 'size-3' : 'size-3.5'} strokeWidth={2} aria-hidden />
+      )}
     </button>
   );
 }
