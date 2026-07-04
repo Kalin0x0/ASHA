@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.22',
+    date: '2026-07-04',
+    title: { en: 'Windows-style desktop', de: 'Desktop im Windows-Stil' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'The end-user portal is now a Windows-12-style desktop: a floating glass taskbar with a Start button, pinned + running workspaces (with a running underline) and a system tray with a live clock; a Start menu (⌘K) with search, a Pinned grid and a Recommended row of your open sessions; and open sessions as windows with Windows caption buttons (minimize = pause, maximize = open, close = end).',
+          de: 'Das Endnutzer-Portal ist jetzt ein Desktop im Windows-12-Stil: eine schwebende Glas-Taskleiste mit Start-Schaltfläche, angehefteten + laufenden Workspaces (mit Lauf-Unterstrich) und einer Taskleisten-Info mit Live-Uhr; ein Startmenü (⌘K) mit Suche, einem Angeheftet-Raster und einer Empfohlen-Reihe deiner offenen Sitzungen; offene Sitzungen als Fenster mit Windows-Titelleisten-Schaltflächen (Minimieren = pausieren, Maximieren = öffnen, Schließen = beenden).',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'Pin a workspace and it now appears as an icon on the desktop — double-click (or Enter) to launch it, just like a real OS.',
+          de: 'Hefte einen Workspace an und er erscheint jetzt als Symbol auf dem Desktop — per Doppelklick (oder Eingabetaste) startest du ihn, wie in einem echten Betriebssystem.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.21',
     date: '2026-07-04',
     title: { en: 'Liquid glass', de: 'Liquid Glass' },
