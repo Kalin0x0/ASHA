@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  Asha — funding / sponsorship configuration            ·  a Naiemi Group product
+# ─────────────────────────────────────────────────────────────────────────────
+#  GitHub reads this file from the repository's DEFAULT branch and renders a
+#  "Sponsor" button in the repo header and sidebar. Only entries with a valid
+#  value are shown, so it is safe to leave unused platforms commented out.
+#
+#  Docs → docs/SPONSORING.md  (how it works + how to add a platform later)
+#  GitHub reference:
+#  https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+#
+#  Each key below maps to a funding platform. Fill in a handle to activate it —
+#  the value is the account/slug used in that platform's URL, never a full URL
+#  (except `custom:`, which takes full URLs).
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── GitHub Sponsors ──────────────────────────────────────────────────────────
+# Up to 4 GitHub usernames or organizations (YAML list). The button only appears
+# once the account has an ACTIVE GitHub Sponsors profile; until then GitHub
+# simply omits this entry (no broken button).
+github: [Kalin0x0]
+
+# ── Ko-fi ────────────────────────────────────────────────────────────────────
+# Your Ko-fi page slug → ko-fi.com/<slug>.
+ko_fi: kalin0x
+
+# ── Buy Me a Coffee ──────────────────────────────────────────────────────────
+# Your username → buymeacoffee.com/<username>.
+# buy_me_a_coffee: your-buymeacoffee-username
+
+# ── Patreon ──────────────────────────────────────────────────────────────────
+# Your Patreon username → patreon.com/<username>.
+# patreon: your-patreon-username
+
+# ── Open Collective ──────────────────────────────────────────────────────────
+# Your collective slug → opencollective.com/<slug>.
+# open_collective: your-collective-slug
+
+# ── PayPal & any other links (Custom) ────────────────────────────────────────
+# NOTE: FUNDING.yml has no dedicated `paypal:` key — PayPal is added here as a
+# full URL, alongside any other donation pages (max 4 URLs total). Examples:
+#   • PayPal.Me link:        https://www.paypal.me/<your-handle>
+#   • PayPal hosted button:  https://www.paypal.com/donate/?hosted_button_id=XXXX
+#   • Your own donate page:  https://naiemi.com/donate
+# custom:
+#   - "https://www.paypal.me/your-handle"
+#   - "https://naiemi.com/donate"
