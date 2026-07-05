@@ -38,6 +38,34 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.26',
+    date: '2026-07-04',
+    title: { en: 'Arrange desktop icons freely', de: 'Desktop-Symbole frei anordnen' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'On the Windows desktop you can now drag your pinned workspace icons anywhere on the desktop — they snap to a tidy grid, stay within view, and their positions are remembered per browser. Unmoved icons still flow into the top-start column automatically.',
+          de: 'Auf dem Windows-Desktop kannst du deine angehefteten Workspace-Symbole jetzt überall auf dem Desktop platzieren — sie rasten an einem sauberen Raster ein, bleiben im sichtbaren Bereich und ihre Positionen werden pro Browser gespeichert. Nicht verschobene Symbole ordnen sich weiterhin automatisch in der Startspalte an.',
+        },
+      },
+    ],
+  },
+  {
+    version: '1.1.25',
+    date: '2026-07-04',
+    title: { en: 'Smooth theme & session animations', de: 'Sanfte Design- & Sitzungs-Animationen' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Switching light/dark theme now sweeps the new theme across the screen as a circle expanding from where you clicked (View Transitions). Opening or resuming a session plays a frosted overlay with the app icon springing up under a gold pulse while the viewer loads behind it. Both respect "reduce motion" and fall back to an instant switch where unsupported.',
+          de: 'Der Wechsel zwischen hellem/dunklem Design breitet das neue Design jetzt als Kreis vom Klickpunkt über den Bildschirm aus (View Transitions). Beim Öffnen oder Fortsetzen einer Sitzung erscheint ein Milchglas-Overlay, bei dem das App-Symbol unter einem Gold-Puls aufspringt, während der Viewer dahinter lädt. Beides berücksichtigt „Bewegung reduzieren" und wechselt sonst sofort.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.24',
     date: '2026-07-04',
     title: { en: 'One-click updates', de: 'Ein-Klick-Updates' },

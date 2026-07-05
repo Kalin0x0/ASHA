@@ -152,5 +152,8 @@
       "label": "Launchpad",
       "specs": "{cores} vCPU · {gb} GB"
     }
+  },
+  "launchOverlay": {
+    "opening": "Opening {name}…"
   }
 }
