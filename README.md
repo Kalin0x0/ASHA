@@ -225,16 +225,23 @@ The best way to support Asha is **GitHub Sponsors** — one-off or monthly, canc
 
 ### ☕ Other ways to donate
 
-Prefer a different platform? These activate automatically from
-[`.github/FUNDING.yml`](.github/FUNDING.yml) — add your handles there to light up the
-badges below (see the [Sponsoring guide](docs/SPONSORING.md)).
+Prefer buying us a coffee? Every cup fuels a late-night feature 💛
+
+<div align="center">
+
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20coffee-ff5e5b?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/kalin0x)
+
+</div>
+
+More platforms activate automatically from [`.github/FUNDING.yml`](.github/FUNDING.yml) —
+add your handles there to light up the badges below (see the
+[Sponsoring guide](docs/SPONSORING.md)).
 
 <!--
   Ready-to-use external donation badges. Uncomment a line and replace the handle
   once the matching entry is set in .github/FUNDING.yml. (No placeholder links are
   shown until then, so the section never renders a broken button.)
 
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-ff5e5b?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/YOUR_KOFI_SLUG)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support-ffdd00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/YOUR_BMAC_USERNAME)
 [![Patreon](https://img.shields.io/badge/Patreon-Become%20a%20patron-f96854?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/YOUR_PATREON_USERNAME)
 [![Open Collective](https://img.shields.io/badge/Open%20Collective-Contribute-1f87ff?style=for-the-badge&logo=opencollective&logoColor=white)](https://opencollective.com/YOUR_COLLECTIVE_SLUG)
