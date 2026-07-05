@@ -10,6 +10,7 @@ import { useConfirm } from '@/components/ui/confirm';
 import { useAuth } from '@/lib/api/auth-context';
 import { CURRENT_USER } from '@/lib/current-user';
 import { useLaunchableWorkspaces, usePauseSession, useResumeSession, useSessions, useTerminateSession } from '@/lib/hooks';
+import { launchTransition } from '@/lib/launch-overlay-store';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import type { SessionRow, SessionStatus, Workspace } from '@/lib/types';
 import { cn, formatDuration } from '@/lib/utils';
@@ -84,8 +85,13 @@ export function OpenSessions({
 
   if (mine.length === 0) return null;
 
-  const openViewer = (s: SessionRow) =>
-    router.push(GUAC.has(s.connectionType) ? `/connect/${s.kasmId}` : `/session/${s.id}`);
+  const openViewer = (s: SessionRow) => {
+    const ws = wsByName.get(s.workspaceName);
+    launchTransition(
+      { name: s.workspaceName, iconUrl: ws?.iconUrl, dockerImage: ws?.dockerImage, category: ws?.category },
+      () => router.push(GUAC.has(s.connectionType) ? `/connect/${s.kasmId}` : `/session/${s.id}`),
+    );
+  };
   const onResume = (s: SessionRow) => {
     if (s.status === 'PAUSED') resume(s.id);
     openViewer(s);

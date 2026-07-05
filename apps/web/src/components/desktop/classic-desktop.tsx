@@ -1,6 +1,7 @@
 'use client';
 
 import { WorkstationLauncher } from '@/components/composite/workstation-launcher';
+import { LaunchOverlay } from '@/components/desktop/launch-overlay';
 import { MenuBar } from '@/components/desktop/menu-bar';
 
 /**
@@ -15,6 +16,8 @@ export function ClassicDesktop() {
       <div className="relative z-10 flex-1">
         <WorkstationLauncher />
       </div>
+      {/* Session-opening animation */}
+      <LaunchOverlay />
     </div>
   );
 }

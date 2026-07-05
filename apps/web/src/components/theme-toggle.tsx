@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { themeTransition } from '@/lib/theme-transition';
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -19,7 +20,8 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon-sm"
       aria-label={t('themeToggle')}
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      // The new theme sweeps in as a circle from the click point.
+      onClick={(e) => themeTransition(() => setTheme(isDark ? 'light' : 'dark'), e)}
     >
       {mounted && !isDark ? <Moon className="size-4" /> : <Sun className="size-4" />}
     </Button>

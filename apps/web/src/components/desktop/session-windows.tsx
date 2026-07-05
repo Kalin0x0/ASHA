@@ -18,6 +18,7 @@ import {
   useSessions,
   useTerminateSession,
 } from '@/lib/hooks';
+import { launchTransition } from '@/lib/launch-overlay-store';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import type { SessionRow, SessionStatus, Workspace } from '@/lib/types';
 import { cn, formatDuration } from '@/lib/utils';
@@ -90,7 +91,11 @@ export function SessionWindows({
 
   const onOpen = (s: SessionRow) => {
     if (s.status === 'PAUSED') resume(s.id);
-    router.push(sessionViewerPath(s));
+    const ws = wsByName.get(s.workspaceName);
+    launchTransition(
+      { name: s.workspaceName, iconUrl: ws?.iconUrl, dockerImage: ws?.dockerImage, category: ws?.category },
+      () => router.push(sessionViewerPath(s)),
+    );
   };
   const onPause = (s: SessionRow) => {
     setBusy((b) => ({ ...b, [s.id]: 'stop' }));

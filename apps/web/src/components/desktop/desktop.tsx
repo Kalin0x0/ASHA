@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { DesktopIcons } from '@/components/desktop/desktop-icons';
+import { LaunchOverlay } from '@/components/desktop/launch-overlay';
 import { SessionWindows, sessionViewerPath, useMySessions } from '@/components/desktop/session-windows';
 import { StartMenu } from '@/components/desktop/start-menu';
 import { Taskbar } from '@/components/desktop/taskbar';
@@ -12,6 +13,7 @@ import { LaunchDialog } from '@/components/composite/launch-dialog';
 import { GlassFilter } from '@/components/ui/liquid-glass';
 import { useFavorites } from '@/lib/favorites-store';
 import { useResumeSession } from '@/lib/hooks';
+import { launchTransition } from '@/lib/launch-overlay-store';
 import type { SessionRow, Workspace } from '@/lib/types';
 
 /**
@@ -55,7 +57,11 @@ export function Desktop() {
 
   const openSession = (s: SessionRow) => {
     if (s.status === 'PAUSED') resume(s.id);
-    router.push(sessionViewerPath(s));
+    const ws = workspaces.find((w) => w.friendlyName === s.workspaceName);
+    launchTransition(
+      { name: s.workspaceName, iconUrl: ws?.iconUrl, dockerImage: ws?.dockerImage, category: ws?.category },
+      () => router.push(sessionViewerPath(s)),
+    );
   };
 
   return (
@@ -105,6 +111,9 @@ export function Desktop() {
         onWebNative={(ws) => void launchWebNative(ws.id)}
         launching={launchingId !== null}
       />
+
+      {/* Session-opening animation (z-60, above the taskbar/start) */}
+      <LaunchOverlay />
     </div>
   );
 }

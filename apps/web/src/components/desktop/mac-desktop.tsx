@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Dock } from '@/components/desktop/dock';
+import { LaunchOverlay } from '@/components/desktop/launch-overlay';
 import { Launchpad } from '@/components/desktop/launchpad';
 import { MenuBar } from '@/components/desktop/menu-bar';
 import { SessionWindows, sessionViewerPath, useMySessions } from '@/components/desktop/session-windows';
@@ -11,6 +12,7 @@ import { useWorkspaceLaunch } from '@/components/desktop/use-workspace-launch';
 import { LaunchDialog } from '@/components/composite/launch-dialog';
 import { GlassFilter } from '@/components/ui/liquid-glass';
 import { useResumeSession } from '@/lib/hooks';
+import { launchTransition } from '@/lib/launch-overlay-store';
 import type { Workspace } from '@/lib/types';
 
 /**
@@ -44,7 +46,10 @@ export function MacDesktop() {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
     if (live) {
       if (live.status === 'PAUSED') resume(live.id);
-      router.push(sessionViewerPath(live));
+      launchTransition(
+        { name: ws.friendlyName, iconUrl: ws.iconUrl, dockerImage: ws.dockerImage, category: ws.category },
+        () => router.push(sessionViewerPath(live)),
+      );
       return;
     }
     onLaunch(ws.id);
@@ -98,6 +103,9 @@ export function MacDesktop() {
           onWebNative={(ws) => void launchWebNative(ws.id)}
           launching={launchingId !== null}
         />
+
+        {/* Session-opening animation */}
+        <LaunchOverlay />
       </div>
     </div>
   );
