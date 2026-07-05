@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { BACKGROUNDS } from '@/lib/backgrounds';
 import { useBackground } from '@/lib/background-store';
 import { type ShellMode, useShell } from '@/lib/shell-store';
+import { themeTransition } from '@/lib/theme-transition';
 import { cn } from '@/lib/utils';
 
 const SHELL_ICONS: Record<ShellMode, typeof AppWindow> = {
@@ -132,7 +133,7 @@ export function BackgroundPicker() {
             <button
               key={key}
               type="button"
-              onClick={() => setTheme(key)}
+              onClick={(e) => themeTransition(() => setTheme(key), e)}
               aria-pressed={active}
               className={cn(
                 'flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-medium transition-all ring-gold-focus',

@@ -598,6 +598,30 @@
   60%, 100% { transform: translateX(140%) skewX(-18deg); opacity: 0; }
 }
 
+/* ── Theme-switch circular reveal (View Transitions API) ─────────────────────
+   themeTransition() sets --theme-reveal-x/y/r from the click point, then flips
+   the theme inside document.startViewTransition. The NEW snapshot is clipped to
+   a growing circle from that point; the old one sits underneath. Browsers
+   without the API never create these pseudo-elements → instant switch. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+  clip-path: circle(0px at var(--theme-reveal-x, 50%) var(--theme-reveal-y, 0%));
+  animation: theme-reveal 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes theme-reveal {
+  to {
+    clip-path: circle(var(--theme-reveal-r, 150vmax) at var(--theme-reveal-x, 50%) var(--theme-reveal-y, 0%));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bg-aurora,
   .bg-wallpaper,
@@ -610,6 +634,11 @@
   .animate-glass-sheen,
   .animate-wallpaper-drift {
     animation: none !important;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+    clip-path: none !important;
   }
 }
 

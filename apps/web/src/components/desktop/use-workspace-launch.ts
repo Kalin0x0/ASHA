@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useLaunchableWorkspaces, useLaunchSession } from '@/lib/hooks';
+import { launchTransition } from '@/lib/launch-overlay-store';
 import type { Workspace } from '@/lib/types';
 
 /**
@@ -33,8 +34,16 @@ export function useWorkspaceLaunch() {
       return;
     }
     setLaunchTarget(null);
-    if (ws && ws.type !== 'CONTAINER') router.push(`/connect/${session.kasmId}`);
-    else router.push(`/session/${session.id}`);
+    const path = ws && ws.type !== 'CONTAINER' ? `/connect/${session.kasmId}` : `/session/${session.id}`;
+    launchTransition(
+      {
+        name: ws?.friendlyName ?? session.workspaceName,
+        iconUrl: ws?.iconUrl,
+        dockerImage: ws?.dockerImage,
+        category: ws?.category,
+      },
+      () => router.push(path),
+    );
   };
 
   const onLaunch = (id: string) => {
