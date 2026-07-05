@@ -197,6 +197,61 @@ All seven phases are complete. The full per-item build log lives in [`TODO.md`](
 - ✅ **Phase 6** — closing the gaps to the incumbents: session pause/resume/resize + multi-monitor, GPU encoding (NVENC/VAAPI), runtime DLP enforcement (agent + viewer), PulseAudio + CUPS sidecars, full SAML SP-initiated flow + LDAP bind/live-test with JIT provisioning, license enforcement, image-registry marketplace, drag-and-drop upload, and mobile/touch-optimized viewer.
 - ✅ **Phase 7** — enterprise identity, the full VM driver matrix, and at-rest secret hardening: **WebAuthn / passkeys** (passwordless login + enrollment), **SCIM 2.0** user/group provisioning, **OIDC** Authorization Code + PKCE with JWKS ID-token verification, **nonce-binding** and **RP-initiated logout**, **SAML Single Logout** (nameID + sessionIndex), eleven real VM-provider drivers (Proxmox/AWS/Azure/GCP/vSphere/DigitalOcean/Oracle/OpenStack/Nutanix/KubeVirt/Harvester), **AES-256-GCM secret-sealing at rest** for every provider, auth-config and webhook secret, and a **complete admin surface** — every navigation item is now a live page wired to its backend: Authentication (providers + SSO mappings + SCIM), Infrastructure (Zones/Servers/Pools/AutoScale/VM+DNS providers), Sessions (Staging/Casting), Storage Mappings, Connectivity (Proxies/Web Filtering/Browser Isolation/Egress), Observability (Reporting/Metrics/Audit Log/Log Forwarding), Developer (API Keys/Webhooks/API Docs), and Settings (General/Branding/Banners/Database/Config Import-Export/Security).
 
+## 💛 Support this project
+
+<div align="center">
+
+[![Sponsor Asha](https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Kalin0x0)
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/Kalin0x0?style=for-the-badge&logo=githubsponsors&logoColor=white&label=Sponsors&color=db61a2)](https://github.com/sponsors/Kalin0x0)
+[![License](https://img.shields.io/badge/License-MIT-d4af37?style=for-the-badge)](LICENSE)
+
+</div>
+
+Asha is built in the open by **[Naiemi Group](https://github.com/Kalin0x0)** — an
+original, from-scratch container-streaming / VDI / DaaS platform. If Asha saves you
+time, powers your workspaces, or you'd simply like to see it grow, **your support keeps
+the containers streaming** ✨. Every sponsorship goes straight into development, hosting
+for the demo, and the next batch of features. Thank you 🙏
+
+### ❤️ Become a sponsor
+
+The best way to support Asha is **GitHub Sponsors** — one-off or monthly, cancel anytime:
+
+<div align="center">
+
+### **[→ Sponsor Asha on GitHub](https://github.com/sponsors/Kalin0x0)**
+
+</div>
+
+### ☕ Other ways to donate
+
+Prefer buying us a coffee? Every cup fuels a late-night feature 💛
+
+<div align="center">
+
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20coffee-ff5e5b?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/kalin0x)
+
+</div>
+
+More platforms activate automatically from [`.github/FUNDING.yml`](.github/FUNDING.yml) —
+add your handles there to light up the badges below (see the
+[Sponsoring guide](docs/SPONSORING.md)).
+
+<!--
+  Ready-to-use external donation badges. Uncomment a line and replace the handle
+  once the matching entry is set in .github/FUNDING.yml. (No placeholder links are
+  shown until then, so the section never renders a broken button.)
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support-ffdd00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/YOUR_BMAC_USERNAME)
+[![Patreon](https://img.shields.io/badge/Patreon-Become%20a%20patron-f96854?style=for-the-badge&logo=patreon&logoColor=white)](https://www.patreon.com/YOUR_PATREON_USERNAME)
+[![Open Collective](https://img.shields.io/badge/Open%20Collective-Contribute-1f87ff?style=for-the-badge&logo=opencollective&logoColor=white)](https://opencollective.com/YOUR_COLLECTIVE_SLUG)
+[![PayPal](https://img.shields.io/badge/PayPal-Donate-00457c?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.me/YOUR_PAYPAL_HANDLE)
+-->
+
+> ⭐ Not able to donate? **Starring the repo** and sharing Asha helps just as much — it's
+> free and it genuinely moves the needle. New here? The
+> [installation guide](docs/INSTALL.md) gets you a live Asha in one command.
+
 ## License & ownership
 
 Asha is a **Naiemi Group** product. All first-party source in this repository is owned by
