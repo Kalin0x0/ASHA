@@ -114,6 +114,24 @@ export function getMe() {
   return apiFetch<AuthUser>('/auth/me');
 }
 
+/** Whether the public 10-minute demo button is enabled for this deployment. */
+export function getDemoConfig() {
+  return apiFetch<{ enabled: boolean }>('/auth/demo', { auth: false });
+}
+
+export interface ApiDemoResponse {
+  accessToken: string;
+  refreshToken: string | null;
+  expiresIn: number;
+  tokenType: string;
+  demoExpiresAt: string;
+  user: AuthUser;
+}
+/** Start a one-shot 10-minute demo session (deduped per e-mail + device server-side). */
+export function loginAsDemo(body: { email: string; fingerprint: string }) {
+  return apiFetch<ApiDemoResponse>('/auth/demo', { method: 'POST', body, auth: false });
+}
+
 export function logout(refreshToken: string | null) {
   return apiFetch<{ ok: true }>('/auth/logout', {
     method: 'POST',

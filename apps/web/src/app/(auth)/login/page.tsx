@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, Fingerprint, KeyRound, Network, ShieldCheck, Zap } from 'lucide-react';
+import { ArrowRight, Fingerprint, KeyRound, Network, ShieldCheck, Timer, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -13,10 +13,12 @@ import { useAuth } from '@/lib/api/auth-context';
 import { getAuth } from '@/lib/api/auth-store';
 import {
   type ApiPublicAuthProvider,
+  getDemoConfig,
   getPublicAuthProviders,
   ssoLoginUrl,
 } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
+import { computeDeviceFingerprint } from '@/lib/device-fingerprint';
 
 const SHOWCASE_FEATURES = [
   { Icon: ShieldCheck, key: 'zeroTrust' },
@@ -27,11 +29,13 @@ const SHOWCASE_FEATURES = [
 export default function LoginPage() {
   const router = useRouter();
   const t = useTranslations('auth');
-  const { login, loginWithPasskey } = useAuth();
+  const { login, loginWithPasskey, loginAsDemo } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoEnabled, setDemoEnabled] = useState(false);
   const [ssoProviders, setSsoProviders] = useState<ApiPublicAuthProvider[]>([]);
 
   useEffect(() => {
@@ -39,7 +43,29 @@ export default function LoginPage() {
     getPublicAuthProviders()
       .then(setSsoProviders)
       .catch(() => setSsoProviders([]));
+    getDemoConfig()
+      .then((c) => setDemoEnabled(c.enabled))
+      .catch(() => setDemoEnabled(false));
   }, []);
+
+  const onDemo = async () => {
+    if (!isLive) {
+      router.push('/');
+      return;
+    }
+    if (!email) {
+      toast.error(t('errors.enterEmailFirst'));
+      return;
+    }
+    setDemoLoading(true);
+    try {
+      await loginAsDemo(email, computeDeviceFingerprint());
+      router.push('/');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('errors.demoFailed'));
+      setDemoLoading(false);
+    }
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -245,6 +271,27 @@ export default function LoginPage() {
               </Button>
             )}
           </div>
+
+          {(demoEnabled || !isLive) && (
+            <div className="mt-5 rounded-[var(--radius-md)] border border-gold-500/30 bg-gold-500/[0.06] p-3.5">
+              <div className="flex items-center gap-2">
+                <Timer className="size-4 text-gold-300" />
+                <p className="text-sm font-semibold">{t('demo.title')}</p>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{t('demo.subtitle')}</p>
+              <Button
+                variant="secondary"
+                type="button"
+                loading={demoLoading}
+                onClick={() => void onDemo()}
+                className="mt-3 h-10 w-full gap-2 border border-gold-500/40"
+              >
+                {!demoLoading && <Zap className="size-4 text-gold-300" />}
+                <span>{t('demo.start')}</span>
+              </Button>
+              <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground/80">{t('demo.notice')}</p>
+            </div>
+          )}
 
           <div className="mt-6 flex items-center gap-2.5 rounded-[var(--radius-md)] border border-border-subtle bg-[color-mix(in_srgb,var(--surface-1)_50%,transparent)] px-3.5 py-3">
             <ShieldCheck className="size-4 shrink-0 text-gold-400" />
