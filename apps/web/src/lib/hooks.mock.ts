@@ -459,3 +459,59 @@ export function useMyTariff(): import('@/lib/api/endpoints').ApiMyTariff | null 
     remainingSeconds: 742 * 60,
   };
 }
+
+// ── Self-service account (isolated mock mini-store) ───────────────────────────
+type MockAccount = import('@/lib/api/endpoints').ApiAccount;
+let mockAccount: MockAccount = {
+  id: 'mock-user',
+  email: 'user@asha.local',
+  username: 'user',
+  displayName: 'Sam Meridian',
+  avatarUrl: null,
+  status: 'ACTIVE',
+  isSystemAdmin: false,
+  locale: 'en',
+  lastLoginAt: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
+  isLocalAccount: true,
+  hasPassword: true,
+  twoFactorEnabled: false,
+  groups: ['All Users'],
+};
+const acctListeners = new Set<() => void>();
+const acctStore = {
+  subscribe(fn: () => void) {
+    acctListeners.add(fn);
+    return () => acctListeners.delete(fn);
+  },
+  snapshot: () => mockAccount,
+  emit() {
+    for (const l of acctListeners) l();
+  },
+};
+
+export function useAccount(): MockAccount | null {
+  return useSyncExternalStore(acctStore.subscribe, acctStore.snapshot, acctStore.snapshot);
+}
+
+export function useUpdateAccount() {
+  return useCallback(async (input: import('@/lib/api/endpoints').UpdateAccountInput) => {
+    mockAccount = {
+      ...mockAccount,
+      ...(input.displayName !== undefined ? { displayName: input.displayName } : {}),
+      ...(input.locale !== undefined ? { locale: input.locale } : {}),
+      ...(input.avatarUrl !== undefined ? { avatarUrl: input.avatarUrl } : {}),
+      ...(input.email !== undefined ? { email: input.email.toLowerCase() } : {}),
+    };
+    acctStore.emit();
+    return mockAccount;
+  }, []);
+}
+
+export function useChangePassword() {
+  return useCallback(async (_input: { currentPassword?: string; newPassword: string }) => {
+    mockAccount = { ...mockAccount, hasPassword: true };
+    acctStore.emit();
+    return { ok: true as const };
+  }, []);
+}

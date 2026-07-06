@@ -157,6 +157,82 @@
     "opening": "{name} wird geöffnet…"
   },
   "tariff": {
-    "remainingTitle": "{name} — verbleibende Zeit in dieser Periode"
+    "remainingTitle": "{name} — verbleibende Zeit in dieser Periode",
+    "periods": {
+      "MINUTE": "Pro Minute",
+      "HOUR": "Pro Stunde",
+      "MONTH": "Monatlich"
+    }
+  },
+  "account": {
+    "menuItem": "Profil",
+    "title": "Dein Profil",
+    "subtitle": "Konto, Sicherheit und Tarif verwalten.",
+    "save": "Änderungen speichern",
+    "liveOnly": "Nur mit dem Live-Backend verfügbar.",
+    "tabs": {
+      "profile": "Profil",
+      "security": "Sicherheit",
+      "plan": "Tarif & Nutzung"
+    },
+    "profile": {
+      "description": "Dein Name, Foto, E-Mail und Sprache.",
+      "uploadPhoto": "Foto hochladen",
+      "removePhoto": "Entfernen",
+      "photoHint": "JPG oder PNG, quadratisch ist am besten. Privat gespeichert.",
+      "displayName": "Anzeigename",
+      "username": "Benutzername",
+      "email": "E-Mail",
+      "emailManaged": "Deine E-Mail wird von deinem Identity-Provider verwaltet.",
+      "language": "Sprache"
+    },
+    "avatarErrors": {
+      "not-an-image": "Bitte eine Bilddatei auswählen.",
+      "too-large": "Dieses Bild ist zu groß.",
+      "decode-failed": "Bild konnte nicht gelesen werden.",
+      "no-canvas": "Dein Browser konnte das Bild nicht verarbeiten."
+    },
+    "security": {
+      "passwordTitle": "Passwort",
+      "passwordDescription": "Ändere das Passwort, mit dem du dich anmeldest.",
+      "current": "Aktuelles Passwort",
+      "new": "Neues Passwort",
+      "confirm": "Neues Passwort bestätigen",
+      "updatePassword": "Passwort aktualisieren",
+      "tooShort": "Das neue Passwort muss mindestens 8 Zeichen haben.",
+      "mismatch": "Die neuen Passwörter stimmen nicht überein.",
+      "passwordSaved": "Passwort aktualisiert",
+      "passwordFailed": "Passwort konnte nicht aktualisiert werden",
+      "twoFactorTitle": "Zwei-Faktor-Authentifizierung",
+      "twoFactorDescription": "Füge einen zeitbasierten Einmalcode aus einer Authenticator-App hinzu.",
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert",
+      "enable": "Aktivieren",
+      "disable": "Deaktivieren",
+      "scanHint": "Scanne diesen Code mit deiner Authenticator-App und gib dann den 6-stelligen Code ein.",
+      "verify": "Bestätigen",
+      "twoFactorEnabled": "Zwei-Faktor-Authentifizierung aktiviert",
+      "twoFactorDisabled": "Zwei-Faktor-Authentifizierung deaktiviert",
+      "twoFactorFailed": "Zwei-Faktor-Authentifizierung konnte nicht geändert werden",
+      "invalidCode": "Dieser Code ist ungültig — bitte erneut versuchen.",
+      "disable2faTitle": "Zwei-Faktor deaktivieren?",
+      "disable2faBody": "Dein Konto ist dann weniger geschützt. Du kannst es jederzeit wieder aktivieren."
+    },
+    "plan": {
+      "title": "Tarif & Nutzung",
+      "description": "Dein Zeitbudget und was dein Tarif erlaubt.",
+      "unlimited": "Unbegrenzt",
+      "unlimitedHint": "Für dein Konto gilt kein Zeitbudget.",
+      "left": "übrig",
+      "used": "Verbraucht",
+      "activeSessions": "Aktive Sitzungen",
+      "maxSession": "Max. Sitzung",
+      "budget": "Budget",
+      "noLimit": "Kein Limit"
+    },
+    "toasts": {
+      "saved": "Profil gespeichert",
+      "saveFailed": "Dein Profil konnte nicht gespeichert werden"
+    }
   }
 }
