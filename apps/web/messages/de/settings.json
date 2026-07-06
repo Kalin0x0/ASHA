@@ -146,6 +146,74 @@
       "saveFailed": "Lizenz konnte nicht gespeichert werden"
     }
   },
+  "tariffs": {
+    "title": "Tarife",
+    "description": "Zeit-Tarife, die die Nutzung messen und begrenzen — Budgets pro Minute, pro Stunde oder monatlich plus Sitzungslimits. Dies ist Messung, keine Abrechnung. Durchgesetzt beim Start und während laufender Sitzungen.",
+    "liveOnly": "Tarife sind nur mit Live-Backend verfügbar. Mit <code>NEXT_PUBLIC_API_MODE=live</code> ausführen.",
+    "stats": {
+      "plans": "Tarife",
+      "assignments": "Zuweisungen",
+      "default": "Org-Standard"
+    },
+    "noDefault": "Keiner",
+    "newPlan": "Neuer Tarif",
+    "editPlan": "Tarif bearbeiten",
+    "plans": "Tarife",
+    "empty": "Noch keine Tarife. Erstellen Sie oben einen.",
+    "periods": {
+      "MINUTE": "Pro Minute",
+      "HOUR": "Pro Stunde",
+      "MONTH": "Monatlich"
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "z. B. Standard, GPU, Test",
+      "period": "Abrechnungszeitraum",
+      "budgetMinutes": "Zeitbudget (Min.)",
+      "budgetHint": "Kontingent pro Zeitraum. Leer = unbegrenzt.",
+      "maxSessionMinutes": "Max. Sitzung (Min.)",
+      "maxSessionHint": "Hartes Limit pro Sitzung. Leer = keins.",
+      "maxConcurrent": "Max. gleichzeitig",
+      "maxConcurrentHint": "Parallele Sitzungen. Leer = unbegrenzt.",
+      "isDefault": "Als Organisations-Standard festlegen",
+      "isDefaultHint": "Gilt für alle ohne Benutzer-/Gruppentarif."
+    },
+    "createPlan": "Tarif erstellen",
+    "savePlan": "Tarif speichern",
+    "cancelEdit": "Abbrechen",
+    "edit": "Bearbeiten",
+    "enforcedAtLaunch": "Beim Start durchgesetzt",
+    "defaultBadge": "Standard",
+    "summary": {
+      "budget": "{minutes} Min. / Zeitraum",
+      "unlimited": "Unbegrenzte Zeit",
+      "maxSession": "{minutes} Min. / Sitzung",
+      "maxConcurrent": "{count} gleichzeitig"
+    },
+    "assign": {
+      "title": "Zuweisungen",
+      "hint": "Ein Benutzertarif schlägt einen Gruppentarif, dieser schlägt den Org-Standard.",
+      "plan": "Tarif",
+      "selectPlan": "Tarif auswählen…",
+      "subjectType": "Zuweisen an",
+      "USER": "Benutzer",
+      "GROUP": "Gruppe",
+      "selectSubject": "Auswählen…",
+      "apply": "Zuweisen",
+      "remaining": "{minutes} Min. übrig"
+    },
+    "toasts": {
+      "loadFailed": "Tarife konnten nicht geladen werden",
+      "nameRequired": "Geben Sie dem Tarif einen Namen",
+      "saved": "Tarif gespeichert",
+      "saveFailed": "Tarif konnte nicht gespeichert werden",
+      "deleted": "Tarif gelöscht",
+      "deleteFailed": "Tarif konnte nicht gelöscht werden",
+      "pickBoth": "Wählen Sie Tarif und Empfänger",
+      "assigned": "Tarif zugewiesen",
+      "assignFailed": "Tarif konnte nicht zugewiesen werden"
+    }
+  },
   "database": {
     "title": "Datenbank",
     "description": "Automatisierte pg_dump-Backups mit Aufbewahrung. Stoßen Sie ein Backup bei Bedarf an oder prüfen Sie den Backup-Verlauf.",
