@@ -70,6 +70,8 @@ const TENANT_MODELS = new Set<string>([
   'MetricSample',
   'LogForwarderConfig',
   'ConfigExportBundle',
+  'Tariff',
+  'TariffAssignment',
 ]);
 
 // Batch operations: wrap where in AND so orgId is added as an extra filter.

@@ -445,3 +445,17 @@ export function useUninstallEntry() {
     return { ok: true as const, hostImageRemoved: true, sharedWithOtherImages: false };
   }, []);
 }
+
+/** Mock tariff budget — a monthly "Standard" plan with ~12h left, for the chip. */
+export function useMyTariff(): import('@/lib/api/endpoints').ApiMyTariff | null {
+  return {
+    tariffId: 'mock-standard',
+    name: 'Standard',
+    period: 'MONTH',
+    budgetMinutes: 1200,
+    maxSessionMinutes: 120,
+    maxConcurrent: 3,
+    assignmentId: 'mock',
+    remainingSeconds: 742 * 60,
+  };
+}

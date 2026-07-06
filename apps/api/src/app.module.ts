@@ -19,6 +19,7 @@ import { ConnectivityModule } from './modules/connectivity/connectivity.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
 import { LicensingModule } from './modules/licensing/licensing.module';
+import { TariffsModule } from './modules/tariffs/tariffs.module';
 import { LogForwardingModule } from './modules/log-forwarding/log-forwarding.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { RegistryModule } from './modules/registry/registry.module';
@@ -107,6 +108,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     LogForwardingModule,
     BackupsModule,
     LicensingModule,
+    TariffsModule,
     RegistryModule,
     ScimModule,
     ApiKeysModule,

@@ -629,6 +629,9 @@ model Workspace {
   // Lifecycle limits enforced by the session reaper (null = unlimited)
   maxDurationMinutes Int?
   idleTimeoutMinutes Int?
+  // Tariff weight: how fast this workspace burns a user's usage budget (1.0 =
+  // real time; a GPU desktop might be 2.0). Combines with the tariff metering.
+  minuteCostFactor   Float         @default(1.0)
   // Data-loss-prevention + delivery policy:
   // { clipboardUp, clipboardDown, uploads, downloads, printing, audioIn, audioOut, pwa }
   dlp           Json          @default("{}")
@@ -807,6 +810,9 @@ model Session {
   /// reaper independently of updatedAt (which background stats writes churn).
   pausedAt          DateTime?
   expiresAt         DateTime?
+  /// Metered usage charged against the holder's tariff budget (seconds), bumped
+  /// by the metering reaper (elapsed × workspace.minuteCostFactor).
+  consumedSeconds   Int             @default(0)
   destroyedAt       DateTime?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
@@ -1418,6 +1424,68 @@ model LicenseUsageSample {
   license License @relation(fields: [licenseId], references: [id], onDelete: Cascade)
 
   @@index([licenseId])
+}
+
+// ── Tariffs (time-based metering & limits — NOT payment processing) ───────────
+// A Tariff is a time plan: a budget of usage minutes per period plus hard caps.
+// It is assigned to a subject (org default / group / individual user) via a
+// TariffAssignment, which also holds the live remaining balance. Session launch
+// is gated on the balance, session duration is capped, the reaper meters usage
+// down, and MONTH tariffs reset each period.
+enum TariffPeriod {
+  MINUTE
+  HOUR
+  MONTH
+}
+
+enum TariffSubject {
+  ORG
+  GROUP
+  USER
+}
+
+model Tariff {
+  id               String       @id @default(cuid())
+  orgId            String
+  name             String
+  period           TariffPeriod @default(MONTH)
+  // Usage allowance per period, in minutes. null = unlimited time.
+  budgetMinutes    Int?
+  // Hard per-session cap (minutes). null = no per-session cap (workspace cap still applies).
+  maxSessionMinutes Int?
+  // Max simultaneous sessions for a holder of this tariff. null = unlimited.
+  maxConcurrent    Int?
+  // Exactly one tariff per org may be the default (applied when a user/group has
+  // no explicit assignment). Enforced in the service, not the DB.
+  isDefault        Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  assignments TariffAssignment[]
+
+  @@unique([orgId, name])
+  @@index([orgId])
+}
+
+model TariffAssignment {
+  id              String        @id @default(cuid())
+  orgId           String
+  tariffId        String
+  subjectType     TariffSubject
+  // ORG → the orgId; GROUP → a Group id; USER → a User id.
+  subjectId       String
+  // Live balance for the current period, in seconds. Decremented by the metering
+  // reaper; refilled to (budgetMinutes*60) at each period reset.
+  remainingSeconds Int          @default(0)
+  periodResetAt   DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tariff Tariff @relation(fields: [tariffId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, subjectType, subjectId])
+  @@index([orgId])
+  @@index([tariffId])
 }
 
 model Webhook {

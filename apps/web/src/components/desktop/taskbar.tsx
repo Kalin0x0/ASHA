@@ -8,6 +8,7 @@ import { BackgroundPicker } from '@/components/composite/background-picker';
 import { InstallButton } from '@/components/composite/install-button';
 import { LanguageSwitcher } from '@/components/composite/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { TariffChip } from '@/components/desktop/tariff-chip';
 import { LiquidGlass } from '@/components/ui/liquid-glass';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import type { SessionRow, Workspace } from '@/lib/types';
@@ -120,6 +121,7 @@ export function Taskbar({
           {/* System tray */}
           <span aria-hidden className="mx-0.5 h-7 w-px shrink-0 bg-white/12" />
           <div className="flex shrink-0 items-center gap-0.5">
+            <TariffChip className="me-1 hidden sm:inline-flex" />
             <InstallButton className="hidden lg:inline-flex" />
             <BackgroundPicker />
             <LanguageSwitcher />

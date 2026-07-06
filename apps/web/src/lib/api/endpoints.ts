@@ -1170,3 +1170,52 @@ export const deleteMaintenanceTask = (id: string) =>
   apiFetch<{ ok: true }>(`/maintenance/${id}`, { method: 'DELETE' });
 export const runMaintenanceTask = (id: string) =>
   apiFetch<MaintenanceRunResult>(`/maintenance/${id}/run`, { method: 'POST' });
+
+// ── Tariffs (time-based metering & limits) ────────────────────────────────────
+export type TariffPeriod = 'MINUTE' | 'HOUR' | 'MONTH';
+export interface ApiTariff {
+  id: string;
+  name: string;
+  period: TariffPeriod;
+  budgetMinutes: number | null;
+  maxSessionMinutes: number | null;
+  maxConcurrent: number | null;
+  isDefault: boolean;
+}
+/** The signed-in user's own budget (null = unlimited / no tariff). */
+export interface ApiMyTariff {
+  tariffId: string;
+  name: string;
+  period: TariffPeriod;
+  budgetMinutes: number | null;
+  maxSessionMinutes: number | null;
+  maxConcurrent: number | null;
+  assignmentId: string;
+  remainingSeconds: number;
+}
+export interface UpsertTariffInput {
+  id?: string;
+  name: string;
+  period: TariffPeriod;
+  budgetMinutes?: number | null;
+  maxSessionMinutes?: number | null;
+  maxConcurrent?: number | null;
+  isDefault?: boolean;
+}
+export interface ApiTariffAssignment {
+  id: string;
+  tariffId: string;
+  subjectType: 'ORG' | 'GROUP' | 'USER';
+  subjectId: string;
+  remainingSeconds: number;
+}
+
+export const getMyTariff = () => apiFetch<ApiMyTariff | null>('/tariffs/me');
+export const getTariffs = () => apiFetch<ApiTariff[]>('/tariffs');
+export const getTariffAssignments = () => apiFetch<ApiTariffAssignment[]>('/tariffs/assignments');
+export const upsertTariff = (body: UpsertTariffInput) =>
+  apiFetch<ApiTariff>('/tariffs', { method: 'PUT', body });
+export const deleteTariff = (id: string) =>
+  apiFetch<{ ok: true }>(`/tariffs/${id}`, { method: 'DELETE' });
+export const assignTariff = (body: { tariffId: string; subjectType: 'ORG' | 'GROUP' | 'USER'; subjectId: string }) =>
+  apiFetch<ApiTariffAssignment>('/tariffs/assign', { method: 'POST', body });

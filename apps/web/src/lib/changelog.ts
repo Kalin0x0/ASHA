@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.28',
+    date: '2026-07-05',
+    title: { en: 'Time-based tariffs', de: 'Zeitbasierte Tarife' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Time plans (per-minute, per-hour or monthly) that meter and limit usage — not billing. A tariff gives a user a time budget plus caps (max session length, max concurrent sessions); it can be set as the org default or assigned to a group or individual user. Launching is refused when the budget is exhausted, session duration is capped to what is left (weighted by a per-workspace cost factor), the reaper meters usage down while sessions run, and budgets renew each period. The taskbar/menu bar now shows your remaining time.',
+          de: 'Zeit-Tarife (pro Minute, pro Stunde oder monatlich), die die Nutzung messen und begrenzen — keine Abrechnung. Ein Tarif gibt einem Benutzer ein Zeit-Budget plus Obergrenzen (max. Sitzungsdauer, max. gleichzeitige Sitzungen); er kann als Organisations-Standard gesetzt oder einer Gruppe bzw. einem einzelnen Benutzer zugewiesen werden. Ein Start wird verweigert, wenn das Budget aufgebraucht ist, die Sitzungsdauer wird auf die Restzeit begrenzt (gewichtet mit einem Workspace-Kostenfaktor), der Reaper zählt die Nutzung während laufender Sitzungen herunter, und Budgets erneuern sich pro Periode. Taskleiste/Menüleiste zeigen jetzt deine Restzeit.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.27',
     date: '2026-07-05',
     title: { en: 'Strict user isolation', de: 'Strikte Benutzer-Isolation' },
