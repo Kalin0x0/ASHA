@@ -285,6 +285,17 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
       ? { Name: 'on-failure', MaximumRetryCount: 3 }
       : { Name: 'no' };
 
+  // WEBRTC (Neko) media plane: signaling (TCP 8080) stays on the Docker network
+  // (Traefik serves it via the per-session label), but the WebRTC MEDIA plane is
+  // UDP and the remote browser must reach it directly — so publish Neko's single
+  // UDP mux port to the host. The host port MUST equal the container port because
+  // Neko advertises its ICE candidate as <public-ip>:<mux> (NAT1TO1); the
+  // Speedport→OPNsense forward lands on host:<mux> → container:<mux>.
+  const webrtcMuxPort =
+    cmd.protocol === 'WEBRTC'
+      ? Number(cmd.runConfig.env?.NEKO_WEBRTC_UDPMUX ?? 59000) || 59000
+      : undefined;
+
   const container = await docker.createContainer({
     name: `asha-sess-${cmd.kasmId}`,
     Image: cmd.runConfig.dockerImage,
@@ -292,8 +303,18 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     // cannot override the per-session password or encoder selection.
     Env: Object.entries({ ...cmd.runConfig.env, ...gpuEnv(cmd), VNC_PW: vncPw }).map(([k, v]) => `${k}=${v}`),
     Labels: labels,
+    // WEBRTC only: expose the Neko UDP media port so it can be published to the
+    // host. (TCP 8080 signaling is intentionally NOT published — Traefik serves
+    // it over the Docker network; publishing only UDP can't collide with it.)
+    ...(webrtcMuxPort ? { ExposedPorts: { [`${webrtcMuxPort}/udp`]: {} } } : {}),
     HostConfig: {
       NetworkMode: agentEnv.sessionNetwork,
+      // Map host UDP <mux> → container UDP <mux> (same number — Neko's ICE
+      // candidate advertises exactly this port). The session network is a named
+      // bridge, so PortBindings are honoured.
+      ...(webrtcMuxPort
+        ? { PortBindings: { [`${webrtcMuxPort}/udp`]: [{ HostPort: String(webrtcMuxPort) }] } }
+        : {}),
       ShmSize: parseShm(cmd.runConfig.shmSize),
       Memory: cmd.runConfig.memLimitMb ? cmd.runConfig.memLimitMb * 2 ** 20 : undefined,
       NanoCpus: cmd.runConfig.cores ? Math.round(cmd.runConfig.cores * 1e9) : undefined,
