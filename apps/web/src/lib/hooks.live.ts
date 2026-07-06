@@ -768,3 +768,9 @@ export function useLaunchSession() {
     [mutateAsync],
   );
 }
+
+/** The signed-in user's own tariff budget (null = unlimited / no tariff). */
+export function useMyTariff(): api.ApiMyTariff | null {
+  const { data } = useQuery({ queryKey: ['tariff', 'me'], queryFn: api.getMyTariff, refetchInterval: 30_000 });
+  return data ?? null;
+}

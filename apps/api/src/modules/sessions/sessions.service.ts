@@ -24,6 +24,7 @@ import { RedisService } from '../../common/redis.service';
 import { resolveTokens, type TokenContext } from '../../common/tokens';
 import { ConnectivityRenderService } from '../connectivity/connectivity-render.service';
 import { LicensingService } from '../licensing/licensing.service';
+import { TariffsService } from '../tariffs/tariffs.service';
 import { ServersService } from '../servers/servers.service';
 import { StorageService } from '../storage/storage.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
@@ -51,11 +52,17 @@ export class SessionsService {
     // Optional: opens server-backed (RDP/VNC/SSH) sessions for non-container
     // workspaces by reusing the fixed-server connect path.
     @Optional() private readonly servers?: ServersService,
+    // Optional (kept LAST so positional unit-test construction is unaffected):
+    // when present, per-user time tariffs gate launch + cap session duration.
+    @Optional() private readonly tariffs?: TariffsService,
   ) {}
 
   async create(user: AuthUser, dto: CreateSessionDto) {
     // License gate first — refuse before we allocate any resources.
     await this.licensing?.assertCanLaunch(user.orgId, user.sub);
+    // Tariff gate — refuse when the user's time budget is used up or their
+    // plan's concurrency cap is hit, before we allocate any resources.
+    await this.tariffs?.assertWithinTariff(user);
     // Per-group concurrency gate — refuse if the user's most restrictive group
     // cap would be exceeded, before we allocate any resources.
     await this.assertWithinGroupConcurrencyLimit(user.sub, user.orgId);
@@ -111,9 +118,14 @@ export class SessionsService {
       : protocol === 'WEBRTC' ? 'NEKO_WEBRTC'
       : 'GUAC_RDP';
     // Hard lifetime cap: the reaper terminates the session once expiresAt passes.
-    const expiresAt = workspace.maxDurationMinutes
-      ? new Date(Date.now() + workspace.maxDurationMinutes * 60_000)
-      : null;
+    // The effective cap is the MIN of the workspace's own cap and any tariff cap
+    // (per-session limit or the user's remaining time budget, weighted by the
+    // workspace's minuteCostFactor).
+    const caps: number[] = [];
+    if (workspace.maxDurationMinutes) caps.push(workspace.maxDurationMinutes * 60_000);
+    const tariffCapMs = await this.tariffs?.sessionCapMs(user, workspace.minuteCostFactor ?? 1);
+    if (tariffCapMs != null) caps.push(tariffCapMs);
+    const expiresAt = caps.length ? new Date(Date.now() + Math.min(...caps)) : null;
     const session = await prisma.session.create({
       data: {
         orgId: user.orgId,

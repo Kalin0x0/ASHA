@@ -155,5 +155,8 @@
   },
   "launchOverlay": {
     "opening": "در حال باز کردن {name}…"
+  },
+  "tariff": {
+    "remainingTitle": "{name} — زمان باقی‌مانده در این دوره"
   }
 }

@@ -155,5 +155,8 @@
   },
   "launchOverlay": {
     "opening": "Opening {name}…"
+  },
+  "tariff": {
+    "remainingTitle": "{name} — time left this period"
   }
 }
