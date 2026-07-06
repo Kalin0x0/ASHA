@@ -7,8 +7,8 @@
     "audio": "Audio",
     "audioToast": "Audio is bridged via the PulseAudio sidecar",
     "virtualPrinter": "Virtual printer",
-    "printToast": "Virtual printing",
-    "printToastDescription": "Print to the CUPS sidecar; jobs are captured as PDF for download.",
+    "printToast": "Virtual printer",
+    "printToastDescription": "Print from the app with Ctrl+P to \"Kasm-Printer\" — the PDF opens here.",
     "camera": "Camera / webcam",
     "closeCamera": "Close camera",
     "cameraPreview": "Camera preview",
@@ -50,7 +50,10 @@
     "audioOn": "Speaker on — playing session audio",
     "audioOff": "Mute session audio",
     "audioError": "Couldn't start session audio",
-    "audioUnreachable": "Audio route unreachable — the session stream did not connect"
+    "audioUnreachable": "Audio route unreachable — the session stream did not connect",
+    "printPreview": "Print preview",
+    "print": "Print",
+    "download": "Download"
   },
   "status": {
     "connected": "Connected",
