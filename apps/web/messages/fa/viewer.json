@@ -7,8 +7,8 @@
     "audio": "صدا",
     "audioToast": "صدا از طریق سایدکار PulseAudio منتقل می‌شود",
     "virtualPrinter": "چاپگر مجازی",
-    "printToast": "چاپ مجازی",
-    "printToastDescription": "چاپ به سایدکار CUPS انجام می‌شود؛ کارهای چاپی به‌صورت PDF برای دانلود ذخیره می‌شوند.",
+    "printToast": "چاپگر مجازی",
+    "printToastDescription": "از داخل برنامه با Ctrl+P روی «Kasm-Printer» چاپ کنید — PDF اینجا باز می‌شود.",
     "camera": "دوربین / وب‌کم",
     "closeCamera": "بستن دوربین",
     "cameraPreview": "پیش‌نمایش دوربین",
@@ -50,7 +50,10 @@
     "audioOn": "بلندگو روشن — پخش صدای نشست",
     "audioOff": "بی‌صدا کردن صدای نشست",
     "audioError": "صدای نشست شروع نشد",
-    "audioUnreachable": "مسیر صدا در دسترس نیست — جریان نشست وصل نشد"
+    "audioUnreachable": "مسیر صدا در دسترس نیست — جریان نشست وصل نشد",
+    "printPreview": "پیش‌نمایش چاپ",
+    "print": "چاپ",
+    "download": "دانلود"
   },
   "status": {
     "connected": "متصل",

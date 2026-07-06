@@ -7,6 +7,7 @@ import {
   CameraOff,
   Check,
   Clipboard,
+  Download,
   Loader2,
   Maximize2,
   Monitor,
@@ -22,6 +23,7 @@ import {
   VolumeX,
   Wifi,
   Usb,
+  X,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
@@ -126,6 +128,11 @@ export default function StreamingViewerPage() {
   // (served per-session at /session/<kasmId>/audio → container :4901).
   const audioPlayerRef = useRef<{ destroy?: () => void } | null>(null);
   const [audioOn, setAudioOn] = useState(false);
+  // Print preview: the KasmVNC-relayed PDF, captured same-origin, shown reliably
+  // in an in-app viewer (the guest's own hidden-iframe print() is fragile).
+  const printFrameRef = useRef<HTMLIFrameElement>(null);
+  const [printPdf, setPrintPdf] = useState<string | null>(null);
+  const [printOpen, setPrintOpen] = useState(false);
   const [clock, setClock] = useState('');
   const [webcamOpen, setWebcamOpen] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -198,6 +205,48 @@ export default function StreamingViewerPage() {
       audioPlayerRef.current = null;
     };
   }, []);
+
+  // Capture KasmVNC's printed PDF (same-origin) and surface it in an in-app viewer.
+  // The guest client builds an application/pdf Blob and prints it from a hidden
+  // display:none iframe via contentWindow.print() — unreliable in Chromium, and
+  // invisible to the user. Wrap the iframe's URL.createObjectURL so we grab that
+  // Blob and show it from Asha's own top document (reliable Print + Download).
+  useEffect(() => {
+    if (!frameReady) return;
+    withKasm((w) => {
+      const win = w as unknown as Window & typeof globalThis;
+      const wu = win.URL as typeof win.URL & { __ashaPdfWrap?: boolean };
+      if (wu.__ashaPdfWrap) return;
+      const orig = wu.createObjectURL.bind(wu);
+      wu.createObjectURL = ((obj: Blob | MediaSource) => {
+        const url = orig(obj as Blob);
+        try {
+          if (obj instanceof win.Blob && (obj as Blob).type === 'application/pdf') {
+            (obj as Blob).arrayBuffer().then((buf) => {
+              const top = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
+              setPrintPdf((prev) => {
+                if (prev) URL.revokeObjectURL(prev);
+                return top;
+              });
+              setPrintOpen(true);
+            });
+          }
+        } catch {
+          /* noop */
+        }
+        return url;
+      }) as typeof wu.createObjectURL;
+      wu.__ashaPdfWrap = true;
+    });
+  }, [frameReady]);
+
+  // Revoke the captured PDF blob URL on unmount.
+  useEffect(
+    () => () => {
+      if (printPdf) URL.revokeObjectURL(printPdf);
+    },
+    [printPdf],
+  );
 
   // Launch watchdog: if the session hasn't reached RUNNING (or ERROR) within the
   // timeout, surface a clear "taking too long" state with a retry instead of an
@@ -551,13 +600,12 @@ export default function StreamingViewerPage() {
             label={t('toolbar.virtualPrinter')}
             disabled={!allow('printing')}
             disabledHint={t('dlp.printingDisabledHint')}
-            onClick={() =>
-              toast(t('toolbar.printToast'), {
-                description: t('toolbar.printToastDescription'),
-              })
-            }
+            onClick={() => {
+              if (printPdf) setPrintOpen(true);
+              else toast(t('toolbar.printToast'), { description: t('toolbar.printToastDescription') });
+            }}
           >
-            <Printer className="size-4" />
+            <Printer className={cn('size-4', printPdf && 'text-gold-400')} />
           </ControlButton>
           <ControlButton
             label={webcamOpen ? t('toolbar.closeCamera') : t('toolbar.camera')}
@@ -678,6 +726,54 @@ export default function StreamingViewerPage() {
         {/* Floating webcam capture panel — getUserMedia, stays in-frame as PiP */}
         {webcamOpen && isRunning && (
           <WebcamPanel isWebRtc={isWebRtc} onClose={() => setWebcamOpen(false)} />
+        )}
+
+        {/* Print preview — the PDF KasmVNC produced, shown reliably from Asha's
+            own document (Print + Download), instead of the guest's fragile
+            hidden-iframe print. */}
+        {printOpen && printPdf && (
+          <div className="absolute inset-0 top-12 z-50 flex flex-col bg-anthracite-950/92 backdrop-blur">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Printer className="size-4 text-gold-400" /> {t('toolbar.printPreview')}
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={printPdf}
+                  download="Kasm-Print.pdf"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-subtle px-3 text-xs font-medium transition-colors hover:bg-secondary ring-gold-focus"
+                >
+                  <Download className="size-3.5" /> {t('toolbar.download')}
+                </a>
+                <button
+                  onClick={() => {
+                    try {
+                      printFrameRef.current?.contentWindow?.focus();
+                      printFrameRef.current?.contentWindow?.print();
+                    } catch {
+                      /* noop */
+                    }
+                  }}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-gold-500/90 px-3 text-xs font-medium text-anthracite-950 transition-colors hover:bg-gold-500 ring-gold-focus"
+                >
+                  <Printer className="size-3.5" /> {t('toolbar.print')}
+                </button>
+                <button
+                  onClick={() => setPrintOpen(false)}
+                  aria-label={tc('actions.close')}
+                  className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground ring-gold-focus"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            </div>
+            <iframe
+              ref={printFrameRef}
+              src={printPdf}
+              title={t('toolbar.printPreview')}
+              className="min-h-0 flex-1 border-0 bg-white"
+            />
+          </div>
         )}
 
         {/* Drag-and-drop file upload overlay */}
