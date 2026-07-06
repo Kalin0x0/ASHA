@@ -10,6 +10,7 @@ const { prismaMock } = vi.hoisted(() => ({
     userGroup: { findMany: vi.fn() },
     user: { findMany: vi.fn() },
     group: { findMany: vi.fn() },
+    setting: { findUnique: vi.fn() },
   },
 }));
 
@@ -116,8 +117,22 @@ describe('WorkspacesService — access control', () => {
     );
   });
 
-  it('launchableForUser: a normal user is filtered to unassigned + direct + group grants', async () => {
+  it('launchableForUser: deny-by-default (setting absent) → ONLY direct + group grants, NOT unassigned', async () => {
+    prismaMock.setting.findUnique.mockResolvedValue(null); // absent ⇒ deny-by-default ON
     prismaMock.userGroup.findMany.mockResolvedValue([{ groupId: 'g1' }, { groupId: 'g2' }]);
+    await svc.launchableForUser(userA);
+    const arg = prismaMock.workspace.findMany.mock.calls[0]![0] as { where: { OR: unknown[] } };
+    expect(arg.where.OR).toEqual([
+      { assignedUsers: { some: { userId: 'userA' } } },
+      { groups: { some: { id: { in: ['g1', 'g2'] } } } },
+    ]);
+    // The "unassigned ⇒ everyone" clause must be absent under deny-by-default.
+    expect(arg.where.OR).not.toContainEqual({ groups: { none: {} }, assignedUsers: { none: {} } });
+  });
+
+  it('launchableForUser: legacy open mode (setting=false) → unassigned + direct + group grants', async () => {
+    prismaMock.setting.findUnique.mockResolvedValue({ valueJson: false }); // explicit opt-out
+    prismaMock.userGroup.findMany.mockResolvedValue([{ groupId: 'g1' }]);
     await svc.launchableForUser(userA);
     expect(prismaMock.workspace.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -126,26 +141,19 @@ describe('WorkspacesService — access control', () => {
           OR: expect.arrayContaining([
             { groups: { none: {} }, assignedUsers: { none: {} } },
             { assignedUsers: { some: { userId: 'userA' } } },
-            { groups: { some: { id: { in: ['g1', 'g2'] } } } },
+            { groups: { some: { id: { in: ['g1'] } } } },
           ]),
         }),
       }),
     );
   });
 
-  it('launchableForUser: a user in no groups still sees unassigned + direct grants', async () => {
+  it('launchableForUser: deny-by-default, user in no groups → only their direct grants', async () => {
+    prismaMock.setting.findUnique.mockResolvedValue(null);
     prismaMock.userGroup.findMany.mockResolvedValue([]);
     await svc.launchableForUser(userA);
-    expect(prismaMock.workspace.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          OR: expect.arrayContaining([
-            { groups: { none: {} }, assignedUsers: { none: {} } },
-            { assignedUsers: { some: { userId: 'userA' } } },
-          ]),
-        }),
-      }),
-    );
+    const arg = prismaMock.workspace.findMany.mock.calls[0]![0] as { where: { OR: unknown[] } };
+    expect(arg.where.OR).toEqual([{ assignedUsers: { some: { userId: 'userA' } } }]);
   });
 
   it('setAssignments: replaces group + user grants, org-scoped', async () => {

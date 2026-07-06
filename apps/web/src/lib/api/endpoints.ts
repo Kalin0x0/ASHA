@@ -124,6 +124,8 @@ export function logout(refreshToken: string | null) {
 // ── Resources ─────────────────────────────────────────────────────────────────
 
 export const getSessions = () => apiFetch<ApiSession[]>('/sessions');
+// The signed-in user's OWN sessions (server-scoped) — the isolated portal list.
+export const getMySessions = () => apiFetch<ApiSession[]>('/sessions/mine');
 export const getSession = (id: string) => apiFetch<ApiSession>(`/sessions/${id}`);
 export const createSession = (workspaceId: string) =>
   apiFetch<ApiSession>('/sessions', { method: 'POST', body: { workspaceId } });

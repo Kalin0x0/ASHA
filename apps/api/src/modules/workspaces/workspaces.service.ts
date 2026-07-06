@@ -26,30 +26,50 @@ export class WorkspacesService {
   }
 
   /**
-   * Workspaces the given user may launch. An enabled workspace with NO group AND
-   * no direct-user grants is visible to everyone; any grant restricts it to the
-   * listed users plus members of its assigned groups. System admins see all so
-   * they can use (and verify) every workspace.
+   * Workspaces the given user may launch (this also covers server-backed
+   * *services*, which are modelled as `type: SERVER` workspaces). System admins
+   * always see all.
+   *
+   * Non-admin visibility is governed by the `isolation.denyByDefault` org
+   * setting (default ON — the secure default): each user sees ONLY the
+   * workspaces granted to them directly or via a group. With the setting turned
+   * OFF, the legacy behaviour applies — an ungranted workspace (no group AND no
+   * direct-user grant) is visible to everyone.
    */
   async launchableForUser(user: AuthUser) {
     if (user.isSystemAdmin) return this.launchable();
-    const memberships = await prisma.userGroup.findMany({
-      where: { userId: user.sub },
-      select: { groupId: true },
-    });
+    const [memberships, denyByDefault] = await Promise.all([
+      prisma.userGroup.findMany({ where: { userId: user.sub }, select: { groupId: true } }),
+      this.isDenyByDefault(user.orgId),
+    ]);
     const groupIds = memberships.map((m) => m.groupId);
+    const grantClauses = [
+      { assignedUsers: { some: { userId: user.sub } } }, // direct grant
+      ...(groupIds.length ? [{ groups: { some: { id: { in: groupIds } } } }] : []), // via group
+    ];
     return prisma.workspace.findMany({
       where: {
         enabled: true,
-        OR: [
-          { groups: { none: {} }, assignedUsers: { none: {} } }, // unassigned ⇒ everyone
-          { assignedUsers: { some: { userId: user.sub } } }, // direct grant
-          ...(groupIds.length ? [{ groups: { some: { id: { in: groupIds } } } }] : []), // via group
-        ],
+        OR: denyByDefault
+          ? grantClauses
+          : [{ groups: { none: {} }, assignedUsers: { none: {} } }, ...grantClauses], // legacy: unassigned ⇒ everyone
       },
       include: WORKSPACE_INCLUDE,
       orderBy: { friendlyName: 'asc' },
     });
+  }
+
+  /**
+   * Whether strict per-user isolation is on for this org (deny-by-default).
+   * Reads the `isolation.denyByDefault` ORG setting; absent ⇒ ON (secure
+   * default). Only an explicit `false` opts back into the open, legacy model.
+   */
+  private async isDenyByDefault(orgId: string): Promise<boolean> {
+    const row = await prisma.setting.findUnique({
+      where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId, zoneId: '', key: 'isolation.denyByDefault' } },
+      select: { valueJson: true },
+    });
+    return row?.valueJson !== false;
   }
 
   async get(id: string) {

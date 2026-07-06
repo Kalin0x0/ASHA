@@ -53,6 +53,20 @@ export function useSessions(): SessionRow[] {
   }, [sessions, users, zones, agents, workspaces]);
 }
 
+/**
+ * The signed-in user's OWN sessions (server-scoped `/sessions/mine`) — the
+ * isolated portal list. Maps with empty lookups: a normal user needn't (and
+ * can't) call the admin users/zones/agents endpoints, and mapSession falls back
+ * to the session payload's own fields (workspaceName, userId, zoneId, …).
+ */
+export function useOwnSessions(): SessionRow[] {
+  const { data } = useQuery({ queryKey: ['sessions', 'mine'], queryFn: api.getMySessions, refetchInterval: 8_000 });
+  return useMemo(() => {
+    const empty = { users: toMap([]), zones: toMap([]), agents: toMap([]), workspaces: toMap([]) };
+    return (data ?? []).map((s) => mapSession(s, empty));
+  }, [data]);
+}
+
 export function useSession(id: string): SessionRow | undefined {
   const users = useUsersQuery().data;
   const zones = useZonesQuery().data;

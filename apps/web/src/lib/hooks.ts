@@ -16,6 +16,7 @@ const impl = API_MODE === 'live' ? live : mock;
 
 export const useDashboard = impl.useDashboard;
 export const useSessions = impl.useSessions;
+export const useOwnSessions = impl.useOwnSessions;
 export const useSession = impl.useSession;
 export const useAgents = impl.useAgents;
 export const useZones = impl.useZones;

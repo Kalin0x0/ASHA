@@ -13,9 +13,9 @@ import { useAuth } from '@/lib/api/auth-context';
 import { CURRENT_USER } from '@/lib/current-user';
 import {
   useLaunchableWorkspaces,
+  useOwnSessions,
   usePauseSession,
   useResumeSession,
-  useSessions,
   useTerminateSession,
 } from '@/lib/hooks';
 import { launchTransition } from '@/lib/launch-overlay-store';
@@ -29,7 +29,9 @@ const GUAC = new Set(['RDP', 'VNC', 'SSH']);
 /** The signed-in user's ACTIVE sessions — shared by the desktop + dock. */
 export function useMySessions(): SessionRow[] {
   const { user } = useAuth();
-  const sessions = useSessions();
+  // Server-scoped list (/sessions/mine in live) — the user only ever receives
+  // their own sessions; the meId filter below is a redundant safety net.
+  const sessions = useOwnSessions();
   const meId = user?.id ?? CURRENT_USER.id;
   return useMemo(
     () => sessions.filter((s) => s.user.id === meId && ACTIVE.includes(s.status)),
