@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.31',
+    date: '2026-07-06',
+    title: { en: 'User profile', de: 'Benutzerprofil' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'A full self-service profile, opened from the desktop menu bar or Start menu: upload a photo, change your display name, e-mail and language, change your password, and manage two-factor authentication. A Plan & usage tab shows your tariff, remaining time and what your plan allows.',
+          de: 'Ein vollständiges Selbstbedienungs-Profil, aufrufbar über die Desktop-Menüleiste oder das Startmenü: Foto hochladen, Anzeigename, E-Mail und Sprache ändern, Passwort ändern und Zwei-Faktor-Authentifizierung verwalten. Ein Tab „Tarif & Nutzung" zeigt deinen Tarif, die Restzeit und was dein Plan erlaubt.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'The desktop top-bar user area is now larger and clickable, showing your name and photo.',
+          de: 'Der Nutzerbereich in der Desktop-Leiste ist jetzt größer und anklickbar und zeigt deinen Namen und dein Foto.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.30',
     date: '2026-07-06',
     title: { en: '10-minute demo accounts', de: '10-Minuten-Demokonten' },

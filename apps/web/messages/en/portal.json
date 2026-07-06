@@ -157,6 +157,82 @@
     "opening": "Opening {name}…"
   },
   "tariff": {
-    "remainingTitle": "{name} — time left this period"
+    "remainingTitle": "{name} — time left this period",
+    "periods": {
+      "MINUTE": "Per minute",
+      "HOUR": "Per hour",
+      "MONTH": "Monthly"
+    }
+  },
+  "account": {
+    "menuItem": "Profile",
+    "title": "Your profile",
+    "subtitle": "Manage your account, security and plan.",
+    "save": "Save changes",
+    "liveOnly": "This is only available with the live backend.",
+    "tabs": {
+      "profile": "Profile",
+      "security": "Security",
+      "plan": "Plan & usage"
+    },
+    "profile": {
+      "description": "Your name, photo, e-mail and language.",
+      "uploadPhoto": "Upload photo",
+      "removePhoto": "Remove",
+      "photoHint": "JPG or PNG, square works best. Stored privately.",
+      "displayName": "Display name",
+      "username": "Username",
+      "email": "E-mail",
+      "emailManaged": "Your e-mail is managed by your identity provider.",
+      "language": "Language"
+    },
+    "avatarErrors": {
+      "not-an-image": "Please choose an image file.",
+      "too-large": "That image is too large.",
+      "decode-failed": "Could not read that image.",
+      "no-canvas": "Your browser could not process the image."
+    },
+    "security": {
+      "passwordTitle": "Password",
+      "passwordDescription": "Change the password you sign in with.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "updatePassword": "Update password",
+      "tooShort": "New password must be at least 8 characters.",
+      "mismatch": "The new passwords do not match.",
+      "passwordSaved": "Password updated",
+      "passwordFailed": "Could not update password",
+      "twoFactorTitle": "Two-factor authentication",
+      "twoFactorDescription": "Add a time-based one-time code from an authenticator app.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enable": "Enable",
+      "disable": "Disable",
+      "scanHint": "Scan this code with your authenticator app, then enter the 6-digit code.",
+      "verify": "Verify",
+      "twoFactorEnabled": "Two-factor authentication enabled",
+      "twoFactorDisabled": "Two-factor authentication disabled",
+      "twoFactorFailed": "Could not update two-factor authentication",
+      "invalidCode": "That code is not valid — try again.",
+      "disable2faTitle": "Disable two-factor?",
+      "disable2faBody": "Your account will be less protected. You can re-enable it any time."
+    },
+    "plan": {
+      "title": "Plan & usage",
+      "description": "Your time budget and what your plan allows.",
+      "unlimited": "Unlimited",
+      "unlimitedHint": "No time budget applies to your account.",
+      "left": "left",
+      "used": "Used",
+      "activeSessions": "Active sessions",
+      "maxSession": "Max session",
+      "budget": "Budget",
+      "noLimit": "No limit"
+    },
+    "toasts": {
+      "saved": "Profile saved",
+      "saveFailed": "Could not save your profile"
+    }
   }
 }

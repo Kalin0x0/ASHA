@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutDashboard, LogOut } from 'lucide-react';
+import { LayoutDashboard, LogOut, UserCircle2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -11,7 +11,7 @@ import { InstallButton } from '@/components/composite/install-button';
 import { LanguageSwitcher } from '@/components/composite/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { TariffChip } from '@/components/desktop/tariff-chip';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/api/auth-context';
+import { useProfileDialog } from '@/lib/profile-store';
 
 /**
  * The OS-style menu bar of the end-user desktop — a thin, translucent strip
@@ -31,6 +32,7 @@ export function MenuBar() {
   const t = useTranslations('portal');
   const { user, logout } = useAuth();
   const router = useRouter();
+  const openProfile = useProfileDialog((s) => s.openProfile);
 
   const displayName = user?.displayName || user?.username || user?.email || 'Asha';
   const initials =
@@ -62,6 +64,9 @@ export function MenuBar() {
             {user?.email && <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{user.email}</span>}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => openProfile()}>
+            <UserCircle2 className="size-4" /> {t('account.menuItem')}
+          </DropdownMenuItem>
           {user?.isSystemAdmin && (
             <DropdownMenuItem onSelect={() => router.push('/dashboard')}>
               <LayoutDashboard className="size-4" /> {t('header.admin')}
@@ -95,9 +100,19 @@ export function MenuBar() {
         <BackgroundPicker />
         <LanguageSwitcher />
         <ThemeToggle />
-        <Avatar className="ms-1 size-6">
-          <AvatarFallback className="text-[10px] font-bold">{initials}</AvatarFallback>
-        </Avatar>
+        <button
+          type="button"
+          onClick={() => openProfile()}
+          title={t('account.menuItem')}
+          aria-label={t('account.menuItem')}
+          className="ms-1 flex items-center gap-2 rounded-full py-0.5 pe-2 ps-0.5 transition-colors hover:bg-secondary/70 ring-gold-focus"
+        >
+          <Avatar className="size-7 border border-border-subtle">
+            {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
+            <AvatarFallback className="text-[10px] font-bold">{initials}</AvatarFallback>
+          </Avatar>
+          <span className="hidden max-w-[9rem] truncate text-xs font-medium text-foreground/90 lg:inline">{displayName}</span>
+        </button>
         <MenuClock />
       </div>
     </header>

@@ -305,6 +305,8 @@ export class AuthService {
     displayName: string | null;
     orgId: string;
     isSystemAdmin: boolean;
+    avatarUrl?: string | null;
+    locale?: string;
   }) {
     return {
       id: user.id,
@@ -313,6 +315,8 @@ export class AuthService {
       displayName: user.displayName,
       orgId: user.orgId,
       isSystemAdmin: user.isSystemAdmin,
+      avatarUrl: user.avatarUrl ?? null,
+      locale: user.locale ?? 'en',
     };
   }
 }

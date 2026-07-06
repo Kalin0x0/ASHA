@@ -13,6 +13,8 @@ export interface AuthUser {
   displayName: string | null;
   orgId: string;
   isSystemAdmin: boolean;
+  avatarUrl?: string | null;
+  locale?: string;
   groups?: string[];
   permissions?: string[];
 }

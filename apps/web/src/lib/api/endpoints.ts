@@ -132,6 +132,45 @@ export function loginAsDemo(body: { email: string; fingerprint: string }) {
   return apiFetch<ApiDemoResponse>('/auth/demo', { method: 'POST', body, auth: false });
 }
 
+// ── Self-service account / profile ───────────────────────────────────────────
+export interface ApiAccount {
+  id: string;
+  email: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  status: 'ACTIVE' | 'DISABLED' | 'INVITED' | 'LOCKED' | 'DEMO';
+  isSystemAdmin: boolean;
+  locale: string;
+  lastLoginAt: string | null;
+  createdAt: string;
+  isLocalAccount: boolean;
+  hasPassword: boolean;
+  twoFactorEnabled: boolean;
+  groups: string[];
+}
+export interface UpdateAccountInput {
+  displayName?: string | null;
+  locale?: string;
+  avatarUrl?: string | null;
+  email?: string;
+}
+export const getAccount = () => apiFetch<ApiAccount>('/account');
+export const updateAccount = (body: UpdateAccountInput) => apiFetch<ApiAccount>('/account', { method: 'PATCH', body });
+export const changePassword = (body: { currentPassword?: string; newPassword: string }) =>
+  apiFetch<{ ok: true }>('/account/password', { method: 'POST', body });
+
+// 2FA / TOTP self-service (backend already implements these).
+export interface TotpEnrollResponse {
+  methodId: string;
+  otpUri: string;
+  qrDataUrl: string;
+}
+export const enrollTotp = () => apiFetch<TotpEnrollResponse>('/auth/2fa/totp/enroll', { method: 'POST' });
+export const confirmTotp = (body: { methodId: string; code: string }) =>
+  apiFetch<{ ok: true }>('/auth/2fa/totp/confirm', { method: 'POST', body });
+export const disableTotp = () => apiFetch<{ ok: true }>('/auth/2fa/totp', { method: 'DELETE' });
+
 export function logout(refreshToken: string | null) {
   return apiFetch<{ ok: true }>('/auth/logout', {
     method: 'POST',
