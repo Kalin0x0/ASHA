@@ -47,6 +47,12 @@ export function useSessions() {
   return useSnapshot(() => store.getData().sessions);
 }
 
+// Mock has a single (unauthenticated) identity, so "own" sessions == all mock
+// sessions; the portal consumers still narrow to the current user client-side.
+export function useOwnSessions() {
+  return useSnapshot(() => store.getData().sessions);
+}
+
 export function useSession(id: string) {
   return useSnapshot(() => store.getData().sessions.find((s) => s.id === id || s.kasmId === id), [id]);
 }
