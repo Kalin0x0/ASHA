@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.29',
+    date: '2026-07-06',
+    title: { en: 'Tariff management console', de: 'Tarif-Verwaltungskonsole' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'A Settings → Tariffs admin page to create, edit and delete time plans, mark one as the organization default, and assign a plan to an individual user or a group. The default plan now backs an org-wide assignment so it actually applies to everyone without a more specific plan.',
+          de: 'Eine Admin-Seite unter Einstellungen → Tarife zum Erstellen, Bearbeiten und Löschen von Zeit-Tarifen, zum Festlegen eines Organisations-Standards und zum Zuweisen eines Tarifs an einen einzelnen Benutzer oder eine Gruppe. Der Standard-Tarif hinterlegt jetzt eine organisationsweite Zuweisung, sodass er tatsächlich für alle ohne spezifischeren Tarif gilt.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.28',
     date: '2026-07-05',
     title: { en: 'Time-based tariffs', de: 'Zeitbasierte Tarife' },

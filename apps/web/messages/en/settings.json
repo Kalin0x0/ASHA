@@ -146,6 +146,74 @@
       "saveFailed": "Could not save license"
     }
   },
+  "tariffs": {
+    "title": "Tariffs",
+    "description": "Time plans that meter and limit usage — per-minute, per-hour or monthly budgets plus session caps. This is metering, not billing. Enforcement runs at session launch and while sessions run.",
+    "liveOnly": "Tariffs are live-backend only. Run with <code>NEXT_PUBLIC_API_MODE=live</code>.",
+    "stats": {
+      "plans": "Plans",
+      "assignments": "Assignments",
+      "default": "Org default"
+    },
+    "noDefault": "None",
+    "newPlan": "New plan",
+    "editPlan": "Edit plan",
+    "plans": "Plans",
+    "empty": "No tariffs yet. Create one above.",
+    "periods": {
+      "MINUTE": "Per minute",
+      "HOUR": "Per hour",
+      "MONTH": "Monthly"
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g. Standard, GPU, Trial",
+      "period": "Billing period",
+      "budgetMinutes": "Time budget (min)",
+      "budgetHint": "Allowance per period. Empty = unlimited.",
+      "maxSessionMinutes": "Max session (min)",
+      "maxSessionHint": "Hard cap per session. Empty = none.",
+      "maxConcurrent": "Max concurrent",
+      "maxConcurrentHint": "Parallel sessions. Empty = unlimited.",
+      "isDefault": "Set as organization default",
+      "isDefaultHint": "Applies to everyone without a user/group plan."
+    },
+    "createPlan": "Create plan",
+    "savePlan": "Save plan",
+    "cancelEdit": "Cancel",
+    "edit": "Edit",
+    "enforcedAtLaunch": "Enforced at launch",
+    "defaultBadge": "Default",
+    "summary": {
+      "budget": "{minutes} min / period",
+      "unlimited": "Unlimited time",
+      "maxSession": "{minutes} min / session",
+      "maxConcurrent": "{count} concurrent"
+    },
+    "assign": {
+      "title": "Assignments",
+      "hint": "A user plan wins over a group plan, which wins over the org default.",
+      "plan": "Plan",
+      "selectPlan": "Select a plan…",
+      "subjectType": "Assign to",
+      "USER": "User",
+      "GROUP": "Group",
+      "selectSubject": "Select…",
+      "apply": "Assign",
+      "remaining": "{minutes} min left"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load tariffs",
+      "nameRequired": "Give the plan a name",
+      "saved": "Tariff saved",
+      "saveFailed": "Could not save tariff",
+      "deleted": "Tariff deleted",
+      "deleteFailed": "Could not delete tariff",
+      "pickBoth": "Pick a plan and a subject",
+      "assigned": "Tariff assigned",
+      "assignFailed": "Could not assign tariff"
+    }
+  },
   "database": {
     "title": "Database",
     "description": "Automated pg_dump backups with retention. Trigger an on-demand backup or review the backup history.",
