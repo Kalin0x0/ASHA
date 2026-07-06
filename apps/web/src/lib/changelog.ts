@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.30',
+    date: '2026-07-06',
+    title: { en: '10-minute demo accounts', de: '10-Minuten-Demokonten' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'A "Start 10-minute test" button on the login page mints an instant, isolated demo workspace. Each demo is one-shot — allowed only once per e-mail and once per device (best-effort browser fingerprint, backed by IP recording); a repeat attempt is rejected and logged. The demo user only sees the workspaces flagged for demo, is time-boxed by a 10-minute tariff, and is pruned automatically when it expires.',
+          de: 'Ein Knopf „10-Minuten-Test starten" auf der Anmeldeseite erzeugt sofort einen isolierten Demo-Workspace. Jede Demo ist einmalig — nur einmal pro E-Mail und pro Gerät erlaubt (bestmöglicher Browser-Fingerabdruck, ergänzt durch IP-Aufzeichnung); ein wiederholter Versuch wird abgelehnt und protokolliert. Der Demo-Benutzer sieht nur die als Demo markierten Workspaces, ist durch einen 10-Minuten-Tarif zeitlich begrenzt und wird nach Ablauf automatisch entfernt.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'Security events (like demo abuse attempts) are now written to both the audit trail and a structured log stream that the Fluent Bit forwarder ships to your SIEM.',
+          de: 'Sicherheitsereignisse (z. B. Demo-Missbrauchsversuche) werden jetzt sowohl in das Audit-Protokoll als auch in einen strukturierten Log-Stream geschrieben, den der Fluent-Bit-Forwarder an Ihr SIEM weiterleitet.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.29',
     date: '2026-07-06',
     title: { en: 'Tariff management console', de: 'Tarif-Verwaltungskonsole' },

@@ -52,6 +52,32 @@ export class SessionReaperService {
   }
 
   /**
+   * Tear down expired 10-minute demo accounts: destroy their live sessions, drop
+   * the demo tariff assignment, then delete the user (cascading its rows). The
+   * DemoGrant is intentionally left behind so the e-mail/device stays one-shot.
+   */
+  @Interval('demo-reaper', 60_000)
+  async reapDemoUsers(): Promise<number> {
+    const expired = await prisma.user.findMany({
+      where: { status: 'DEMO', demoExpiresAt: { not: null, lte: new Date() } },
+      select: { id: true, orgId: true },
+    });
+    if (expired.length === 0) return 0;
+
+    for (const u of expired) {
+      const live = await prisma.session.findMany({
+        where: { userId: u.id, status: { in: [...ACTIVE_STATUSES] } },
+        select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
+      });
+      for (const s of live) await this.sessions.destroy(s, 'demo_expired');
+      await prisma.tariffAssignment.deleteMany({ where: { orgId: u.orgId, subjectType: 'USER', subjectId: u.id } });
+      await prisma.user.delete({ where: { id: u.id } });
+    }
+    this.logger.log(`Pruned ${expired.length} expired demo account(s)`);
+    return expired.length;
+  }
+
+  /**
    * Sessions left in TERMINATING longer than this are force-finalized to
    * DESTROYED. Covers the case where an agent received the destroy event but
    * died (or lost connectivity) before it could stop the container and ack —
