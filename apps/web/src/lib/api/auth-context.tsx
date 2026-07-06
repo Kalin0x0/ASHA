@@ -10,6 +10,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (email: string, password: string, totp?: string) => Promise<void>;
   loginWithPasskey: (email: string) => Promise<void>;
+  loginAsDemo: (email: string, fingerprint: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -58,6 +59,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const loginAsDemo = useCallback(async (email: string, fingerprint: string) => {
+    const res = await api.loginAsDemo({ email, fingerprint });
+    // Demo tokens carry no refresh token — store an empty one; the session simply
+    // expires when the 10-minute access token does.
+    setAuth(
+      { accessToken: res.accessToken, refreshToken: res.refreshToken ?? '', expiresIn: res.expiresIn, tokenType: res.tokenType },
+      res.user,
+    );
+    try {
+      setUser(await api.getMe());
+    } catch {
+      /* keep the basic demo user */
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await api.logout(getRefreshToken());
@@ -68,8 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isAuthenticated: Boolean(user), login, loginWithPasskey, logout }),
-    [user, login, loginWithPasskey, logout],
+    () => ({ user, isAuthenticated: Boolean(user), login, loginWithPasskey, loginAsDemo, logout }),
+    [user, login, loginWithPasskey, loginAsDemo, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

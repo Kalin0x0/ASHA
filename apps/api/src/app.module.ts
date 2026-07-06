@@ -12,6 +12,7 @@ import { AgentsModule } from './modules/agents/agents.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthProvidersModule } from './modules/auth-providers/auth-providers.module';
+import { DemoModule } from './modules/demo/demo.module';
 import { BackupsModule } from './modules/backups/backups.module';
 import { BugReportsModule } from './modules/bug-reports/bug-reports.module';
 import { CastingModule } from './modules/casting/casting.module';
@@ -109,6 +110,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     BackupsModule,
     LicensingModule,
     TariffsModule,
+    DemoModule,
     RegistryModule,
     ScimModule,
     ApiKeysModule,

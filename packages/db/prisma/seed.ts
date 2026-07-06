@@ -166,6 +166,24 @@ async function main() {
     },
   });
 
+  // A dedicated group for 10-minute demo accounts: carries the end-user "User"
+  // role (so demo users can launch) but NO workspace grants — under
+  // deny-by-default this keeps demo users isolated to explicitly-granted demo
+  // workspaces only, instead of seeing everything the default group can.
+  const demoGroup = await prisma.group.upsert({
+    where: { orgId_name: { orgId: org.id, name: 'Demo Users' } },
+    update: {},
+    create: {
+      id: 'seed-group-demo',
+      orgId: org.id,
+      name: 'Demo Users',
+      description: 'Time-boxed 10-minute demo accounts.',
+      priority: 900,
+      keepaliveExpirationSec: 600,
+      maxConcurrentSessions: 1,
+    },
+  });
+
   // group → role
   async function linkGroupRole(groupId: string, roleName: string) {
     const roleId = roleByName.get(roleName)!;
@@ -177,6 +195,7 @@ async function main() {
   }
   await linkGroupRole(adminGroup.id, 'Super Admin');
   await linkGroupRole(allUsers.id, 'User');
+  await linkGroupRole(demoGroup.id, 'User');
 
   console.log('▸ Seeding admin user…');
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
@@ -256,9 +275,11 @@ async function main() {
       },
     });
 
+    // Offer Firefox as the public 10-minute demo workspace.
+    const isDemo = img.name === 'firefox';
     const ws = await prisma.workspace.upsert({
       where: { orgId_name: { orgId: org.id, name: img.name } },
-      update: { imageId: img.id, enabled: true },
+      update: { imageId: img.id, enabled: true, isDemo },
       create: {
         orgId: org.id,
         name: img.name,
@@ -269,6 +290,7 @@ async function main() {
         iconUrl: img.iconUrl,
         categories: img.name === 'ubuntu-desktop' ? ['Desktops'] : ['Browsers'],
         enabled: true,
+        isDemo,
         coresLimit: 2,
         memLimitMb: 2768,
         dockerConfig: { shmSize: '1g', ports: [6901] },
