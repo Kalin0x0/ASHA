@@ -58,9 +58,18 @@ export class TariffsService {
     const tariff = dto.id
       ? await this.updateExisting(orgId, dto.id, data)
       : await prisma.tariff.create({ data: { orgId, ...data } });
-    // At most one default per org.
+    // At most one default per org, and the default tariff owns the ORG-level
+    // assignment so resolveForUser() actually falls back to it for everyone.
     if (data.isDefault) {
       await prisma.tariff.updateMany({ where: { orgId, isDefault: true, id: { not: tariff.id } }, data: { isDefault: false } });
+      await prisma.tariffAssignment.upsert({
+        where: { orgId_subjectType_subjectId: { orgId, subjectType: 'ORG', subjectId: orgId } },
+        create: { orgId, tariffId: tariff.id, subjectType: 'ORG', subjectId: orgId, remainingSeconds: data.budgetMinutes != null ? data.budgetMinutes * 60 : 0, periodResetAt: this.nextResetAt(data.period) },
+        update: { tariffId: tariff.id },
+      });
+    } else {
+      // Clearing the default drops the org-wide fallback (if this tariff held it).
+      await prisma.tariffAssignment.deleteMany({ where: { orgId, subjectType: 'ORG', subjectId: orgId, tariffId: tariff.id } });
     }
     await this.audit.record({ orgId, actorUserId, action: 'tariff.upsert', targetType: 'Tariff', targetId: tariff.id, metadata: { name: data.name } });
     return tariff;
