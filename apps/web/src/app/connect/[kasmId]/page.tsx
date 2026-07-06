@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getAccessToken } from '@/lib/api/auth-store';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
-import { useLaunchableWorkspaces, useSessions } from '@/lib/hooks';
+import { useLaunchableWorkspaces, useSessions, useTerminateSession } from '@/lib/hooks';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { cn } from '@/lib/utils';
@@ -519,6 +519,12 @@ export default function ConnectPage() {
     return () => clearInterval(id);
   }, [state, captureThumb]);
 
+  const terminate = useTerminateSession();
+  // Leave the viewer and return to the workstation. Uses router.push('/'), NOT
+  // router.back(): back() is a no-op when the session was opened directly, in a
+  // new tab, or after a reload / the RDP router.replace redirect — which is why
+  // the Back and End buttons "did nothing". The session keeps running so the
+  // user can jump back into it from the workstation.
   const disconnect = useCallback(() => {
     captureThumb(); // keep a fresh preview for the switcher
     try {
@@ -526,8 +532,19 @@ export default function ConnectPage() {
     } catch {
       /* already closed */
     }
-    router.back();
+    router.push('/');
   }, [router, captureThumb]);
+  // End = actually terminate the session server-side, then return. (Previously
+  // "End" only called disconnect → the session kept running.)
+  const endSession = useCallback(() => {
+    try {
+      clientRef.current?.disconnect();
+    } catch {
+      /* already closed */
+    }
+    if (session?.id) terminate(session.id);
+    router.push('/');
+  }, [router, session?.id, terminate]);
 
   // Download a full-resolution screenshot of the live desktop.
   const screenshot = useCallback(() => {
@@ -633,7 +650,7 @@ export default function ConnectPage() {
               <RefreshCw className="size-3.5" /> <span className="hidden sm:inline">Reconnect</span>
             </Button>
           )}
-          <Button variant="destructive" size="sm" onClick={disconnect} title="End session" className="ms-1">
+          <Button variant="destructive" size="sm" onClick={endSession} title="End session" className="ms-1">
             <Power className="size-3.5" /> <span className="hidden sm:inline">End</span>
           </Button>
         </div>
@@ -674,7 +691,7 @@ export default function ConnectPage() {
         onTogglePerf={togglePerf}
         onReconnect={reconnect}
         onWorkspaces={() => router.push('/')}
-        onEnd={disconnect}
+        onEnd={endSession}
       />
     </div>
   );
