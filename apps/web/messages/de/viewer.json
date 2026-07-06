@@ -7,8 +7,8 @@
     "audio": "Audio",
     "audioToast": "Audio wird über den PulseAudio-Sidecar übertragen",
     "virtualPrinter": "Virtueller Drucker",
-    "printToast": "Virtuelles Drucken",
-    "printToastDescription": "Drucken Sie an den CUPS-Sidecar; Aufträge werden als PDF zum Herunterladen erfasst.",
+    "printToast": "Virtueller Drucker",
+    "printToastDescription": "Aus der App mit Strg+P auf „Kasm-Printer\" drucken — das PDF erscheint hier.",
     "camera": "Kamera / Webcam",
     "closeCamera": "Kamera schließen",
     "cameraPreview": "Kameravorschau",
@@ -50,7 +50,10 @@
     "audioOn": "Lautsprecher an — Sitzungston läuft",
     "audioOff": "Sitzungston stummschalten",
     "audioError": "Sitzungston konnte nicht gestartet werden",
-    "audioUnreachable": "Audio-Route nicht erreichbar — der Sitzungs-Stream hat nicht verbunden"
+    "audioUnreachable": "Audio-Route nicht erreichbar — der Sitzungs-Stream hat nicht verbunden",
+    "printPreview": "Druckvorschau",
+    "print": "Drucken",
+    "download": "Herunterladen"
   },
   "status": {
     "connected": "Verbunden",
