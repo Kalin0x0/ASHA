@@ -8,8 +8,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
 import { LiquidGlass } from '@/components/ui/liquid-glass';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/lib/api/auth-context';
+import { useProfileDialog } from '@/lib/profile-store';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import type { SessionRow, Workspace } from '@/lib/types';
@@ -41,6 +42,7 @@ export function StartMenu({
   const t = useTranslations('portal');
   const { user, logout } = useAuth();
   const router = useRouter();
+  const openProfile = useProfileDialog((s) => s.openProfile);
   const favorites = useFavorites();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -189,12 +191,21 @@ export function StartMenu({
 
                 {/* Footer — account + power */}
                 <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3">
-                  <div className="flex min-w-0 items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      openProfile();
+                    }}
+                    title={t('account.menuItem')}
+                    className="flex min-w-0 items-center gap-2.5 rounded-lg px-1.5 py-1 outline-none transition-colors hover:bg-white/10 ring-gold-focus"
+                  >
                     <Avatar className="size-8">
+                      {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
                       <AvatarFallback className="text-[11px] font-bold">{initials}</AvatarFallback>
                     </Avatar>
                     <span className="truncate text-sm font-medium">{displayName}</span>
-                  </div>
+                  </button>
                   <div className="flex items-center gap-1">
                     {user?.isSystemAdmin && (
                       <button

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ClassicDesktop } from '@/components/desktop/classic-desktop';
 import { Desktop } from '@/components/desktop/desktop';
 import { MacDesktop } from '@/components/desktop/mac-desktop';
+import { ProfileDialog } from '@/components/desktop/profile-dialog';
 import { DEFAULT_SHELL_MODE, useShell } from '@/lib/shell-store';
 
 /**
@@ -18,7 +19,11 @@ export function DesktopShell() {
   useEffect(() => setMounted(true), []);
 
   const active = mounted ? mode : DEFAULT_SHELL_MODE;
-  if (active === 'macos') return <MacDesktop />;
-  if (active === 'classic') return <ClassicDesktop />;
-  return <Desktop />;
+  return (
+    <>
+      {active === 'macos' ? <MacDesktop /> : active === 'classic' ? <ClassicDesktop /> : <Desktop />}
+      {/* One profile dialog for every shell; opened from the top bar / Start menu. */}
+      <ProfileDialog />
+    </>
+  );
 }

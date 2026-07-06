@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import * as api from '@/lib/api/endpoints';
 import type { ApiGroup, RdpFileOptions } from '@/lib/api/endpoints';
+import { getAuth, setUser } from '@/lib/api/auth-store';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
 import { downloadRdpFile } from '@/lib/rdp';
 import { formatRelativeTime } from '@/lib/utils';
@@ -773,4 +774,30 @@ export function useLaunchSession() {
 export function useMyTariff(): api.ApiMyTariff | null {
   const { data } = useQuery({ queryKey: ['tariff', 'me'], queryFn: api.getMyTariff, refetchInterval: 30_000 });
   return data ?? null;
+}
+
+// ── Self-service account ──────────────────────────────────────────────────────
+const ACCOUNT_KEY = ['account'] as const;
+
+export function useAccount(): api.ApiAccount | null {
+  const { data } = useQuery({ queryKey: ACCOUNT_KEY, queryFn: api.getAccount });
+  return data ?? null;
+}
+
+export function useUpdateAccount() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.updateAccount,
+    onSuccess: (acct) => {
+      qc.invalidateQueries({ queryKey: ACCOUNT_KEY });
+      // Reflect avatar / name changes in the shared auth user immediately.
+      const current = getAuth().user;
+      if (current) setUser({ ...current, displayName: acct.displayName, avatarUrl: acct.avatarUrl, locale: acct.locale, email: acct.email });
+    },
+  });
+  return useCallback((input: api.UpdateAccountInput) => mutateAsync(input), [mutateAsync]);
+}
+
+export function useChangePassword() {
+  return useCallback((input: { currentPassword?: string; newPassword: string }) => api.changePassword(input), []);
 }
