@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.27',
+    date: '2026-07-05',
+    title: { en: 'Strict user isolation', de: 'Strikte Benutzer-Isolation' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'End users are now isolated by default: a normal user only sees the workspaces and server-backed services explicitly assigned to them (directly or via a group) — no longer the whole catalog. Admins can revert to the open model via the org setting "isolation.denyByDefault". The portal also fetches only your own sessions from a new server-enforced endpoint, instead of filtering a full list client-side.',
+          de: 'Endbenutzer sind jetzt standardmäßig isoliert: Ein normaler Benutzer sieht nur die Workspaces und server-basierten Dienste, die ihm ausdrücklich (direkt oder über eine Gruppe) zugewiesen sind — nicht mehr den gesamten Katalog. Admins können über die Organisations-Einstellung „isolation.denyByDefault" zum offenen Modell zurückkehren. Das Portal lädt zudem nur noch die eigenen Sitzungen über einen serverseitig erzwungenen Endpunkt, statt eine vollständige Liste clientseitig zu filtern.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.26',
     date: '2026-07-04',
     title: { en: 'Arrange desktop icons freely', de: 'Desktop-Symbole frei anordnen' },

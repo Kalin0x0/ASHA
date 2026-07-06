@@ -30,6 +30,16 @@ export class SessionsController {
     return this.sessions.list({ status });
   }
 
+  // The signed-in user's OWN sessions — the isolated portal list. Declared
+  // before `:id` so "mine" isn't captured as a session id. Needs only
+  // SESSION_VIEW (own), so a normal user (who lacks SESSION_VIEW_ANY) can see
+  // their desktops without being able to enumerate the whole org.
+  @RequirePermissions('SESSION_VIEW')
+  @Get('mine')
+  mine(@CurrentUser() user: AuthUser, @Query('status') status?: string) {
+    return this.sessions.list({ status, userId: user.sub });
+  }
+
   @RequirePermissions('SESSION_VIEW_ANY')
   @Get(':id')
   get(@Param('id') id: string, @CurrentUser() user: AuthUser) {
