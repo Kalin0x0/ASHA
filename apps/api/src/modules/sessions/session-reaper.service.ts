@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { prisma } from '@asha/db';
+import { TariffsService } from '../tariffs/tariffs.service';
 import { SessionsService } from './sessions.service';
 
 /** Session statuses that are still alive and therefore reapable. */
@@ -23,7 +24,32 @@ const ABANDONABLE_STATUSES = ['RUNNING', 'DEGRADED'] as const;
 export class SessionReaperService {
   private readonly logger = new Logger(SessionReaperService.name);
 
-  constructor(private readonly sessions: SessionsService) {}
+  constructor(
+    private readonly sessions: SessionsService,
+    // Optional so unit tests can construct the reaper without tariffs; when
+    // present, active sessions are metered against their holder's budget.
+    @Optional() private readonly tariffs?: TariffsService,
+  ) {}
+
+  /**
+   * Meter active sessions against their holders' tariff budgets, reset any
+   * budgets whose period rolled over, and terminate sessions whose holder just
+   * ran out of time (reason `quota_exhausted`). No-op when tariffs are unset.
+   */
+  @Interval('tariff-meter', 60_000)
+  async meterTariffs(): Promise<number> {
+    if (!this.tariffs) return 0;
+    await this.tariffs.resetExpiredPeriods();
+    const exhaustedIds = await this.tariffs.meterAndCollectExhausted();
+    if (exhaustedIds.length === 0) return 0;
+    const due = await prisma.session.findMany({
+      where: { id: { in: exhaustedIds } },
+      select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
+    });
+    for (const s of due) await this.sessions.destroy(s, 'quota_exhausted');
+    this.logger.log(`Reaped ${due.length} session(s) over their tariff budget`);
+    return due.length;
+  }
 
   /**
    * Sessions left in TERMINATING longer than this are force-finalized to

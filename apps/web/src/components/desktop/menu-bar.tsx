@@ -10,6 +10,7 @@ import { BackgroundPicker } from '@/components/composite/background-picker';
 import { InstallButton } from '@/components/composite/install-button';
 import { LanguageSwitcher } from '@/components/composite/language-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { TariffChip } from '@/components/desktop/tariff-chip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -79,6 +80,7 @@ export function MenuBar() {
 
       {/* Status items */}
       <div className="ms-auto flex items-center gap-0.5">
+        <TariffChip className="me-1 hidden sm:inline-flex" />
         <InstallButton className="hidden md:inline-flex" />
         {user?.isSystemAdmin && (
           <Link
