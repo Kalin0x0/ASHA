@@ -283,8 +283,13 @@ export class AuthService {
       secret: this.env.JWT_ACCESS_SECRET,
       expiresIn: this.env.JWT_ACCESS_TTL,
     });
+    // A unique jti guarantees every refresh token is a distinct JWT. Without it
+    // the payload is just { sub } + second-granularity iat/exp, so two tokens
+    // minted for the same user within the same second are byte-identical → same
+    // tokenHash → a unique-constraint 500 on create (hit by multi-tab sessions
+    // and concurrent 401→refresh retries).
     const refreshToken = await this.jwt.signAsync(
-      { sub: user.id },
+      { sub: user.id, jti: randomToken(16) },
       { secret: this.env.JWT_REFRESH_SECRET, expiresIn: this.env.JWT_REFRESH_TTL },
     );
     await prisma.refreshToken.create({
