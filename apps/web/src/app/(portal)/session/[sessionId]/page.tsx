@@ -41,9 +41,11 @@ import {
   pauseSession,
   resizeSession,
   resumeSession,
+  terminateSession,
 } from '@/lib/api/endpoints';
+import { ApiError } from '@/lib/api/client';
 import { isLive } from '@/lib/api/mode';
-import { useLaunchableWorkspaces, useSession, useTerminateSession } from '@/lib/hooks';
+import { useLaunchableWorkspaces, useSession } from '@/lib/hooks';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { isLikelyUnreachableUrl } from '@/lib/stream';
 import { cn } from '@/lib/utils';
@@ -117,7 +119,6 @@ export default function StreamingViewerPage() {
   const params = useParams<{ sessionId: string }>();
   const router = useRouter();
   const session = useSession(params.sessionId);
-  const terminate = useTerminateSession();
   const stageRef = useRef<HTMLDivElement>(null);
   // Handle to the embedded KasmVNC iframe so toolbar buttons can drive its
   // same-origin DOM controls (clipboard + settings panels). KasmVNC does NOT
@@ -421,7 +422,21 @@ export default function StreamingViewerPage() {
       }))
     )
       return;
-    if (session) terminate(session.id);
+    // Terminate by the id from the URL — NOT the fetched `session`, which is null
+    // for a normal user who can't read the admin session-detail endpoint (so the
+    // old `if (session)` guard skipped the call and the desktop kept running).
+    // Await the DELETE so it isn't dropped by the immediate navigation, and
+    // surface a failure instead of the misleading success toast.
+    if (isLive) {
+      try {
+        await terminateSession(params.sessionId);
+      } catch (e) {
+        toast.error(tc('confirm.title'), {
+          description: e instanceof ApiError ? e.message : t('status.endedToast'),
+        });
+        return;
+      }
+    }
     toast.success(t('status.endedToast'));
     router.push('/');
   };

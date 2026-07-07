@@ -20,6 +20,7 @@ import {
 } from '@asha/events';
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
+import { RbacService } from '../../common/rbac.service';
 import { RedisService } from '../../common/redis.service';
 import { resolveTokens, type TokenContext } from '../../common/tokens';
 import { ConnectivityRenderService } from '../connectivity/connectivity-render.service';
@@ -52,9 +53,12 @@ export class SessionsService {
     // Optional: opens server-backed (RDP/VNC/SSH) sessions for non-container
     // workspaces by reusing the fixed-server connect path.
     @Optional() private readonly servers?: ServersService,
-    // Optional (kept LAST so positional unit-test construction is unaffected):
-    // when present, per-user time tariffs gate launch + cap session duration.
+    // Optional: per-user time tariffs gate launch + cap session duration.
     @Optional() private readonly tariffs?: TariffsService,
+    // Optional (kept LAST so positional unit-test construction is unaffected):
+    // resolves a caller's effective permissions for the owner-vs-any terminate
+    // check the route guard can't make (it has no row-level session context).
+    @Optional() private readonly rbac?: RbacService,
   ) {}
 
   async create(user: AuthUser, dto: CreateSessionDto) {
@@ -447,7 +451,27 @@ export class SessionsService {
   }
 
   async get(id: string, user: AuthUser) {
-    return this.findInOrg(id, user.orgId);
+    const session = await this.findInOrg(id, user.orgId);
+    await this.assertSessionScope(session, user, 'SESSION_VIEW_ANY');
+    return session;
+  }
+
+  /**
+   * Row-level authorization the route guard can't do (it has no session context):
+   * the OWNER may always act on their own session; system admins and holders of
+   * the given "…_ANY" permission may act on anyone's. Shared by view + terminate.
+   * Falls back to owner/admin-only if the RBAC service isn't wired (unit tests).
+   */
+  private async assertSessionScope(
+    session: { userId: string | null },
+    user: AuthUser,
+    anyPermission: 'SESSION_VIEW_ANY' | 'SESSION_TERMINATE_ANY',
+  ) {
+    if (user.isSystemAdmin) return;
+    if (session.userId && session.userId === user.sub) return;
+    const granted = this.rbac ? await this.rbac.effectivePermissions(user.sub) : new Set<string>();
+    if (granted.has(anyPermission) || granted.has('*')) return;
+    throw new ForbiddenException('You do not have access to this session');
   }
 
   /** Load a session scoped to the caller's org — enforces tenant isolation. */
@@ -470,7 +494,11 @@ export class SessionsService {
 
   async terminate(id: string, user: AuthUser) {
     const session = await this.findInOrg(id, user.orgId);
-    await this.destroy(session, 'admin_terminate', user.sub);
+    await this.assertSessionScope(session, user, 'SESSION_TERMINATE_ANY');
+    // Distinguish an owner ending their own desktop from an admin/operator
+    // terminating someone else's — surfaces correctly in the audit trail.
+    const reason = user.isSystemAdmin || session.userId !== user.sub ? 'admin_terminate' : 'user_ended';
+    await this.destroy(session, reason, user.sub);
     return { ok: true };
   }
 
