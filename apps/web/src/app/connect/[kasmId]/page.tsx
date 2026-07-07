@@ -228,10 +228,25 @@ export default function ConnectPage() {
     const mouse = new Guacamole.Mouse(el);
     const sendMouse = (s: { x: number; y: number }) => {
       const sc = display.getScale() || 1;
-      client.sendMouseState({ ...s, x: s.x / sc, y: s.y / sc });
+      try {
+        client.sendMouseState({ ...s, x: s.x / sc, y: s.y / sc });
+      } catch {
+        /* tunnel not open yet — drop the event */
+      }
     };
     // Keyboard → server (whole document so shortcuts reach the desktop).
     const keyboard = new Guacamole.Keyboard(document);
+    // Guacamole throws synchronously (InvalidStateError: WebSocket still in
+    // CONNECTING state) if a key event is sent before the tunnel is OPEN — e.g.
+    // the user types during the "Establishing connection" phase. Swallow it so an
+    // early keystroke can't crash the whole viewer (BugReport ERR-7B8AE804).
+    const safeKey = (pressed: 0 | 1, keysym: number) => {
+      try {
+        clientRef.current?.sendKeyEvent(pressed, keysym);
+      } catch {
+        /* tunnel not open yet — drop the key */
+      }
+    };
     // Clipboard paste plumbing (see onPaste below): track Ctrl/Cmd so we can let
     // Ctrl/Cmd+V reach the browser `paste` event (which delivers the clipboard
     // text with NO permission prompt). `pendingPasteV` is a safety net so the V
@@ -255,11 +270,8 @@ export default function ConnectPage() {
           if (pendingPasteV) clearTimeout(pendingPasteV);
           pendingPasteV = setTimeout(() => {
             pendingPasteV = null;
-            const c = clientRef.current;
-            if (c) {
-              c.sendKeyEvent(1, keysym);
-              c.sendKeyEvent(0, keysym);
-            }
+            safeKey(1, keysym);
+            safeKey(0, keysym);
           }, 60);
           // IMPORTANT: in guacamole-common-js, returning false from onkeydown
           // makes the library call e.preventDefault() (press() returns false →
@@ -269,12 +281,12 @@ export default function ConnectPage() {
           // permission-free `paste` event actually fires into the focused sink.
           return true;
         }
-        client.sendKeyEvent(1, keysym);
+        safeKey(1, keysym);
         return true;
       };
       keyboard.onkeyup = (keysym) => {
         if (PASTE_MODS.has(keysym)) modActive = false;
-        client.sendKeyEvent(0, keysym);
+        safeKey(0, keysym);
         return true;
       };
     }
@@ -330,11 +342,8 @@ export default function ConnectPage() {
       // Inject V now that the clipboard is pushed (Ctrl/Cmd is already held on the
       // remote from the physical key) so the desktop pastes the up-to-date text.
       if (!monitor) {
-        const c = clientRef.current;
-        if (c) {
-          c.sendKeyEvent(1, 0x76);
-          c.sendKeyEvent(0, 0x76);
-        }
+        safeKey(1, 0x76);
+        safeKey(0, 0x76);
       }
     };
     document.addEventListener('paste', onPaste);
@@ -405,8 +414,21 @@ export default function ConnectPage() {
       if (refocusTimer) clearTimeout(refocusTimer);
       if (pendingPasteV) clearTimeout(pendingPasteV);
       display.onresize = null;
-      keyboard.onkeydown = null;
-      keyboard.onkeyup = null;
+      // No-ops rather than null: Guacamole.Keyboard keeps its own `document`
+      // listeners after unmount (it has no public teardown), so a keystroke fired
+      // after this effect cleans up still calls keyboard.onkeyup(...) — and if
+      // that were null the library would throw "onkeyup is not a function"
+      // (BugReport ERR-FBABA083). A no-op absorbs the stray event harmlessly.
+      const noopKey = () => true;
+      keyboard.onkeydown = noopKey;
+      keyboard.onkeyup = noopKey;
+      try {
+        // reset() exists at runtime (guacamole-common-js 1.5) but isn't in the
+        // shipped type defs — release any keys still held down.
+        (keyboard as unknown as { reset?: () => void }).reset?.();
+      } catch {
+        /* teardown must never throw */
+      }
       mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = null;
       client.onclipboard = null;
       sendClipboardRef.current = null;
@@ -479,12 +501,16 @@ export default function ConnectPage() {
   const sendCtrlAltDel = useCallback(() => {
     const c = clientRef.current;
     if (!c || monitor) return;
-    c.sendKeyEvent(1, KEYSYM.CTRL);
-    c.sendKeyEvent(1, KEYSYM.ALT);
-    c.sendKeyEvent(1, KEYSYM.DEL);
-    c.sendKeyEvent(0, KEYSYM.DEL);
-    c.sendKeyEvent(0, KEYSYM.ALT);
-    c.sendKeyEvent(0, KEYSYM.CTRL);
+    try {
+      c.sendKeyEvent(1, KEYSYM.CTRL);
+      c.sendKeyEvent(1, KEYSYM.ALT);
+      c.sendKeyEvent(1, KEYSYM.DEL);
+      c.sendKeyEvent(0, KEYSYM.DEL);
+      c.sendKeyEvent(0, KEYSYM.ALT);
+      c.sendKeyEvent(0, KEYSYM.CTRL);
+    } catch {
+      /* tunnel not open — ignore */
+    }
   }, [monitor]);
 
   /** Copy the local clipboard into the remote, then issue Ctrl+V to paste it. */
@@ -502,10 +528,14 @@ export default function ConnectPage() {
     sendClipboardRef.current(text);
     // Give guacd a beat to apply the clipboard before pasting into the focused app.
     setTimeout(() => {
-      c.sendKeyEvent(1, KEYSYM.CTRL);
-      c.sendKeyEvent(1, KEYSYM.V);
-      c.sendKeyEvent(0, KEYSYM.V);
-      c.sendKeyEvent(0, KEYSYM.CTRL);
+      try {
+        c.sendKeyEvent(1, KEYSYM.CTRL);
+        c.sendKeyEvent(1, KEYSYM.V);
+        c.sendKeyEvent(0, KEYSYM.V);
+        c.sendKeyEvent(0, KEYSYM.CTRL);
+      } catch {
+        /* tunnel not open — ignore */
+      }
     }, 80);
     toast.success('Pasted to the remote desktop');
   }, [monitor]);

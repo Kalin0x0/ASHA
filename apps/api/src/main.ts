@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { corsOrigins, loadEnv } from '@asha/config';
@@ -16,7 +17,14 @@ import { DevApiModule } from './modules/dev-api/dev-api.module';
 
 async function bootstrap() {
   const env = loadEnv();
-  const app = await NestFactory.create(AppModule);
+  // Disable the auto-registered body parser so we can raise the JSON limit:
+  // Express defaults to 100 kB, but a bug report carries an optional screenshot
+  // data URL (contract allows up to 8 MB — see createFeedbackSchema). At the
+  // default limit every screenshot 413'd (surfacing as a 500) before the request
+  // ever reached the handler, so users couldn't file bugs with a screenshot.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
+  app.useBodyParser('json', { limit: '9mb' });
+  app.useBodyParser('urlencoded', { extended: true, limit: '9mb' });
 
   app.use(
     helmet({
