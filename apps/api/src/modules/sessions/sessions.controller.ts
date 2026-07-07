@@ -8,7 +8,7 @@ import {
   type StreamProfileDto,
   streamProfileSchema,
 } from '@asha/contracts';
-import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/decorators';
+import { type AuthUser, CurrentUser, RequireAnyPermission, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
 import { SessionsService } from './sessions.service';
 
@@ -40,13 +40,20 @@ export class SessionsController {
     return this.sessions.list({ status, userId: user.sub });
   }
 
-  @RequirePermissions('SESSION_VIEW_ANY')
+  // Owner may read their own session (needed by the portal viewer for keepalive
+  // + the desktop name); admins / SESSION_VIEW_ANY holders may read anyone's.
+  @RequireAnyPermission('SESSION_VIEW', 'SESSION_VIEW_ANY')
   @Get(':id')
   get(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.sessions.get(id, user);
   }
 
-  @RequirePermissions('SESSION_TERMINATE_ANY')
+  // A user may end their OWN session (SESSION_TERMINATE_OWN — the default User
+  // role has it); admins and holders of SESSION_TERMINATE_ANY may end anyone's.
+  // The service enforces the row-level ownership check the guard can't do.
+  // (Previously this hard-required SESSION_TERMINATE_ANY, so a normal user's
+  // "End session" 403'd silently and the desktop kept running.)
+  @RequireAnyPermission('SESSION_TERMINATE_OWN', 'SESSION_TERMINATE_ANY')
   @Delete(':id')
   terminate(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.sessions.terminate(id, user);

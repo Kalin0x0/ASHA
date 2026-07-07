@@ -20,14 +20,16 @@ import {
   X,
 } from 'lucide-react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ApiError } from '@/lib/api/client';
+import { terminateSession } from '@/lib/api/endpoints';
 import { getAccessToken } from '@/lib/api/auth-store';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
-import { useLaunchableWorkspaces, useSessions, useTerminateSession } from '@/lib/hooks';
+import { useLaunchableWorkspaces, useOwnSessions, useSessions } from '@/lib/hooks';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { cn } from '@/lib/utils';
@@ -127,7 +129,16 @@ export default function ConnectPage() {
   const [autoAttempts, setAutoAttempts] = useState(0);
 
   // Resolve the session → workspace so the toolbar shows the name + description.
-  const session = useSessions().find((s) => s.kasmId === kasmId);
+  // Check BOTH the admin list (/sessions, admins only) and the owner list
+  // (/sessions/mine, everyone): a normal user can't read the admin list, so
+  // without the own-sessions fallback `session` was undefined for them and the
+  // End button had no id to terminate (and keepalive never fired).
+  const adminSessions = useSessions();
+  const ownSessions = useOwnSessions();
+  const session = useMemo(
+    () => adminSessions.find((s) => s.kasmId === kasmId) ?? ownSessions.find((s) => s.kasmId === kasmId),
+    [adminSessions, ownSessions, kasmId],
+  );
   const workspaces = useLaunchableWorkspaces();
   const ws = workspaces.find((w) => w.friendlyName === session?.workspaceName);
   const workspaceName = session?.workspaceName ?? 'Remote desktop';
@@ -519,14 +530,17 @@ export default function ConnectPage() {
     return () => clearInterval(id);
   }, [state, captureThumb]);
 
-  const terminate = useTerminateSession();
   // Leave the viewer and return to the workstation. Uses router.push('/'), NOT
   // router.back(): back() is a no-op when the session was opened directly, in a
   // new tab, or after a reload / the RDP router.replace redirect — which is why
   // the Back and End buttons "did nothing". The session keeps running so the
   // user can jump back into it from the workstation.
   const disconnect = useCallback(() => {
-    captureThumb(); // keep a fresh preview for the switcher
+    try {
+      captureThumb(); // keep a fresh preview for the switcher (best-effort)
+    } catch {
+      /* thumbnail capture must never block leaving the viewer */
+    }
     try {
       clientRef.current?.disconnect();
     } catch {
@@ -534,17 +548,33 @@ export default function ConnectPage() {
     }
     router.push('/');
   }, [router, captureThumb]);
-  // End = actually terminate the session server-side, then return. (Previously
-  // "End" only called disconnect → the session kept running.)
-  const endSession = useCallback(() => {
+  // End = actually terminate the session server-side, then return. AWAITS the
+  // DELETE (rather than fire-and-forget before an immediate unmount, which could
+  // drop the request) and surfaces a failure as a toast instead of silently
+  // doing nothing — the old path swallowed errors, so a 403 (a normal user only
+  // has SESSION_TERMINATE_OWN; the endpoint used to demand _ANY) looked like a
+  // dead button while the desktop kept running. Navigation always happens.
+  const [ending, setEnding] = useState(false);
+  const endSession = useCallback(async () => {
     try {
       clientRef.current?.disconnect();
     } catch {
       /* already closed */
     }
-    if (session?.id) terminate(session.id);
+    if (session?.id) {
+      setEnding(true);
+      try {
+        await terminateSession(session.id);
+      } catch (e) {
+        setEnding(false);
+        toast.error('Sitzung konnte nicht beendet werden', {
+          description: e instanceof ApiError ? e.message : 'Bitte erneut versuchen.',
+        });
+        return; // stay in the viewer so the user sees the error and can retry
+      }
+    }
     router.push('/');
-  }, [router, session?.id, terminate]);
+  }, [router, session?.id]);
 
   // Download a full-resolution screenshot of the live desktop.
   const screenshot = useCallback(() => {
@@ -650,8 +680,16 @@ export default function ConnectPage() {
               <RefreshCw className="size-3.5" /> <span className="hidden sm:inline">Reconnect</span>
             </Button>
           )}
-          <Button variant="destructive" size="sm" onClick={endSession} title="End session" className="ms-1">
-            <Power className="size-3.5" /> <span className="hidden sm:inline">End</span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => void endSession()}
+            disabled={ending}
+            title="End session"
+            className="ms-1"
+          >
+            {ending ? <Loader2 className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}{' '}
+            <span className="hidden sm:inline">{ending ? 'Beende…' : 'End'}</span>
           </Button>
         </div>
       </header>
@@ -691,7 +729,7 @@ export default function ConnectPage() {
         onTogglePerf={togglePerf}
         onReconnect={reconnect}
         onWorkspaces={() => router.push('/')}
-        onEnd={endSession}
+        onEnd={() => void endSession()}
       />
     </div>
   );

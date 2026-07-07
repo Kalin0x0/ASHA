@@ -163,22 +163,41 @@ export class ServersService {
       }
     }
 
-    const session = await prisma.session.create({
-      data: {
+    // Reuse a still-live session for the same (user, server) instead of spawning
+    // a fresh one on every "Connect" click. Fixed-server sessions have no
+    // container/agent to reap, so without this each reconnect leaked a new
+    // RUNNING row that piled up in the sessions list forever. Reusing keeps one
+    // session per user↔server and simply refreshes its keepalive + proxy record.
+    const existing = await prisma.session.findFirst({
+      where: {
         orgId: user.orgId,
         userId: user.sub,
         serverId: server.id,
-        zoneId: server.zoneId,
-        connectionType,
-        status: 'RUNNING',
-        workspaceName: server.hostname,
-        host: server.address,
-        internalHost: server.address,
-        port,
-        startedAt: new Date(),
-        lastKeepaliveAt: new Date(),
+        status: { in: ['RUNNING', 'DEGRADED'] },
       },
+      orderBy: { createdAt: 'desc' },
     });
+    const session = existing
+      ? await prisma.session.update({
+          where: { id: existing.id },
+          data: { connectionType, host: server.address, internalHost: server.address, port, lastKeepaliveAt: new Date() },
+        })
+      : await prisma.session.create({
+          data: {
+            orgId: user.orgId,
+            userId: user.sub,
+            serverId: server.id,
+            zoneId: server.zoneId,
+            connectionType,
+            status: 'RUNNING',
+            workspaceName: server.hostname,
+            host: server.address,
+            internalHost: server.address,
+            port,
+            startedAt: new Date(),
+            lastKeepaliveAt: new Date(),
+          },
+        });
 
     const token = await this.jwt.signAsync(
       { sid: session.id, kasmId: session.kasmId },
