@@ -232,9 +232,11 @@ export function buildInitialData(): MockData {
       email: `${username}@asha.local`,
       username,
       status: i === 11 ? 'DISABLED' : i === 12 ? 'INVITED' : 'ACTIVE',
+      isSystemAdmin: i < 2,
       groups: i < 2 ? ['Administrators', 'All Users'] : ['All Users'],
       twoFactor: rng() > 0.45,
       lastLoginAt: i === 12 ? null : `${Math.floor(between(1, 72))}h ago`,
+      deactivatesAt: null,
     };
   });
 

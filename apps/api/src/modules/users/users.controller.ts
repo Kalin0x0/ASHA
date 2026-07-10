@@ -13,6 +13,9 @@ const createSchema = z.object({
   password: z.string().min(8).max(200).optional(),
   isSystemAdmin: z.boolean().optional(),
   locale: z.string().max(10).optional(),
+  // License/access expiry (ISO datetime). Null/omitted = perpetual. When it
+  // passes the account is auto-deactivated (sellable time-limited accounts).
+  deactivatesAt: z.string().datetime().nullable().optional(),
 });
 type CreateDto = z.infer<typeof createSchema>;
 
@@ -23,6 +26,8 @@ const updateSchema = z.object({
   isSystemAdmin: z.boolean().optional(),
   status: z.enum(['ACTIVE', 'DISABLED', 'INVITED', 'LOCKED']).optional(),
   password: z.string().min(8).max(200).optional(),
+  // Set/extend (renew) or clear (null = perpetual) the license expiry.
+  deactivatesAt: z.string().datetime().nullable().optional(),
 });
 type UpdateDto = z.infer<typeof updateSchema>;
 

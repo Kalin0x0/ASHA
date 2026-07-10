@@ -20,6 +20,7 @@ const SAFE_SELECT = {
   isSystemAdmin: true,
   locale: true,
   lastLoginAt: true,
+  deactivatesAt: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -31,6 +32,7 @@ export interface CreateUserInput {
   password?: string;
   isSystemAdmin?: boolean;
   locale?: string;
+  deactivatesAt?: string | null;
 }
 
 export interface UpdateUserInput {
@@ -40,6 +42,7 @@ export interface UpdateUserInput {
   isSystemAdmin?: boolean;
   status?: 'ACTIVE' | 'DISABLED' | 'INVITED' | 'LOCKED';
   password?: string;
+  deactivatesAt?: string | null;
 }
 
 /** Minimal RFC-4180-ish CSV line parser (handles "quoted, fields" + "" escapes). */
@@ -136,6 +139,7 @@ export class UsersService {
         isSystemAdmin: dto.isSystemAdmin ?? false,
         locale: dto.locale ?? 'en',
         status: 'ACTIVE',
+        ...(dto.deactivatesAt ? { deactivatesAt: new Date(dto.deactivatesAt) } : {}),
         ...(dto.password
           ? { credentials: { create: { kind: 'PASSWORD', secret: await hashPassword(dto.password) } } }
           : {}),
@@ -220,6 +224,16 @@ export class UsersService {
     if (dto.isSystemAdmin !== undefined && !user.isSystemAdmin) {
       throw new ForbiddenException('Only a system admin can change system-admin status');
     }
+    // A non-system-admin (even with USER_EDIT) must not edit their OWN account
+    // status or license expiry — otherwise a license customer with edit rights
+    // could reactivate themselves or clear their own expiry. Admins are exempt.
+    if (
+      !user.isSystemAdmin &&
+      id === user.sub &&
+      (dto.status !== undefined || dto.deactivatesAt !== undefined)
+    ) {
+      throw new ForbiddenException('You cannot change your own account status or license.');
+    }
     const target = await prisma.user.findFirst({ where: { id, orgId: user.orgId } });
     if (!target) throw new NotFoundException('User not found');
 
@@ -246,6 +260,10 @@ export class UsersService {
         ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
         ...(dto.isSystemAdmin !== undefined ? { isSystemAdmin: dto.isSystemAdmin } : {}),
         ...(dto.status !== undefined ? { status: dto.status } : {}),
+        // Set/extend (renew) or clear (null → perpetual) the license expiry.
+        ...(dto.deactivatesAt !== undefined
+          ? { deactivatesAt: dto.deactivatesAt ? new Date(dto.deactivatesAt) : null }
+          : {}),
       },
       select: SAFE_SELECT,
     });

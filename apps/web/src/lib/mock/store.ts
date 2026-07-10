@@ -221,9 +221,11 @@ class MockStore {
       email,
       username,
       status: 'ACTIVE',
+      isSystemAdmin: input.isSystemAdmin ?? false,
       groups: input.isSystemAdmin ? ['Administrators', 'All Users'] : ['All Users'],
       twoFactor: false,
       lastLoginAt: null,
+      deactivatesAt: input.deactivatesAt ?? null,
     };
     this.data.users = [user, ...this.data.users];
     this.emit();

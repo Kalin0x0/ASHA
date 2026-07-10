@@ -32,7 +32,23 @@ export class AuthService {
       where: { OR: [{ email: dto.email }, { username: dto.email }] },
       include: { credentials: true, twoFactorMethods: true },
     });
-    if (!user || user.status !== 'ACTIVE') throw new UnauthorizedException('Invalid credentials');
+    // Sellable time-limited accounts: reject an expired license just-in-time
+    // (before the ≤60s license-reaper tick) and persist the deactivation +
+    // revoke any live refresh tokens. Folded into the same generic rejection as a
+    // disabled account so it reveals nothing extra to an unauthenticated caller.
+    // System admins are exempt (see license-reaper) so a stray expiry can't lock
+    // every admin out.
+    const licenseExpired =
+      !!user && !user.isSystemAdmin && !!user.deactivatesAt && user.deactivatesAt.getTime() <= Date.now();
+    if (!user || user.status !== 'ACTIVE' || licenseExpired) {
+      if (user && licenseExpired && user.status === 'ACTIVE') {
+        await prisma.user.update({ where: { id: user.id }, data: { status: 'DISABLED' } }).catch(() => undefined);
+        await prisma.refreshToken
+          .updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } })
+          .catch(() => undefined);
+      }
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     const cred = user.credentials.find((c) => c.kind === 'PASSWORD');
     if (!cred || !(await verifyPassword(dto.password, cred.secret))) {
@@ -131,7 +147,16 @@ export class AuthService {
     if (stored.expiresAt < new Date()) throw new UnauthorizedException('Refresh token expired');
 
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-    if (!user || user.status !== 'ACTIVE') throw new UnauthorizedException('User unavailable');
+    // Block a refresh once the account's license has expired (JIT, before the
+    // reaper), and persist the deactivation so it can't refresh again. Admins exempt.
+    const licenseExpired =
+      !!user && !user.isSystemAdmin && !!user.deactivatesAt && user.deactivatesAt.getTime() <= Date.now();
+    if (!user || user.status !== 'ACTIVE' || licenseExpired) {
+      if (user && licenseExpired && user.status === 'ACTIVE') {
+        await prisma.user.update({ where: { id: user.id }, data: { status: 'DISABLED' } }).catch(() => undefined);
+      }
+      throw new UnauthorizedException('User unavailable');
+    }
 
     await prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
     // Carry the rotation family forward so the full chain stays linked.

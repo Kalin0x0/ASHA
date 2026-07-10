@@ -12,7 +12,8 @@
       "user": "User",
       "groups": "Groups",
       "twoFactor": "2FA",
-      "lastLogin": "Last login"
+      "lastLogin": "Last login",
+      "license": "License"
     },
     "create": {
       "title": "Create user",
@@ -29,12 +30,38 @@
     },
     "toasts": {
       "created": "User {email} created",
-      "createFailed": "Could not create the user"
+      "createFailed": "Could not create the user",
+      "renewed": "License renewed for {email}",
+      "deactivated": "{email} deactivated",
+      "updateFailed": "Update failed"
     },
     "empty": {
       "title": "No users found",
       "searchDescription": "Try a different search term.",
       "noUsersDescription": "No users have been added yet."
+    },
+    "license": {
+      "presetLabel": "Access valid for",
+      "hint": "When it expires the account is automatically deactivated. Renewable at any time.",
+      "unlimited": "Unlimited",
+      "valid": "Valid",
+      "expiringSoon": "Expiring soon",
+      "expired": "Expired",
+      "renew": "Renew",
+      "renewTitle": "Renew license",
+      "renewDescription": "Set a new validity for {name} — the account will be reactivated.",
+      "renewSubmit": "Renew & activate",
+      "deactivateNow": "Deactivate now",
+      "presets": {
+        "unlimited": "Unlimited",
+        "h1": "1 hour",
+        "d1": "1 day",
+        "w1": "1 week",
+        "m1": "1 month",
+        "custom": "Date…"
+      },
+      "customRequired": "Please choose a date.",
+      "deactivateConfirm": "{name}'s access ends immediately and the account is deactivated."
     }
   },
   "groups": {

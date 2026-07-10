@@ -210,6 +210,21 @@ export function useCreateUser() {
   );
 }
 
+/** Patch a user (status, license expiry, profile). Used by license renew/deactivate. */
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof api.updateUser>[1] }) =>
+      api.updateUser(id, patch),
+    onSuccess: () => qc.invalidateQueries({ queryKey: USERS_KEY }),
+  });
+  return useCallback(
+    async (id: string, patch: Parameters<typeof api.updateUser>[1]): Promise<UserRow> =>
+      mapUser(await mutateAsync({ id, patch })),
+    [mutateAsync],
+  );
+}
+
 export function useCreateWorkspace() {
   const qc = useQueryClient();
   const { mutateAsync } = useMutation({
