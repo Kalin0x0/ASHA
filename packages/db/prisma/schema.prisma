@@ -343,6 +343,14 @@ model User {
   lastLoginAt   DateTime?
   /** When a 10-minute demo account expires (reaper disables + prunes it). Null for normal accounts. */
   demoExpiresAt DateTime?
+  /**
+   * License/access expiry (sellable, time-limited accounts). When set and passed,
+   * the license-reaper deactivates the account: kills live sessions, revokes
+   * refresh tokens, and flips status → DISABLED. The account is KEPT (not
+   * deleted) so an admin can renew it (new date + status ACTIVE). Null =
+   * perpetual. Also enforced just-in-time at login/refresh.
+   */
+  deactivatesAt DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -359,6 +367,8 @@ model User {
   @@unique([orgId, email])
   @@unique([orgId, username])
   @@index([orgId])
+  // Drives the license-reaper's "active accounts past their expiry" scan.
+  @@index([status, deactivatesAt])
 }
 
 /**

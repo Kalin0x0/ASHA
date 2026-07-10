@@ -12,7 +12,8 @@
       "user": "کاربر",
       "groups": "گروه‌ها",
       "twoFactor": "2FA",
-      "lastLogin": "آخرین ورود"
+      "lastLogin": "آخرین ورود",
+      "license": "لایسنس"
     },
     "create": {
       "title": "ایجاد کاربر",
@@ -29,12 +30,38 @@
     },
     "toasts": {
       "created": "کاربر {email} ایجاد شد",
-      "createFailed": "ایجاد کاربر ممکن نشد"
+      "createFailed": "ایجاد کاربر ممکن نشد",
+      "renewed": "لایسنس {email} تمدید شد",
+      "deactivated": "{email} غیرفعال شد",
+      "updateFailed": "به‌روزرسانی ناموفق بود"
     },
     "empty": {
       "title": "کاربری یافت نشد",
       "searchDescription": "عبارت جستجوی دیگری را امتحان کنید.",
       "noUsersDescription": "هنوز کاربری افزوده نشده است."
+    },
+    "license": {
+      "presetLabel": "اعتبار دسترسی",
+      "hint": "پس از انقضا، حساب به‌طور خودکار غیرفعال می‌شود. در هر زمان قابل تمدید است.",
+      "unlimited": "نامحدود",
+      "valid": "معتبر",
+      "expiringSoon": "به‌زودی منقضی می‌شود",
+      "expired": "منقضی‌شده",
+      "renew": "تمدید",
+      "renewTitle": "تمدید لایسنس",
+      "renewDescription": "اعتبار جدیدی برای {name} تعیین کنید — حساب دوباره فعال می‌شود.",
+      "renewSubmit": "تمدید و فعال‌سازی",
+      "deactivateNow": "غیرفعال‌سازی فوری",
+      "presets": {
+        "unlimited": "نامحدود",
+        "h1": "۱ ساعت",
+        "d1": "۱ روز",
+        "w1": "۱ هفته",
+        "m1": "۱ ماه",
+        "custom": "تاریخ…"
+      },
+      "customRequired": "لطفاً یک تاریخ انتخاب کنید.",
+      "deactivateConfirm": "دسترسی {name} فوراً پایان می‌یابد و حساب غیرفعال می‌شود."
     }
   },
   "groups": {

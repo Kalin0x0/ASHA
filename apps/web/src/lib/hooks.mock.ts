@@ -17,6 +17,7 @@ import type {
   ManagedImage,
   UpdateFeedbackInput,
   UpdateWorkspaceInput,
+  UserRow,
   Workspace,
 } from '@/lib/types';
 // ServerOption is returned directly from the mock store (see useServers).
@@ -223,6 +224,30 @@ export function useLaunchSession() {
 
 export function useCreateUser() {
   return useCallback(async (input: CreateUserInput) => store.createUser(input), []);
+}
+
+export function useUpdateUser() {
+  return useCallback(
+    async (
+      id: string,
+      patch: {
+        username?: string;
+        displayName?: string | null;
+        locale?: string;
+        isSystemAdmin?: boolean;
+        status?: UserRow['status'];
+        password?: string;
+        deactivatesAt?: string | null;
+      },
+    ): Promise<UserRow> => {
+      const u = store.getData().users.find((x) => x.id === id);
+      if (!u) throw new Error('User not found');
+      if (patch.status !== undefined) u.status = patch.status;
+      if (patch.deactivatesAt !== undefined) u.deactivatesAt = patch.deactivatesAt;
+      return u;
+    },
+    [],
+  );
 }
 
 export function useCreateWorkspace() {

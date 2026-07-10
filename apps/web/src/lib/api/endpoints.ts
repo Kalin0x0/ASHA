@@ -100,7 +100,10 @@ export interface ApiUser {
   username: string;
   displayName: string | null;
   status: 'ACTIVE' | 'DISABLED' | 'INVITED' | 'LOCKED';
+  isSystemAdmin: boolean;
   lastLoginAt: string | null;
+  /** License/access expiry (ISO). null = perpetual. */
+  deactivatesAt: string | null;
   groups?: { group: { name: string } }[];
 }
 
@@ -367,6 +370,8 @@ export interface CreateUserBody {
   password?: string;
   isSystemAdmin?: boolean;
   locale?: string;
+  /** License/access expiry (ISO). null/omitted = perpetual. */
+  deactivatesAt?: string | null;
 }
 export const createUser = (body: CreateUserBody) =>
   apiFetch<ApiUser>('/users', { method: 'POST', body });
@@ -379,6 +384,8 @@ export const updateUser = (
     isSystemAdmin: boolean;
     status: ApiUser['status'];
     password: string;
+    /** Set/extend (renew) or clear (null → perpetual) the license expiry. */
+    deactivatesAt: string | null;
   }>,
 ) => apiFetch<ApiUser>(`/users/${id}`, { method: 'PATCH', body });
 export const deleteUser = (id: string) =>

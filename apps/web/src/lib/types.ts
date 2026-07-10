@@ -115,9 +115,12 @@ export interface UserRow {
   email: string;
   username: string;
   status: 'ACTIVE' | 'DISABLED' | 'INVITED' | 'LOCKED';
+  isSystemAdmin: boolean;
   groups: string[];
   twoFactor: boolean;
   lastLoginAt: string | null;
+  /** License/access expiry (ISO). null = perpetual. */
+  deactivatesAt: string | null;
 }
 
 export interface CreateUserInput {
@@ -127,6 +130,8 @@ export interface CreateUserInput {
   password?: string;
   isSystemAdmin?: boolean;
   locale?: string;
+  /** License/access expiry (ISO). null/omitted = perpetual. */
+  deactivatesAt?: string | null;
 }
 
 export interface CreateWorkspaceInput {
