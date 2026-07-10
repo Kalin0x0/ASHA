@@ -12,7 +12,8 @@
       "user": "Benutzer",
       "groups": "Gruppen",
       "twoFactor": "2FA",
-      "lastLogin": "Letzte Anmeldung"
+      "lastLogin": "Letzte Anmeldung",
+      "license": "Lizenz"
     },
     "create": {
       "title": "Benutzer erstellen",
@@ -29,12 +30,38 @@
     },
     "toasts": {
       "created": "Benutzer {email} erstellt",
-      "createFailed": "Benutzer konnte nicht erstellt werden"
+      "createFailed": "Benutzer konnte nicht erstellt werden",
+      "renewed": "Lizenz für {email} verlängert",
+      "deactivated": "{email} deaktiviert",
+      "updateFailed": "Aktualisierung fehlgeschlagen"
     },
     "empty": {
       "title": "Keine Benutzer gefunden",
       "searchDescription": "Versuchen Sie einen anderen Suchbegriff.",
       "noUsersDescription": "Es wurden noch keine Benutzer hinzugefügt."
+    },
+    "license": {
+      "presetLabel": "Zugang gültig",
+      "hint": "Nach Ablauf wird das Konto automatisch deaktiviert. Jederzeit verlängerbar.",
+      "unlimited": "Unbegrenzt",
+      "valid": "Gültig",
+      "expiringSoon": "Läuft bald ab",
+      "expired": "Abgelaufen",
+      "renew": "Verlängern",
+      "renewTitle": "Lizenz verlängern",
+      "renewDescription": "Neue Gültigkeit für {name} festlegen — das Konto wird reaktiviert.",
+      "renewSubmit": "Verlängern & aktivieren",
+      "deactivateNow": "Jetzt deaktivieren",
+      "presets": {
+        "unlimited": "Unbegrenzt",
+        "h1": "1 Stunde",
+        "d1": "1 Tag",
+        "w1": "1 Woche",
+        "m1": "1 Monat",
+        "custom": "Datum…"
+      },
+      "customRequired": "Bitte ein Datum wählen.",
+      "deactivateConfirm": "Der Zugang von {name} wird sofort beendet und das Konto deaktiviert."
     }
   },
   "groups": {

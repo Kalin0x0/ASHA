@@ -78,6 +78,49 @@ export class SessionReaperService {
   }
 
   /**
+   * Enforce sellable, time-limited licenses: deactivate accounts whose
+   * `deactivatesAt` has passed. Unlike demo accounts these are KEPT (not deleted)
+   * so an admin can renew them — we kill live sessions, revoke refresh tokens,
+   * and flip status → DISABLED (which the login gate already rejects). Login also
+   * checks this just-in-time, so this reaper is the backstop for already-signed-in
+   * users and the ≤60 s window between expiry and the next tick.
+   */
+  @Interval('license-reaper', 60_000)
+  async reapExpiredLicenses(): Promise<number> {
+    const now = new Date();
+    const expired = await prisma.user.findMany({
+      // System admins are exempt from license expiry — licenses are for customer
+      // accounts, and auto-disabling the last admin would lock everyone out.
+      where: { status: 'ACTIVE', isSystemAdmin: false, deactivatesAt: { not: null, lte: now } },
+      select: { id: true },
+    });
+    if (expired.length === 0) return 0;
+
+    for (const u of expired) {
+      const live = await prisma.session.findMany({
+        where: { userId: u.id, status: { in: [...ACTIVE_STATUSES] } },
+        select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
+      });
+      for (const s of live) await this.sessions.destroy(s, 'license_expired');
+      // Revoke live refresh tokens so an open tab can't silently refresh past expiry.
+      await prisma.refreshToken.updateMany({
+        where: { userId: u.id, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      // Revoke the user's API keys too — ApiKeyGuard honours revokedAt, and
+      // without this an expired customer keeps full Developer-API access (the
+      // guard never re-checks the owning account's status).
+      await prisma.apiKey.updateMany({
+        where: { userId: u.id, revokedAt: null },
+        data: { revokedAt: now },
+      });
+      await prisma.user.update({ where: { id: u.id }, data: { status: 'DISABLED' } });
+    }
+    this.logger.log(`Deactivated ${expired.length} expired user license(s)`);
+    return expired.length;
+  }
+
+  /**
    * Sessions left in TERMINATING longer than this are force-finalized to
    * DESTROYED. Covers the case where an agent received the destroy event but
    * died (or lost connectivity) before it could stop the container and ack —
