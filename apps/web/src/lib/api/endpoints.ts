@@ -1167,6 +1167,8 @@ export const getFeedback = (status?: string) =>
   apiFetch<ApiFeedback[]>(`/feedback${status ? `?status=${encodeURIComponent(status)}` : ''}`);
 export const updateFeedback = (id: string, body: { status?: string; note?: string }) =>
   apiFetch<ApiFeedback>(`/feedback/${id}`, { method: 'PATCH', body });
+export const deleteFeedback = (id: string) =>
+  apiFetch<{ ok: true }>(`/feedback/${id}`, { method: 'DELETE' });
 
 // ── WebAuthn / passkeys ───────────────────────────────────────────────────────
 
@@ -1217,6 +1219,8 @@ export const updateBugReport = (id: string, body: { status?: BugStatus; severity
   apiFetch<BugReportRow>(`/bug-reports/${id}`, { method: 'PATCH', body });
 export const resolveBugReport = (id: string, body: BugResolveInput) =>
   apiFetch<BugReportRow>(`/bug-reports/${id}/resolve`, { method: 'POST', body });
+export const deleteBugReport = (id: string) =>
+  apiFetch<{ ok: true }>(`/bug-reports/${id}`, { method: 'DELETE' });
 /** Fire-and-forget intake for an automatically-captured client error. */
 export const ingestClientError = (body: ClientErrorInput & { appVersion?: string }) =>
   apiFetch<{ errorCode: string }>('/bug-reports/ingest', { method: 'POST', body });

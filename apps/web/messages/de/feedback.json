@@ -40,6 +40,12 @@
     "viewScreenshot": "Screenshot ansehen",
     "notePlaceholder": "Notiz zum Verlauf hinzufügen…",
     "saved": "Aktualisiert.",
-    "saveFailed": "Aktualisierung konnte nicht gespeichert werden."
+    "saveFailed": "Aktualisierung konnte nicht gespeichert werden.",
+    "delete": {
+      "confirmTitle": "Feedback löschen?",
+      "confirmBody": "Dieses Feedback wird endgültig gelöscht.",
+      "done": "Feedback gelöscht",
+      "failed": "Löschen fehlgeschlagen"
+    }
   }
 }

@@ -360,6 +360,21 @@ export function useUpdateFeedback() {
   );
 }
 
+/** Permanently delete a feedback item (admin triage). */
+export function useDeleteFeedback() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.deleteFeedback,
+    onSuccess: () => qc.invalidateQueries({ queryKey: FEEDBACK_KEY }),
+  });
+  return useCallback(
+    async (id: string) => {
+      await mutateAsync(id);
+    },
+    [mutateAsync],
+  );
+}
+
 // ── Maintenance / automation scheduler ───────────────────────────────────────
 
 const MAINTENANCE_KEY = ['maintenance'] as const;
@@ -731,6 +746,15 @@ export function useResolveBug() {
   });
   return useCallback(async (id: string, input: BugResolveInput) => {
     await mutateAsync({ id, input });
+  }, [mutateAsync]);
+}
+
+/** Permanently delete a bug report (admin triage). */
+export function useDeleteBug() {
+  const invalidate = useInvalidateBugs();
+  const { mutateAsync } = useMutation({ mutationFn: api.deleteBugReport, onSuccess: invalidate });
+  return useCallback(async (id: string) => {
+    await mutateAsync(id);
   }, [mutateAsync]);
 }
 

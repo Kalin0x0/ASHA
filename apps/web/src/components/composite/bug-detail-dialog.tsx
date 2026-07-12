@@ -1,6 +1,6 @@
 'use client';
 
-import { BrainCircuit, CheckCircle2, FileCode2, Sparkles, Wrench } from 'lucide-react';
+import { BrainCircuit, CheckCircle2, FileCode2, Sparkles, Trash2, Wrench } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input, Label } from '@/components/ui/input';
+import { useConfirm } from '@/components/ui/confirm';
 import { severityVariant, sourceVariant, statusVariant } from '@/lib/bug-display';
-import { useBugReport, useResolveBug, useUpdateBug } from '@/lib/hooks';
+import { useBugReport, useDeleteBug, useResolveBug, useUpdateBug } from '@/lib/hooks';
 import type { BugFixRow } from '@/lib/types';
 
 const textareaClass =
@@ -95,9 +96,12 @@ export function BugDetailDialog({ id, onClose }: { id: string | null; onClose: (
   const report = useBugReport(id ?? '');
   const updateBug = useUpdateBug();
   const resolveBug = useResolveBug();
+  const deleteBug = useDeleteBug();
+  const confirm = useConfirm();
 
   const [resolving, setResolving] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [rootCause, setRootCause] = useState('');
   const [resolution, setResolution] = useState('');
   const [prevention, setPrevention] = useState('');
@@ -148,6 +152,26 @@ export function BugDetailDialog({ id, onClose }: { id: string | null; onClose: (
   const onReopen = async () => {
     if (!id) return;
     await updateBug(id, { status: 'IN_PROGRESS' });
+  };
+
+  const onDelete = async () => {
+    if (!id) return;
+    const ok = await confirm({
+      title: t('delete.confirmTitle'),
+      description: t('delete.confirmBody'),
+      confirmLabel: tc('actions.delete'),
+      destructive: true,
+    });
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await deleteBug(id);
+      toast.success(t('delete.done'));
+      onClose();
+    } catch (e) {
+      setDeleting(false);
+      toast.error(e instanceof Error ? e.message : t('delete.failed'));
+    }
   };
 
   return (
@@ -281,6 +305,20 @@ export function BugDetailDialog({ id, onClose }: { id: string | null; onClose: (
                   </Button>
                 </div>
               )}
+
+              {/* Danger zone — permanently delete this report (BUG_MANAGE) */}
+              <div className="flex items-center justify-between border-t border-border-subtle pt-3">
+                <span className="text-xs text-muted-foreground">{t('delete.hint')}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onDelete}
+                  loading={deleting}
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="size-4" /> {tc('actions.delete')}
+                </Button>
+              </div>
             </div>
           </>
         ) : (

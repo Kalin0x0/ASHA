@@ -85,7 +85,14 @@
     "wontFix": "Won't fix",
     "resolvedNote": "Resolved {date}",
     "reopen": "Reopen",
-    "notFound": "This report could not be found."
+    "notFound": "This report could not be found.",
+    "delete": {
+      "confirmTitle": "Delete bug report?",
+      "confirmBody": "This bug report will be permanently deleted. A linked fix in the knowledge base is kept.",
+      "hint": "Permanently delete",
+      "done": "Bug report deleted",
+      "failed": "Delete failed"
+    }
   },
   "fix": {
     "rootCause": "Root cause",
