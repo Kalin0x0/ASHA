@@ -85,7 +85,14 @@
     "wontFix": "Wird nicht behoben",
     "resolvedNote": "Behoben am {date}",
     "reopen": "Wieder öffnen",
-    "notFound": "Diese Meldung konnte nicht gefunden werden."
+    "notFound": "Diese Meldung konnte nicht gefunden werden.",
+    "delete": {
+      "confirmTitle": "Bug-Report löschen?",
+      "confirmBody": "Dieser Bug-Report wird endgültig gelöscht. Ein verknüpfter Fix in der Wissensbasis bleibt erhalten.",
+      "hint": "Endgültig löschen",
+      "done": "Bug-Report gelöscht",
+      "failed": "Löschen fehlgeschlagen"
+    }
   },
   "fix": {
     "rootCause": "Ursache",

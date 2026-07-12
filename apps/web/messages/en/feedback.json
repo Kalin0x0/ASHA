@@ -40,6 +40,12 @@
     "viewScreenshot": "View screenshot",
     "notePlaceholder": "Add a note to the thread…",
     "saved": "Updated.",
-    "saveFailed": "Couldn't save the update."
+    "saveFailed": "Couldn't save the update.",
+    "delete": {
+      "confirmTitle": "Delete feedback?",
+      "confirmBody": "This feedback will be permanently deleted.",
+      "done": "Feedback deleted",
+      "failed": "Delete failed"
+    }
   }
 }

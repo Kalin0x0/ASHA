@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   type CreateFeedbackDto,
@@ -39,5 +39,13 @@ export class FeedbackController {
     @Body(new ZodPipe(updateFeedbackSchema)) dto: UpdateFeedbackDto,
   ) {
     return this.feedback.update(user.orgId, user.sub, id, dto);
+  }
+
+  // Permanently delete a feedback item — admins only (triage surface).
+  @Audit('feedback.delete', { targetType: 'Feedback' })
+  @RequirePermissions('SETTINGS_MANAGE')
+  @Delete(':id')
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.feedback.remove(user.orgId, id);
   }
 }

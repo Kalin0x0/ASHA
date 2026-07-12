@@ -206,6 +206,12 @@ export function useResolveBug() {
   }, []);
 }
 
+export function useDeleteBug() {
+  return useCallback(async (_id: string) => {
+    /* mock: no-op */
+  }, []);
+}
+
 export function useTerminateSession() {
   return useCallback((id: string) => store.terminateSession(id), []);
 }
@@ -284,6 +290,12 @@ export function useUpdateFeedback() {
     async (id: string, patch: UpdateFeedbackInput) => store.updateFeedback(id, patch),
     [],
   );
+}
+
+export function useDeleteFeedback() {
+  return useCallback(async (_id: string) => {
+    /* mock: no-op */
+  }, []);
 }
 
 // ── Maintenance / automation scheduler (isolated dev-only mock store) ─────────
