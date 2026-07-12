@@ -68,4 +68,12 @@ export class FeedbackService {
     });
     return updated;
   }
+
+  /** Permanently delete a feedback item (org-scoped). */
+  async remove(orgId: string, id: string) {
+    const existing = await prisma.feedback.findFirst({ where: { id, orgId } });
+    if (!existing) throw new NotFoundException('Feedback not found');
+    await prisma.feedback.delete({ where: { id } });
+    return { ok: true };
+  }
 }

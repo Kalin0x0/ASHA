@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, Bug, ExternalLink, Loader2, MessageSquarePlus, MessageSquareWarning, Send, User } from 'lucide-react';
+import { Bot, Bug, ExternalLink, Loader2, MessageSquarePlus, MessageSquareWarning, Send, Trash2, User } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -15,7 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useFeedback, useUpdateFeedback, useUsers } from '@/lib/hooks';
+import { useConfirm } from '@/components/ui/confirm';
+import { useDeleteFeedback, useFeedback, useUpdateFeedback, useUsers } from '@/lib/hooks';
 import type { FeedbackItem, FeedbackStatus } from '@/lib/types';
 import { cn, formatRelativeTime } from '@/lib/utils';
 
@@ -121,11 +122,32 @@ function FeedbackCard({
   const t = useTranslations('feedback');
   const tc = useTranslations('common');
   const updateFeedback = useUpdateFeedback();
+  const deleteFeedback = useDeleteFeedback();
+  const confirm = useConfirm();
   const [note, setNote] = useState('');
   const [status, setStatus] = useState<FeedbackStatus>(item.status);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const dirty = note.trim().length > 0 || status !== item.status;
+
+  const onDelete = async () => {
+    const ok = await confirm({
+      title: t('triage.delete.confirmTitle'),
+      description: t('triage.delete.confirmBody'),
+      confirmLabel: tc('actions.delete'),
+      destructive: true,
+    });
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await deleteFeedback(item.id);
+      toast.success(t('triage.delete.done'));
+    } catch (err) {
+      setDeleting(false);
+      toast.error(err instanceof Error ? err.message : t('triage.delete.failed'));
+    }
+  };
 
   const save = async () => {
     if (!dirty) return;
@@ -221,6 +243,17 @@ function FeedbackCard({
           <Button size="sm" onClick={() => void save()} disabled={!dirty || saving}>
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
             {tc('actions.save')}
+          </Button>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            onClick={() => void onDelete()}
+            loading={deleting}
+            aria-label={tc('actions.delete')}
+            title={tc('actions.delete')}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="size-4" />
           </Button>
         </div>
       </div>

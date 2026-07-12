@@ -344,6 +344,15 @@ export class BugReportsService {
     return updated;
   }
 
+  /** Permanently delete a bug report (org-scoped). The linked BugFix knowledge
+   *  entry is intentionally kept — deleting a report shouldn't erase the fix. */
+  async remove(user: AuthUser, id: string) {
+    const report = await prisma.bugReport.findFirst({ where: { id, orgId: user.orgId } });
+    if (!report) throw new NotFoundException('Bug report not found');
+    await prisma.bugReport.delete({ where: { id } });
+    return { ok: true };
+  }
+
   /** Increment the reuse counter on a stored fix when its fingerprint reappears. */
   private async bumpKnownFix(orgId: string | null, fingerprint: string) {
     await prisma.bugFix

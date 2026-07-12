@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { Audit } from '../../common/audit.interceptor';
@@ -137,5 +137,14 @@ export class BugReportsController {
     @Body(new ZodPipe(resolveSchema)) dto: ResolveDto,
   ) {
     return this.bugs.resolve(user, id, dto);
+  }
+
+  /** Permanently delete a bug report (the linked BugFix knowledge entry, if any,
+   *  is kept). Admin-only via BUG_MANAGE. */
+  @Audit('bug.delete', { targetType: 'BugReport' })
+  @RequirePermissions('BUG_MANAGE')
+  @Delete(':id')
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.bugs.remove(user, id);
   }
 }
