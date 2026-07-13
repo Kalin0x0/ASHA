@@ -4,12 +4,13 @@ import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Logo } from '@/components/brand/logo';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/lib/api/auth-context';
 import { CURRENT_VERSION } from '@/lib/changelog';
-import { findNavItem, navGroups, type NavGroup, type NavItem } from '@/lib/nav';
+import { findNavItem, type NavGroup, type NavItem, visibleNavGroups } from '@/lib/nav';
 import { useUIStore } from '@/lib/ui-store';
 import { cn } from '@/lib/utils';
 
@@ -19,8 +20,16 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
   const activeHref = active?.item.href;
   const activeGroupKey = active?.group.key;
   const { toggleSidebar, setSidebarCollapsed } = useUIStore();
+  const { user } = useAuth();
   const tNav = useTranslations('shell.nav');
   const tSidebar = useTranslations('shell.sidebar');
+
+  // Only the sections this user may see — a "limited admin" (e.g. Operator) gets
+  // a filtered nav; system admins see everything.
+  const groups = useMemo(
+    () => visibleNavGroups(user?.permissions, user?.isSystemAdmin ?? false),
+    [user],
+  );
 
   // Which accordion sections are open. The group holding the current route is
   // opened on load and kept open as you navigate; the user may open others too.
@@ -76,7 +85,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
 
       <ScrollArea className="flex-1 px-2.5 py-3">
         <nav className={cn('flex flex-col', collapsed ? 'gap-1.5' : 'gap-0.5')}>
-          {navGroups.map((group) =>
+          {groups.map((group) =>
             collapsed ? (
               <CollapsedGroup
                 key={group.key}
