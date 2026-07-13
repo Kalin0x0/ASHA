@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/api/auth-context';
+import { canAccessAdmin } from '@/lib/nav';
 import { useProfileDialog } from '@/lib/profile-store';
 
 /**
@@ -31,6 +32,7 @@ import { useProfileDialog } from '@/lib/profile-store';
 export function MenuBar() {
   const t = useTranslations('portal');
   const { user, logout } = useAuth();
+  const canAdmin = canAccessAdmin(user?.permissions, user?.isSystemAdmin ?? false);
   const router = useRouter();
   const openProfile = useProfileDialog((s) => s.openProfile);
 
@@ -67,7 +69,7 @@ export function MenuBar() {
           <DropdownMenuItem onSelect={() => openProfile()}>
             <UserCircle2 className="size-4" /> {t('account.menuItem')}
           </DropdownMenuItem>
-          {user?.isSystemAdmin && (
+          {canAdmin && (
             <DropdownMenuItem onSelect={() => router.push('/dashboard')}>
               <LayoutDashboard className="size-4" /> {t('header.admin')}
             </DropdownMenuItem>
@@ -87,7 +89,7 @@ export function MenuBar() {
       <div className="ms-auto flex items-center gap-0.5">
         <TariffChip className="me-1 hidden sm:inline-flex" />
         <InstallButton className="hidden md:inline-flex" />
-        {user?.isSystemAdmin && (
+        {canAdmin && (
           <Link
             href="/dashboard"
             title={t('header.admin')}
