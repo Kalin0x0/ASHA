@@ -19,6 +19,7 @@ import {
 } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 import { computeDeviceFingerprint } from '@/lib/device-fingerprint';
+import { canAccessAdmin } from '@/lib/nav';
 
 const SHOWCASE_FEATURES = [
   { Icon: ShieldCheck, key: 'zeroTrust' },
@@ -76,7 +77,9 @@ export default function LoginPage() {
     }
     try {
       await login(email, password);
-      router.push(getAuth().user?.isSystemAdmin ? '/dashboard' : '/');
+      router.push(
+        canAccessAdmin(getAuth().user?.permissions, getAuth().user?.isSystemAdmin ?? false) ? '/dashboard' : '/',
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('errors.signInFailed'));
       setLoading(false);
@@ -95,7 +98,9 @@ export default function LoginPage() {
     setPasskeyLoading(true);
     try {
       await loginWithPasskey(email);
-      router.push(getAuth().user?.isSystemAdmin ? '/dashboard' : '/');
+      router.push(
+        canAccessAdmin(getAuth().user?.permissions, getAuth().user?.isSystemAdmin ?? false) ? '/dashboard' : '/',
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('errors.passkeyFailed'));
     } finally {

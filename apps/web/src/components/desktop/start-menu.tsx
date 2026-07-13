@@ -10,6 +10,7 @@ import { AppIcon } from '@/components/composite/app-icon';
 import { LiquidGlass } from '@/components/ui/liquid-glass';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/lib/api/auth-context';
+import { canAccessAdmin } from '@/lib/nav';
 import { useProfileDialog } from '@/lib/profile-store';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useThumbnails } from '@/lib/thumbnail-store';
@@ -41,6 +42,7 @@ export function StartMenu({
 }) {
   const t = useTranslations('portal');
   const { user, logout } = useAuth();
+  const canAdmin = canAccessAdmin(user?.permissions, user?.isSystemAdmin ?? false);
   const router = useRouter();
   const openProfile = useProfileDialog((s) => s.openProfile);
   const favorites = useFavorites();
@@ -207,7 +209,7 @@ export function StartMenu({
                     <span className="truncate text-sm font-medium">{displayName}</span>
                   </button>
                   <div className="flex items-center gap-1">
-                    {user?.isSystemAdmin && (
+                    {canAdmin && (
                       <button
                         type="button"
                         onClick={() => router.push('/dashboard')}

@@ -10,11 +10,14 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useLaunchableWorkspaces, useLaunchSession } from '@/lib/hooks';
-import { navGroups } from '@/lib/nav';
+import { useAuth } from '@/lib/api/auth-context';
+import { visibleNavGroups } from '@/lib/nav';
 import { useUIStore } from '@/lib/ui-store';
 
 export function CommandPalette() {
   const router = useRouter();
+  const { user } = useAuth();
+  const groups = visibleNavGroups(user?.permissions, user?.isSystemAdmin ?? false);
   const { commandOpen, setCommandOpen } = useUIStore();
   const { setTheme, resolvedTheme } = useTheme();
   const workspaces = useLaunchableWorkspaces();
@@ -105,7 +108,7 @@ export function CommandPalette() {
                 </Item>
               </Command.Group>
 
-              {navGroups.map((group) => (
+              {groups.map((group) => (
                 <Command.Group key={group.key} heading={tNav(`groups.${group.key}`)}>
                   {group.items.map((item) => (
                     <Item
