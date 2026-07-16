@@ -110,7 +110,9 @@
     "liveOnly": "Staging ist nur mit Live-Backend verfügbar. Starten Sie mit <code>NEXT_PUBLIC_API_MODE=live</code>.",
     "stats": {
       "pools": "Staging-Pools",
-      "preWarmed": "Vorgewärmt"
+      "preWarmed": "Vorgewärmt",
+      "ready": "Jetzt bereit",
+      "target": "Ziel"
     },
     "poolsTitle": "Pools",
     "empty": "Noch keine Staging-Pools konfiguriert.",
@@ -130,7 +132,10 @@
     "toastAdjustFailed": "Pool konnte nicht angepasst werden",
     "toastUpdateFailed": "Pool konnte nicht aktualisiert werden",
     "toastRemoved": "Staging-Pool entfernt",
-    "toastRemoveFailed": "Pool konnte nicht entfernt werden"
+    "toastRemoveFailed": "Pool konnte nicht entfernt werden",
+    "readyPill": "{ready}/{desired} bereit",
+    "warmingPill": "{count} wird vorbereitet…",
+    "stalled": "Hängt"
   },
   "casting": {
     "title": "Casting",

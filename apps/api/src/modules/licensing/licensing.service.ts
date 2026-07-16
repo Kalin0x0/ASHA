@@ -181,7 +181,11 @@ export class LicensingService {
       }
     } else {
       // NAMED_USER: count distinct users who have ever launched a session.
-      const grouped = await prisma.session.groupBy({ by: ['userId'], where: { orgId } });
+      // Unclaimed staged sessions (userId null) are infrastructure, not a seat.
+      const grouped = await prisma.session.groupBy({
+        by: ['userId'],
+        where: { orgId, userId: { not: null } },
+      });
       const seatsUsed = new Set(grouped.map((g) => g.userId));
       if (!seatsUsed.has(userId) && seatsUsed.size >= license.seats) {
         throw new ForbiddenException(
@@ -197,7 +201,10 @@ export class LicensingService {
     const concurrent = await prisma.session.count({
       where: { orgId, status: { in: LicensingService.ACTIVE as never } },
     });
-    const grouped = await prisma.session.groupBy({ by: ['userId'], where: { orgId } });
+    const grouped = await prisma.session.groupBy({
+      by: ['userId'],
+      where: { orgId, userId: { not: null } },
+    });
     const namedUsers = new Set(grouped.map((g) => g.userId)).size;
     if (license) {
       await prisma.licenseUsageSample.create({

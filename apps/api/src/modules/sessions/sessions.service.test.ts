@@ -72,6 +72,7 @@ describe('SessionsService.create', () => {
     prismaMock.fileMapping.findMany.mockResolvedValue([]); // E4: no admin file mappings
     prismaMock.userGroup.findMany.mockResolvedValue([]); // no group concurrency cap by default
     prismaMock.session.count.mockResolvedValue(0);
+    prismaMock.session.findMany.mockResolvedValue([]); // no staged pool to claim from
   });
 
   it('delegates a server-backed workspace to the server connect path (no container)', async () => {

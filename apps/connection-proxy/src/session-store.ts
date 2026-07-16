@@ -8,7 +8,8 @@ export interface SessionRecord {
   sessionId: string;
   kasmId: string;
   orgId: string;
-  userId: string;
+  /** Null while the session is an unclaimed staged pool session. */
+  userId: string | null;
   protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH';
   /** Internal host:port of the running container, set by the agent. */
   internalHost?: string;

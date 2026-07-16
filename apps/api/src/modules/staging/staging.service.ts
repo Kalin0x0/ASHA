@@ -13,11 +13,36 @@ import { AuditService } from '../../common/audit.service';
 export class StagingService {
   constructor(private readonly audit: AuditService) {}
 
-  list(orgId: string) {
-    return prisma.sessionStaging.findMany({
+  /**
+   * Rules enriched with the pool's ACTUAL fill level so the UI reports reality,
+   * not the target: readyCount = unclaimed RUNNING (instantly claimable),
+   * warmingCount = unclaimed still provisioning.
+   */
+  async list(orgId: string) {
+    const rules = await prisma.sessionStaging.findMany({
       where: { orgId },
       orderBy: { createdAt: 'desc' },
       include: { workspace: { select: { id: true, name: true, friendlyName: true } } },
+    });
+    if (rules.length === 0) return rules;
+    const counts = await prisma.session.groupBy({
+      by: ['stagingId', 'status'],
+      where: {
+        stagingId: { in: rules.map((r) => r.id) },
+        userId: null,
+        status: { in: ['REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED'] },
+      },
+      _count: true,
+    });
+    return rules.map((r) => {
+      let readyCount = 0;
+      let warmingCount = 0;
+      for (const c of counts) {
+        if (c.stagingId !== r.id) continue;
+        if (c.status === 'RUNNING') readyCount += c._count;
+        else warmingCount += c._count;
+      }
+      return { ...r, readyCount, warmingCount };
     });
   }
 

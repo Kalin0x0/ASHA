@@ -110,7 +110,9 @@
     "liveOnly": "استیجینگ تنها با بک‌اند زنده در دسترس است. با <code>NEXT_PUBLIC_API_MODE=live</code> اجرا کنید.",
     "stats": {
       "pools": "استخرهای استیجینگ",
-      "preWarmed": "از پیش آماده‌شده"
+      "preWarmed": "از پیش آماده‌شده",
+      "ready": "اکنون آماده",
+      "target": "هدف"
     },
     "poolsTitle": "استخرها",
     "empty": "هنوز هیچ استخر استیجینگی پیکربندی نشده است.",
@@ -130,7 +132,10 @@
     "toastAdjustFailed": "امکان تنظیم استخر وجود نداشت",
     "toastUpdateFailed": "امکان به‌روزرسانی استخر وجود نداشت",
     "toastRemoved": "استخر استیجینگ حذف شد",
-    "toastRemoveFailed": "امکان حذف استخر وجود نداشت"
+    "toastRemoveFailed": "امکان حذف استخر وجود نداشت",
+    "readyPill": "{ready}/{desired} آماده",
+    "warmingPill": "{count} در حال آماده‌سازی…",
+    "stalled": "متوقف"
   },
   "casting": {
     "title": "کستینگ",

@@ -812,7 +812,15 @@ model Session {
   id                String         @id @default(cuid())
   orgId             String
   kasmId            String         @unique @default(cuid()) // opaque token used in URLs
-  userId            String
+  /// Null ONLY for an unclaimed pre-warmed (staged) session — no other writer
+  /// leaves it unset. Claiming assigns the user atomically; from then on the
+  /// session behaves like any user launch. Reapers/metering key exemptions on
+  /// `userId: null` (see SessionReaperService / TariffsService).
+  userId            String?
+  /// SessionStaging rule that pre-warmed this session (plain id, no FK — the
+  /// rule may be deleted first; the reconciler then retires the orphans).
+  /// Survives the claim as provenance.
+  stagingId         String?
   // Null for fixed-server (RDP/VNC/SSH) sessions, which connect directly to a
   // Server rather than launching a workspace container.
   workspaceId       String?
@@ -859,7 +867,10 @@ model Session {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
-  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // user is optional to match the nullable userId above (unclaimed staged
+  // sessions); Cascade still applies once claimed — deleting a user removes
+  // their sessions, exactly as before.
+  user          User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace     Workspace?            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   image         Image?                @relation(fields: [imageId], references: [id], onDelete: SetNull)
   zone          DeploymentZone?       @relation(fields: [zoneId], references: [id], onDelete: SetNull)
@@ -874,6 +885,7 @@ model Session {
   @@index([userId])
   @@index([workspaceId])
   @@index([zoneId])
+  @@index([stagingId])
 }
 
 model SessionControlEvent {
@@ -987,6 +999,11 @@ model SessionStaging {
   zoneId          String
   desiredSessions Int      @default(0)
   enabled         Boolean  @default(true)
+  /// Why the pool isn't filling (e.g. no ONLINE agent in the zone). Written by
+  /// the reconciler on a failed provision attempt, cleared on success — the
+  /// admin UI surfaces it so a stuck pool is never silent.
+  lastError        String?
+  lastReconciledAt DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

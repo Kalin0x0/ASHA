@@ -209,6 +209,9 @@ export class SessionReaperService {
       where: {
         status: { in: [...ABANDONABLE_STATUSES] },
         lastKeepaliveAt: { lt: cutoff },
+        // Unclaimed staged pool sessions have no viewer to keepalive them BY
+        // DESIGN — their lifecycle belongs to the staging reconciler alone.
+        userId: { not: null },
       },
       select: { id: true, orgId: true, zoneId: true, containerId: true },
     });
@@ -334,6 +337,9 @@ export class SessionReaperService {
           workspaceId: ws.id,
           status: { in: [...ACTIVE_STATUSES] },
           lastKeepaliveAt: { lt: cutoff },
+          // Unclaimed staged pool sessions are idle by definition — the staging
+          // reconciler owns their lifecycle, not the per-workspace idle policy.
+          userId: { not: null },
         },
         select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
       });

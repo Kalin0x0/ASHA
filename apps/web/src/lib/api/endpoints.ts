@@ -28,7 +28,8 @@ export interface ApiLoginResponse extends AuthTokens {
 export interface ApiSession {
   id: string;
   kasmId: string;
-  userId: string;
+  /** Null while the session is an unclaimed pre-warmed (staged) pool session. */
+  userId: string | null;
   workspaceId: string;
   /** Null once the session's zone has been deleted (history keeps the row). */
   zoneId: string | null;
@@ -926,6 +927,13 @@ export interface ApiStaging {
   zoneId: string;
   desiredSessions: number;
   enabled: boolean;
+  /** Unclaimed RUNNING pool sessions — instantly claimable by a launch. */
+  readyCount: number;
+  /** Unclaimed pool sessions still provisioning. */
+  warmingCount: number;
+  /** Why the pool isn't filling (reconciler-written), null when healthy. */
+  lastError: string | null;
+  lastReconciledAt: string | null;
   workspace?: { id: string; name: string; friendlyName: string | null } | null;
 }
 export const getStaging = () => apiFetch<ApiStaging[]>('/staging');

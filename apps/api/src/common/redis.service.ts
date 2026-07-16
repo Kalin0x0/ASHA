@@ -47,6 +47,18 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /** Read a JSON value written by set(). Null when missing, unparsable, or Redis is down. */
+  async get<T = unknown>(key: string): Promise<T | null> {
+    if (!this.connected) return null;
+    try {
+      const raw = await this.client.get(key);
+      return raw ? (JSON.parse(raw) as T) : null;
+    } catch (e) {
+      this.logger.warn(`get failed: ${(e as Error).message}`);
+      return null;
+    }
+  }
+
   /** Set a JSON value with an optional TTL (seconds). No-op when Redis is down. */
   async set(key: string, value: unknown, ttlSec?: number): Promise<void> {
     if (!this.connected) return;

@@ -71,11 +71,14 @@ describe('SessionReaperService', () => {
     expect(sessions.destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 'idle1' }), 'idle_timeout');
     // idle query is scoped to the workspace with a cutoff derived from its timeout
     // (not necessarily the last findMany — the stuck-TERMINATING sweep runs after).
+    // Unclaimed staged pool sessions (userId null) are exempt: they are idle by
+    // definition and belong to the staging reconciler.
     expect(prismaMock.session.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           workspaceId: 'ws1',
           lastKeepaliveAt: { lt: expect.any(Date) },
+          userId: { not: null },
         }),
       }),
     );
@@ -177,12 +180,15 @@ describe('SessionReaperService', () => {
     expect(n).toBe(2);
     expect(sessions.destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 'ab1' }), 'idle_timeout');
     expect(sessions.destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 'ab2' }), 'idle_timeout');
-    // Targets only came-up-but-silent sessions; never PAUSED or pre-RUNNING.
+    // Targets only came-up-but-silent sessions; never PAUSED or pre-RUNNING —
+    // and never unclaimed staged pool sessions (userId null), whose lifecycle
+    // belongs to the staging reconciler alone.
     expect(prismaMock.session.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           status: { in: ['RUNNING', 'DEGRADED'] },
           lastKeepaliveAt: { lt: expect.any(Date) },
+          userId: { not: null },
         }),
       }),
     );

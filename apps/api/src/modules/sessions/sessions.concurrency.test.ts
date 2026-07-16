@@ -64,6 +64,7 @@ describe('SessionsService.create — group concurrency limit', () => {
     prismaMock.session.create.mockResolvedValue({ id: 'sess1', kasmId: 'kid', orgId: 'org1', zoneId: 'zone1' });
     prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', kasmId: 'kid', orgId: 'org1', zoneId: 'zone1' });
     prismaMock.session.update.mockResolvedValue({});
+    prismaMock.session.findMany.mockResolvedValue([]); // no staged pool to claim from
     prismaMock.volumeMapping.findMany.mockResolvedValue([]);
     prismaMock.fileMapping.findMany.mockResolvedValue([]);
   });
