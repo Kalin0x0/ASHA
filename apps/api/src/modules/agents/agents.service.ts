@@ -144,7 +144,12 @@ export class AgentsService {
       if (dto.error) data.errorMessage = dto.error;
 
       if (dto.status === 'RUNNING') {
-        const zone = await prisma.deploymentZone.findUnique({ where: { id: session.zoneId } });
+        // zoneId is null only on history whose zone was deleted; a session going
+        // RUNNING always has one. resolveSessionBaseUrl already falls back when
+        // the zone carries no proxyBaseUrl.
+        const zone = session.zoneId
+          ? await prisma.deploymentZone.findUnique({ where: { id: session.zoneId } })
+          : null;
         const token = await this.jwt.signAsync(
           { sid: session.id, kasmId: session.kasmId },
           { secret: this.env.SESSION_TOKEN_SECRET, expiresIn: this.env.SESSION_TOKEN_TTL },

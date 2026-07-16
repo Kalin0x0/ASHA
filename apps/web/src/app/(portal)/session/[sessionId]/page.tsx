@@ -416,9 +416,9 @@ export default function StreamingViewerPage() {
   const onTerminate = async () => {
     if (
       !(await confirm({
-        title: tc('confirm.title'),
-        confirmLabel: tc('actions.terminate'),
-        description: tc('confirm.description'),
+        title: t('confirmEnd.title'),
+        description: t('confirmEnd.description', { name: workspaceName }),
+        confirmLabel: t('confirmEnd.confirm'),
       }))
     )
       return;
@@ -431,8 +431,8 @@ export default function StreamingViewerPage() {
       try {
         await terminateSession(params.sessionId);
       } catch (e) {
-        toast.error(tc('confirm.title'), {
-          description: e instanceof ApiError ? e.message : t('status.endedToast'),
+        toast.error(t('confirmEnd.error'), {
+          description: e instanceof ApiError ? e.message : t('confirmEnd.errorDescription'),
         });
         return;
       }
@@ -546,14 +546,17 @@ export default function StreamingViewerPage() {
           <span className="hidden text-sm font-medium sm:inline">{t('toolbar.backToWorkspaces')}</span>
         </button>
 
-        <div className="flex min-w-0 items-center gap-2.5">
+        {/* flex-1 + min-w-0 = basis 0: the title/description yield space to the
+            toolbar and truncate, instead of a long workspace description sizing
+            this block off its content and squeezing the controls. */}
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
           <AshaMark className="size-7 shrink-0" />
           <div className="min-w-0 leading-tight">
-            <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
-              {workspaceName}
+            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <span className="truncate">{workspaceName}</span>
               <span
                 className={cn(
-                  'inline-flex items-center gap-1 text-[11px] font-medium',
+                  'inline-flex shrink-0 items-center gap-1 text-[11px] font-medium',
                   isError ? 'text-destructive' : connected ? 'text-success' : 'text-warning',
                 )}
               >
@@ -573,7 +576,7 @@ export default function StreamingViewerPage() {
         </div>
 
         {connected && (
-          <div className="ml-2 hidden items-center gap-1.5 rounded-md bg-anthracite-900/60 px-2.5 py-1 font-mono text-[11px] text-muted-foreground sm:flex">
+          <div className="ml-2 hidden shrink-0 items-center gap-1.5 rounded-md bg-anthracite-900/60 px-2.5 py-1 font-mono text-[11px] text-muted-foreground sm:flex">
             <Wifi className="size-3 text-success" />
             {t('status.live')} ·{' '}
             <span className={cn(isWebRtc && 'text-gold-400')}>{protocolLabel}</span>

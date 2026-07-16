@@ -817,7 +817,12 @@ model Session {
   // Server rather than launching a workspace container.
   workspaceId       String?
   imageId           String?
-  zoneId            String
+  // Set at launch and never changed. Nullable so deleting a zone is not blocked
+  // by the session HISTORY pointing at it: a required FK defaults to RESTRICT,
+  // which contradicted ZonesService.remove (it refuses LIVE sessions explicitly
+  // and documents that past ones never block). Past rows keep their record and
+  // just lose the link — same as `imageId`/`agentId` on this model.
+  zoneId            String?
   agentId           String?
   serverId          String?
   status            SessionStatus  @default(REQUESTED)
@@ -857,7 +862,7 @@ model Session {
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace     Workspace?            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   image         Image?                @relation(fields: [imageId], references: [id], onDelete: SetNull)
-  zone          DeploymentZone        @relation(fields: [zoneId], references: [id])
+  zone          DeploymentZone?       @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   agent         Agent?                @relation(fields: [agentId], references: [id], onDelete: SetNull)
   recording     Recording?
   screenshots   Screenshot[]
