@@ -94,6 +94,13 @@
     "launchTimeoutTitle": "Launch is taking too long",
     "launchTimeoutDescription": "{name} hasn't finished starting. This can happen on a slow image pull or a weak connection. You can retry or go back."
   },
+  "confirmEnd": {
+    "title": "End this session?",
+    "description": "“{name}” will be shut down and anything not saved inside it is lost. To leave it running, use Back instead.",
+    "confirm": "End session",
+    "error": "Couldn't end the session",
+    "errorDescription": "Please try again."
+  },
   "dlp": {
     "clipboardDisabledHint": "Clipboard sync is disabled by the workspace DLP policy.",
     "uploadsDisabledHint": "File uploads are disabled by the workspace DLP policy.",

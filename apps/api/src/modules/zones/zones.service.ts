@@ -1,6 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { CreateZoneDto, UpdateZoneDto } from '@asha/contracts';
-import { prisma } from '@asha/db';
+import { Prisma, prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
 /**
@@ -91,7 +96,9 @@ export class ZonesService {
 
     // Refuse to orphan live workloads: block while the zone still holds active
     // sessions, or any agents/servers are bound to it. Past sessions
-    // (DESTROYED/TERMINATING/ERROR) never block deletion.
+    // (DESTROYED/TERMINATING/ERROR) never block deletion — their `zoneId` is
+    // nulled by the FK's onDelete: SetNull, so the history row survives without
+    // the link.
     const activeSessions = await prisma.session.count({
       where: { zoneId: id, orgId, status: { notIn: ['DESTROYED', 'TERMINATING', 'ERROR'] } },
     });
@@ -106,7 +113,20 @@ export class ZonesService {
       );
     }
 
-    await prisma.deploymentZone.deleteMany({ where: { id, orgId } });
+    // The checks above are not in the same transaction as the delete, so a
+    // session/agent that lands in this zone in between still trips the FK.
+    // Translate that into the same actionable 409 rather than leaking a raw
+    // Prisma P2003 as a 500.
+    try {
+      await prisma.deploymentZone.deleteMany({ where: { id, orgId } });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2003') {
+        throw new ConflictException(
+          'This zone was just claimed by a new session, agent or server. Refresh and try again.',
+        );
+      }
+      throw e;
+    }
     await this.audit.record({
       orgId,
       actorUserId,
