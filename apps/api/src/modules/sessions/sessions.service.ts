@@ -735,14 +735,28 @@ export class SessionsService {
     session: { id: string; orgId: string; zoneId: string | null; containerId: string | null; kasmId?: string; agentId?: string | null },
     reason: string,
     actorUserId?: string,
-  ) {
+    opts?: {
+      /**
+       * Proceed only while the session is still an UNCLAIMED staged pool
+       * session. The staging reconciler retires surplus with this precondition
+       * folded into the same atomic update the claim races against — so a user
+       * who claims the session a moment before the retire lands keeps it, and
+       * the retire becomes a no-op instead of killing their fresh desktop.
+       */
+      onlyIfUnclaimed?: boolean;
+    },
+  ): Promise<boolean> {
     // Idempotent: only the first transition into TERMINATING proceeds, so two
     // reaper passes (expired + paused) can't double-destroy / double-audit.
     const { count } = await prisma.session.updateMany({
-      where: { id: session.id, status: { notIn: ['TERMINATING', 'DESTROYED'] } },
+      where: {
+        id: session.id,
+        status: { notIn: ['TERMINATING', 'DESTROYED'] },
+        ...(opts?.onlyIfUnclaimed ? { userId: null } : {}),
+      },
       data: { status: 'TERMINATING', terminationReason: reason },
     });
-    if (count === 0) return;
+    if (count === 0) return false;
     await this.redis.publish(RedisChannels.destroy(await this.zoneNameFor(session.zoneId)), {
       sessionId: session.id,
       containerId: session.containerId ?? undefined,
@@ -768,6 +782,7 @@ export class SessionsService {
     if (!session.containerId || !agentLive) {
       await this.finalizeDestroyed(session);
     }
+    return true;
   }
 
   /**

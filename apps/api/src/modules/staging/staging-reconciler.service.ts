@@ -66,16 +66,24 @@ export class StagingReconcilerService {
   private readonly logger = new Logger('staging-reconciler');
   /** ruleId → earliest next provision attempt (in-memory; a restart just retries). */
   private readonly backoffUntil = new Map<string, number>();
+  /** Overlap guard: a slow tick (many rules × provision round-trips) must not
+   *  interleave with the next one — two ticks both seeing the same deficit
+   *  would over-provision past desiredSessions. */
+  private running = false;
 
   constructor(private readonly sessions: SessionsService) {}
 
   @Interval('staging-reconciler', 30_000)
   async tick(): Promise<void> {
     if (process.env.ASHA_STAGING_RECONCILER === 'false') return;
+    if (this.running) return;
+    this.running = true;
     try {
       await this.reconcile();
     } catch (e) {
       this.logger.warn(`tick failed: ${(e as Error).message}`);
+    } finally {
+      this.running = false;
     }
   }
 
@@ -101,11 +109,26 @@ export class StagingReconcilerService {
       try {
         // ERROR'd staged rows (launch-timeout etc.) are dead weight — retire
         // them so they neither count as fill nor clutter the sessions list.
+        // These failures happen ASYNCHRONOUSLY (createStaged succeeded, the
+        // agent never delivered), so they must ALSO back the rule off and land
+        // on lastError — otherwise a broken zone/image churns a fresh corpse
+        // every launch-timeout window without the admin ever seeing why.
         const failedRows = await prisma.session.findMany({
           where: { stagingId: rule.id, userId: null, status: 'ERROR' },
           select: RETIRE_SELECT,
         });
-        retired += await this.retire(failedRows, 'staging_failed');
+        if (failedRows.length > 0) {
+          retired += await this.retire(failedRows, 'staging_failed');
+          this.backoffUntil.set(rule.id, Date.now() + FAILURE_BACKOFF_MS);
+          await prisma.sessionStaging.updateMany({
+            where: { id: rule.id },
+            data: {
+              lastError: `${failedRows.length} staged launch(es) failed to come up (launch timeout) — check the zone's agent and image`,
+              lastReconciledAt: new Date(),
+            },
+          });
+          continue; // resume filling after the backoff, not this tick
+        }
 
         const desired = rule.enabled ? rule.desiredSessions : 0;
         const pool = await prisma.session.findMany({
@@ -164,9 +187,14 @@ export class StagingReconcilerService {
   }
 
   private async retire(sessions: RetireRow[], reason: string): Promise<number> {
+    let n = 0;
     for (const s of sessions) {
-      await this.sessions.destroy(s, reason);
+      // onlyIfUnclaimed folds "is it still ours?" into the same atomic update a
+      // claim races against: a user who claimed this session between our
+      // selection and now keeps it, and the retire is a clean no-op.
+      const destroyed = await this.sessions.destroy(s, reason, undefined, { onlyIfUnclaimed: true });
+      if (destroyed) n += 1;
     }
-    return sessions.length;
+    return n;
   }
 }

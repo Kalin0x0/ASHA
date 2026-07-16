@@ -41,7 +41,7 @@ describe('StagingReconcilerService', () => {
     vi.clearAllMocks();
     sessions = {
       createStaged: vi.fn().mockResolvedValue({ ok: true, sessionId: 'new' }),
-      destroy: vi.fn().mockResolvedValue(undefined),
+      destroy: vi.fn().mockResolvedValue(true),
     };
     svc = new StagingReconcilerService(sessions as never);
 
@@ -99,7 +99,7 @@ describe('StagingReconcilerService', () => {
     // The provisioning one goes first, then the newest ready one; the
     // longest-warm session survives.
     expect(retiredIds).toEqual(['warming', 'ready-new']);
-    expect(sessions.destroy).toHaveBeenCalledWith(expect.anything(), 'staging_surplus');
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.anything(), 'staging_surplus', undefined, { onlyIfUnclaimed: true });
   });
 
   it('treats a disabled rule as target 0 and drains its pool', async () => {
@@ -118,17 +118,53 @@ describe('StagingReconcilerService', () => {
     prismaMock.session.findMany.mockResolvedValueOnce([pool('orphan1'), pool('orphan2', 'ERROR')]);
     const res = await svc.reconcile();
     expect(res.retired).toBe(2);
-    expect(sessions.destroy).toHaveBeenCalledWith(expect.anything(), 'staging_orphaned');
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.anything(), 'staging_orphaned', undefined, { onlyIfUnclaimed: true });
   });
 
-  it('cleans up ERROR rows of a live rule (launch-timeout leftovers)', async () => {
+  it('cleans up ERROR rows of a live rule, records lastError and backs off (no churn loop)', async () => {
+    vi.useFakeTimers();
     prismaMock.session.findMany
       .mockResolvedValueOnce([]) // orphans
-      .mockResolvedValueOnce([pool('failed', 'ERROR')]) // ERROR rows for rule1
-      .mockResolvedValueOnce([pool('a'), pool('b')]); // pool at target
+      .mockResolvedValueOnce([pool('failed', 'ERROR')]); // ERROR rows for rule1
     const res = await svc.reconcile();
     expect(res.retired).toBe(1);
-    expect(sessions.destroy).toHaveBeenCalledWith(expect.anything(), 'staging_failed');
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.anything(), 'staging_failed', undefined, { onlyIfUnclaimed: true });
+    // Async launch failures (agent never delivered) must surface on the rule…
+    expect(prismaMock.sessionStaging.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ lastError: expect.stringContaining('launch timeout') }),
+      }),
+    );
+    // …and back the rule off: no immediate re-provision attempt.
+    expect(sessions.createStaged).not.toHaveBeenCalled();
+    prismaMock.session.findMany.mockResolvedValue([]);
+    await svc.reconcile();
+    expect(sessions.createStaged).not.toHaveBeenCalled();
+  });
+
+  it('retires with the unclaimed precondition and does not count sessions a claimer won', async () => {
+    prismaMock.sessionStaging.findMany.mockResolvedValue([{ ...RULE, desiredSessions: 0 }]);
+    prismaMock.session.findMany
+      .mockResolvedValueOnce([]) // orphans
+      .mockResolvedValueOnce([]) // ERROR rows
+      .mockResolvedValueOnce([pool('a'), pool('b')]);
+    // 'a' was claimed between selection and destroy → destroy reports false.
+    sessions.destroy.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const res = await svc.reconcile();
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.anything(), 'staging_surplus', undefined, {
+      onlyIfUnclaimed: true,
+    });
+    expect(res.retired).toBe(1);
+  });
+
+  it('skips a tick while the previous one is still running (overlap guard)', async () => {
+    let release!: () => void;
+    prismaMock.sessionStaging.findMany.mockReturnValue(new Promise((r) => { release = () => r([]); }));
+    const first = svc.tick();
+    await svc.tick(); // overlaps → must be a no-op
+    expect(prismaMock.sessionStaging.findMany).toHaveBeenCalledTimes(1);
+    release();
+    await first;
   });
 
   it('writes the failure reason to lastError and backs off the rule', async () => {
