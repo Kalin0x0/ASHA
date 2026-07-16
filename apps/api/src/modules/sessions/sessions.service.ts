@@ -515,7 +515,7 @@ export class SessionsService {
    * doesn't linger in TERMINATING forever (and pile up in the sessions list).
    */
   async destroy(
-    session: { id: string; orgId: string; zoneId: string; containerId: string | null; kasmId?: string; agentId?: string | null },
+    session: { id: string; orgId: string; zoneId: string | null; containerId: string | null; kasmId?: string; agentId?: string | null },
     reason: string,
     actorUserId?: string,
   ) {
@@ -526,8 +526,7 @@ export class SessionsService {
       data: { status: 'TERMINATING', terminationReason: reason },
     });
     if (count === 0) return;
-    const zone = await prisma.deploymentZone.findUnique({ where: { id: session.zoneId } });
-    await this.redis.publish(RedisChannels.destroy(zone?.name ?? 'default'), {
+    await this.redis.publish(RedisChannels.destroy(await this.zoneNameFor(session.zoneId)), {
       sessionId: session.id,
       containerId: session.containerId ?? undefined,
       reason,
@@ -591,7 +590,7 @@ export class SessionsService {
    * one was actually started — we never blindly destroy.
    */
   async failStuckLaunch(
-    session: { id: string; orgId: string; zoneId: string; containerId: string | null },
+    session: { id: string; orgId: string; zoneId: string | null; containerId: string | null },
     reason = 'launch_timeout',
   ) {
     const { count } = await prisma.session.updateMany({
@@ -604,8 +603,7 @@ export class SessionsService {
     });
     if (count === 0) return; // already RUNNING / terminal — nothing to fail
     if (session.containerId) {
-      const zone = await prisma.deploymentZone.findUnique({ where: { id: session.zoneId } });
-      await this.redis.publish(RedisChannels.destroy(zone?.name ?? 'default'), {
+      await this.redis.publish(RedisChannels.destroy(await this.zoneNameFor(session.zoneId)), {
         sessionId: session.id,
         containerId: session.containerId,
         reason,
@@ -785,16 +783,27 @@ export class SessionsService {
   }
 
   private async sendControl(
-    session: { id: string; zoneId: string; containerId: string | null },
+    session: { id: string; zoneId: string | null; containerId: string | null },
     partial: Omit<SessionControlCommand, 'sessionId' | 'containerId'>,
   ) {
-    const zone = await prisma.deploymentZone.findUnique({ where: { id: session.zoneId } });
     const command: SessionControlCommand = {
       sessionId: session.id,
       containerId: session.containerId ?? undefined,
       ...partial,
     };
-    await this.redis.publish(RedisChannels.control(zone?.name ?? 'default'), command);
+    await this.redis.publish(RedisChannels.control(await this.zoneNameFor(session.zoneId)), command);
+  }
+
+  /**
+   * Agent pub/sub channels are keyed by zone NAME. A live session always carries
+   * a zoneId; it is null only on history whose zone was deleted (onDelete:
+   * SetNull), which lands on the same 'default' fallback these callers already
+   * used for a zoneId that no longer resolves.
+   */
+  private async zoneNameFor(zoneId: string | null): Promise<string> {
+    if (!zoneId) return 'default';
+    const zone = await prisma.deploymentZone.findUnique({ where: { id: zoneId } });
+    return zone?.name ?? 'default';
   }
 }
 

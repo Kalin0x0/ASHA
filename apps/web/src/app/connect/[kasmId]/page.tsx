@@ -19,11 +19,13 @@ import {
   Wifi,
   X,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
 import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ApiError } from '@/lib/api/client';
 import { terminateSession } from '@/lib/api/endpoints';
@@ -94,6 +96,8 @@ type ViewState = 'connecting' | 'connected' | 'disconnected' | 'error';
 export default function ConnectPage() {
   const params = useParams<{ kasmId: string }>();
   const router = useRouter();
+  const confirm = useConfirm();
+  const t = useTranslations('viewer');
   const kasmId = params?.kasmId ?? '';
   // View-only "watch" mode (admin monitoring): the stream renders but no
   // keyboard/mouse/clipboard input is forwarded, so the user isn't disturbed.
@@ -127,6 +131,12 @@ export default function ConnectPage() {
   // Auto-reconnect bookkeeping: capped exponential backoff on a transient drop
   // or a "not ready yet" race. Reset to 0 once solidly connected.
   const [autoAttempts, setAutoAttempts] = useState(0);
+  // Set the moment the user CHOOSES to leave (Back / End), before we tear the
+  // client down. Our own disconnect() drives guacamole to state 5, which is
+  // indistinguishable from a network drop — so without this the auto-reconnect
+  // below would race the exit and rebuild the tunnel we just closed, which is
+  // what users saw as "End/Back just reloads the session".
+  const leavingRef = useRef(false);
 
   // Resolve the session → workspace so the toolbar shows the name + description.
   // Check BOTH the admin list (/sessions, admins only) and the owner list
@@ -473,6 +483,8 @@ export default function ConnectPage() {
   const sessionStatus = session?.status;
   useEffect(() => {
     if (state !== 'disconnected') return;
+    // The user is on their way out — never fight their own Back/End.
+    if (leavingRef.current) return;
     if (sessionStatus && ['ERROR', 'DESTROYED', 'TERMINATING', 'PAUSED'].includes(sessionStatus)) return;
     if (autoAttempts >= MAX_AUTO_RECONNECTS) return;
     const delay = Math.min(1000 * 2 ** autoAttempts, 8000);
@@ -566,6 +578,7 @@ export default function ConnectPage() {
   // the Back and End buttons "did nothing". The session keeps running so the
   // user can jump back into it from the workstation.
   const disconnect = useCallback(() => {
+    leavingRef.current = true; // before disconnect(): suppress the auto-reconnect
     try {
       captureThumb(); // keep a fresh preview for the switcher (best-effort)
     } catch {
@@ -586,6 +599,18 @@ export default function ConnectPage() {
   // dead button while the desktop kept running. Navigation always happens.
   const [ending, setEnding] = useState(false);
   const endSession = useCallback(async () => {
+    // Confirm BEFORE touching the client: ending is destructive and unrecoverable
+    // (Back, right next to it, leaves the desktop running), so a mis-click must
+    // cost nothing.
+    if (
+      !(await confirm({
+        title: t('confirmEnd.title'),
+        description: t('confirmEnd.description', { name: workspaceName }),
+        confirmLabel: t('confirmEnd.confirm'),
+      }))
+    )
+      return;
+    leavingRef.current = true; // before disconnect(): suppress the auto-reconnect
     try {
       clientRef.current?.disconnect();
     } catch {
@@ -596,15 +621,18 @@ export default function ConnectPage() {
       try {
         await terminateSession(session.id);
       } catch (e) {
+        // Still here, so re-arm the auto-reconnect: the desktop is up and the
+        // user may retry or keep working.
+        leavingRef.current = false;
         setEnding(false);
-        toast.error('Sitzung konnte nicht beendet werden', {
-          description: e instanceof ApiError ? e.message : 'Bitte erneut versuchen.',
+        toast.error(t('confirmEnd.error'), {
+          description: e instanceof ApiError ? e.message : t('confirmEnd.errorDescription'),
         });
         return; // stay in the viewer so the user sees the error and can retry
       }
     }
     router.push('/');
-  }, [router, session?.id]);
+  }, [router, session?.id, confirm, t, workspaceName]);
 
   // Download a full-resolution screenshot of the live desktop.
   const screenshot = useCallback(() => {
@@ -644,7 +672,7 @@ export default function ConnectPage() {
     <div ref={containerRef} className="fixed inset-0 z-50 flex flex-col bg-anthracite-950 text-foreground">
       {resMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setResMenuOpen(false)} aria-hidden />}
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border-subtle bg-[var(--surface-1)] px-2 sm:px-3">
-        <Button variant="ghost" size="icon-sm" onClick={disconnect} aria-label="Back to Workspaces" className="rtl:rotate-180">
+        <Button variant="ghost" size="icon-sm" onClick={disconnect} aria-label="Back to Workspaces" className="shrink-0 rtl:rotate-180">
           <ArrowLeft className="size-4" />
         </Button>
         <AppIcon
@@ -655,8 +683,11 @@ export default function ConnectPage() {
           rounded="rounded-lg"
           className="size-8 shrink-0"
         />
-        <div className="min-w-0 leading-tight">
-          <p className="flex items-center gap-2 truncate text-sm font-semibold text-foreground">
+        {/* flex-1 + min-w-0 = basis 0: the title/description yield space to the
+            toolbar and truncate, instead of a long workspace description sizing
+            this block off its content and squeezing the controls. */}
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <span className="truncate">{workspaceName}</span>
             <StatusPill state={state} />
           </p>
@@ -953,7 +984,7 @@ function StatusPill({ state }: { state: ViewState }) {
   const s = map[state];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border border-border-subtle px-2.5 py-1 text-xs font-medium ${s.text}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle px-2.5 py-1 text-xs font-medium ${s.text}`}
     >
       <span className={`size-1.5 rounded-full ${s.dot}`} />
       {s.label}

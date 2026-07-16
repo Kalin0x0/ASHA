@@ -30,7 +30,8 @@ export interface ApiSession {
   kasmId: string;
   userId: string;
   workspaceId: string;
-  zoneId: string;
+  /** Null once the session's zone has been deleted (history keeps the row). */
+  zoneId: string | null;
   agentId: string | null;
   status: SessionStatus;
   connectionType: string;

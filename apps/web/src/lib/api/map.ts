@@ -104,7 +104,8 @@ export function mapSession(s: ApiSession, lk: SessionLookups): SessionRow {
       email: user?.email ?? '',
     },
     workspaceName: s.workspaceName ?? workspace?.friendlyName ?? 'Workspace',
-    zone: lk.zones.get(s.zoneId)?.name ?? s.zoneId,
+    // zoneId is null once the session's zone has been deleted (history keeps the row).
+    zone: s.zoneId ? (lk.zones.get(s.zoneId)?.name ?? s.zoneId) : '—',
     agent: agent?.hostname ?? '—',
     status: s.status,
     cpuPct: Math.round(s.resources?.cpuPct ?? 0),

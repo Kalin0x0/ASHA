@@ -94,6 +94,13 @@
     "launchTimeoutTitle": "Der Start dauert zu lange",
     "launchTimeoutDescription": "{name} ist noch nicht vollständig gestartet. Das kann bei einem langsamen Image-Download oder einer schwachen Verbindung passieren. Sie können es erneut versuchen oder zurückgehen."
   },
+  "confirmEnd": {
+    "title": "Sitzung beenden?",
+    "description": "„{name}“ wird heruntergefahren; alles darin nicht Gespeicherte geht verloren. Zum Weiterlaufenlassen stattdessen „Zurück“ verwenden.",
+    "confirm": "Sitzung beenden",
+    "error": "Sitzung konnte nicht beendet werden",
+    "errorDescription": "Bitte erneut versuchen."
+  },
   "dlp": {
     "clipboardDisabledHint": "Die Zwischenablage-Synchronisierung ist durch die DLP-Richtlinie des Workspace deaktiviert.",
     "uploadsDisabledHint": "Datei-Uploads sind durch die DLP-Richtlinie des Workspace deaktiviert.",
