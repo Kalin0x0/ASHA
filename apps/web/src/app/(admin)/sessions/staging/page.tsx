@@ -1,6 +1,6 @@
 'use client';
 
-import { Layers, Loader2, Minus, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, Layers, Loader2, Minus, Plus, Trash2, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { Input, Label } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import {
   type ApiStaging,
   type ApiWorkspace,
@@ -23,6 +25,53 @@ import {
   updateStaging,
 } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
+
+/**
+ * The pool's real fill state at a glance: "ready/target" colours by health
+ * (green = fully warm, gold = filling, muted = empty target/paused) and a
+ * spinner counts sessions still provisioning.
+ */
+function ReadinessPill({
+  ready,
+  warming,
+  desired,
+  enabled,
+  readyLabel,
+  warmingLabel,
+}: {
+  ready: number;
+  warming: number;
+  desired: number;
+  enabled: boolean;
+  readyLabel: string;
+  warmingLabel: string;
+}) {
+  const full = enabled && desired > 0 && ready >= desired;
+  const filling = enabled && desired > 0 && !full;
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <span
+        className={cn(
+          'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium tnum',
+          full
+            ? 'border-success/40 bg-success/10 text-success'
+            : filling
+              ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
+              : 'border-border-subtle bg-secondary text-muted-foreground',
+        )}
+      >
+        <Zap className="size-3" />
+        {readyLabel}
+      </span>
+      {warming > 0 && (
+        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+          <Loader2 className="size-3 animate-spin" />
+          {warmingLabel}
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default function StagingPage() {
   const t = useTranslations('sessions');
@@ -59,6 +108,18 @@ export default function StagingPage() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Keep the fill state live: the reconciler runs every 30s, so a light poll
+  // lets the admin watch a pool warm up without manual refreshes.
+  useEffect(() => {
+    if (!isLive) return;
+    const id = setInterval(() => {
+      getStaging()
+        .then(setStaging)
+        .catch(() => undefined);
+    }, 10_000);
+    return () => clearInterval(id);
+  }, []);
 
   const onCreate = async () => {
     if (!workspaceId || !zoneId) return;
@@ -133,9 +194,10 @@ export default function StagingPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label={t('staging.stats.pools')} value={staging.length} icon={Layers} primary />
-        <StatCard label={t('staging.stats.preWarmed')} value={staging.reduce((a, s) => a + s.desiredSessions, 0)} icon={Layers} />
+        <StatCard label={t('staging.stats.ready')} value={staging.reduce((a, s) => a + (s.readyCount ?? 0), 0)} icon={Zap} />
+        <StatCard label={t('staging.stats.target')} value={staging.reduce((a, s) => a + s.desiredSessions, 0)} icon={Layers} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
@@ -149,11 +211,32 @@ export default function StagingPage() {
           ) : (
             staging.map((s) => (
               <div key={s.id} className="flex items-center gap-3 px-5 py-3 text-sm">
-                <Layers className="size-4 text-gold-300" />
+                <Layers className="size-4 shrink-0 text-gold-300" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{wsName(s)}</p>
                   <p className="truncate text-xs text-muted-foreground">{zoneName(s.zoneId)}</p>
                 </div>
+                {/* The pool's REAL state: ready / target, plus in-flight warms and
+                    the reconciler's failure reason when the pool can't fill. */}
+                <ReadinessPill
+                  ready={s.readyCount ?? 0}
+                  warming={s.warmingCount ?? 0}
+                  desired={s.desiredSessions}
+                  enabled={s.enabled}
+                  readyLabel={t('staging.readyPill', { ready: s.readyCount ?? 0, desired: s.desiredSessions })}
+                  warmingLabel={t('staging.warmingPill', { count: s.warmingCount ?? 0 })}
+                />
+                {s.lastError && s.enabled && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning">
+                        <AlertTriangle className="size-3" />
+                        {t('staging.stalled')}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">{s.lastError}</TooltipContent>
+                  </Tooltip>
+                )}
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="icon-sm" disabled={busyId === s.id} onClick={() => void onAdjust(s, -1)}>
                     <Minus className="size-4" />

@@ -90,7 +90,10 @@ export function mapUser(u: ApiUser): UserRow {
 }
 
 export function mapSession(s: ApiSession, lk: SessionLookups): SessionRow {
-  const user = lk.users.get(s.userId);
+  // userId is null for an unclaimed staged pool session — render it as an
+  // ownerless "Staged" row. The '' id can never equal a real user id, so
+  // own-session filters (=== meId) stay correct.
+  const user = s.userId ? lk.users.get(s.userId) : undefined;
   const agent = s.agentId ? lk.agents.get(s.agentId) : undefined;
   const workspace = lk.workspaces.get(s.workspaceId);
   const startedMs = s.startedAt ? Date.parse(s.startedAt) : Date.parse(s.createdAt);
@@ -99,8 +102,8 @@ export function mapSession(s: ApiSession, lk: SessionLookups): SessionRow {
     id: s.id,
     kasmId: s.kasmId,
     user: {
-      id: s.userId,
-      name: user?.displayName ?? user?.username ?? s.userId,
+      id: s.userId ?? '',
+      name: user?.displayName ?? user?.username ?? s.userId ?? 'Staged',
       email: user?.email ?? '',
     },
     workspaceName: s.workspaceName ?? workspace?.friendlyName ?? 'Workspace',

@@ -6,6 +6,7 @@ const { prismaMock } = vi.hoisted(() => ({
     sessionStaging: { findMany: vi.fn(), create: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn(), findFirst: vi.fn() },
     workspace: { findFirst: vi.fn() },
     deploymentZone: { findFirst: vi.fn() },
+    session: { groupBy: vi.fn() },
   },
 }));
 
@@ -44,5 +45,31 @@ describe('StagingService', () => {
   it('throws 404 updating a staging rule in another org', async () => {
     prismaMock.sessionStaging.updateMany.mockResolvedValue({ count: 0 });
     await expect(svc.update('org1', 'u1', 'foreign', { desiredSessions: 0 })).rejects.toThrow('not found');
+  });
+
+  it('enriches rules with the REAL fill level (ready = unclaimed RUNNING, warming = provisioning)', async () => {
+    prismaMock.sessionStaging.findMany.mockResolvedValue([
+      { id: 'r1', desiredSessions: 2 },
+      { id: 'r2', desiredSessions: 1 },
+    ]);
+    prismaMock.session.groupBy.mockResolvedValue([
+      { stagingId: 'r1', status: 'RUNNING', _count: 2 },
+      { stagingId: 'r2', status: 'PROVISIONING', _count: 1 },
+    ]);
+    const rules = await svc.list('org1');
+    expect(rules).toEqual([
+      expect.objectContaining({ id: 'r1', readyCount: 2, warmingCount: 0 }),
+      expect.objectContaining({ id: 'r2', readyCount: 0, warmingCount: 1 }),
+    ]);
+    // Only UNCLAIMED pool sessions count — claimed ones belong to their user.
+    expect(prismaMock.session.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ userId: null }) }),
+    );
+  });
+
+  it('skips the count query when there are no rules', async () => {
+    prismaMock.sessionStaging.findMany.mockResolvedValue([]);
+    await expect(svc.list('org1')).resolves.toEqual([]);
+    expect(prismaMock.session.groupBy).not.toHaveBeenCalled();
   });
 });

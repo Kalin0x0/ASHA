@@ -197,7 +197,10 @@ export class TariffsService {
   async meterAndCollectExhausted(): Promise<string[]> {
     const now = Date.now();
     const sessions = await prisma.session.findMany({
-      where: { status: { in: CONSUMING as never }, startedAt: { not: null } },
+      // Unclaimed staged pool sessions (userId null) have no holder to bill —
+      // the warm-up period is free; metering starts at claim (which also resets
+      // startedAt/consumedSeconds so the claimer never pays for it).
+      where: { status: { in: CONSUMING as never }, startedAt: { not: null }, userId: { not: null } },
       select: { id: true, orgId: true, userId: true, workspaceId: true, startedAt: true, consumedSeconds: true },
     });
     if (sessions.length === 0) return [];
@@ -220,7 +223,7 @@ export class TariffsService {
       await prisma.session.update({ where: { id: s.id }, data: { consumedSeconds: target } });
 
       const key = `${s.orgId}:${s.userId}`;
-      if (!resolved.has(key)) resolved.set(key, await this.resolveForUser(s.orgId, s.userId));
+      if (!resolved.has(key)) resolved.set(key, await this.resolveForUser(s.orgId, s.userId!));
       const eff = resolved.get(key);
       if (!eff || eff.budgetMinutes == null) continue; // unlimited holder
 

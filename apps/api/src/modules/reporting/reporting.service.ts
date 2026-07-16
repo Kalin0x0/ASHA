@@ -62,11 +62,14 @@ export class ReportingService {
       totalCost += cost;
       totalHours += hours;
 
-      const u = byUser.get(s.userId) ?? { id: s.userId, name: s.userId, sessions: 0, hours: 0, cost: 0 };
+      // Unclaimed staged pool sessions have no user — their warm-up compute is
+      // real cost, attributed to a synthetic "staged" bucket instead of a person.
+      const ukey = s.userId ?? 'staged';
+      const u = byUser.get(ukey) ?? { id: ukey, name: s.userId ?? 'Staged (pre-warmed)', sessions: 0, hours: 0, cost: 0 };
       u.sessions += 1;
       u.hours += hours;
       u.cost += cost;
-      byUser.set(s.userId, u);
+      byUser.set(ukey, u);
 
       const wkey = s.workspaceId ?? 'unknown';
       const w = byWorkspace.get(wkey) ?? {

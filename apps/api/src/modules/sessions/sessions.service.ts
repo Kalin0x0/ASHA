@@ -130,6 +130,14 @@ export class SessionsService {
     const tariffCapMs = await this.tariffs?.sessionCapMs(user, workspace.minuteCostFactor ?? 1);
     if (tariffCapMs != null) caps.push(tariffCapMs);
     const expiresAt = caps.length ? new Date(Date.now() + Math.min(...caps)) : null;
+
+    // Instant delivery: hand over a pre-warmed (staged) RUNNING session instead
+    // of a cold provision when one is ready. Placed AFTER every launch gate
+    // (license/tariff/group) so claiming can never bypass a quota, and after the
+    // zone resolution so an explicitly requested zone is honoured.
+    const claimed = await this.claimStagedSession(user, workspace.id, dto, zone.id, expiresAt);
+    if (claimed) return claimed;
+
     const session = await prisma.session.create({
       data: {
         orgId: user.orgId,
@@ -250,6 +258,215 @@ export class SessionsService {
         `Concurrent session limit reached: your group allows at most ${effectiveLimit} active session${effectiveLimit === 1 ? '' : 's'}.`,
       );
     }
+  }
+
+  /**
+   * Try to hand the launching user a pre-warmed (staged) session instead of a
+   * cold provision. Runs strictly AFTER the license/tariff/group gates in
+   * create() so a claim can never bypass a quota. Only unclaimed (userId null)
+   * RUNNING pool sessions qualify; the claim is an atomic conditional update so
+   * two users can never win the same session. On claim the user's clock starts
+   * fresh: expiresAt from THEIR caps, startedAt/consumedSeconds reset so the
+   * warm-up period is never billed to them.
+   *
+   * Zone semantics: an explicitly requested zone (dto.zoneId) is honoured
+   * strictly; otherwise any ready session qualifies, preferring the zone the
+   * cold launch would have targeted.
+   */
+  private async claimStagedSession(
+    user: AuthUser,
+    workspaceId: string,
+    dto: CreateSessionDto,
+    resolvedZoneId: string,
+    expiresAt: Date | null,
+  ) {
+    const candidates = await prisma.session.findMany({
+      where: {
+        orgId: user.orgId,
+        workspaceId,
+        userId: null,
+        stagingId: { not: null },
+        status: 'RUNNING',
+        ...(dto.zoneId ? { zoneId: dto.zoneId } : {}),
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 5,
+    });
+    if (candidates.length === 0) return null;
+    candidates.sort(
+      (a, b) => Number(b.zoneId === resolvedZoneId) - Number(a.zoneId === resolvedZoneId),
+    );
+
+    const now = new Date();
+    for (const c of candidates) {
+      const { count } = await prisma.session.updateMany({
+        where: { id: c.id, userId: null, status: 'RUNNING' },
+        data: {
+          userId: user.sub,
+          expiresAt,
+          startedAt: now,
+          consumedSeconds: 0,
+          lastKeepaliveAt: now,
+          launchValues: (dto.launchValues ?? {}) as object,
+        },
+      });
+      if (count === 0) continue; // raced by a concurrent claimer — next candidate
+
+      // Refresh the connection-proxy record: its 3600s TTL (set at RUNNING) may
+      // have lapsed while the session sat warm, and the claimer should be
+      // stamped on it. Read-modify-write keeps agent-supplied fields (RDP/SSH
+      // credentials) we can't reconstruct from the session row.
+      const key = `asha:proxy:session:${c.kasmId}`;
+      const rec = await this.redis.get<Record<string, unknown>>(key);
+      if (rec) {
+        await this.redis.set(key, { ...rec, userId: user.sub }, 3600);
+      } else if (c.internalHost) {
+        await this.redis.set(
+          key,
+          {
+            sessionId: c.id,
+            kasmId: c.kasmId,
+            orgId: c.orgId,
+            userId: user.sub,
+            protocol:
+              c.connectionType === 'GUAC_RDP' ? 'RDP'
+              : c.connectionType === 'GUAC_VNC' ? 'VNC'
+              : c.connectionType === 'GUAC_SSH' ? 'SSH'
+              : 'KASMVNC',
+            internalHost: c.internalHost,
+            internalPort: c.port ?? undefined,
+            status: 'RUNNING',
+          },
+          3600,
+        );
+      }
+
+      await this.audit.record({
+        orgId: user.orgId,
+        actorUserId: user.sub,
+        action: 'session.create',
+        targetType: 'Session',
+        targetId: c.id,
+        metadata: { staged: true, stagingId: c.stagingId },
+      });
+      await this.webhooks?.dispatch(user.orgId, 'session.created', {
+        sessionId: c.id,
+        workspaceId,
+        userId: user.sub,
+      });
+      return prisma.session.findUnique({ where: { id: c.id } });
+    }
+    return null;
+  }
+
+  /**
+   * Provision one pre-warmed pool session for a SessionStaging rule (called by
+   * the StagingReconcilerService). Mirrors the container path of create() minus
+   * the user gates: the session is created with userId NULL (unclaimed) and
+   * stagingId set, expiresAt null (the claimer's caps apply at claim), and the
+   * container's env/label tokens resolve against a neutral "staged" identity —
+   * per-user token interpolation is inherently unavailable for pre-warmed
+   * sessions (the future owner is unknown at provision time).
+   *
+   * Never leaves an ERROR row behind: on a failed dispatch the just-created row
+   * is deleted so the reconciler's counts stay clean, and the failure reason is
+   * returned for the rule's lastError.
+   */
+  async createStaged(rule: {
+    id: string;
+    orgId: string;
+    workspaceId: string;
+    zoneId: string;
+  }): Promise<{ ok: true; sessionId: string } | { ok: false; reason: string }> {
+    const workspace = await prisma.workspace.findFirst({
+      where: { id: rule.workspaceId, orgId: rule.orgId },
+      include: { image: true },
+    });
+    if (!workspace || !workspace.enabled) return { ok: false, reason: 'Workspace not available' };
+    if (workspace.type && workspace.type !== 'CONTAINER') {
+      return { ok: false, reason: 'Only container workspaces can be staged' };
+    }
+    const zone = await prisma.deploymentZone.findFirst({
+      where: { id: rule.zoneId, orgId: rule.orgId },
+    });
+    if (!zone) return { ok: false, reason: 'Zone not found' };
+
+    const protocol = workspace.image?.protocol ?? 'KASMVNC';
+    const connectionType =
+      protocol === 'KASMVNC' ? 'KASMVNC'
+      : protocol === 'WEBRTC' ? 'NEKO_WEBRTC'
+      : 'GUAC_RDP';
+
+    const session = await prisma.session.create({
+      data: {
+        orgId: rule.orgId,
+        userId: null,
+        stagingId: rule.id,
+        workspaceId: workspace.id,
+        imageId: workspace.imageId,
+        zoneId: zone.id,
+        status: 'REQUESTED',
+        connectionType,
+        workspaceName: workspace.friendlyName,
+        imageName: workspace.image?.friendlyName,
+        expiresAt: null,
+        lastKeepaliveAt: new Date(),
+      },
+    });
+
+    const agent = await this.scheduler.pickAgent(zone.id);
+    if (!agent) {
+      // No capacity — remove the seconds-old row instead of parking an ERROR.
+      await prisma.session.delete({ where: { id: session.id } }).catch(() => undefined);
+      return { ok: false, reason: `No ONLINE agent available in zone "${zone.name}"` };
+    }
+
+    // Same cross-zone alignment as create(): the agent only listens on its own
+    // zone's channels.
+    let provisionZoneName = zone.name;
+    const scheduleData: { status: 'SCHEDULED'; agentId: string; zoneId?: string } = {
+      status: 'SCHEDULED',
+      agentId: agent.id,
+    };
+    if (agent.zoneId && agent.zoneId !== zone.id) {
+      const agentZone = await prisma.deploymentZone.findUnique({
+        where: { id: agent.zoneId },
+        select: { name: true },
+      });
+      if (agentZone) {
+        provisionZoneName = agentZone.name;
+        scheduleData.zoneId = agent.zoneId;
+      }
+    }
+    await prisma.session.update({ where: { id: session.id }, data: scheduleData });
+
+    const tokenCtx: TokenContext = {
+      username: 'staged',
+      email: 'staged@asha.local',
+      customAttributes: {},
+    };
+    try {
+      await this.dispatchProvision(session.id, provisionZoneName, workspace, protocol, tokenCtx, '');
+    } catch (e) {
+      // dispatchProvision marked the row ERROR (bus down) — retire it entirely
+      // and release the slot the scheduler reserved.
+      await prisma.session.delete({ where: { id: session.id } }).catch(() => undefined);
+      await prisma.agent.updateMany({
+        where: { id: agent.id, currentSessions: { gt: 0 } },
+        data: { currentSessions: { decrement: 1 } },
+      });
+      return { ok: false, reason: (e as Error).message };
+    }
+
+    await this.audit.record({
+      orgId: rule.orgId,
+      actorUserId: 'system',
+      action: 'session.stage',
+      targetType: 'Session',
+      targetId: session.id,
+      metadata: { stagingId: rule.id, workspace: workspace.name },
+    });
+    return { ok: true, sessionId: session.id };
   }
 
   /** Build rclone mount sidecars from the org's enabled cloud StorageMappings (E2). */
