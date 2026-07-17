@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
-    workspace: { findFirst: vi.fn(), create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    workspace: { findFirst: vi.fn(), create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn(), deleteMany: vi.fn() },
     image: { create: vi.fn() },
     server: { findFirst: vi.fn() },
     deploymentZone: { findFirst: vi.fn() },
@@ -196,5 +196,46 @@ describe('WorkspacesService — access control', () => {
   it('setAssignments: 404 when the workspace is not in the caller org', async () => {
     prismaMock.workspace.findFirst.mockResolvedValue(null);
     await expect(svc.setAssignments('org1', 'nope', { userIds: [], groupIds: [] })).rejects.toThrow(/not found/i);
+  });
+});
+
+describe('WorkspacesService.remove', () => {
+  let svc: WorkspacesService;
+  let destroy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    destroy = vi.fn().mockResolvedValue(true);
+    svc = new WorkspacesService({ destroy } as never);
+  });
+
+  it('drains live sessions (incl. the staging pool) before deleting the workspace', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
+    prismaMock.session.findMany.mockResolvedValue([
+      { id: 'user-sess', orgId: 'org1', zoneId: 'z1', containerId: 'c1', kasmId: 'k1', agentId: 'a1' },
+      { id: 'pool-sess', orgId: 'org1', zoneId: 'z1', containerId: 'c2', kasmId: 'k2', agentId: 'a1' },
+    ]);
+    prismaMock.workspace.deleteMany.mockResolvedValue({ count: 1 });
+
+    await svc.remove('org1', 'ws1');
+
+    expect(destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 'user-sess' }), 'workspace_deleted');
+    expect(destroy).toHaveBeenCalledWith(expect.objectContaining({ id: 'pool-sess' }), 'workspace_deleted');
+    expect(prismaMock.session.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          workspaceId: 'ws1',
+          status: { notIn: ['DESTROYED', 'TERMINATING', 'ERROR'] },
+        }),
+      }),
+    );
+    expect(prismaMock.workspace.deleteMany).toHaveBeenCalledWith({ where: { id: 'ws1', orgId: 'org1' } });
+  });
+
+  it('404 when the workspace is not in the caller org (no drain, no delete)', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue(null);
+    await expect(svc.remove('org1', 'foreign')).rejects.toThrow(/not found/i);
+    expect(destroy).not.toHaveBeenCalled();
+    expect(prismaMock.workspace.deleteMany).not.toHaveBeenCalled();
   });
 });

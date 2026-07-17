@@ -8,6 +8,7 @@ import {
 import { hashPassword } from '@asha/crypto';
 import { prisma } from '@asha/db';
 import type { AuthUser } from '../../common/decorators';
+import { SessionsService } from '../sessions/sessions.service';
 
 /** Columns safe to return to the admin UI — never credentials/secrets. */
 const SAFE_SELECT = {
@@ -85,6 +86,8 @@ function parseCsv(csv: string): Array<Record<string, string>> {
 
 @Injectable()
 export class UsersService {
+  constructor(private readonly sessions: SessionsService) {}
+
   async list(user: AuthUser, q?: string) {
     return prisma.user.findMany({
       where: {
@@ -283,11 +286,23 @@ export class UsersService {
     if (!target) throw new NotFoundException('User not found');
     if (target.isSystemAdmin) await this.assertNotLastAdmin(user.orgId);
 
+    // Drain before delete: Session.user is onDelete: Cascade, so deleting the
+    // user hard-removes their session rows and leaves any running containers
+    // orphaned with nothing to tear them down. Tear each live session down
+    // first (same as workspace deletion + the demo reaper).
+    const live = await prisma.session.findMany({
+      where: { userId: id, status: { notIn: ['DESTROYED', 'TERMINATING', 'ERROR'] } },
+      select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
+    });
+    for (const s of live) {
+      await this.sessions.destroy(s, 'user_deleted');
+    }
+
     try {
       await prisma.user.delete({ where: { id } });
     } catch {
       throw new BadRequestException(
-        'User has dependent records (e.g. active sessions); disable the account instead',
+        'User has dependent records; disable the account instead',
       );
     }
     return { ok: true };
