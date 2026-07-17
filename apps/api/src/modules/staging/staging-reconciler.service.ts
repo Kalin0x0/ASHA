@@ -65,10 +65,18 @@ const RETIRE_SELECT = {
 
 const POOL_SELECT = { ...RETIRE_SELECT, agent: { select: { status: true } } } as const;
 
-/** A RUNNING/DEGRADED pool session is only real capacity if its agent is live. */
-function agentLive(s: PoolRow): boolean {
-  if (s.status !== 'RUNNING' && s.status !== 'DEGRADED') return true; // still provisioning — leave to the launch reaper
-  return s.agent?.status === 'ONLINE';
+/**
+ * Whether a pool session is real, claimable capacity.
+ *  - REQUESTED/SCHEDULED/PROVISIONING → still warming; leave it to the launch reaper.
+ *  - RUNNING → only if its agent is live (a dead agent = unreachable ghost).
+ *  - DEGRADED → NOT healthy: the claim path requires exactly RUNNING, so a
+ *    degraded pre-warmed session would count as fill yet never be handed out.
+ *    Retire it and let the pool make a fresh one.
+ */
+function poolHealthy(s: PoolRow): boolean {
+  if (s.status === 'REQUESTED' || s.status === 'SCHEDULED' || s.status === 'PROVISIONING') return true;
+  if (s.status === 'RUNNING') return s.agent?.status === 'ONLINE';
+  return false; // DEGRADED (or anything unexpected)
 }
 
 @Injectable()
@@ -151,11 +159,12 @@ export class StagingReconcilerService {
           where: { stagingId: rule.id, userId: null, status: { in: [...POOL_ACTIVE] } },
           select: POOL_SELECT,
         });
-        // Sessions whose agent went dark are unreachable ghosts — retire them
-        // and don't count them as fill, so the reconciler replaces them.
-        const dead = rawPool.filter((s) => !agentLive(s));
-        if (dead.length > 0) retired += await this.retire(dead, 'staging_agent_offline');
-        const pool = rawPool.filter(agentLive);
+        // Unhealthy pool sessions (dead agent, or DEGRADED = not claimable) are
+        // retired and NOT counted as fill, so the reconciler replaces them with
+        // a fresh, claimable one.
+        const dead = rawPool.filter((s) => !poolHealthy(s));
+        if (dead.length > 0) retired += await this.retire(dead, 'staging_unhealthy');
+        const pool = rawPool.filter(poolHealthy);
 
         if (pool.length > desired) {
           const surplus = [...pool]

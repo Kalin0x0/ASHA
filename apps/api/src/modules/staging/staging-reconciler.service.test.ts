@@ -166,11 +166,31 @@ describe('StagingReconcilerService', () => {
       .mockResolvedValueOnce([pool('dead', 'RUNNING', new Date('2026-01-01'), 'OFFLINE')]); // 1 dead
     const res = await svc.reconcile();
     // dead one retired…
-    expect(sessions.destroy).toHaveBeenCalledWith(expect.anything(), 'staging_agent_offline', undefined, {
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.anything(), 'staging_unhealthy', undefined, {
       onlyIfUnclaimed: true,
     });
     // …and NOT counted, so the reconciler provisions a replacement toward desired=2.
     expect(sessions.createStaged).toHaveBeenCalledTimes(2);
+    expect(res.retired).toBe(1);
+  });
+
+  it('retires a DEGRADED pool session (never claimable) and replaces it', async () => {
+    prismaMock.session.findMany
+      .mockResolvedValueOnce([]) // orphans
+      .mockResolvedValueOnce([]) // ERROR rows
+      .mockResolvedValueOnce([
+        pool('ok', 'RUNNING'),
+        pool('degraded', 'DEGRADED'), // live agent, but DEGRADED = not claim-ready
+      ]);
+    const res = await svc.reconcile();
+    expect(sessions.destroy).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'degraded' }),
+      'staging_unhealthy',
+      undefined,
+      { onlyIfUnclaimed: true },
+    );
+    // 1 healthy (RUNNING) counts, deficit 1 → one replacement provisioned.
+    expect(sessions.createStaged).toHaveBeenCalledTimes(1);
     expect(res.retired).toBe(1);
   });
 
