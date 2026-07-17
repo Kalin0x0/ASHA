@@ -103,6 +103,8 @@ export function useWorkspaces(): Workspace[] {
   return useMemo(() => {
     const active = new Map<string, number>();
     for (const s of sessions ?? []) {
+      // Unclaimed pre-warmed pool sessions aren't user activity — don't count them.
+      if (!s.userId && s.stagingId) continue;
       if (s.status === 'RUNNING' || s.status === 'DEGRADED') {
         active.set(s.workspaceId, (active.get(s.workspaceId) ?? 0) + 1);
       }
@@ -125,6 +127,8 @@ export function useLaunchableWorkspaces(): Workspace[] {
   return useMemo(() => {
     const active = new Map<string, number>();
     for (const s of sessions ?? []) {
+      // Unclaimed pre-warmed pool sessions aren't user activity — don't count them.
+      if (!s.userId && s.stagingId) continue;
       if (s.status === 'RUNNING' || s.status === 'DEGRADED') {
         active.set(s.workspaceId, (active.get(s.workspaceId) ?? 0) + 1);
       }

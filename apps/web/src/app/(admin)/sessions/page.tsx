@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, Monitor, MoreHorizontal, Square, XCircle } from 'lucide-react';
+import { Eye, Layers, Monitor, MoreHorizontal, Square, XCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -135,8 +135,17 @@ export default function SessionsPage() {
                     </div>
                   </td>
                   <td className="px-5 py-3">
-                    <p className="truncate">{s.user.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{s.user.email}</p>
+                    {s.staged ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-gold-500/30 bg-gold-500/10 px-2 py-0.5 text-xs font-medium text-gold-300">
+                        <Layers className="size-3" />
+                        {t('list.staged')}
+                      </span>
+                    ) : (
+                      <>
+                        <p className="truncate">{s.user.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{s.user.email}</p>
+                      </>
+                    )}
                   </td>
                   <td className="px-5 py-3">
                     <p>{s.zone}</p>

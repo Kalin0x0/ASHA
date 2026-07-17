@@ -287,6 +287,10 @@ export class SessionsService {
         userId: null,
         stagingId: { not: null },
         status: 'RUNNING',
+        // Never hand out a session whose agent has gone dark — its container is
+        // unreachable, so the user would get a broken desktop. The reconciler
+        // retires these; here we simply skip them.
+        agent: { status: 'ONLINE' },
         ...(dto.zoneId ? { zoneId: dto.zoneId } : {}),
       },
       orderBy: { createdAt: 'asc' },
@@ -391,6 +395,15 @@ export class SessionsService {
     });
     if (!zone) return { ok: false, reason: 'Zone not found' };
 
+    // A pre-warmed container is provisioned under a neutral "staged" identity —
+    // the future owner is unknown. If the org mounts per-user paths (tokenised
+    // {username}/{email}/{custom_attribute_*} in a volume/file mapping, or a
+    // user-scoped file mapping), the same host path would be shared across every
+    // claimer (data leak) and per-user files would be silently missing. Refuse
+    // to stage such a workspace instead of shipping a cross-user hazard.
+    const mountBlock = await this.stagingMountConflict(rule.orgId);
+    if (mountBlock) return { ok: false, reason: mountBlock };
+
     const protocol = workspace.image?.protocol ?? 'KASMVNC';
     const connectionType =
       protocol === 'KASMVNC' ? 'KASMVNC'
@@ -467,6 +480,34 @@ export class SessionsService {
       metadata: { stagingId: rule.id, workspace: workspace.name },
     });
     return { ok: true, sessionId: session.id };
+  }
+
+  /**
+   * Detect whether an org's mounts are per-user, which makes its workspaces
+   * unsafe to pre-warm under a shared identity. Returns an actionable reason
+   * string when staging must be refused, or null when the org's mounts are
+   * user-agnostic. Also used by StagingService before it accepts a rule so the
+   * admin sees the problem at configuration time, not just in the reconciler log.
+   */
+  async stagingMountConflict(orgId: string): Promise<string | null> {
+    const TOKEN = /\{[a-zA-Z0-9_]+\}/;
+    const [volumes, fileMappings] = await Promise.all([
+      prisma.volumeMapping.findMany({ where: { orgId }, select: { hostPath: true, destPath: true } }),
+      prisma.fileMapping.findMany({
+        where: { orgId, target: 'CONTAINER' },
+        select: { sourcePath: true, destPath: true, userId: true },
+      }),
+    ]);
+    if (volumes.some((v) => TOKEN.test(v.hostPath) || TOKEN.test(v.destPath))) {
+      return 'This org uses per-user volume mounts ({username}/{email}/…), which cannot be shared across pre-warmed sessions. Remove the tokens or disable staging for these workspaces.';
+    }
+    if (fileMappings.some((f) => f.userId !== null)) {
+      return 'This org has user-scoped file mappings that a pre-warmed session cannot carry. Disable staging for affected workspaces.';
+    }
+    if (fileMappings.some((f) => TOKEN.test(f.sourcePath) || TOKEN.test(f.destPath))) {
+      return 'This org uses per-user file mounts ({username}/{email}/…), which cannot be shared across pre-warmed sessions. Remove the tokens or disable staging.';
+    }
+    return null;
   }
 
   /** Build rclone mount sidecars from the org's enabled cloud StorageMappings (E2). */
@@ -652,7 +693,7 @@ export class SessionsService {
     await prisma.session.update({ where: { id: sessionId }, data: { status: 'PROVISIONING' } });
   }
 
-  async list(filters: { status?: string; userId?: string } = {}) {
+  async list(filters: { status?: string; userId?: string; excludeUnclaimed?: boolean } = {}) {
     // Validate the caller-supplied status against the enum; an unknown value
     // would otherwise reach Prisma as an invalid enum and 500. Fall back to the
     // default "everything except DESTROYED" filter.
@@ -661,6 +702,11 @@ export class SessionsService {
       where: {
         status: statusFilter ? (statusFilter as never) : { notIn: ['DESTROYED'] },
         ...(filters.userId ? { userId: filters.userId } : {}),
+        // The Developer API and other external surfaces pass excludeUnclaimed so
+        // infrastructure-only staged pool rows (userId null) never leak into a
+        // public listing or break a consumer expecting a string userId. The
+        // admin web UI omits it — it intentionally renders staged rows.
+        ...(filters.excludeUnclaimed ? { userId: { not: null } } : {}),
       },
       orderBy: { createdAt: 'desc' },
       take: 200,
@@ -770,7 +816,12 @@ export class SessionsService {
       targetId: session.id,
       metadata: { reason },
     });
-    await this.webhooks?.dispatch(session.orgId, 'session.terminated', { sessionId: session.id, reason });
+    // A retired staged pool session (onlyIfUnclaimed) never emitted
+    // session.created — firing session.terminated for it would leave webhook
+    // subscribers with an unmatched lifecycle event on every scale-down.
+    if (!opts?.onlyIfUnclaimed) {
+      await this.webhooks?.dispatch(session.orgId, 'session.terminated', { sessionId: session.id, reason });
+    }
 
     // Decide whether a live agent will actually process the destroy event. If
     // not, finalize now — otherwise the session is stuck in TERMINATING with no
@@ -1008,6 +1059,13 @@ export class SessionsService {
   private async requireControllable(id: string, allowed: string[], user: AuthUser) {
     const session = await this.findInOrg(id, user.orgId);
     this.assertCanAccess(session, user);
+    // An unclaimed staged pool session belongs to the reconciler, not to any
+    // operator: pausing it (PAUSED is invisible to every reconciler sweep) would
+    // strand it forever, and resizing/controlling it is meaningless. A sysadmin
+    // who really wants it gone can terminate it.
+    if (session.userId === null && session.stagingId !== null) {
+      throw new BadRequestException('This is an unclaimed pre-warmed session and cannot be controlled; terminate it instead.');
+    }
     if (!allowed.includes(session.status)) {
       throw new BadRequestException(`Session is ${session.status}; expected one of ${allowed.join(', ')}`);
     }

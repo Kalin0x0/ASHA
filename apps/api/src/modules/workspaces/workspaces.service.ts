@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import type { CreateWorkspaceDto, UpdateWorkspaceDto } from '@asha/contracts';
 import { prisma } from '@asha/db';
 import type { AuthUser } from '../../common/decorators';
+import { SessionsService } from '../sessions/sessions.service';
 
 // Container/Server/Zone are all surfaced so the catalog can show what a
 // workspace runs on (Docker image, RDP/VNC/SSH server, deployment zone).
@@ -17,6 +18,8 @@ const WORKSPACE_INCLUDE = {
 
 @Injectable()
 export class WorkspacesService {
+  constructor(private readonly sessions: SessionsService) {}
+
   list() {
     return prisma.workspace.findMany({ include: WORKSPACE_INCLUDE, orderBy: { friendlyName: 'asc' } });
   }
@@ -204,8 +207,23 @@ export class WorkspacesService {
   }
 
   async remove(orgId: string, id: string) {
-    const res = await prisma.workspace.deleteMany({ where: { id, orgId } });
-    if (res.count === 0) throw new NotFoundException('Workspace not found');
+    const ws = await prisma.workspace.findFirst({ where: { id, orgId }, select: { id: true } });
+    if (!ws) throw new NotFoundException('Workspace not found');
+
+    // Drain before delete: Session.workspace is onDelete: Cascade, so a bare
+    // delete would hard-remove every session row (live user sessions AND staged
+    // pool sessions) and leave their containers running orphaned with nothing
+    // left to tear them down. Tear each non-terminal session down first — this
+    // also drains the workspace's staging pool.
+    const live = await prisma.session.findMany({
+      where: { workspaceId: id, status: { notIn: ['DESTROYED', 'TERMINATING', 'ERROR'] } },
+      select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
+    });
+    for (const s of live) {
+      await this.sessions.destroy(s, 'workspace_deleted');
+    }
+
+    await prisma.workspace.deleteMany({ where: { id, orgId } });
     return { ok: true };
   }
 }

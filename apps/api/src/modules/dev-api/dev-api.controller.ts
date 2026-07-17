@@ -29,7 +29,9 @@ export class DevApiController {
   @RequireScopes('sessions:read')
   @Get('sessions')
   listSessions() {
-    return this.sessions.list({});
+    // Never expose unclaimed staged pool rows on the public API — they're
+    // infrastructure and carry a null userId the contract doesn't allow.
+    return this.sessions.list({ excludeUnclaimed: true });
   }
 
   @RequireScopes('sessions:read')

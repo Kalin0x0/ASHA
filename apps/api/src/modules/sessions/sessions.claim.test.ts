@@ -89,6 +89,13 @@ describe('SessionsService.create — staged claim', () => {
     prismaMock.session.findUnique.mockResolvedValue({ ...STAGED, userId: 'user1' });
   });
 
+  it('only considers pool sessions on a live agent (never hands out a dead one)', async () => {
+    await svc.create(USER, { workspaceId: 'ws1' } as never);
+    expect(prismaMock.session.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ agent: { status: 'ONLINE' } }) }),
+    );
+  });
+
   it('claims a ready staged session instead of provisioning', async () => {
     const res = await svc.create(USER, { workspaceId: 'ws1' } as never);
 

@@ -11,6 +11,7 @@ const { prismaMock } = vi.hoisted(() => ({
     user: { findMany: vi.fn() },
     group: { findMany: vi.fn() },
     setting: { findUnique: vi.fn() },
+    session: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
   },
 }));
 
@@ -25,7 +26,7 @@ describe('WorkspacesService.create', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new WorkspacesService();
+    svc = new WorkspacesService({ destroy: vi.fn().mockResolvedValue(true) } as never);
   });
 
   it('auto-creates and links a backing image when a dockerImage is supplied', async () => {
@@ -104,7 +105,7 @@ describe('WorkspacesService — access control', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new WorkspacesService();
+    svc = new WorkspacesService({ destroy: vi.fn().mockResolvedValue(true) } as never);
     prismaMock.workspace.findMany.mockResolvedValue([]);
     prismaMock.workspace.findUnique.mockResolvedValue({ id: 'ws1' });
   });

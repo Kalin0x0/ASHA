@@ -171,8 +171,12 @@ export class LicensingService {
     }
 
     if (license.type === 'CONCURRENT') {
+      // Unclaimed staged pool sessions (userId null) are infrastructure, not a
+      // launched session — a claim converts an existing row (zero net
+      // concurrency). Counting them would let a full warm pool 403 every real
+      // launch and starve the org of the very capacity it paid for.
       const active = await prisma.session.count({
-        where: { orgId, status: { in: LicensingService.ACTIVE as never } },
+        where: { orgId, userId: { not: null }, status: { in: LicensingService.ACTIVE as never } },
       });
       if (active >= license.concurrentSessions) {
         throw new ForbiddenException(
@@ -199,7 +203,7 @@ export class LicensingService {
   async usage(orgId: string) {
     const license = await this.get(orgId);
     const concurrent = await prisma.session.count({
-      where: { orgId, status: { in: LicensingService.ACTIVE as never } },
+      where: { orgId, userId: { not: null }, status: { in: LicensingService.ACTIVE as never } },
     });
     const grouped = await prisma.session.groupBy({
       by: ['userId'],

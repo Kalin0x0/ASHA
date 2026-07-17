@@ -50,6 +50,8 @@ type RetireRow = {
   createdAt: Date;
 };
 
+type PoolRow = RetireRow & { agent: { status: string } | null };
+
 const RETIRE_SELECT = {
   id: true,
   orgId: true,
@@ -60,6 +62,14 @@ const RETIRE_SELECT = {
   status: true,
   createdAt: true,
 } as const;
+
+const POOL_SELECT = { ...RETIRE_SELECT, agent: { select: { status: true } } } as const;
+
+/** A RUNNING/DEGRADED pool session is only real capacity if its agent is live. */
+function agentLive(s: PoolRow): boolean {
+  if (s.status !== 'RUNNING' && s.status !== 'DEGRADED') return true; // still provisioning — leave to the launch reaper
+  return s.agent?.status === 'ONLINE';
+}
 
 @Injectable()
 export class StagingReconcilerService {
@@ -91,7 +101,9 @@ export class StagingReconcilerService {
   async reconcile(): Promise<{ created: number; retired: number }> {
     let created = 0;
     let retired = 0;
-    const rules = await prisma.sessionStaging.findMany();
+    const rules = await prisma.sessionStaging.findMany({
+      include: { workspace: { select: { enabled: true } } },
+    });
 
     // Orphans first: unclaimed pool sessions (incl. ERROR'd ones) whose rule no
     // longer exists. With zero rules, every staged leftover is an orphan.
@@ -130,11 +142,20 @@ export class StagingReconcilerService {
           continue; // resume filling after the backoff, not this tick
         }
 
-        const desired = rule.enabled ? rule.desiredSessions : 0;
-        const pool = await prisma.session.findMany({
+        // A disabled OR deleted workspace means the pool can't serve anyone —
+        // drain it to zero (its containers would otherwise sit un-claimable and
+        // un-reaped, since the reapers now exempt userId null).
+        const desired = rule.enabled && rule.workspace?.enabled ? rule.desiredSessions : 0;
+
+        const rawPool = await prisma.session.findMany({
           where: { stagingId: rule.id, userId: null, status: { in: [...POOL_ACTIVE] } },
-          select: RETIRE_SELECT,
+          select: POOL_SELECT,
         });
+        // Sessions whose agent went dark are unreachable ghosts — retire them
+        // and don't count them as fill, so the reconciler replaces them.
+        const dead = rawPool.filter((s) => !agentLive(s));
+        if (dead.length > 0) retired += await this.retire(dead, 'staging_agent_offline');
+        const pool = rawPool.filter(agentLive);
 
         if (pool.length > desired) {
           const surplus = [...pool]

@@ -66,6 +66,8 @@ export interface SessionRow {
   id: string;
   kasmId: string;
   user: { id: string; name: string; email: string };
+  /** Unclaimed pre-warmed pool session (userId null + stagingId set). Absent = false. */
+  staged?: boolean;
   workspaceName: string;
   workspaceIcon?: string;
   zone: string;
