@@ -1,17 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { CreateStagingDto, UpdateStagingDto } from '@asha/contracts';
 import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
+import { SessionsService } from '../sessions/sessions.service';
 
 /**
  * Session staging: pre-warmed pools of ready sessions per (workspace, zone) so
  * end-users connect instantly instead of waiting for a cold provision. The
- * desired count is advisory — the scheduler reconciles actual standby sessions
- * toward `desiredSessions`.
+ * StagingReconcilerService reconciles the actual standby pool toward
+ * `desiredSessions`.
  */
 @Injectable()
 export class StagingService {
-  constructor(private readonly audit: AuditService) {}
+  constructor(
+    private readonly audit: AuditService,
+    private readonly sessions: SessionsService,
+  ) {}
 
   /**
    * Rules enriched with the pool's ACTUAL fill level so the UI reports reality,
@@ -54,6 +58,13 @@ export class StagingService {
     ]);
     if (!ws) throw new NotFoundException('Workspace not found');
     if (!zone) throw new NotFoundException('Zone not found');
+    if (ws.type && ws.type !== 'CONTAINER') {
+      throw new BadRequestException('Only container workspaces can be pre-warmed (staged).');
+    }
+    // Reject up front if the org's mounts are per-user (can't be shared across a
+    // pre-warmed pool) — the admin sees the reason now, not just in the log.
+    const mountBlock = await this.sessions.stagingMountConflict(orgId);
+    if (mountBlock) throw new BadRequestException(mountBlock);
 
     const created = await prisma.sessionStaging.create({
       data: {

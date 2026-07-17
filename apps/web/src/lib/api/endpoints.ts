@@ -30,6 +30,8 @@ export interface ApiSession {
   kasmId: string;
   /** Null while the session is an unclaimed pre-warmed (staged) pool session. */
   userId: string | null;
+  /** Set for pre-warmed pool sessions; combined with a null userId = unclaimed. */
+  stagingId?: string | null;
   workspaceId: string;
   /** Null once the session's zone has been deleted (history keeps the row). */
   zoneId: string | null;

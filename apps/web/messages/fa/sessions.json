@@ -20,7 +20,8 @@
     "emptyDescription": "پاک کردن جستجو یا فیلتر وضعیت را امتحان کنید.",
     "confirmTitle": "نشست خاتمه داده شود؟",
     "confirmDescription": "با این کار کانتینر <strong>{workspace}</strong> برای <strong>{user}</strong> حذف می‌شود. کارهای ذخیره‌نشده در این نشست از بین خواهند رفت.",
-    "confirmDescriptionFallback": "با این کار کانتینر نشست حذف می‌شود."
+    "confirmDescriptionFallback": "با این کار کانتینر نشست حذف می‌شود.",
+    "staged": "از پیش آماده"
   },
   "detail": {
     "notFoundTitle": "نشست یافت نشد",

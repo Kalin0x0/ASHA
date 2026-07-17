@@ -20,7 +20,8 @@
     "emptyDescription": "Try clearing the search or status filter.",
     "confirmTitle": "Terminate session?",
     "confirmDescription": "This will destroy the <strong>{workspace}</strong> container for <strong>{user}</strong>. Unsaved work in the session will be lost.",
-    "confirmDescriptionFallback": "This will destroy the session container."
+    "confirmDescriptionFallback": "This will destroy the session container.",
+    "staged": "Staged"
   },
   "detail": {
     "notFoundTitle": "Session not found",

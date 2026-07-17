@@ -19,18 +19,20 @@ const RULE = {
   zoneId: 'zone1',
   desiredSessions: 2,
   enabled: true,
+  workspace: { enabled: true },
 };
 
-/** Minimal pool-session row as the reconciler selects it. */
-const pool = (id: string, status = 'RUNNING', createdAt = new Date('2026-01-01')) => ({
+/** Minimal pool-session row as the reconciler selects it (agent ONLINE by default). */
+const pool = (id: string, status = 'RUNNING', createdAt = new Date('2026-01-01'), agentStatus: string | null = 'ONLINE') => ({
   id,
   orgId: 'org1',
   zoneId: 'zone1',
   containerId: null,
   kasmId: `k-${id}`,
-  agentId: null,
+  agentId: agentStatus ? `a-${id}` : null,
   status,
   createdAt,
+  agent: agentStatus ? { status: agentStatus } : null,
 });
 
 describe('StagingReconcilerService', () => {
@@ -155,6 +157,43 @@ describe('StagingReconcilerService', () => {
       onlyIfUnclaimed: true,
     });
     expect(res.retired).toBe(1);
+  });
+
+  it('retires RUNNING pool sessions whose agent went OFFLINE and does not count them as fill', async () => {
+    prismaMock.session.findMany
+      .mockResolvedValueOnce([]) // orphans
+      .mockResolvedValueOnce([]) // ERROR rows
+      .mockResolvedValueOnce([pool('dead', 'RUNNING', new Date('2026-01-01'), 'OFFLINE')]); // 1 dead
+    const res = await svc.reconcile();
+    // dead one retired…
+    expect(sessions.destroy).toHaveBeenCalledWith(expect.anything(), 'staging_agent_offline', undefined, {
+      onlyIfUnclaimed: true,
+    });
+    // …and NOT counted, so the reconciler provisions a replacement toward desired=2.
+    expect(sessions.createStaged).toHaveBeenCalledTimes(2);
+    expect(res.retired).toBe(1);
+  });
+
+  it('does not retire a still-provisioning pool session for lacking a live agent', async () => {
+    prismaMock.sessionStaging.findMany.mockResolvedValue([{ ...RULE, desiredSessions: 1 }]);
+    prismaMock.session.findMany
+      .mockResolvedValueOnce([]) // orphans
+      .mockResolvedValueOnce([]) // ERROR rows
+      .mockResolvedValueOnce([pool('warming', 'PROVISIONING', new Date('2026-01-01'), null)]); // no agent yet
+    const res = await svc.reconcile();
+    expect(sessions.destroy).not.toHaveBeenCalled(); // at target, warming counts
+    expect(res).toEqual({ created: 0, retired: 0 });
+  });
+
+  it('drains the pool when the workspace is disabled (not just the rule)', async () => {
+    prismaMock.sessionStaging.findMany.mockResolvedValue([{ ...RULE, workspace: { enabled: false } }]);
+    prismaMock.session.findMany
+      .mockResolvedValueOnce([]) // orphans
+      .mockResolvedValueOnce([]) // ERROR rows
+      .mockResolvedValueOnce([pool('a'), pool('b')]);
+    const res = await svc.reconcile();
+    expect(res.retired).toBe(2);
+    expect(sessions.createStaged).not.toHaveBeenCalled();
   });
 
   it('skips a tick while the previous one is still running (overlap guard)', async () => {

@@ -20,7 +20,8 @@
     "emptyDescription": "Versuchen Sie, die Suche oder den Statusfilter zurückzusetzen.",
     "confirmTitle": "Sitzung beenden?",
     "confirmDescription": "Dadurch wird der <strong>{workspace}</strong>-Container für <strong>{user}</strong> entfernt. Nicht gespeicherte Arbeit in der Sitzung geht verloren.",
-    "confirmDescriptionFallback": "Dadurch wird der Sitzungscontainer entfernt."
+    "confirmDescriptionFallback": "Dadurch wird der Sitzungscontainer entfernt.",
+    "staged": "Vorgewärmt"
   },
   "detail": {
     "notFoundTitle": "Sitzung nicht gefunden",

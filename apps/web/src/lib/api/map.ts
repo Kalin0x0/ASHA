@@ -98,14 +98,18 @@ export function mapSession(s: ApiSession, lk: SessionLookups): SessionRow {
   const workspace = lk.workspaces.get(s.workspaceId);
   const startedMs = s.startedAt ? Date.parse(s.startedAt) : Date.parse(s.createdAt);
   const uptimeSec = Number.isFinite(startedMs) ? Math.max(0, Math.round((Date.now() - startedMs) / 1000)) : 0;
+  const staged = !s.userId && !!s.stagingId;
   return {
     id: s.id,
     kasmId: s.kasmId,
+    // name falls back to the raw id (never a hardcoded label) so the UI can
+    // translate the staged case at render time via the `staged` flag.
     user: {
       id: s.userId ?? '',
-      name: user?.displayName ?? user?.username ?? s.userId ?? 'Staged',
+      name: user?.displayName ?? user?.username ?? s.userId ?? '',
       email: user?.email ?? '',
     },
+    staged,
     workspaceName: s.workspaceName ?? workspace?.friendlyName ?? 'Workspace',
     // zoneId is null once the session's zone has been deleted (history keeps the row).
     zone: s.zoneId ? (lk.zones.get(s.zoneId)?.name ?? s.zoneId) : '—',
@@ -123,7 +127,10 @@ export function mapSession(s: ApiSession, lk: SessionLookups): SessionRow {
 
 /** Derives the dashboard snapshot from live sessions + agents (no API endpoint). */
 export function deriveDashboard(sessions: SessionRow[], agents: Agent[]): DashboardSnapshot {
-  const running = sessions.filter((s) => s.status === 'RUNNING' || s.status === 'DEGRADED').length;
+  // "Active sessions" is a USER-activity KPI — unclaimed pre-warmed pool
+  // sessions are infrastructure and must not inflate it (or the top-workspaces).
+  const userSessions = sessions.filter((s) => !s.staged);
+  const running = userSessions.filter((s) => s.status === 'RUNNING' || s.status === 'DEGRADED').length;
   const online = agents.filter((a) => a.status === 'ONLINE');
   const cpu = online.length ? Math.round(online.reduce((s, a) => s + a.cpuPct, 0) / online.length) : 0;
   const mem = online.length
@@ -131,7 +138,7 @@ export function deriveDashboard(sessions: SessionRow[], agents: Agent[]): Dashbo
     : 0;
 
   const byWorkspace = new Map<string, number>();
-  for (const s of sessions) {
+  for (const s of userSessions) {
     if (s.status === 'RUNNING' || s.status === 'DEGRADED') {
       byWorkspace.set(s.workspaceName, (byWorkspace.get(s.workspaceName) ?? 0) + 1);
     }

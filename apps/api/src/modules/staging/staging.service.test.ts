@@ -18,10 +18,12 @@ const audit = { record: vi.fn().mockResolvedValue(undefined) };
 
 describe('StagingService', () => {
   let svc: StagingService;
+  let sessions: { stagingMountConflict: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    svc = new StagingService(audit as never);
+    sessions = { stagingMountConflict: vi.fn().mockResolvedValue(null) };
+    svc = new StagingService(audit as never, sessions as never);
   });
 
   it('refuses staging when the workspace is in another org', async () => {
@@ -33,13 +35,30 @@ describe('StagingService', () => {
   });
 
   it('creates a staging rule when workspace + zone are valid', async () => {
-    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'w1' });
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'w1', type: 'CONTAINER' });
     prismaMock.deploymentZone.findFirst.mockResolvedValue({ id: 'z1' });
     prismaMock.sessionStaging.create.mockResolvedValue({ id: 'st1' });
     await svc.create('org1', 'u1', { workspaceId: 'w1', zoneId: 'z1', desiredSessions: 3, enabled: true });
     expect(prismaMock.sessionStaging.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ orgId: 'org1', desiredSessions: 3 }) }),
     );
+  });
+
+  it('refuses to stage a non-container workspace', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'w1', type: 'SERVER' });
+    prismaMock.deploymentZone.findFirst.mockResolvedValue({ id: 'z1' });
+    await expect(
+      svc.create('org1', 'u1', { workspaceId: 'w1', zoneId: 'z1', desiredSessions: 1, enabled: true }),
+    ).rejects.toThrow('container');
+  });
+
+  it('refuses to stage when the org uses per-user mounts', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'w1', type: 'CONTAINER' });
+    prismaMock.deploymentZone.findFirst.mockResolvedValue({ id: 'z1' });
+    sessions.stagingMountConflict.mockResolvedValue('per-user volume mounts');
+    await expect(
+      svc.create('org1', 'u1', { workspaceId: 'w1', zoneId: 'z1', desiredSessions: 1, enabled: true }),
+    ).rejects.toThrow('per-user');
   });
 
   it('throws 404 updating a staging rule in another org', async () => {

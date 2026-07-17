@@ -3,6 +3,7 @@ import type { AgentTokenScope } from '../../common/jwt-auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import type { AgentHeartbeatDto, AgentRegisterDto, SessionStatsDto, SessionStatusDto } from '@asha/contracts';
 import { prisma, runUnscoped } from '@asha/db';
+import { RedisChannels } from '@asha/events';
 import { sessionConnectionUrl } from '@asha/proxy-labels';
 import { type Env, isPlaceholderHost, resolveSessionBaseUrl } from '@asha/config';
 import { ENV } from '../../common/env.module';
@@ -134,6 +135,35 @@ export class AgentsService {
     return runUnscoped(async () => {
       const session = await prisma.session.findUnique({ where: { id: sessionId } });
       if (!session) throw new NotFoundException('Session not found');
+
+      // Lifecycle floor: once a session is TERMINATING/DESTROYED (e.g. the
+      // staging reconciler retired a still-PROVISIONING pool session, or a
+      // reaper tore it down), a late agent report must NOT resurrect it into a
+      // live/claimable state. Instead, tell the agent to tear the just-started
+      // container down — otherwise it runs orphaned, untracked, and (for a
+      // staged row) reappears as a RUNNING ghost with userId null.
+      if (
+        (session.status === 'TERMINATING' || session.status === 'DESTROYED') &&
+        dto.status !== 'DESTROYED' &&
+        dto.status !== 'ERROR'
+      ) {
+        const containerId = dto.containerId ?? session.containerId;
+        if (containerId && session.zoneId) {
+          const zone = await prisma.deploymentZone.findUnique({
+            where: { id: session.zoneId },
+            select: { name: true },
+          });
+          await this.redis.publish(RedisChannels.destroy(zone?.name ?? 'default'), {
+            sessionId: session.id,
+            containerId,
+            reason: 'terminated_during_provision',
+          });
+        }
+        this.logger.warn(
+          `Ignoring '${dto.status}' report for ${session.id} already ${session.status}; ordered orphan container teardown`,
+        );
+        return { ok: true };
+      }
 
       const data: Record<string, unknown> = { status: dto.status };
       if (dto.containerId) data.containerId = dto.containerId;
