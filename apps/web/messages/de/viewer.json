@@ -53,7 +53,8 @@
     "audioUnreachable": "Audio-Route nicht erreichbar — der Sitzungs-Stream hat nicht verbunden",
     "printPreview": "Druckvorschau",
     "print": "Drucken",
-    "download": "Herunterladen"
+    "download": "Herunterladen",
+    "pausing": "Wird pausiert…"
   },
   "status": {
     "connected": "Verbunden",
@@ -92,7 +93,8 @@
     "unreachableTitle": "Workspace nicht erreichbar",
     "unreachableDescription": "Ihr Browser kann {host} nicht auflösen. Die Workspace-Stream-URL ist von hier aus nicht erreichbar — bitten Sie Ihren Administrator, eine öffentliche Workspace-URL festzulegen (WORKSPACE_PUBLIC_BASE_URL oder die Proxy-Basis-URL der Zone).",
     "launchTimeoutTitle": "Der Start dauert zu lange",
-    "launchTimeoutDescription": "{name} ist noch nicht vollständig gestartet. Das kann bei einem langsamen Image-Download oder einer schwachen Verbindung passieren. Sie können es erneut versuchen oder zurückgehen."
+    "launchTimeoutDescription": "{name} ist noch nicht vollständig gestartet. Das kann bei einem langsamen Image-Download oder einer schwachen Verbindung passieren. Sie können es erneut versuchen oder zurückgehen.",
+    "resuming": "Sitzung wird fortgesetzt…"
   },
   "confirmEnd": {
     "title": "Sitzung beenden?",
