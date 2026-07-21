@@ -34,6 +34,12 @@ Self-hosted · multi-tenant · a modern container-streaming / VDI / DaaS platfor
 > noVNC, Neko, Squid, WireGuard, guacd, Fluent Bit), Asha consumes them as **unmodified runtime
 > container images or generated config** — never linked into our source, so licenses stay clean.
 
+> [!TIP]
+> **The name.** *Asha* comes from the Zoroastrian / Old-Persian tradition, where it means **truth,
+> cosmic order and righteousness** — the principle that keeps the world running as it should. It's a
+> fitting name for a platform whose job is to deliver clean, ordered, trustworthy workspaces, and it
+> continues the project's Persian naming family.
+
 <br>
 
 <!--
