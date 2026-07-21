@@ -8,6 +8,8 @@
     "label": "Sitzung öffnen in",
     "webNative": "Web Native",
     "webNativeHint": "Den Desktop im Browser streamen — nichts zu installieren.",
+    "webNewTab": "In neuer Seite öffnen",
+    "webNewTabHint": "Den Desktop in einem separaten Browser-Tab öffnen — hier weiterarbeiten.",
     "rdpClient": "RDP-Client",
     "rdpClientHint": "Eine .rdp-Datei herunterladen und im nativen Remotedesktop-Client öffnen.",
     "options": "Remotedesktop-Optionen",

@@ -8,6 +8,8 @@
     "label": "Open session in",
     "webNative": "Web Native",
     "webNativeHint": "Stream the desktop in your browser — nothing to install.",
+    "webNewTab": "New browser tab",
+    "webNewTabHint": "Open the desktop in a separate browser tab — keep working here.",
     "rdpClient": "RDP Client",
     "rdpClientHint": "Download an .rdp file and open it in the native Remote Desktop client.",
     "options": "Remote Desktop options",

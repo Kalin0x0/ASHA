@@ -24,8 +24,15 @@ import type { SessionRow, Workspace } from '@/lib/types';
  */
 export function Desktop() {
   const router = useRouter();
-  const { workspaces, launchingId, launchTarget, setLaunchTarget, onLaunch, launchWebNative } =
-    useWorkspaceLaunch();
+  const {
+    workspaces,
+    launchingId,
+    launchTarget,
+    setLaunchTarget,
+    onLaunch,
+    launchWebNative,
+    launchWebNativeInTab,
+  } = useWorkspaceLaunch();
   const mySessions = useMySessions();
   const resume = useResumeSession();
   const hasFavorites = useFavorites((s) => s.ids.length > 0);
@@ -109,6 +116,7 @@ export function Desktop() {
         open={launchTarget !== null}
         onOpenChange={(o) => !o && setLaunchTarget(null)}
         onWebNative={(ws) => void launchWebNative(ws.id)}
+        onWebNewTab={(ws, win) => void launchWebNativeInTab(ws.id, win)}
         launching={launchingId !== null}
       />
 
