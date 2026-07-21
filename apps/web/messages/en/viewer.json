@@ -53,7 +53,8 @@
     "audioUnreachable": "Audio route unreachable — the session stream did not connect",
     "printPreview": "Print preview",
     "print": "Print",
-    "download": "Download"
+    "download": "Download",
+    "pausing": "Pausing…"
   },
   "status": {
     "connected": "Connected",
@@ -92,7 +93,8 @@
     "unreachableTitle": "Workspace not reachable",
     "unreachableDescription": "Your browser can't resolve {host}. The workspace stream URL isn't reachable from here — ask your administrator to set a public workspace URL (WORKSPACE_PUBLIC_BASE_URL or the zone's proxy base URL).",
     "launchTimeoutTitle": "Launch is taking too long",
-    "launchTimeoutDescription": "{name} hasn't finished starting. This can happen on a slow image pull or a weak connection. You can retry or go back."
+    "launchTimeoutDescription": "{name} hasn't finished starting. This can happen on a slow image pull or a weak connection. You can retry or go back.",
+    "resuming": "Resuming session…"
   },
   "confirmEnd": {
     "title": "End this session?",

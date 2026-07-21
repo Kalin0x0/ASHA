@@ -137,6 +137,8 @@ export default function StreamingViewerPage() {
   const [clock, setClock] = useState('');
   const [webcamOpen, setWebcamOpen] = useState(false);
   const [paused, setPaused] = useState(false);
+  // True while the Back button is pausing the session before it navigates away.
+  const [leaving, setLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [resMenuOpen, setResMenuOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -168,6 +170,23 @@ export default function StreamingViewerPage() {
   useEffect(() => {
     if (isRemoteDesktop && session) router.replace(`/connect/${session.kasmId}`);
   }, [isRemoteDesktop, session, router]);
+
+  // Auto-resume on reopen: Back pauses the session on the way out, so arriving
+  // at an already-PAUSED session means the user came back to use it — thaw it so
+  // they land in a live desktop instead of a paused overlay. Fires exactly once
+  // and ONLY when the session was already paused as we arrived (autoResumeRef is
+  // latched on first sight); an in-place Pause the user triggers later never
+  // trips it.
+  const autoResumeRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!isLive || !session?.id) return;
+    if (autoResumeRef.current === null) autoResumeRef.current = session.status === 'PAUSED';
+    if (autoResumeRef.current && session.status === 'PAUSED') {
+      autoResumeRef.current = false;
+      resumeSession(session.id).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id, session?.status]);
   // The stream URL may point at a host the browser can't resolve (e.g. the
   // default asha.local). Detect it so we can show a clear error rather than
   // letting the <iframe> fail with a raw browser DNS error.
@@ -412,7 +431,22 @@ export default function StreamingViewerPage() {
     });
   };
 
-  const disconnect = () => router.push('/');
+  // Back to Workspaces PAUSES the session (freezes the container so it stops
+  // burning compute) and returns to the launcher — the session's state is
+  // preserved and reopening it auto-resumes (see the effect below). Best-effort:
+  // if the pause call fails we still leave, never trapping the user in the
+  // viewer. Non-running states (error/timeout) just navigate.
+  const disconnect = useCallback(async () => {
+    if (isLive && isRunning && session?.id) {
+      setLeaving(true);
+      try {
+        await pauseSession(session.id);
+      } catch {
+        /* leave anyway — the session simply stays running */
+      }
+    }
+    router.push('/');
+  }, [isLive, isRunning, session?.id, router]);
   const onTerminate = async () => {
     if (
       !(await confirm({
@@ -538,12 +572,19 @@ export default function StreamingViewerPage() {
         {/* Always-visible, clearly-labelled exit — users reported getting "stuck"
             inside the stream with only an unlabelled arrow to leave by. */}
         <button
-          onClick={disconnect}
+          onClick={() => void disconnect()}
+          disabled={leaving}
           aria-label={t('toolbar.backToWorkspaces')}
-          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-white/10 ps-2 pe-2.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground ring-gold-focus"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-white/10 ps-2 pe-2.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground ring-gold-focus disabled:opacity-70"
         >
-          <ArrowLeft className="size-[18px] rtl:rotate-180" />
-          <span className="hidden text-sm font-medium sm:inline">{t('toolbar.backToWorkspaces')}</span>
+          {leaving ? (
+            <Loader2 className="size-[18px] animate-spin" />
+          ) : (
+            <ArrowLeft className="size-[18px] rtl:rotate-180" />
+          )}
+          <span className="hidden text-sm font-medium sm:inline">
+            {leaving ? t('toolbar.pausing') : t('toolbar.backToWorkspaces')}
+          </span>
         </button>
 
         {/* flex-1 + min-w-0 = basis 0: the title/description yield space to the
@@ -713,7 +754,10 @@ export default function StreamingViewerPage() {
       >
         {isError ? (
           <Disconnected workspaceName={workspaceName} onRetry={() => router.refresh()} onBack={disconnect} />
-        ) : isRunning ? (
+        ) : isRunning || isPaused ? (
+          // Keep the stream mounted while PAUSED too — the paused/resuming
+          // overlay (below) covers it, so a reopened session doesn't drop to the
+          // provisioning spinner and resume is instant.
           unreachable ? (
             <UnreachableHost url={connectionUrl!} onBack={disconnect} />
           ) : connectionUrl && !isRemoteDesktop ? (
@@ -804,20 +848,32 @@ export default function StreamingViewerPage() {
           </div>
         )}
 
-        {/* Paused overlay */}
-        {isPaused && isRunning && (
+        {/* Paused overlay. Two contexts share it: an in-place Pause the user
+            triggered (`paused` local state) → "Paused" + a Resume button; or a
+            reopened session Back had paused (`!paused`) → a "Resuming…" spinner
+            while the auto-resume effect thaws it. */}
+        {isPaused && (
           <div className="absolute inset-0 top-12 z-30 flex flex-col items-center justify-center gap-4 bg-anthracite-950/85 backdrop-blur">
-            <Pause className="size-12 rounded-full bg-gold-500/15 p-3 text-gold-400" />
-            <div className="text-center">
-              <h2 className="font-display text-2xl font-medium">{t('status.paused')}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{t('status.pausedDescription')}</p>
-            </div>
-            <button
-              onClick={() => void togglePause()}
-              className="inline-flex h-9 items-center gap-2 rounded-md bg-gold-500/90 px-4 text-sm font-medium text-anthracite-950 transition-colors hover:bg-gold-500 ring-gold-focus"
-            >
-              <Play className="size-4" /> {t('status.resume')}
-            </button>
+            {paused ? (
+              <>
+                <Pause className="size-12 rounded-full bg-gold-500/15 p-3 text-gold-400" />
+                <div className="text-center">
+                  <h2 className="font-display text-2xl font-medium">{t('status.paused')}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{t('status.pausedDescription')}</p>
+                </div>
+                <button
+                  onClick={() => void togglePause()}
+                  className="inline-flex h-9 items-center gap-2 rounded-md bg-gold-500/90 px-4 text-sm font-medium text-anthracite-950 transition-colors hover:bg-gold-500 ring-gold-focus"
+                >
+                  <Play className="size-4" /> {t('status.resume')}
+                </button>
+              </>
+            ) : (
+              <>
+                <Loader2 className="size-10 animate-spin text-gold-400" />
+                <h2 className="font-display text-2xl font-medium">{t('status.resuming')}</h2>
+              </>
+            )}
           </div>
         )}
       </div>
