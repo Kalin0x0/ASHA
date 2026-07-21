@@ -95,6 +95,26 @@ export function WorkstationLauncher() {
     );
   };
 
+  // Same launch, but delivered into a pre-opened browser tab (`win`) so the
+  // launcher stays put. `win` is opened synchronously on click to dodge the
+  // pop-up blocker; we point it at the session URL once the launch resolves.
+  const launchWebNativeInTab = async (id: string, win: Window | null) => {
+    setLaunchingId(id);
+    const ws = workspaces.find((w) => w.id === id);
+    const session = await launch(id);
+    setLaunchingId(null);
+    if (!session) {
+      win?.close();
+      toast.error(t('launcher.launchError'));
+      return;
+    }
+    setLaunchTarget(null);
+    const path = ws && ws.type !== 'CONTAINER' ? `/connect/${session.kasmId}` : `/session/${session.id}`;
+    const url = `${window.location.origin}${path}`;
+    if (win) win.location.href = url;
+    else window.open(url, '_blank', 'noopener'); // fallback if the tab was blocked
+  };
+
   const onLaunch = (id: string) => {
     const ws = workspaces.find((w) => w.id === id);
     // RDP desktops offer a choice: stream in the browser ("Web Native") or
@@ -288,6 +308,7 @@ export function WorkstationLauncher() {
         open={launchTarget !== null}
         onOpenChange={(o) => !o && setLaunchTarget(null)}
         onWebNative={(ws) => void launchWebNative(ws.id)}
+        onWebNewTab={(ws, win) => void launchWebNativeInTab(ws.id, win)}
         launching={launchingId !== null}
       />
     </div>

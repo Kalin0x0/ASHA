@@ -46,6 +46,27 @@ export function useWorkspaceLaunch() {
     );
   };
 
+  // Same as launchWebNative, but delivers the viewer into a pre-opened browser
+  // tab (`win`) instead of navigating the current one — the desktop stays put.
+  // `win` is opened synchronously on click to dodge the pop-up blocker; we point
+  // it at the session URL once the launch resolves.
+  const launchWebNativeInTab = async (id: string, win: Window | null) => {
+    setLaunchingId(id);
+    const ws = workspaces.find((w) => w.id === id);
+    const session = await launch(id);
+    setLaunchingId(null);
+    if (!session) {
+      win?.close();
+      toast.error(t('launcher.launchError'));
+      return;
+    }
+    setLaunchTarget(null);
+    const path = ws && ws.type !== 'CONTAINER' ? `/connect/${session.kasmId}` : `/session/${session.id}`;
+    const url = `${window.location.origin}${path}`;
+    if (win) win.location.href = url;
+    else window.open(url, '_blank', 'noopener'); // fallback if the tab was blocked
+  };
+
   const onLaunch = (id: string) => {
     const ws = workspaces.find((w) => w.id === id);
     if (ws && ws.type === 'SERVER' && ws.protocol === 'RDP') {
@@ -55,5 +76,13 @@ export function useWorkspaceLaunch() {
     void launchWebNative(id);
   };
 
-  return { workspaces, launchingId, launchTarget, setLaunchTarget, onLaunch, launchWebNative };
+  return {
+    workspaces,
+    launchingId,
+    launchTarget,
+    setLaunchTarget,
+    onLaunch,
+    launchWebNative,
+    launchWebNativeInTab,
+  };
 }

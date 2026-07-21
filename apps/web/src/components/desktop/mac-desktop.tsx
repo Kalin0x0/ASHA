@@ -23,8 +23,15 @@ import type { Workspace } from '@/lib/types';
 export function MacDesktop() {
   const t = useTranslations('portal');
   const router = useRouter();
-  const { workspaces, launchingId, launchTarget, setLaunchTarget, onLaunch, launchWebNative } =
-    useWorkspaceLaunch();
+  const {
+    workspaces,
+    launchingId,
+    launchTarget,
+    setLaunchTarget,
+    onLaunch,
+    launchWebNative,
+    launchWebNativeInTab,
+  } = useWorkspaceLaunch();
   const mySessions = useMySessions();
   const resume = useResumeSession();
   const [launchpadOpen, setLaunchpadOpen] = useState(false);
@@ -101,6 +108,7 @@ export function MacDesktop() {
           open={launchTarget !== null}
           onOpenChange={(o) => !o && setLaunchTarget(null)}
           onWebNative={(ws) => void launchWebNative(ws.id)}
+          onWebNewTab={(ws, win) => void launchWebNativeInTab(ws.id, win)}
           launching={launchingId !== null}
         />
 
