@@ -29,7 +29,7 @@ vi.mock('@asha/db', () => ({
 
 import { BugReportsService } from './bug-reports.service';
 
-const user = { sub: 'u1', orgId: 'org1', email: 'admin@chista.local', isSystemAdmin: true };
+const user = { sub: 'u1', orgId: 'org1', email: 'admin@asha.local', isSystemAdmin: true };
 
 describe('BugReportsService', () => {
   let svc: BugReportsService;

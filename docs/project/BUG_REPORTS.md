@@ -1,6 +1,6 @@
 # Bug reports & the central fix-memory
 
-Chista ships a built-in bug tracker with a twist: every resolution is written
+Asha ships a built-in bug tracker with a twist: every resolution is written
 into a durable **fix memory** so the same problem is never diagnosed twice —
 and the whole surface is plain REST, so **Claude Code (or any other UI/agent)
 can read open bugs and fix them, then record _what_ it was and _how_ it was
@@ -17,7 +17,7 @@ fixed.**
 | Report-a-bug UI | `apps/web/src/components/composite/report-bug-dialog.tsx` (topbar) |
 | Triage UI | `/observability/bug-reports` (list + detail/resolve dialog) |
 | Fix memory UI | `/observability/knowledge-base` |
-| Permissions | `@chista/rbac`: `BUG_VIEW`, `BUG_MANAGE` (category `Support`) |
+| Permissions | `@asha/rbac`: `BUG_VIEW`, `BUG_MANAGE` (category `Support`) |
 
 ## Two intakes, one tracker
 
