@@ -425,7 +425,7 @@ class MockStore {
       component: 'web',
       route: input.route ?? null,
       httpStatus: null,
-      reporterEmail: input.reporterEmail ?? 'you@chista.local',
+      reporterEmail: input.reporterEmail ?? 'you@asha.local',
       occurrences: 1,
       createdAt: now,
       lastSeenAt: now,

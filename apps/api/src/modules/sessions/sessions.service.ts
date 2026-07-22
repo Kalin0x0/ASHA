@@ -858,7 +858,7 @@ export class SessionsService {
     if (session.kasmId) {
       // NB: the key prefix is `asha:` — it MUST match what the agent/servers
       // write and the connection-proxy reads (see agents.service / session-store).
-      // A stale `chista:` prefix here meant terminated sessions' proxy records
+      // A stale legacy key prefix here meant terminated sessions' proxy records
       // were never deleted and lingered until their TTL.
       await this.redis.del(`asha:proxy:session:${session.kasmId}`).catch(() => undefined);
     }
