@@ -11,7 +11,7 @@
  * Bump VERSION on a release to roll the caches and trigger the in-app
  * "update available" prompt for installed users.
  */
-const VERSION = 'asha-v3';
+const VERSION = 'asha-v4';
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = '/offline';
