@@ -188,7 +188,7 @@ A4 Commit-to-Image · A7 VPN-Sidecar · B3 Gamepad · C4 Hardware-TOTP · D6 Aut
 ### 5b. Neue Differentiatoren — über Kasm heben
 | # | Differentiator | Kurz | Aufwand | Prio |
 |---|---|---|---|---|
-| 1 | **KI-Copilot „AshaGPT"** | In-Console-Assistent: Troubleshooting, NL→Admin-Action (RBAC-gated), Recording-Summaries, Audit-Anomalie-Erklärung. Nutzt Claude/ChatGPT-OAuth (Hermes-Pattern). | XL | P1 (nach H1/G4) |
+| 1 | **KI-Copilot „AshaGPT"** | In-Console-Assistent: Troubleshooting, NL→Admin-Action (RBAC-gated), Recording-Summaries, Audit-Anomalie-Erklärung. Nutzt LLM-OAuth (z. B. OpenAI) (Hermes-Pattern). | XL | P1 (nach H1/G4) |
 | 2 | **Aurora-Glass-UX** | Konsequentes Design-System, Command-Palette (⌘K), Live-Dashboards, In-Session-Floating-Dock — sichtbares Differenzierungsmerkmal ggü. Kasm. | L | P1 |
 | 3 | **Public-API + offizielles SDK** | Versionierte `/api/dev/v1` + generierte TS/Python/Go-SDKs, Postman-Collection, Sandbox-Org. | L | P1 (nach H1) |
 | 4 | **Terraform-Provider + Policy-as-Code** | `terraform-provider-asha` (HCL) + OPA/Rego-Policies für DLP/Egress/RBAC — versionierbar, PR-reviewbar, CI-gated. | XL | P2 |

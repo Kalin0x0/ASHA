@@ -145,7 +145,7 @@ const SEED_BUG_FIXES: BugFixRow[] = [
     filesTouched: ['apps/api/src/modules/users/users.service.ts', 'apps/web/src/lib/api/map.ts'],
     commitRef: null,
     authoredBy: 'AI',
-    authorName: 'Claude Code',
+    authorName: 'AI Assistant',
     tags: ['web', 'api', 'null-safety'],
     reusedCount: 1,
     createdAt: new Date(Date.now() - 6 * 24 * 3600 * 1000).toISOString(),
