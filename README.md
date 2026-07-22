@@ -12,8 +12,8 @@ Self-hosted · multi-tenant · a modern container-streaming / VDI / DaaS platfor
 <br>
 
 [![License](https://img.shields.io/badge/License-MIT-d4af37?style=for-the-badge)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-276%20passing-4c9a2a?style=for-the-badge)](TODO.md)
-[![CI](https://img.shields.io/badge/typecheck·lint·test·build-green-4c9a2a?style=for-the-badge)](TODO.md)
+[![Tests](https://img.shields.io/badge/tests-510%20passing-4c9a2a?style=for-the-badge)](https://github.com/Kalin0x0/ASHA/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/Kalin0x0/ASHA/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/Kalin0x0/ASHA/actions/workflows/ci.yml)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Kalin0x0)
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
