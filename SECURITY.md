@@ -19,12 +19,11 @@ reporting an issue.
 
 **Please do not open a public issue for security problems.**
 
-Report privately through either channel:
-
-1. **GitHub Private Vulnerability Reporting** (preferred) — open the repository's
-   **Security → Report a vulnerability** tab. This creates a private advisory
-   visible only to the maintainers.
-2. **Email** — `security@naiemi.com`.
+Report privately through **GitHub Private Vulnerability Reporting**: open the
+repository's **Security → Report a vulnerability** tab, or use the
+[new advisory form](https://github.com/Kalin0x0/ASHA/security/advisories/new)
+directly. This creates a private advisory visible only to the maintainers, so
+the issue stays confidential until a fix ships.
 
 When reporting, please include:
 

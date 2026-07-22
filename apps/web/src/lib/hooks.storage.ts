@@ -72,10 +72,10 @@ const mockFiles: ApiFileMapping[] = [
 
 const mockProfiles: ApiPersistentProfile[] = [
   {
-    id: 'prof-shahin-chrome',
+    id: 'prof-kian-chrome',
     userId: 'user-1',
     workspaceId: 'ws-chrome',
-    volumeName: 'profile-shahin-chrome',
+    volumeName: 'profile-kian-chrome',
     backend: 'DOCKER_VOLUME',
     sizeLimitMb: 5120,
     lastUsedAt: new Date(Date.now() - 36e5).toISOString(),
@@ -111,7 +111,7 @@ const mockShares: ApiSessionShare[] = [
     enableAv: true,
     expiresAt: new Date(Date.now() + 42 * 6e4).toISOString(),
     createdAt: new Date(Date.now() - 18 * 6e4).toISOString(),
-    ownerName: 'Shahin Naiemi',
+    ownerName: 'Kian Ardalan',
     workspaceName: 'Chrome Browser',
     participantCount: 2,
   },

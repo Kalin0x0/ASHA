@@ -6,7 +6,7 @@
  */
 export const CURRENT_USER = {
   id: 'user-1',
-  name: 'Shahin Naiemi',
-  email: 'shahin.naiemi@asha.local',
-  initials: 'SN',
+  name: 'Kian Ardalan',
+  email: 'kian.ardalan@asha.local',
+  initials: 'KA',
 } as const;

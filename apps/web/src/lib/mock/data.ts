@@ -55,7 +55,7 @@ const ZONE_DEFS: Array<Pick<Zone, 'id' | 'name' | 'region'>> = [
 ];
 
 const USER_NAMES = [
-  'Shahin Naiemi', 'Dariush Karimi', 'Leyla Hosseini', 'Arman Tehrani', 'Nadia Farahani',
+  'Kian Ardalan', 'Dariush Karimi', 'Leyla Hosseini', 'Arman Tehrani', 'Nadia Farahani',
   'Bijan Rostami', 'Sahar Ahmadi', 'Kaveh Mirzaei', 'Roya Esfahani', 'Omid Sadeghi',
   'Mina Yazdani', 'Farhad Ghorbani', 'Parisa Moradi', 'Reza Jafari',
 ];
@@ -324,10 +324,10 @@ export function buildInitialData(): MockData {
     { id: 'a1', kind: 'session', actor: 'Leyla Hosseini', message: 'launched Ubuntu Desktop in eu-frankfurt', at: '2m ago' },
     { id: 'a2', kind: 'auth', actor: 'Arman Tehrani', message: 'signed in via OIDC', at: '5m ago' },
     { id: 'a3', kind: 'agent', actor: 'system', message: 'agent us-east-agent-02 reported unhealthy', at: '8m ago' },
-    { id: 'a4', kind: 'admin', actor: 'Shahin Naiemi', message: 'updated workspace "Kali Linux" resource limits', at: '14m ago' },
+    { id: 'a4', kind: 'admin', actor: 'Kian Ardalan', message: 'updated workspace "Kali Linux" resource limits', at: '14m ago' },
     { id: 'a5', kind: 'session', actor: 'Nadia Farahani', message: 'terminated a Firefox session', at: '18m ago' },
     { id: 'a6', kind: 'alert', actor: 'system', message: 'CPU on homelap-agent-01 exceeded 85%', at: '22m ago' },
-    { id: 'a7', kind: 'admin', actor: 'Shahin Naiemi', message: 'created API key "ci-pipeline"', at: '31m ago' },
+    { id: 'a7', kind: 'admin', actor: 'Kian Ardalan', message: 'created API key "ci-pipeline"', at: '31m ago' },
     { id: 'a8', kind: 'session', actor: 'Kaveh Mirzaei', message: 'shared a VS Code session with 2 collaborators', at: '44m ago' },
     { id: 'a9', kind: 'auth', actor: 'Roya Esfahani', message: 'enrolled a WebAuthn security key', at: '1h ago' },
     { id: 'a10', kind: 'agent', actor: 'system', message: 'agent homelab-agent-02 entered draining state', at: '1h ago' },
