@@ -153,8 +153,8 @@ export function Topbar() {
   );
 }
 
-/** Two-letter initials from a display name (e.g. "Sh. Naiemi" → "SN"), falling
- *  back to the email local-part ("sh.naiemi@…" → "SN"). */
+/** Two-letter initials from a display name (e.g. "Ada Lovelace" → "AL"), falling
+ *  back to the email local-part ("ada.lovelace@…" → "AL"). */
 function initialsOf(name: string, email?: string): string {
   const src = (name || email || '').trim();
   const parts = src.split(/[\s._@-]+/).filter(Boolean);
