@@ -42,23 +42,20 @@ Self-hosted · multi-tenant · a modern container-streaming / VDI / DaaS platfor
 
 <br>
 
-<!--
-  ✦ Screenshot gallery — drop your own PNGs into docs/brand/ and uncomment.
-    (Left blank until then so the README never renders a broken image.)
+### Screenshots
 
 <div align="center">
 <table>
   <tr>
-    <td align="center" width="50%"><img src="docs/brand/portal-light.png" alt="End-user portal" /></td>
-    <td align="center" width="50%"><img src="docs/brand/admin-dashboard.png" alt="Admin dashboard" /></td>
+    <td align="center" width="50%"><img src="docs/brand/portal.jpg" alt="End-user desktop portal" /><br /><sub><b>End-user desktop</b> — one-click launch, dock, favorites</sub></td>
+    <td align="center" width="50%"><img src="docs/brand/admin-dashboard.png" alt="Admin dashboard" /><br /><sub><b>Admin dashboard</b> — live sessions, agent fleet, utilization</sub></td>
   </tr>
   <tr>
-    <td align="center" width="50%"><img src="docs/brand/session-viewer.png" alt="Session viewer" /></td>
-    <td align="center" width="50%"><img src="docs/brand/tariffs.png" alt="Tariffs" /></td>
+    <td align="center" width="50%"><img src="docs/brand/workspaces.png" alt="Workspace catalog" /><br /><sub><b>Workspace catalog</b> — containerized desktops, browsers &amp; apps</sub></td>
+    <td align="center" width="50%"><img src="docs/brand/tariffs.png" alt="Usage tariffs & metering" /><br /><sub><b>Tariffs</b> — per-minute / hourly / monthly usage metering</sub></td>
   </tr>
 </table>
 </div>
--->
 
 ## Contents
 
