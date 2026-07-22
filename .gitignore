@@ -49,3 +49,7 @@ docker-compose.prod.yml
 recordings/
 !apps/web/src/**/recordings/
 !apps/api/src/**/recordings/
+
+# Internal dev notes — not for the public repo (kept locally, untracked)
+/CLAUDE.md
+docs/project/MEMORY.md
