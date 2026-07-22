@@ -277,7 +277,7 @@ enum BugStatus {
   DUPLICATE
 }
 
-// Who authored a fix-memory entry — an AI agent (e.g. Claude Code) or a person.
+// Who authored a fix-memory entry — an AI agent (e.g. AI Assistant) or a person.
 enum FixAuthorKind {
   AI
   HUMAN
@@ -1751,7 +1751,7 @@ model BugFix {
   filesTouched String[]      @default([])
   commitRef    String?
   authoredBy   FixAuthorKind @default(AI)
-  /// Display name of the author (e.g. "Claude Code" or a person's name).
+  /// Display name of the author (e.g. "AI Assistant" or a person's name).
   authorName   String?
   tags         String[]      @default([])
   /// How many later reports this fix has matched — a recurrence signal.

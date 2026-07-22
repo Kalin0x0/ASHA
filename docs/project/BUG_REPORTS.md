@@ -2,7 +2,7 @@
 
 Asha ships a built-in bug tracker with a twist: every resolution is written
 into a durable **fix memory** so the same problem is never diagnosed twice —
-and the whole surface is plain REST, so **Claude Code (or any other UI/agent)
+and the whole surface is plain REST, so **AI Assistant (or any other UI/agent)
 can read open bugs and fix them, then record _what_ it was and _how_ it was
 fixed.**
 
@@ -78,7 +78,7 @@ POST /api/v1/bug-reports/<id>/resolve
   "prevention": "how to avoid recurrence (optional)",
   "filesTouched": ["apps/api/...", "apps/web/..."],
   "authoredBy": "AI",
-  "authorName": "Claude Code",
+  "authorName": "AI Assistant",
   "tags": ["api", "null-safety"]
 }
 ```

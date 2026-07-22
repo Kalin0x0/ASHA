@@ -434,7 +434,7 @@ async function main() {
         'apps/web/src/lib/api/map.ts',
       ],
       authoredBy: 'AI',
-      authorName: 'Claude Code',
+      authorName: 'AI Assistant',
       tags: ['web', 'api', 'null-safety'],
       reusedCount: 0,
     },
