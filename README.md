@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="apps/web/public/asha-logo.svg" alt="Asha" width="150" height="150" />
+<img src="docs/brand/asha-cover.png" alt="Asha — Isolated Workstation Platform" width="100%" />
 
 # Asha
 
