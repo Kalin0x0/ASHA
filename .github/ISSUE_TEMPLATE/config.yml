@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/Kalin0x0/ASHA/security/advisories/new
+    about: Please report security issues privately through GitHub — never as a public issue.
+  - name: 💬 Questions & ideas (Discussions)
+    url: https://github.com/Kalin0x0/ASHA/discussions
+    about: Ask questions, share your self-hosting setup, or discuss ideas with the community.
+  - name: 📖 Documentation
+    url: https://github.com/Kalin0x0/ASHA#readme
+    about: Installation and configuration live in the README and the docs/ folder.

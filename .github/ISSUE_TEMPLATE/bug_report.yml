@@ -1,0 +1,105 @@
+name: 🐛 Bug report
+description: Report a defect in Asha (the self-hosted platform).
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug in **Asha**.
+
+        - Please search [existing issues](https://github.com/Kalin0x0/ASHA/issues?q=is%3Aissue) first — your problem may already be tracked.
+        - **Found a security vulnerability?** Do **not** file it here. Use [private vulnerability reporting](https://github.com/Kalin0x0/ASHA/security/advisories/new) instead.
+  - type: input
+    id: version
+    attributes:
+      label: Asha version / commit
+      description: A release tag, the version shown in the app footer, or the commit SHA you deployed.
+      placeholder: "v1.0.0 or 77d9508"
+    validations:
+      required: true
+  - type: dropdown
+    id: deploy
+    attributes:
+      label: Deployment method
+      description: How is this instance running?
+      options:
+        - Docker Compose
+        - Kubernetes / Helm
+        - Local dev (pnpm dev)
+        - Other (describe under "What happened?")
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      description: Where does the bug surface? (matches the `component` field in Observability → Bug Reports)
+      options:
+        - web (frontend)
+        - api (backend)
+        - agent
+        - connection-proxy
+        - packages / shared
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: errorcode
+    attributes:
+      label: Error code (ERR-XXXXXXXX)
+      description: If Asha showed a stable error code — in the UI toast or under Observability → Bug Reports — paste it here. It pinpoints the exact failure.
+      placeholder: "ERR-1A2B3C4D"
+    validations:
+      required: false
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and its impact.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: API / agent / browser-console output or a stack trace. This will be rendered as code — no backticks needed.
+      render: shell
+    validations:
+      required: false
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Docker/Kubernetes version, browser, reverse proxy (Traefik / NPM), etc.
+      placeholder: "Ubuntu 24.04 · Docker 27 · Chrome 140 · Traefik v3"
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: This is not a security vulnerability (those go through private reporting).
+          required: true
+        - label: I am running the latest version, or have stated my version above.
+          required: true

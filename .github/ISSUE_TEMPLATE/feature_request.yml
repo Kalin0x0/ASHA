@@ -1,0 +1,53 @@
+name: 💡 Feature request
+description: Suggest an idea or improvement for Asha.
+title: "[feat]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping shape **Asha**. For open-ended questions or ideas you're
+        still exploring, a [Discussion](https://github.com/Kalin0x0/ASHA/discussions) is often the better place to start.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the pain point or use case, e.g. "As a self-hoster, I want to …".
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like Asha to do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workarounds or other approaches you've weighed.
+    validations:
+      required: false
+  - type: dropdown
+    id: component
+    attributes:
+      label: Area
+      description: Which part of Asha would this touch?
+      options:
+        - web (frontend)
+        - api (backend)
+        - agent
+        - connection-proxy
+        - deployment / ops
+        - docs
+        - Other
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, mockups, links, or anything else that helps.
+    validations:
+      required: false
