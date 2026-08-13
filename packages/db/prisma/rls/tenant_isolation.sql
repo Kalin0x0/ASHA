@@ -79,7 +79,11 @@ DECLARE
     'StorageMapping', 'FileMapping', 'PersistentProfile', 'VolumeMapping',
     'BannerWatermarkConfig', 'Webhook',
     'MetricSample', 'LogForwarderConfig', 'ConfigExportBundle',
-    'Feedback'
+    'Feedback',
+    -- Public sign-up requests. The unauthenticated submit path never sets
+    -- app.current_org_id, so the permissive fallback lets it insert; the admin
+    -- review paths run with the org set and stay confined to their own tenant.
+    'AccountRequest'
   ];
 BEGIN
   FOREACH tbl IN ARRAY tables LOOP

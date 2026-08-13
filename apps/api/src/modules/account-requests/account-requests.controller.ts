@@ -9,7 +9,12 @@ import { AccountRequestsService } from './account-requests.service';
 
 const submitSchema = z.object({
   email: z.string().email(),
-  username: z.string().min(1).max(64).optional(),
+  // Charset-restricted on purpose: login matches `email OR username`, so an
+  // unconstrained username could be spelled as somebody else's address.
+  username: z
+    .string()
+    .regex(/^[a-z0-9._-]{3,64}$/i, 'Use 3-64 letters, digits, dot, dash or underscore')
+    .optional(),
   displayName: z.string().max(120).optional(),
   reason: z.string().max(2000).optional(),
   password: z.string().min(8).max(200),
@@ -30,10 +35,16 @@ type RejectDto = z.infer<typeof rejectSchema>;
 const settingsSchema = z.object({ enabled: z.boolean() });
 type SettingsDto = z.infer<typeof settingsSchema>;
 
-/** Client IP, preferring the proxy header (the stack runs behind Traefik/NPM). */
-function clientIp(req: { ip?: string; headers: Record<string, string | undefined> }): string | undefined {
-  const fwd = req.headers['x-forwarded-for'];
-  return (typeof fwd === 'string' ? fwd.split(',')[0]?.trim() : undefined) || req.ip;
+/**
+ * Client IP for the abuse trail.
+ *
+ * Deliberately just `req.ip`: Express already applies the configured trust-proxy
+ * hop count, so this is the first address the deployment actually trusts. Taking
+ * the left-most `X-Forwarded-For` entry instead would record a value the caller
+ * chose — a forged origin in the admin queue and in the SIEM.
+ */
+function clientIp(req: { ip?: string }): string | undefined {
+  return req.ip;
 }
 
 /**

@@ -18,7 +18,9 @@ const { prismaMock } = vi.hoisted(() => ({
       findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
       delete: vi.fn(),
+      count: vi.fn(),
       groupBy: vi.fn(),
     },
     $transaction: vi.fn(),
@@ -55,6 +57,8 @@ beforeEach(() => {
   prismaMock.accountRequest.findUnique.mockResolvedValue(null);
   prismaMock.accountRequest.create.mockResolvedValue({ id: 'req1' });
   prismaMock.accountRequest.update.mockResolvedValue({ id: 'req1' });
+  prismaMock.accountRequest.updateMany.mockResolvedValue({ count: 1 });
+  prismaMock.accountRequest.count.mockResolvedValue(0);
   prismaMock.group.findFirst.mockResolvedValue({ id: 'grp-demo' });
   prismaMock.userGroup.create.mockResolvedValue({});
   prismaMock.workspace.findMany.mockResolvedValue([]);
@@ -94,29 +98,54 @@ describe('AccountRequestsService — public submit', () => {
     expect(result).not.toHaveProperty('accessToken');
   });
 
-  it('refuses an address that already has an account', async () => {
+  it('gives the same answer for an address that already has an account', async () => {
+    // Anything else would be a user-enumeration oracle on a public endpoint.
     prismaMock.user.findFirst.mockResolvedValue({ id: 'u1' });
     const { svc, security } = makeService();
-    await expect(svc.submit(SUBMIT)).rejects.toThrow(/already has an account/i);
+    await expect(svc.submit(SUBMIT)).resolves.toEqual({ status: 'PENDING' });
+    expect(prismaMock.accountRequest.create).not.toHaveBeenCalled();
     expect(security.emit).toHaveBeenCalledWith(
       expect.objectContaining({ metadata: expect.objectContaining({ reason: 'existing_account' }) }),
     );
   });
 
-  it('refuses a second request while one is still pending', async () => {
+  it('gives the same answer while a request is already pending', async () => {
     prismaMock.accountRequest.findUnique.mockResolvedValue({ id: 'req1', status: 'PENDING' });
     const { svc } = makeService();
-    await expect(svc.submit(SUBMIT)).rejects.toThrow(/awaiting review/i);
+    await expect(svc.submit(SUBMIT)).resolves.toEqual({ status: 'PENDING' });
+    expect(prismaMock.accountRequest.update).not.toHaveBeenCalled();
   });
 
-  it('does not spend bcrypt on a request it is going to reject', async () => {
-    // bcrypt is ~250ms of CPU; hashing before the cheap checks would turn a
-    // repeat-submit flood into CPU exhaustion on a public endpoint.
+  it('is indistinguishable across new, taken and queued addresses', async () => {
+    const { svc } = makeService();
+    const fresh = await svc.submit(SUBMIT);
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'u1' });
+    const taken = await svc.submit(SUBMIT);
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.accountRequest.findUnique.mockResolvedValue({ id: 'r', status: 'PENDING' });
+    const queued = await svc.submit(SUBMIT);
+    expect(fresh).toEqual(taken);
+    expect(taken).toEqual(queued);
+  });
+
+  it('does not spend bcrypt on a request it is going to ignore', async () => {
+    // bcrypt costs hundreds of ms on a single Node thread; hashing before the
+    // cheap checks would turn a replay flood into CPU exhaustion.
     const { hashPassword } = await import('@asha/crypto');
     prismaMock.accountRequest.findUnique.mockResolvedValue({ id: 'req1', status: 'PENDING' });
     const { svc } = makeService();
-    await expect(svc.submit(SUBMIT)).rejects.toThrow();
+    await svc.submit(SUBMIT);
     expect(hashPassword).not.toHaveBeenCalled();
+  });
+
+  it('stops recording once the pending queue is full', async () => {
+    prismaMock.accountRequest.count.mockResolvedValue(500);
+    const { svc, security } = makeService();
+    await expect(svc.submit(SUBMIT)).resolves.toEqual({ status: 'PENDING' });
+    expect(prismaMock.accountRequest.create).not.toHaveBeenCalled();
+    expect(security.emit).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: expect.objectContaining({ reason: 'queue_full' }) }),
+    );
   });
 
   it('revives a rejected request in place instead of inserting a duplicate', async () => {
@@ -131,7 +160,9 @@ describe('AccountRequestsService — public submit', () => {
   it('does not silently re-open an already approved address', async () => {
     prismaMock.accountRequest.findUnique.mockResolvedValue({ id: 'req1', status: 'APPROVED' });
     const { svc } = makeService();
-    await expect(svc.submit(SUBMIT)).rejects.toThrow(/already been approved/i);
+    await expect(svc.submit(SUBMIT)).resolves.toEqual({ status: 'PENDING' });
+    expect(prismaMock.accountRequest.update).not.toHaveBeenCalled();
+    expect(prismaMock.accountRequest.create).not.toHaveBeenCalled();
   });
 });
 
@@ -181,11 +212,29 @@ describe('AccountRequestsService — approval', () => {
     const { svc } = makeService();
     await svc.approve(ADMIN, 'req1');
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
-    expect(prismaMock.accountRequest.update.mock.calls[0]![0].data).toMatchObject({
+    expect(prismaMock.accountRequest.updateMany.mock.calls[0]![0].data).toMatchObject({
       status: 'APPROVED',
       reviewedById: 'admin1',
-      createdUserId: 'u-new',
     });
+    expect(prismaMock.accountRequest.update.mock.calls[0]![0].data).toMatchObject({ createdUserId: 'u-new' });
+  });
+
+  it('claims the row conditionally on PENDING, so a racing reject cannot win', async () => {
+    const { svc } = makeService();
+    await svc.approve(ADMIN, 'req1');
+    expect(prismaMock.accountRequest.updateMany.mock.calls[0]![0].where).toMatchObject({
+      id: 'req1',
+      orgId: 'org1',
+      status: 'PENDING',
+    });
+  });
+
+  it('aborts the whole approval when the row was claimed by someone else', async () => {
+    // The concurrent reviewer got there first: count 0 ⇒ throw ⇒ the $transaction
+    // rolls back, so no orphan account survives.
+    prismaMock.accountRequest.updateMany.mockResolvedValue({ count: 0 });
+    const { svc } = makeService();
+    await expect(svc.approve(ADMIN, 'req1')).rejects.toThrow(/already been reviewed/i);
   });
 
   it('refuses to approve twice', async () => {
@@ -267,13 +316,21 @@ describe('AccountRequestsService — rejection', () => {
   it('marks REJECTED and destroys the stored credential', async () => {
     const { svc } = makeService();
     await svc.reject(ADMIN, 'req1', 'not a customer');
-    expect(prismaMock.accountRequest.update.mock.calls[0]![0].data).toMatchObject({
+    const call = prismaMock.accountRequest.updateMany.mock.calls[0]![0];
+    expect(call.where).toMatchObject({ id: 'req1', orgId: 'org1', status: 'PENDING' });
+    expect(call.data).toMatchObject({
       status: 'REJECTED',
       reviewedById: 'admin1',
       reviewNote: 'not a customer',
       passwordHash: '',
     });
     expect(prismaMock.user.create).not.toHaveBeenCalled();
+  });
+
+  it('loses cleanly when a reject races an approval', async () => {
+    prismaMock.accountRequest.updateMany.mockResolvedValue({ count: 0 });
+    const { svc } = makeService();
+    await expect(svc.reject(ADMIN, 'req1')).rejects.toThrow(/already been reviewed/i);
   });
 
   it('scopes the list query to the caller’s org', async () => {

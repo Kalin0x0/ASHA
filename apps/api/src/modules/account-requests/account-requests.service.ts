@@ -35,6 +35,13 @@ const DEMO_GROUP_NAME = 'Demo Users';
 /** ORG-scoped Setting key gating the public endpoint. Absent ⇒ closed. */
 const SETTING_KEY = 'accountRequests.enabled';
 
+/**
+ * Ceiling on unreviewed requests. Past this the public endpoint quietly stops
+ * recording new ones, so an anonymous caller cannot grow the table (or bury a
+ * real request under noise) while an operator is away.
+ */
+const MAX_PENDING = Number(process.env.ASHA_MAX_PENDING_ACCOUNT_REQUESTS) || 500;
+
 export interface SubmitRequestInput {
   email: string;
   username?: string;
@@ -75,9 +82,19 @@ export class AccountRequestsService {
 
   // ── Public surface ─────────────────────────────────────────────────────────
 
+  /**
+   * The org an unauthenticated visitor lands in. There is no host→org mapping in
+   * this product, so the public endpoints resolve the oldest org, exactly as the
+   * instant-demo flow does. `assertPublicOrg` keeps the admin toggle honest
+   * about that instead of letting a second org silently write a dead setting.
+   */
+  private publicOrg() {
+    return prisma.org.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true } });
+  }
+
   /** Public: may visitors request an account on this deployment? */
   async getConfig(): Promise<{ enabled: boolean }> {
-    const org = await prisma.org.findFirst({ orderBy: { createdAt: 'asc' } });
+    const org = await this.publicOrg();
     if (!org) return { enabled: false };
     return { enabled: await this.isEnabled(org.id) };
   }
@@ -93,13 +110,31 @@ export class AccountRequestsService {
     return row?.valueJson === true;
   }
 
-  /** Admin: read the toggle for this org. */
-  async getSettings(user: AuthUser): Promise<{ enabled: boolean }> {
-    return { enabled: await this.isEnabled(user.orgId) };
+  /**
+   * Public sign-up has exactly one landing org (see `publicOrg`). An admin of a
+   * different org toggling it would write a setting nothing ever reads, and see
+   * a switch that silently does nothing — so say so instead.
+   */
+  private async assertPublicOrg(user: AuthUser) {
+    const org = await this.publicOrg();
+    if (!org) throw new ServiceUnavailableException('Account requests are not available');
+    if (org.id !== user.orgId) {
+      throw new ForbiddenException(
+        'Public sign-up is served by the primary organisation and can only be configured there.',
+      );
+    }
   }
 
-  /** Admin: open or close public sign-up for this org. */
+  /** Admin: read the toggle. Reports the effective public state, not a local one. */
+  async getSettings(user: AuthUser): Promise<{ enabled: boolean; configurable: boolean }> {
+    const org = await this.publicOrg();
+    const configurable = !!org && org.id === user.orgId;
+    return { enabled: configurable ? await this.isEnabled(user.orgId) : false, configurable };
+  }
+
+  /** Admin: open or close public sign-up for this deployment. */
   async setSettings(user: AuthUser, enabled: boolean): Promise<{ enabled: boolean }> {
+    await this.assertPublicOrg(user);
     await prisma.setting.upsert({
       where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId: user.orgId, zoneId: '', key: SETTING_KEY } },
       create: { scope: 'ORG', orgId: user.orgId, zoneId: '', key: SETTING_KEY, valueJson: enabled, type: 'boolean' },
@@ -116,11 +151,17 @@ export class AccountRequestsService {
   }
 
   /**
-   * Accept a visitor's request. Returns only a status — never a token, never the
-   * created row — so the endpoint leaks nothing about the deployment's users.
+   * Accept a visitor's request.
+   *
+   * Always answers `{ status: 'PENDING' }` once the feature is open — the same
+   * response whether the address is new, already has an account, or already has
+   * a request. Distinguishable answers would turn this into a user-enumeration
+   * oracle for anyone walking a corporate address list, which is also the
+   * targeting step for seeding a request under someone else's name. The real
+   * outcome is recorded as a security event for the operator instead.
    */
   async submit(input: SubmitRequestInput): Promise<{ status: 'PENDING' }> {
-    const org = await prisma.org.findFirst({ orderBy: { createdAt: 'asc' } });
+    const org = await this.publicOrg();
     if (!org) throw new ServiceUnavailableException('Account requests are not available');
     const orgId = org.id;
     if (!(await this.isEnabled(orgId))) throw new ForbiddenException('Account requests are disabled');
@@ -129,37 +170,45 @@ export class AccountRequestsService {
     const username = (input.username?.trim() || email.split('@')[0] || 'user').toLowerCase();
     const displayName = input.displayName?.trim() || null;
     const reason = input.reason?.trim() || null;
+    const ACCEPTED = { status: 'PENDING' } as const;
 
-    // An address that already has an account must not be shadowed by a request.
-    const existingUser = await prisma.user.findFirst({ where: { orgId, email }, select: { id: true } });
-    if (existingUser) {
+    const noop = async (why: string) => {
       await this.security.emit({
-        action: 'auth.account_request_rejected',
+        action: 'auth.account_request_ignored',
         severity: 'warn',
         orgId,
         ip: input.ip,
         userAgent: input.userAgent,
-        metadata: { email, reason: 'existing_account' },
+        metadata: { email, reason: why },
       });
-      throw new ConflictException('This e-mail already has an account. Please sign in instead.');
-    }
+      return ACCEPTED;
+    };
+
+    // An address that already has an account must not be shadowed by a request.
+    const existingUser = await prisma.user.findFirst({ where: { orgId, email }, select: { id: true } });
+    if (existingUser) return noop('existing_account');
 
     const prior = await prisma.accountRequest.findUnique({
       where: { orgId_email: { orgId, email } },
       select: { id: true, status: true },
     });
 
-    if (prior?.status === 'PENDING') {
-      throw new ConflictException('A request for this e-mail is already awaiting review.');
-    }
-    if (prior?.status === 'APPROVED') {
-      // Approved but the account is gone (admin deleted it) — don't silently
-      // re-open; an admin should decide again via a fresh conversation.
-      throw new ConflictException('This e-mail has already been approved. Please contact your administrator.');
+    // Already queued — nothing to do, and re-hashing would hand an attacker a
+    // free bcrypt on every replay.
+    if (prior?.status === 'PENDING') return noop('already_pending');
+    // Approved once already; if the account was since deleted an admin should
+    // decide again deliberately rather than have it silently re-open.
+    if (prior?.status === 'APPROVED') return noop('already_approved');
+
+    // Cap the queue so an anonymous caller cannot grow the table without bound.
+    if (!prior) {
+      const queued = await prisma.accountRequest.count({ where: { orgId, status: 'PENDING' } });
+      if (queued >= MAX_PENDING) return noop('queue_full');
     }
 
-    // Hash last: bcrypt costs ~250ms of CPU, so every cheap rejection above must
-    // happen before it or a repeat-submit flood turns into a CPU exhaustion.
+    // Hash last: bcrypt costs hundreds of ms of CPU on a single Node thread, so
+    // every cheap rejection above must happen first — otherwise a replay flood
+    // becomes CPU exhaustion that starves ordinary sign-ins.
     const passwordHash = await hashPassword(input.password);
 
     if (prior) {
@@ -274,6 +323,21 @@ export class AccountRequestsService {
     // One transaction: either the account exists and the request is closed, or
     // neither happened. Prevents an approved-but-userless request on failure.
     const created = await prisma.$transaction(async (tx) => {
+      // Claim the row FIRST, conditional on it still being PENDING. The status
+      // transition is the lock: without it two admins hitting Approve and Reject
+      // at the same moment both pass the earlier read, and the queue ends up
+      // showing REJECTED while a working account quietly exists.
+      const claimed = await tx.accountRequest.updateMany({
+        where: { id: req.id, orgId: user.orgId, status: 'PENDING' },
+        data: {
+          status: 'APPROVED',
+          reviewedById: user.sub,
+          reviewedAt: new Date(),
+          reviewNote: input.note?.trim() || null,
+        },
+      });
+      if (claimed.count !== 1) throw new ConflictException('This request has already been reviewed');
+
       const newUser = await tx.user.create({
         data: {
           orgId: user.orgId,
@@ -295,16 +359,8 @@ export class AccountRequestsService {
       for (const ws of demoWorkspaces) {
         await tx.workspaceUser.create({ data: { orgId: user.orgId, workspaceId: ws.id, userId: newUser.id } });
       }
-      await tx.accountRequest.update({
-        where: { id: req.id },
-        data: {
-          status: 'APPROVED',
-          reviewedById: user.sub,
-          reviewedAt: new Date(),
-          reviewNote: input.note?.trim() || null,
-          createdUserId: newUser.id,
-        },
-      });
+      // Link the account back to the request now that it has an id.
+      await tx.accountRequest.update({ where: { id: req.id }, data: { createdUserId: newUser.id } });
       return newUser;
     });
 
@@ -324,8 +380,10 @@ export class AccountRequestsService {
   /** Turn a request down. The row is kept so the same address can be re-applied. */
   async reject(user: AuthUser, id: string, note?: string) {
     const req = await this.getPending(user, id);
-    await prisma.accountRequest.update({
-      where: { id: req.id },
+    // Conditional on still-PENDING, so a reject racing an approve loses cleanly
+    // instead of marking an already-created account's request as refused.
+    const claimed = await prisma.accountRequest.updateMany({
+      where: { id: req.id, orgId: user.orgId, status: 'PENDING' },
       data: {
         status: 'REJECTED',
         reviewedById: user.sub,
@@ -335,6 +393,7 @@ export class AccountRequestsService {
         passwordHash: '',
       },
     });
+    if (claimed.count !== 1) throw new ConflictException('This request has already been reviewed');
     await this.security.emit({
       action: 'auth.account_request_rejected',
       severity: 'info',
@@ -370,7 +429,13 @@ export class AccountRequestsService {
   private async freeUsername(orgId: string, base: string): Promise<string> {
     for (let n = 1; n <= 50; n++) {
       const candidate = n === 1 ? base : `${base}-${n}`;
-      const taken = await prisma.user.findFirst({ where: { orgId, username: candidate }, select: { id: true } });
+      // Also check e-mails: login resolves `OR: [{ email }, { username }]`, so a
+      // username equal to someone else's address would make that person's login
+      // ambiguous — and could lock them out of their own account.
+      const taken = await prisma.user.findFirst({
+        where: { orgId, OR: [{ username: candidate }, { email: candidate }] },
+        select: { id: true },
+      });
       if (!taken) return candidate;
     }
     throw new ConflictException('Could not derive a free username — set one explicitly');
