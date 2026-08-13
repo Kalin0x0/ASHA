@@ -184,9 +184,12 @@ export function getAccountRequestStats() {
   return apiFetch<{ pending: number; approved: number; rejected: number }>('/account-requests/stats');
 }
 
-/** Admin view of the public sign-up toggle (default off). */
+/**
+ * Admin view of the public sign-up toggle (default off). `configurable` is false
+ * when this org is not the one public sign-up is served from.
+ */
 export function getAccountRequestSettings() {
-  return apiFetch<{ enabled: boolean }>('/account-requests/settings');
+  return apiFetch<{ enabled: boolean; configurable: boolean }>('/account-requests/settings');
 }
 
 export function setAccountRequestSettings(enabled: boolean) {

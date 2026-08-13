@@ -55,6 +55,20 @@ export class FederationService {
       }
       if (!user.federatedFrom) {
         user = await prisma.user.update({ where: { id: user.id }, data: { federatedFrom: authConfigId } });
+        // Adoption also retires any local password on the account. Whoever set
+        // that password did so before the address was proven to belong to this
+        // IdP identity — leaving it live would let them keep signing in as the
+        // now-SSO-managed user, inheriting whatever groups the IdP maps on.
+        // (Account pre-hijacking: an attacker seeds an account under someone
+        // else's address, then waits for the real owner's first SSO login.)
+        const { count } = await prisma.userCredential.deleteMany({
+          where: { userId: user.id, kind: 'PASSWORD' },
+        });
+        if (count > 0) {
+          this.logger.warn(
+            `Retired ${count} local password credential(s) for ${email} on adoption by IdP ${authConfigId}`,
+          );
+        }
       }
     }
 

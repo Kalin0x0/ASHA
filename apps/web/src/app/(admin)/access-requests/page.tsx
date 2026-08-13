@@ -99,6 +99,8 @@ export default function AccessRequestsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   /** Public sign-up switch. null while loading so the toggle doesn't flicker. */
   const [signupOpen, setSignupOpen] = useState<boolean | null>(null);
+  /** False when another org serves public sign-up — the switch would do nothing. */
+  const [signupConfigurable, setSignupConfigurable] = useState(true);
   const [togglingSignup, setTogglingSignup] = useState(false);
 
   // Approve dialog
@@ -130,7 +132,10 @@ export default function AccessRequestsPage() {
   useEffect(() => {
     if (!isLive) return;
     getAccountRequestSettings()
-      .then((s) => setSignupOpen(s.enabled))
+      .then((s) => {
+        setSignupOpen(s.enabled);
+        setSignupConfigurable(s.configurable);
+      })
       .catch(() => setSignupOpen(false));
   }, []);
 
@@ -266,9 +271,13 @@ export default function AccessRequestsPage() {
               <div>
                 <p className="text-sm font-medium">{t('toggle.title')}</p>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  {signupOpen ? t('toggle.onBody') : t('toggle.offBody')}
+                  {!signupConfigurable
+                    ? t('toggle.notConfigurable')
+                    : signupOpen
+                      ? t('toggle.onBody')
+                      : t('toggle.offBody')}
                 </p>
-                {signupOpen && (
+                {signupOpen && signupConfigurable && (
                   <p className="mt-1.5 text-[11px] text-muted-foreground/70">
                     <span className="text-muted-foreground">{t('toggle.publicUrl')}</span>{' '}
                     <code className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono" dir="ltr">
@@ -285,7 +294,7 @@ export default function AccessRequestsPage() {
                 role="switch"
                 aria-checked={!!signupOpen}
                 aria-label={signupOpen ? t('toggle.close') : t('toggle.open')}
-                disabled={signupOpen === null || togglingSignup}
+                disabled={signupOpen === null || togglingSignup || !signupConfigurable}
                 onClick={() => void onToggleSignup()}
                 className={cn(
                   'ring-gold-focus relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50',

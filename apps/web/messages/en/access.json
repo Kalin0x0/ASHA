@@ -291,7 +291,8 @@
       "open": "Open public sign-up",
       "close": "Close public sign-up",
       "opened": "Public sign-up is open",
-      "closed": "Public sign-up is closed"
+      "closed": "Public sign-up is closed",
+      "notConfigurable": "Public sign-up is served by the primary organisation and can only be configured there."
     }
   }
 }

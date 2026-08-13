@@ -291,7 +291,8 @@
       "open": "Öffentliche Registrierung öffnen",
       "close": "Öffentliche Registrierung schließen",
       "opened": "Öffentliche Registrierung ist geöffnet",
-      "closed": "Öffentliche Registrierung ist geschlossen"
+      "closed": "Öffentliche Registrierung ist geschlossen",
+      "notConfigurable": "Die öffentliche Registrierung wird von der primären Organisation bereitgestellt und kann nur dort konfiguriert werden."
     }
   }
 }

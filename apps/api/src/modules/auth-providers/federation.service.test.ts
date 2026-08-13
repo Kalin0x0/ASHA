@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     user: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+    userCredential: { deleteMany: vi.fn() },
     ssoMapping: { findMany: vi.fn() },
     userGroup: { findMany: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
   },
@@ -21,6 +22,35 @@ describe('FederationService.provision', () => {
     svc = new FederationService();
     prismaMock.ssoMapping.findMany.mockResolvedValue([]);
     prismaMock.userGroup.findMany.mockResolvedValue([]);
+    prismaMock.userCredential.deleteMany.mockResolvedValue({ count: 0 });
+  });
+
+  it('retires a local password when an unbound account is adopted by an IdP', async () => {
+    // Account pre-hijacking: whoever set that password did so before the address
+    // was proven to belong to this identity. Leaving it live would let them keep
+    // signing in as the now-SSO-managed user, with the IdP-mapped groups.
+    const local = { id: 'u9', orgId: 'org1', email: 'jane@corp.com', status: 'ACTIVE', federatedFrom: null };
+    prismaMock.user.findFirst.mockResolvedValue(local);
+    prismaMock.user.update.mockResolvedValue({ ...local, federatedFrom: 'ac1' });
+    prismaMock.userCredential.deleteMany.mockResolvedValue({ count: 1 });
+
+    await svc.provision('org1', 'ac1', { email: 'jane@corp.com' });
+
+    expect(prismaMock.userCredential.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'u9', kind: 'PASSWORD' },
+    });
+  });
+
+  it('leaves credentials alone when the account is already bound to that IdP', async () => {
+    prismaMock.user.findFirst.mockResolvedValue({
+      id: 'u8',
+      orgId: 'org1',
+      email: 'b@x.io',
+      status: 'ACTIVE',
+      federatedFrom: 'ac1',
+    });
+    await svc.provision('org1', 'ac1', { email: 'b@x.io' });
+    expect(prismaMock.userCredential.deleteMany).not.toHaveBeenCalled();
   });
 
   it('JIT-creates a new user on first SSO login', async () => {
