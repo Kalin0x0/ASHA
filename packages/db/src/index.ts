@@ -72,6 +72,10 @@ const TENANT_MODELS = new Set<string>([
   'ConfigExportBundle',
   'Tariff',
   'TariffAssignment',
+  // Public sign-up requests. The public submit path runs with no tenant context
+  // and resolves its org explicitly, so it is unaffected; listing it here hardens
+  // the admin review routes against a cross-tenant id.
+  'AccountRequest',
 ]);
 
 // Batch operations: wrap where in AND so orgId is added as an extra filter.

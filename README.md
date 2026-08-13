@@ -92,6 +92,7 @@ Built from scratch or on open-source tooling — **nothing derived from any prop
 | 🛡 | **Multi-tenancy & RBAC** — 40+ Prisma models, permission matrix, app-layer org scoping + Postgres RLS backstop. |
 | 👤 | **Self-service profile** — photo, name, e-mail, password & TOTP two-factor, plus a live plan-&-usage view. |
 | ⏱ | **Tariffs & isolation** — time budgets (per-minute/hour/month) metered & enforced, deny-by-default workspace visibility, and a one-shot **10-minute demo** account. |
+| ✅ | **Approval-gated sign-up** — visitors request a demo/test account at `/request-access`; nothing is created until an admin approves it, optionally time-boxed to an hour, day, week or month. Off by default. |
 
 ### Operations & scale
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowRight, Fingerprint, KeyRound, Network, ShieldCheck, Timer, Zap } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
@@ -13,6 +14,7 @@ import { useAuth } from '@/lib/api/auth-context';
 import { getAuth } from '@/lib/api/auth-store';
 import {
   type ApiPublicAuthProvider,
+  getAccountRequestConfig,
   getDemoConfig,
   getPublicAuthProviders,
   ssoLoginUrl,
@@ -37,6 +39,7 @@ export default function LoginPage() {
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoEnabled, setDemoEnabled] = useState(false);
+  const [signupEnabled, setSignupEnabled] = useState(false);
   const [ssoProviders, setSsoProviders] = useState<ApiPublicAuthProvider[]>([]);
 
   useEffect(() => {
@@ -47,6 +50,9 @@ export default function LoginPage() {
     getDemoConfig()
       .then((c) => setDemoEnabled(c.enabled))
       .catch(() => setDemoEnabled(false));
+    getAccountRequestConfig()
+      .then((c) => setSignupEnabled(c.enabled))
+      .catch(() => setSignupEnabled(false));
   }, []);
 
   const onDemo = async () => {
@@ -296,6 +302,17 @@ export default function LoginPage() {
               </Button>
               <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground/80">{t('demo.notice')}</p>
             </div>
+          )}
+
+          {(signupEnabled || !isLive) && (
+            <p className="mt-5 text-center text-sm text-muted-foreground">
+              <Link
+                href="/request-access"
+                className="ring-gold-focus rounded text-gold-300 transition-colors hover:text-gold-200 hover:underline"
+              >
+                {t('requestAccessCta')}
+              </Link>
+            </p>
           )}
 
           <div className="mt-6 flex items-center gap-2.5 rounded-[var(--radius-md)] border border-border-subtle bg-[color-mix(in_srgb,var(--surface-1)_50%,transparent)] px-3.5 py-3">
