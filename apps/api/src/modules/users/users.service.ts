@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { hashPassword } from '@asha/crypto';
@@ -34,6 +35,8 @@ export interface CreateUserInput {
   isSystemAdmin?: boolean;
   locale?: string;
   deactivatesAt?: string | null;
+  /** Groups to place the user in. Omitted ⇒ the org's default group. */
+  groupIds?: string[];
 }
 
 export interface UpdateUserInput {
@@ -86,6 +89,8 @@ function parseCsv(csv: string): Array<Record<string, string>> {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger('Users');
+
   constructor(private readonly sessions: SessionsService) {}
 
   async list(user: AuthUser, q?: string) {
@@ -133,6 +138,13 @@ export class UsersService {
     });
     if (existing) throw new ConflictException('A user with this email or username already exists');
 
+    // Permissions come from groups only (user → group → role → permission), so a
+    // user created with no group holds none at all — not even WORKSPACE_VIEW. They
+    // sign in fine and then see an empty app, and a workspace assigned directly to
+    // them still does not appear, because listing workspaces is itself gated. Put
+    // every new account in the org's default group unless the caller picks groups.
+    const groupIds = dto.groupIds?.length ? await this.validGroupIds(user.orgId, dto.groupIds) : await this.defaultGroupIds(user.orgId);
+
     return prisma.user.create({
       data: {
         orgId: user.orgId,
@@ -146,9 +158,28 @@ export class UsersService {
         ...(dto.password
           ? { credentials: { create: { kind: 'PASSWORD', secret: await hashPassword(dto.password) } } }
           : {}),
+        ...(groupIds.length
+          ? { groups: { create: groupIds.map((groupId) => ({ orgId: user.orgId, groupId })) } }
+          : {}),
       },
       select: SAFE_SELECT,
     });
+  }
+
+  /** The org's default group, or nothing if the deployment has not marked one. */
+  private async defaultGroupIds(orgId: string): Promise<string[]> {
+    const group = await prisma.group.findFirst({ where: { orgId, isDefault: true }, select: { id: true } });
+    if (!group) {
+      this.logger.warn(`Org ${orgId} has no default group — new users are created without permissions`);
+      return [];
+    }
+    return [group.id];
+  }
+
+  /** Keeps caller-supplied group ids inside the tenant. */
+  private async validGroupIds(orgId: string, ids: string[]): Promise<string[]> {
+    const groups = await prisma.group.findMany({ where: { orgId, id: { in: ids } }, select: { id: true } });
+    return groups.map((g) => g.id);
   }
 
   /**

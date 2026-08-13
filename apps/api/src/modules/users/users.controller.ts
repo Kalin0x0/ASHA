@@ -16,6 +16,9 @@ const createSchema = z.object({
   // License/access expiry (ISO datetime). Null/omitted = perpetual. When it
   // passes the account is auto-deactivated (sellable time-limited accounts).
   deactivatesAt: z.string().datetime().nullable().optional(),
+  // Omitted ⇒ the org's default group, so an account is never created with no
+  // permissions at all. Pass [] deliberately to create a group-less user.
+  groupIds: z.array(z.string()).max(100).optional(),
 });
 type CreateDto = z.infer<typeof createSchema>;
 
