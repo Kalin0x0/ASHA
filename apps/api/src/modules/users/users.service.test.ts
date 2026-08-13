@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     user: { findFirst: vi.fn(), create: vi.fn(), delete: vi.fn(), count: vi.fn() },
+    group: { findFirst: vi.fn(), findMany: vi.fn() },
     session: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
@@ -24,6 +25,51 @@ describe('UsersService.create', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     svc = new UsersService(sessions as never);
+    prismaMock.group.findFirst.mockResolvedValue({ id: 'grp-default' });
+    prismaMock.group.findMany.mockResolvedValue([]);
+  });
+
+  it('places a new user in the org default group', async () => {
+    // Permissions come only from groups, so a group-less account holds none at
+    // all — it signs in and then sees an empty app, and even a workspace
+    // assigned directly to it stays invisible, because listing workspaces is
+    // itself permission-gated.
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({ id: 'u9' });
+    await svc.create(admin, { email: 'New@Asha.local' });
+    expect(prismaMock.group.findFirst.mock.calls[0]![0].where).toMatchObject({
+      orgId: 'org1',
+      isDefault: true,
+    });
+    expect(prismaMock.user.create.mock.calls[0]![0].data.groups).toEqual({
+      create: [{ orgId: 'org1', groupId: 'grp-default' }],
+    });
+  });
+
+  it('honours explicitly chosen groups instead of the default', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({ id: 'u9' });
+    prismaMock.group.findMany.mockResolvedValue([{ id: 'g1' }, { id: 'g2' }]);
+    await svc.create(admin, { email: 'a@asha.local', groupIds: ['g1', 'g2'] });
+    expect(prismaMock.group.findFirst).not.toHaveBeenCalled();
+    expect(prismaMock.user.create.mock.calls[0]![0].data.groups.create).toHaveLength(2);
+  });
+
+  it('drops group ids belonging to another tenant', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({ id: 'u9' });
+    prismaMock.group.findMany.mockResolvedValue([]); // none of them are ours
+    await svc.create(admin, { email: 'a@asha.local', groupIds: ['other-org-group'] });
+    expect(prismaMock.group.findMany.mock.calls[0]![0].where).toMatchObject({ orgId: 'org1' });
+    expect(prismaMock.user.create.mock.calls[0]![0].data).not.toHaveProperty('groups');
+  });
+
+  it('still creates the user when the org has no default group', async () => {
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({ id: 'u9' });
+    prismaMock.group.findFirst.mockResolvedValue(null);
+    await expect(svc.create(admin, { email: 'a@asha.local' })).resolves.toBeTruthy();
+    expect(prismaMock.user.create.mock.calls[0]![0].data).not.toHaveProperty('groups');
   });
 
   it('creates a user, lowercasing email + defaulting username, with a hashed password credential', async () => {
