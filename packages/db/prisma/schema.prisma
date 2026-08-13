@@ -61,6 +61,12 @@ enum CredentialKind {
   WEBAUTHN
 }
 
+enum AccountRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum TwoFactorType {
   TOTP
   WEBAUTHN
@@ -390,6 +396,51 @@ model DemoGrant {
   @@unique([orgId, email])
   @@unique([orgId, fingerprintHash])
   @@index([orgId])
+}
+
+/**
+ * A visitor's request for a demo / test account, awaiting admin approval.
+ *
+ * Deliberately NOT a `User` row with a PENDING status: a request is not an
+ * account. Keeping it in its own table means an unapproved request can never be
+ * counted by a licence gate, listed in the admin user table, exported over SCIM
+ * or resolved by any `prisma.user` lookup — the way a pending row in `User`
+ * inevitably would be.
+ *
+ * The requester chooses their password up front and it is bcrypt-hashed
+ * immediately (`passwordHash`); the plaintext never touches the database. On
+ * approval the hash is moved verbatim onto the created `UserCredential`, so the
+ * account works on first sign-in without the deployment needing any SMTP.
+ *
+ * One row per (orgId, email): a rejected request is revived in place if the same
+ * address applies again, which keeps this table from growing under retries.
+ */
+model AccountRequest {
+  id           String               @id @default(cuid())
+  orgId        String
+  email        String
+  username     String
+  displayName  String?
+  /// Free-text: who they are and what they want to evaluate. Shown to the admin.
+  reason       String?              @db.Text
+  /// bcrypt hash of the password the requester chose. Never plaintext.
+  passwordHash String
+  status       AccountRequestStatus @default(PENDING)
+  /// Best-effort abuse forensics for the public endpoint.
+  ip           String?
+  userAgent    String?
+  /// Set once reviewed — the admin, when, and why it was turned down.
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?
+  /// The `User` minted on approval. Kept after that user is deleted, as history.
+  createdUserId String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@unique([orgId, email])
+  @@index([orgId, status])
+  @@index([status, createdAt])
 }
 
 model UserCredential {

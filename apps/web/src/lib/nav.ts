@@ -49,6 +49,7 @@ import {
   SlidersHorizontal,
   Timer,
   TrendingUp,
+  UserPlus,
   Users,
   UsersRound,
   Webhook,
@@ -122,6 +123,7 @@ export const navGroups: NavGroup[] = [
     icon: Lock,
     items: [
       { key: 'users', href: '/users', icon: Users, perm: 'USER_VIEW' },
+      { key: 'accessRequests', href: '/access-requests', icon: UserPlus, perm: 'USER_VIEW' },
       { key: 'groups', href: '/groups', icon: UsersRound, perm: 'GROUP_MANAGE' },
       { key: 'roles', href: '/roles', icon: ShieldCheck, perm: 'ROLE_MANAGE' },
       { key: 'authentication', href: '/authentication', icon: KeyRound, perm: 'AUTH_MANAGE' },
