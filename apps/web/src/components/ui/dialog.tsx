@@ -19,7 +19,13 @@ export const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'glass-strong fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl p-6 shadow-[var(--shadow-lifted)] data-[state=open]:animate-rise',
+        // A centred `fixed` box grows in both directions, so without a height
+        // cap a long form simply extends past the top and bottom of the screen
+        // with nothing to scroll — the page behind cannot reach it either.
+        // Cap it to the viewport and let the panel itself scroll. `dvh` tracks
+        // mobile browser chrome; `overscroll-contain` keeps the wheel from
+        // chaining to the page once the dialog hits its end.
+        'glass-strong fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-xl p-6 shadow-[var(--shadow-lifted)] data-[state=open]:animate-rise',
         className,
       )}
       {...props}
