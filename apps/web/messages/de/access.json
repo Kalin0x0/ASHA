@@ -217,5 +217,81 @@
       "mappingAddFailed": "Zuordnung konnte nicht hinzugefügt werden",
       "mappingRemoveFailed": "Zuordnung konnte nicht entfernt werden"
     }
+  },
+  "requests": {
+    "title": "Zugangsanfragen",
+    "description": "Angefragte Demo- und Testkonten. Es wird nichts angelegt, bevor Sie freigeben.",
+    "filter": {
+      "pending": "Offen",
+      "all": "Alle"
+    },
+    "stats": {
+      "pending": "Wartet auf Prüfung",
+      "approved": "Freigegeben",
+      "rejected": "Abgelehnt"
+    },
+    "status": {
+      "PENDING": "Offen",
+      "APPROVED": "Freigegeben",
+      "REJECTED": "Abgelehnt"
+    },
+    "table": {
+      "requester": "Anfragende Person",
+      "reason": "Begründung",
+      "requested": "Angefragt",
+      "status": "Status"
+    },
+    "actions": {
+      "approve": "Freigeben",
+      "reject": "Ablehnen",
+      "delete": "Löschen",
+      "cancel": "Abbrechen",
+      "more": "Weitere Aktionen"
+    },
+    "approve": {
+      "title": "Anfrage freigeben",
+      "description": "Konto für {email} anlegen.",
+      "licenseHint": "Wie lange das Konto aktiv bleibt. Nach Ablauf wird es automatisch deaktiviert.",
+      "noteLabel": "Interne Notiz",
+      "notePlaceholder": "Optional — bleibt im Audit-Protokoll",
+      "notice": "Die anfragende Person meldet sich mit dem selbst gewählten Passwort an. Asha versendet keine E-Mail."
+    },
+    "confirm": {
+      "rejectTitle": "Diese Anfrage ablehnen?",
+      "rejectBody": "{email} erhält kein Konto. Das hinterlegte Passwort wird verworfen; eine erneute Anfrage ist später möglich.",
+      "deleteTitle": "Diese Anfrage löschen?",
+      "deleteBody": "Der Eintrag zu {email} wird endgültig entfernt. Ein bereits angelegtes Konto bleibt davon unberührt."
+    },
+    "toast": {
+      "approved": "Konto für {email} angelegt",
+      "rejected": "Anfrage abgelehnt",
+      "deleted": "Anfrage gelöscht"
+    },
+    "empty": {
+      "pendingTitle": "Keine offenen Anfragen",
+      "allTitle": "Noch keine Zugangsanfragen",
+      "body": "Anfragen erscheinen hier, sobald jemand ein Demo- oder Testkonto beantragt."
+    },
+    "liveOnly": {
+      "title": "Nur mit Live-Backend",
+      "body": "Zugangsanfragen kommen aus der API. Verbinden Sie die App mit einer Live-Installation, um sie zu prüfen."
+    },
+    "errors": {
+      "load": "Zugangsanfragen konnten nicht geladen werden",
+      "approve": "Anfrage konnte nicht freigegeben werden",
+      "reject": "Anfrage konnte nicht abgelehnt werden",
+      "delete": "Anfrage konnte nicht gelöscht werden",
+      "toggle": "Einstellung konnte nicht geändert werden"
+    },
+    "toggle": {
+      "title": "Öffentliche Registrierung",
+      "onBody": "Besucher können einen Demo- oder Testzugang anfragen. Jede Anfrage braucht weiterhin Ihre Freigabe.",
+      "offBody": "Geschlossen – das Anfrageformular ist ausgeblendet und der öffentliche Endpunkt lehnt Einsendungen ab.",
+      "publicUrl": "Öffentliches Formular:",
+      "open": "Öffentliche Registrierung öffnen",
+      "close": "Öffentliche Registrierung schließen",
+      "opened": "Öffentliche Registrierung ist geöffnet",
+      "closed": "Öffentliche Registrierung ist geschlossen"
+    }
   }
 }

@@ -26,6 +26,7 @@
       "casting": "Casting",
       "sharing": "Sharing",
       "users": "Users",
+      "accessRequests": "Access requests",
       "groups": "Groups",
       "roles": "Roles",
       "authentication": "Authentication",

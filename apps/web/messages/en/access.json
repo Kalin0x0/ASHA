@@ -217,5 +217,81 @@
       "mappingAddFailed": "Could not add mapping",
       "mappingRemoveFailed": "Could not remove mapping"
     }
+  },
+  "requests": {
+    "title": "Access requests",
+    "description": "Demo and test accounts people have applied for. Nothing is created until you approve it.",
+    "filter": {
+      "pending": "Pending",
+      "all": "All"
+    },
+    "stats": {
+      "pending": "Awaiting review",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    },
+    "table": {
+      "requester": "Requester",
+      "reason": "Reason",
+      "requested": "Requested",
+      "status": "Status"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "more": "More actions"
+    },
+    "approve": {
+      "title": "Approve request",
+      "description": "Create an account for {email}.",
+      "licenseHint": "How long the account stays active. It is deactivated automatically when the time is up.",
+      "noteLabel": "Internal note",
+      "notePlaceholder": "Optional — kept in the audit trail",
+      "notice": "The requester signs in with the password they chose. No e-mail is sent by Asha."
+    },
+    "confirm": {
+      "rejectTitle": "Reject this request?",
+      "rejectBody": "{email} will not get an account. The stored password is discarded and they can apply again later.",
+      "deleteTitle": "Delete this request?",
+      "deleteBody": "The record for {email} is removed permanently. This does not touch an account that was already created."
+    },
+    "toast": {
+      "approved": "Account created for {email}",
+      "rejected": "Request rejected",
+      "deleted": "Request deleted"
+    },
+    "empty": {
+      "pendingTitle": "No requests awaiting review",
+      "allTitle": "No access requests yet",
+      "body": "Requests appear here when someone applies for a demo or test account."
+    },
+    "liveOnly": {
+      "title": "Available with a live backend",
+      "body": "Access requests come from the API. Connect this app to a live deployment to review them."
+    },
+    "errors": {
+      "load": "Could not load access requests",
+      "approve": "Could not approve the request",
+      "reject": "Could not reject the request",
+      "delete": "Could not delete the request",
+      "toggle": "Could not change the setting"
+    },
+    "toggle": {
+      "title": "Public sign-up",
+      "onBody": "Visitors can request a demo or test account. Every request still needs your approval.",
+      "offBody": "Closed — the request form is hidden and the public endpoint refuses submissions.",
+      "publicUrl": "Public form:",
+      "open": "Open public sign-up",
+      "close": "Close public sign-up",
+      "opened": "Public sign-up is open",
+      "closed": "Public sign-up is closed"
+    }
   }
 }

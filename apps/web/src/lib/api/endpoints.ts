@@ -139,6 +139,79 @@ export function loginAsDemo(body: { email: string; fingerprint: string }) {
   return apiFetch<ApiDemoResponse>('/auth/demo', { method: 'POST', body, auth: false });
 }
 
+// ── Account requests (approval-gated sign-up) ────────────────────────────────
+
+export interface ApiAccountRequest {
+  id: string;
+  email: string;
+  username: string;
+  displayName: string | null;
+  reason: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  ip: string | null;
+  userAgent: string | null;
+  reviewedById: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  createdUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Whether visitors may request an account on this deployment (default off). */
+export function getAccountRequestConfig() {
+  return apiFetch<{ enabled: boolean }>('/account-requests/config', { auth: false });
+}
+
+/** Public: file a request for a demo/test account. Returns a status only. */
+export function submitAccountRequest(body: {
+  email: string;
+  username?: string;
+  displayName?: string;
+  reason?: string;
+  password: string;
+}) {
+  return apiFetch<{ status: 'PENDING' }>('/account-requests', { method: 'POST', body, auth: false });
+}
+
+export function getAccountRequests(status?: string) {
+  return apiFetch<ApiAccountRequest[]>(
+    `/account-requests${status ? `?status=${encodeURIComponent(status)}` : ''}`,
+  );
+}
+
+export function getAccountRequestStats() {
+  return apiFetch<{ pending: number; approved: number; rejected: number }>('/account-requests/stats');
+}
+
+/** Admin view of the public sign-up toggle (default off). */
+export function getAccountRequestSettings() {
+  return apiFetch<{ enabled: boolean }>('/account-requests/settings');
+}
+
+export function setAccountRequestSettings(enabled: boolean) {
+  return apiFetch<{ enabled: boolean }>('/account-requests/settings', { method: 'PUT', body: { enabled } });
+}
+
+/** Approve a request — mints the real account. `deactivatesAt` time-boxes it. */
+export function approveAccountRequest(
+  id: string,
+  body: { deactivatesAt?: string | null; groupId?: string; note?: string } = {},
+) {
+  return apiFetch<{ request: ApiAccountRequest; user: ApiUser }>(`/account-requests/${id}/approve`, {
+    method: 'POST',
+    body,
+  });
+}
+
+export function rejectAccountRequest(id: string, body: { note?: string } = {}) {
+  return apiFetch<ApiAccountRequest>(`/account-requests/${id}/reject`, { method: 'POST', body });
+}
+
+export function deleteAccountRequest(id: string) {
+  return apiFetch<{ ok: true }>(`/account-requests/${id}`, { method: 'DELETE' });
+}
+
 // ── Self-service account / profile ───────────────────────────────────────────
 export interface ApiAccount {
   id: string;

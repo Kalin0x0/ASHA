@@ -11,6 +11,7 @@ import { TenantInterceptor } from './common/tenant.interceptor';
 import { AgentsModule } from './modules/agents/agents.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { AccountModule } from './modules/account/account.module';
+import { AccountRequestsModule } from './modules/account-requests/account-requests.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthProvidersModule } from './modules/auth-providers/auth-providers.module';
 import { DemoModule } from './modules/demo/demo.module';
@@ -112,6 +113,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     LicensingModule,
     TariffsModule,
     DemoModule,
+    AccountRequestsModule,
     AccountModule,
     RegistryModule,
     ScimModule,
