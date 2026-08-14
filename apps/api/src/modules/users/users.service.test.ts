@@ -64,6 +64,16 @@ describe('UsersService.create', () => {
     expect(prismaMock.user.create.mock.calls[0]![0].data).not.toHaveProperty('groups');
   });
 
+  it('treats an explicit empty groupIds as "no groups", not as "use the default"', async () => {
+    // The CSV import relies on this: it names its own groups and must not have
+    // the org default silently added on top.
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({ id: 'u9' });
+    await svc.create(admin, { email: 'a@asha.local', groupIds: [] });
+    expect(prismaMock.group.findFirst).not.toHaveBeenCalled();
+    expect(prismaMock.user.create.mock.calls[0]![0].data).not.toHaveProperty('groups');
+  });
+
   it('still creates the user when the org has no default group', async () => {
     prismaMock.user.findFirst.mockResolvedValue(null);
     prismaMock.user.create.mockResolvedValue({ id: 'u9' });

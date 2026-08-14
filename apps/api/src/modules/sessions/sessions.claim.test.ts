@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     workspace: { findUnique: vi.fn(), findFirst: vi.fn() },
+    setting: { findUnique: vi.fn() },
     deploymentZone: { findUnique: vi.fn(), findFirst: vi.fn() },
     session: {
       create: vi.fn(),
@@ -68,6 +69,10 @@ describe('SessionsService.create — staged claim', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // These tests exercise the pre-warm pool, not access control: the launching
+    // user is granted the workspace (grant enforcement has its own suite).
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
+    prismaMock.setting.findUnique.mockResolvedValue(null);
     scheduler = { pickAgent: vi.fn(), pickZoneWithLiveAgent: vi.fn().mockResolvedValue(null) };
     redis = { publish: vi.fn().mockResolvedValue(true), get: vi.fn().mockResolvedValue(null), set: vi.fn().mockResolvedValue(undefined) };
     audit = { record: vi.fn().mockResolvedValue(undefined) };
