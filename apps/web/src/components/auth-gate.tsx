@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/api/auth-context';
@@ -49,10 +50,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 function AuthGateFallback() {
+  const t = useTranslations('common');
   return (
     <div className="flex min-h-screen items-center justify-center" role="status" aria-live="polite">
       <span className="size-6 animate-spin rounded-full border-2 border-border-subtle border-t-gold-500" />
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t('labels.loading')}</span>
     </div>
   );
 }

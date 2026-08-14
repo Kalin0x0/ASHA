@@ -1,6 +1,7 @@
 'use client';
 
 import { Copy, Download, Loader2, Send, TerminalSquare } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -27,12 +28,12 @@ function useOrigin() {
   return typeof window !== 'undefined' ? window.location.origin : 'https://asha.example.com';
 }
 
-async function copy(text: string) {
+async function copy(text: string, okMsg: string, failMsg: string) {
   try {
     await navigator.clipboard.writeText(text);
-    toast.success('Copied to clipboard');
+    toast.success(okMsg);
   } catch {
-    toast.error('Clipboard access was blocked');
+    toast.error(failMsg);
   }
 }
 
@@ -40,9 +41,10 @@ async function copy(text: string) {
  * Discoverability + remote deploy for the installable Windows host agent. Shows
  * the local install command, download links, and a "Deploy to hosts by IP"
  * dialog that mints a registration token and builds the ready-to-run remote
- * deploy command (WinRM). Inline EN to match this admin page.
+ * deploy command (WinRM).
  */
 export function AgentInstallCard() {
+  const t = useTranslations('infrastructure.agentInstall');
   const origin = useOrigin();
   const [deployOpen, setDeployOpen] = useState(false);
   const localCmd = `powershell -ExecutionPolicy Bypass -File install.ps1 -AshaUrl "${origin}" -Token "<REGISTRATION_TOKEN>" -EnableRdp`;
@@ -55,14 +57,13 @@ export function AgentInstallCard() {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-medium">Install the Windows agent</p>
+            <p className="font-medium">{t('title')}</p>
             <Button variant="secondary" size="sm" onClick={() => setDeployOpen(true)}>
-              <Send className="size-3.5" /> Deploy to hosts by IP
+              <Send className="size-3.5" /> {t('deployButton')}
             </Button>
           </div>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Run this on a Windows desktop/server (admin PowerShell) to auto-register it and keep it Online.
-            Generate a registration token under Access → Authentication first.
+            {t('description')}
           </p>
           <div className="mt-2 flex items-center gap-2">
             <code
@@ -71,13 +72,13 @@ export function AgentInstallCard() {
             >
               {localCmd}
             </code>
-            <Button variant="secondary" size="sm" onClick={() => void copy(localCmd)}>
-              <Copy className="size-3.5" /> Copy
+            <Button variant="secondary" size="sm" onClick={() => void copy(localCmd, t('copiedToast'), t('clipboardBlockedToast'))}>
+              <Copy className="size-3.5" /> {t('copy')}
             </Button>
           </div>
 
           <p className="mt-2.5 mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Download the agent
+            {t('downloadTitle')}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {FILES.map(({ file, label }) => (
@@ -92,8 +93,7 @@ export function AgentInstallCard() {
             ))}
           </div>
           <p className="mt-1.5 text-[11px] text-muted-foreground">
-            <code>install.ps1</code> = install on this machine · <code>remote-install.ps1</code> = push to other
-            hosts by IP (WinRM).
+            {t.rich('filesHint', { code: (chunks) => <code>{chunks}</code> })}
           </p>
         </div>
       </div>
@@ -112,6 +112,7 @@ function DeployDialog({
   onOpenChange: (o: boolean) => void;
   origin: string;
 }) {
+  const t = useTranslations('infrastructure.agentInstall');
   const [hosts, setHosts] = useState('');
   const [enableRdp, setEnableRdp] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -124,14 +125,14 @@ function DeployDialog({
 
   const generate = async () => {
     if (targets.length === 0) {
-      toast.error('Enter at least one host IP or name.');
+      toast.error(t('deploy.noHostsToast'));
       return;
     }
     setBusy(true);
     try {
       let token = '<REGISTRATION_TOKEN>';
       if (isLive) {
-        const minted = await mintRegistrationToken({ name: `Agent deploy ${new Date().toISOString().slice(0, 16)}` });
+        const minted = await mintRegistrationToken({ name: t('deploy.tokenName', { date: new Date().toISOString().slice(0, 16) }) });
         token = minted.token;
       }
       const rdp = enableRdp ? ' -EnableRdp' : '';
@@ -139,9 +140,9 @@ function DeployDialog({
         `$cred = Get-Credential\n` +
           `./remote-install.ps1 -ComputerName ${targets.join(',')} -AshaUrl "${origin}" -Token "${token}" -Credential $cred${rdp}`,
       );
-      if (!isLive) toast.message('Demo mode — token is a placeholder. Connect the live API to mint a real one.');
+      if (!isLive) toast.message(t('deploy.demoToast'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not mint a registration token.');
+      toast.error(err instanceof Error ? err.message : t('deploy.mintFailedToast'));
     } finally {
       setBusy(false);
     }
@@ -158,17 +159,16 @@ function DeployDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Send className="size-5 text-gold-300" /> Deploy agent to hosts by IP
+            <Send className="size-5 text-gold-300" /> {t('deploy.title')}
           </DialogTitle>
           <DialogDescription>
-            Generates a remote-deploy command (PowerShell Remoting / WinRM) that installs the agent on the hosts
-            you list — run it from a Windows admin box that can reach them. WinRM must be enabled on the targets.
+            {t('deploy.description')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           <div>
-            <Label htmlFor="deploy-hosts">Target hosts (IP or hostname, one per line or comma-separated)</Label>
+            <Label htmlFor="deploy-hosts">{t('deploy.hostsLabel')}</Label>
             <textarea
               id="deploy-hosts"
               dir="ltr"
@@ -181,15 +181,15 @@ function DeployDialog({
           </div>
           <label className="flex items-center gap-2.5 text-sm">
             <input type="checkbox" checked={enableRdp} onChange={(e) => setEnableRdp(e.target.checked)} className="size-4 accent-gold-500" />
-            Enable Remote Desktop on each host
+            {t('deploy.enableRdp')}
           </label>
 
           {command && (
             <div>
               <div className="mb-1 flex items-center justify-between">
-                <Label>Run this from a Windows admin box</Label>
-                <Button variant="ghost" size="sm" onClick={() => void copy(command)}>
-                  <Copy className="size-3.5" /> Copy
+                <Label>{t('deploy.commandLabel')}</Label>
+                <Button variant="ghost" size="sm" onClick={() => void copy(command, t('copiedToast'), t('clipboardBlockedToast'))}>
+                  <Copy className="size-3.5" /> {t('copy')}
                 </Button>
               </div>
               <pre dir="ltr" className="overflow-x-auto rounded-md border border-border-subtle bg-anthracite-950/60 p-3 font-mono text-[11px] text-muted-foreground">
@@ -201,11 +201,11 @@ function DeployDialog({
 
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-            Close
+            {t('deploy.close')}
           </Button>
           <Button size="sm" onClick={() => void generate()} disabled={busy}>
             {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-            {command ? 'Regenerate' : 'Generate command'}
+            {command ? t('deploy.regenerate') : t('deploy.generate')}
           </Button>
         </DialogFooter>
       </DialogContent>
