@@ -212,9 +212,11 @@ export class TariffsService {
       factors.set(wid, ws?.minuteCostFactor ?? 1);
     }
     const resolved = new Map<string, EffectiveTariff | null>(); // cache per user
-    const exhausted: string[] = [];
+    // Budget holders (org+user) whose balance is gone after this tick.
+    const exhaustedHolders = new Set<string>();
 
     for (const s of sessions) {
+      const key = `${s.orgId}:${s.userId}`;
       // Server-backed sessions may have no workspace → real-time (factor 1).
       const factor = s.workspaceId ? (factors.get(s.workspaceId) ?? 1) : 1;
       const target = Math.floor(((now - s.startedAt!.getTime()) / 1000) * factor);
@@ -222,19 +224,26 @@ export class TariffsService {
       if (delta <= 0) continue;
       await prisma.session.update({ where: { id: s.id }, data: { consumedSeconds: target } });
 
-      const key = `${s.orgId}:${s.userId}`;
       if (!resolved.has(key)) resolved.set(key, await this.resolveForUser(s.orgId, s.userId!));
       const eff = resolved.get(key);
       if (!eff || eff.budgetMinutes == null) continue; // unlimited holder
 
-      const res = await prisma.tariffAssignment.updateMany({
+      await prisma.tariffAssignment.updateMany({
         where: { id: eff.assignmentId, remainingSeconds: { gt: 0 } },
         data: { remainingSeconds: { decrement: Math.min(delta, eff.remainingSeconds) } },
       });
       eff.remainingSeconds = Math.max(0, eff.remainingSeconds - delta);
-      if (res.count > 0 && eff.remainingSeconds <= 0) exhausted.push(s.id);
+      if (eff.remainingSeconds <= 0) exhaustedHolders.add(key);
     }
-    return exhausted;
+
+    // The budget is shared across a holder's sessions, so when it runs out every
+    // one of them has to go — not just whichever happened to cross zero. Keying
+    // off the per-session `updateMany` count did the latter: the first session
+    // consumed the last of the balance, the rest then matched no row
+    // (`remainingSeconds > 0` was already false) and ran on unmetered to their
+    // own expiry. A second pass also catches sessions this tick skipped for
+    // delta <= 0, and holders who were already at zero when the tick began.
+    return sessions.filter((s) => exhaustedHolders.has(`${s.orgId}:${s.userId}`)).map((s) => s.id);
   }
 
   /** Refill budgets whose period has rolled over. Returns the number reset. */

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Mock the data layer + crypto. hashToken is identity-prefixed so a presented
 // key maps predictably to a stored hash; safeEqual is a plain compare.
 const { prismaMock } = vi.hoisted(() => ({
-  prismaMock: { apiKey: { findUnique: vi.fn(), update: vi.fn() } },
+  prismaMock: { apiKey: { findUnique: vi.fn(), update: vi.fn() }, user: { findUnique: vi.fn() } },
 }));
 vi.mock('@asha/db', () => ({ prisma: prismaMock, runUnscoped: (fn: () => unknown) => fn() }));
 vi.mock('@asha/crypto', () => ({
@@ -39,7 +39,11 @@ function makeCtx(headers: Record<string, string>, required?: string[]) {
 }
 
 describe('ApiKeyGuard', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default: the key's owner is a healthy account.
+    prismaMock.user.findUnique.mockResolvedValue({ status: 'ACTIVE', deactivatesAt: null });
+  });
 
   it('rejects a missing / too-short key', async () => {
     const { ctx, reflector } = makeCtx({});
@@ -90,5 +94,50 @@ describe('ApiKeyGuard', () => {
     prismaMock.apiKey.findUnique.mockResolvedValue({ ...VALID_ROW, scopes: ['*'] });
     const { ctx, reflector } = makeCtx({ 'x-api-key': KEY }, ['sessions:write', 'sessions:read']);
     await expect(new ApiKeyGuard(reflector).canActivate(ctx)).resolves.toBe(true);
+  });
+});
+
+describe('ApiKeyGuard — the key inherits its owner’s standing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prismaMock.apiKey.findUnique.mockResolvedValue(VALID_ROW);
+    prismaMock.apiKey.update.mockResolvedValue({});
+  });
+
+  const run = () => {
+    const { ctx, reflector } = makeCtx({ 'x-api-key': KEY });
+    return new ApiKeyGuard(reflector).canActivate(ctx);
+  };
+
+  it('rejects a key whose owner was disabled in the UI', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ status: 'DISABLED', deactivatesAt: null });
+    await expect(run()).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects a key whose owner was SCIM-deprovisioned (row gone)', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    await expect(run()).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects a key whose owner’s licence has run out', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ status: 'ACTIVE', deactivatesAt: new Date(Date.now() - 1000) });
+    await expect(run()).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects an orphaned key left behind by a deleted owner (userId set null)', async () => {
+    prismaMock.apiKey.findUnique.mockResolvedValue({ ...VALID_ROW, userId: null });
+    await expect(run()).rejects.toThrow(UnauthorizedException);
+    expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('still accepts a key whose owner is active', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ status: 'ACTIVE', deactivatesAt: null });
+    await expect(run()).resolves.toBe(true);
+  });
+
+  it('does not stamp lastUsedAt for a rejected key', async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ status: 'DISABLED', deactivatesAt: null });
+    await run().catch(() => undefined);
+    expect(prismaMock.apiKey.update).not.toHaveBeenCalled();
   });
 });

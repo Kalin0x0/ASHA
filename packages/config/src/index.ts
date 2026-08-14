@@ -69,8 +69,48 @@ export const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+/**
+ * The development defaults above that are security-critical. They exist so
+ * `pnpm dev:api` boots without a full `.env`, but this is an open-source
+ * self-hosted product: every one of these strings is published in this
+ * repository, so a deployment still holding one is signing tokens (or sealing
+ * credentials) with a key the whole internet can read. Production must not be
+ * allowed to start that way.
+ */
+const INSECURE_DEFAULTS: Readonly<Record<string, string>> = {
+  JWT_ACCESS_SECRET: 'dev-access-secret-change-me-please-32++chars',
+  JWT_REFRESH_SECRET: 'dev-refresh-secret-change-me-please-32++chars',
+  SESSION_TOKEN_SECRET: 'dev-session-token-secret-change-me-32++chars',
+  SECRET_SEAL_KEY: '0123456789abcdef0123456789abcdef',
+  GUAC_CRYPT_SECRET: 'MySuperSecretKeyForParamsToken12',
+  ASHA_AGENT_ENROLLMENT_TOKEN: 'dev-enrollment-token-change-me',
+};
+
+/** Which security-critical values are still at their published dev default. */
+export function insecureDefaultsInUse(env: Env): string[] {
+  return Object.entries(INSECURE_DEFAULTS)
+    .filter(([key, dev]) => (env as unknown as Record<string, unknown>)[key] === dev)
+    .map(([key]) => key);
+}
+
 export function loadEnv(src: NodeJS.ProcessEnv = process.env): Env {
-  return envSchema.parse(src);
+  const env = envSchema.parse(src);
+
+  // Fail closed rather than booting a production deployment with keys anyone
+  // can look up. Development and tests keep the convenient defaults.
+  if (env.NODE_ENV === 'production') {
+    const weak = insecureDefaultsInUse(env);
+    if (weak.length > 0) {
+      throw new Error(
+        `Refusing to start: ${weak.join(', ')} ${weak.length === 1 ? 'is' : 'are'} still set to the ` +
+          'development default shipped in this repository. Generate a unique value for each ' +
+          '(e.g. `openssl rand -hex 32`) and set it in the environment before starting in production. ' +
+          'GUAC_CRYPT_SECRET must be exactly 32 characters.',
+      );
+    }
+  }
+
+  return env;
 }
 
 export function corsOrigins(env: Env): string[] {
