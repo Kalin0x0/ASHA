@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // pulls no Prisma client, Redis connection, or env validation.
 const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
-    workspace: { findUnique: vi.fn() },
+    workspace: { findUnique: vi.fn(), findFirst: vi.fn() },
+    setting: { findUnique: vi.fn() },
     deploymentZone: { findUnique: vi.fn(), findFirst: vi.fn() },
     session: { create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn() },
     agent: { findFirst: vi.fn(), updateMany: vi.fn() },
@@ -369,5 +370,65 @@ describe('SessionsService ownership (non-admin)', () => {
       id: 's1', orgId: 'org1', userId: 'someone-else', workspaceId: 'ws1', connectionUrl: 'https://x', status: 'RUNNING',
     });
     await expect(svc.connection('s1', OWNER)).rejects.toThrow(/access/i);
+  });
+});
+
+describe('SessionsService.create workspace access grant', () => {
+  let svc: SessionsService;
+  const BOB = { sub: 'bob', orgId: 'org1', isSystemAdmin: false } as never;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    svc = new SessionsService(
+      {} as never,
+      { publish: vi.fn().mockResolvedValue(true) } as never,
+      { record: vi.fn().mockResolvedValue(undefined) } as never,
+    );
+    prismaMock.workspace.findUnique.mockResolvedValue(WORKSPACE);
+    prismaMock.userGroup.findMany.mockResolvedValue([]);
+    prismaMock.setting.findUnique.mockResolvedValue(null); // absent ⇒ deny-by-default
+  });
+
+  it('refuses a workspace the user was never granted', async () => {
+    // The catalog would not have listed it; the id came from elsewhere.
+    prismaMock.workspace.findFirst.mockResolvedValue(null);
+    await expect(svc.create(BOB, { workspaceId: 'ws1' } as never)).rejects.toThrow(/not available/i);
+    expect(prismaMock.session.create).not.toHaveBeenCalled();
+  });
+
+  it('reports the same error as an unknown id, so it cannot be used to probe', async () => {
+    prismaMock.workspace.findUnique.mockResolvedValue(null);
+    const unknown = await svc.create(BOB, { workspaceId: 'nope' } as never).catch((e) => e.message);
+    prismaMock.workspace.findUnique.mockResolvedValue(WORKSPACE);
+    prismaMock.workspace.findFirst.mockResolvedValue(null);
+    const ungranted = await svc.create(BOB, { workspaceId: 'ws1' } as never).catch((e) => e.message);
+    expect(ungranted).toBe(unknown);
+  });
+
+  it('checks the grant against both direct and group assignment', async () => {
+    prismaMock.userGroup.findMany.mockResolvedValue([{ groupId: 'g1' }]);
+    prismaMock.workspace.findFirst.mockResolvedValue(null);
+    await svc.create(BOB, { workspaceId: 'ws1' } as never).catch(() => undefined);
+    const where = prismaMock.workspace.findFirst.mock.calls[0]![0].where;
+    expect(where.id).toBe('ws1');
+    expect(where.OR).toEqual([
+      { assignedUsers: { some: { userId: 'bob' } } },
+      { groups: { some: { id: { in: ['g1'] } } } },
+    ]);
+  });
+
+  it('restores the legacy open model when isolation.denyByDefault is explicitly false', async () => {
+    prismaMock.setting.findUnique.mockResolvedValue({ valueJson: false });
+    prismaMock.workspace.findFirst.mockResolvedValue(null);
+    await svc.create(BOB, { workspaceId: 'ws1' } as never).catch(() => undefined);
+    const where = prismaMock.workspace.findFirst.mock.calls[0]![0].where;
+    expect(where.OR[0]).toEqual({ groups: { none: {} }, assignedUsers: { none: {} } });
+  });
+
+  it('does not gate system admins', async () => {
+    const ADMIN = { sub: 'a1', orgId: 'org1', isSystemAdmin: true } as never;
+    prismaMock.workspace.findUnique.mockResolvedValue(null); // stop early, we only assert the check
+    await svc.create(ADMIN, { workspaceId: 'ws1' } as never).catch(() => undefined);
+    expect(prismaMock.workspace.findFirst).not.toHaveBeenCalled();
   });
 });

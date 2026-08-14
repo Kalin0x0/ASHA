@@ -47,6 +47,19 @@ export class ScimService {
     if (key.expiresAt && key.expiresAt < new Date()) {
       throw new UnauthorizedException('SCIM bearer token has expired');
     }
+    // SCIM tokens are ApiKey rows that grant org-wide user create/patch/delete,
+    // so they must die with the account that minted them — the same rule
+    // ApiKeyGuard applies to ordinary keys.
+    if (key.userId) {
+      const owner = await prisma.user.findUnique({
+        where: { id: key.userId },
+        select: { status: true, deactivatesAt: true },
+      });
+      const expired = !!owner?.deactivatesAt && owner.deactivatesAt.getTime() <= Date.now();
+      if (!owner || owner.status !== 'ACTIVE' || expired) {
+        throw new UnauthorizedException('Invalid SCIM bearer token');
+      }
+    }
   }
 
   async issueToken(orgId: string, actorUserId: string): Promise<{ token: string; id: string }> {

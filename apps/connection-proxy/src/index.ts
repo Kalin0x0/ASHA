@@ -1,13 +1,16 @@
 import http from 'node:http';
 import { createLogger } from '@asha/logger';
 import { WebSocketServer } from 'ws';
-import { proxyEnv } from './env.js';
+import { assertProductionSecrets, proxyEnv } from './env.js';
 import { handleUpgrade } from './proxy.js';
 import { SessionStore } from './session-store.js';
 
 const log = createLogger('proxy');
 
 async function main(): Promise<void> {
+  // Before anything listens: never guard session streams with a published key.
+  assertProductionSecrets();
+
   log.info({ port: proxyEnv.port }, 'Asha connection-proxy starting');
 
   const store = new SessionStore();

@@ -143,7 +143,13 @@ export class UsersService {
     // sign in fine and then see an empty app, and a workspace assigned directly to
     // them still does not appear, because listing workspaces is itself gated. Put
     // every new account in the org's default group unless the caller picks groups.
-    const groupIds = dto.groupIds?.length ? await this.validGroupIds(user.orgId, dto.groupIds) : await this.defaultGroupIds(user.orgId);
+    // `undefined` means "caller didn't choose" ⇒ default group. An explicit `[]`
+    // means "no groups" and must NOT fall back, or the CSV import (which names
+    // its own groups) would widen every imported account.
+    const groupIds =
+      dto.groupIds === undefined
+        ? await this.defaultGroupIds(user.orgId)
+        : await this.validGroupIds(user.orgId, dto.groupIds);
 
     return prisma.user.create({
       data: {
@@ -209,8 +215,14 @@ export class UsersService {
       }
       try {
         const isAdmin = ['1', 'true', 'yes'].includes((r.issystemadmin ?? '').toLowerCase());
+        // A row that names its groups means exactly those groups. Leaving
+        // groupIds off would fall back to the org default and silently widen
+        // every imported account's access beyond what the CSV asked for; the
+        // named groups are attached below, once resolved by name.
+        const namesGroups = Boolean((r.groups ?? '').trim());
         const created = await this.create(user, {
           email,
+          ...(namesGroups ? { groupIds: [] } : {}),
           username: r.username || undefined,
           displayName: r.displayname || undefined,
           password: r.password || undefined,

@@ -22,9 +22,17 @@ import type { FederatedProfile } from './federation.service';
 export class LdapService {
   constructor(@Inject(ENV) private readonly env: Env) {}
 
-  private async loadConfig(orgId: string, id: string) {
+  private async loadConfig(orgId: string, id: string, opts: { requireEnabled?: boolean } = {}) {
     const cfg = await prisma.authConfig.findFirst({ where: { id, orgId, type: 'LDAP' } });
     if (!cfg) throw new NotFoundException('LDAP provider not found');
+    // Turning a provider off must actually stop logins through it. OIDC filters
+    // on `enabled` in its query and SAML refuses a disabled config; LDAP checked
+    // neither, so a decommissioned (or compromised) directory kept minting
+    // sessions for anyone who still had the URL. Admin test/sync deliberately
+    // pass requireEnabled=false so a provider can be repaired while it is off.
+    if (opts.requireEnabled && !cfg.enabled) {
+      throw new BadRequestException('LDAP provider is disabled');
+    }
     const resolved = cfg.secretRef
       ? unsealConfig(cfg.secretRef, this.env.SECRET_SEAL_KEY)
       : (cfg.config as Record<string, unknown>);
@@ -77,7 +85,7 @@ export class LdapService {
    * user with the supplied password → return a normalized profile.
    */
   async authenticate(orgId: string, id: string, username: string, password: string): Promise<{ orgId: string; profile: FederatedProfile }> {
-    const c = await this.loadConfig(orgId, id);
+    const c = await this.loadConfig(orgId, id, { requireEnabled: true });
     const client = this.newClient(c);
     try {
       await client.bind(c.bindDN, c.bindPassword);
