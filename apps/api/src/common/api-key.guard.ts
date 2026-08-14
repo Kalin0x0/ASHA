@@ -41,6 +41,21 @@ export class ApiKeyGuard implements CanActivate {
       const k = await prisma.apiKey.findUnique({ where: { prefix } });
       if (!k || k.revokedAt || (k.expiresAt && k.expiresAt.getTime() < Date.now())) return null;
       if (!safeEqual(hashed, k.hashedKey)) return null;
+
+      // A key inherits its owner's standing. Disabling an account — or SCIM
+      // deprovisioning one — revokes its JWTs but writes nothing to ApiKey, so
+      // without this an offboarded employee's key kept launching sessions and
+      // reading org data indefinitely. `ApiKey.user` is onDelete: SetNull, so a
+      // deleted owner leaves the key orphaned; refuse that too rather than let
+      // it live on as a permanent org-wide credential.
+      if (!k.userId) return null;
+      const owner = await prisma.user.findUnique({
+        where: { id: k.userId },
+        select: { status: true, deactivatesAt: true },
+      });
+      if (!owner || owner.status !== 'ACTIVE') return null;
+      if (owner.deactivatesAt && owner.deactivatesAt.getTime() <= Date.now()) return null;
+
       await prisma.apiKey.update({ where: { id: k.id }, data: { lastUsedAt: new Date() } }).catch(() => undefined);
       return k;
     });

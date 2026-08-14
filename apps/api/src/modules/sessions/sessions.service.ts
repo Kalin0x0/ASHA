@@ -77,6 +77,12 @@ export class SessionsService {
     });
     if (!workspace || !workspace.enabled) throw new NotFoundException('Workspace not available');
 
+    // The catalog endpoint filters by access grant, but the workspace id travels
+    // in the request body — so filtering only the list lets any user launch a
+    // workspace they were never granted simply by naming its id. Apply the same
+    // grant rule here, where it actually gates the resource.
+    await this.assertWorkspaceGranted(user, workspace.id);
+
     // Server-backed workspaces (Windows desktops, etc.) connect to a fixed
     // RDP/VNC/SSH host via the connection-proxy — NOT a container. Reuse the
     // server connect path so "launch from My Workspace" behaves like a Static
@@ -237,6 +243,53 @@ export class SessionsService {
    * treated as "no cap" rather than a permanent lockout). The per-org license
    * cap is enforced separately in `create()`.
    */
+  /**
+   * Refuse to launch a workspace the caller was not granted. This mirrors the
+   * filter `WorkspacesService.launchableForUser` applies to the catalog — a
+   * direct `WorkspaceUser` grant, or one via a group the user belongs to — and
+   * honours the same `isolation.denyByDefault` ORG setting (absent ⇒ ON; only an
+   * explicit `false` restores the legacy "unassigned means everyone" model).
+   * System admins bypass, as everywhere else.
+   */
+  private async assertWorkspaceGranted(user: AuthUser, workspaceId: string) {
+    if (user.isSystemAdmin) return;
+
+    const [memberships, isolation] = await Promise.all([
+      prisma.userGroup.findMany({ where: { userId: user.sub }, select: { groupId: true } }),
+      prisma.setting.findUnique({
+        where: {
+          scope_orgId_zoneId_key: {
+            scope: 'ORG',
+            orgId: user.orgId,
+            zoneId: '',
+            key: 'isolation.denyByDefault',
+          },
+        },
+        select: { valueJson: true },
+      }),
+    ]);
+    const denyByDefault = isolation?.valueJson !== false;
+    const groupIds = memberships.map((m) => m.groupId);
+
+    const grantClauses = [
+      { assignedUsers: { some: { userId: user.sub } } },
+      ...(groupIds.length ? [{ groups: { some: { id: { in: groupIds } } } }] : []),
+    ];
+
+    const granted = await prisma.workspace.findFirst({
+      where: {
+        id: workspaceId,
+        OR: denyByDefault
+          ? grantClauses
+          : [{ groups: { none: {} }, assignedUsers: { none: {} } }, ...grantClauses],
+      },
+      select: { id: true },
+    });
+    // Same shape as an unknown id, so this cannot be used to probe which
+    // workspaces exist in the org.
+    if (!granted) throw new NotFoundException('Workspace not available');
+  }
+
   private async assertWithinGroupConcurrencyLimit(userId: string, orgId: string) {
     const memberships = await prisma.userGroup.findMany({
       where: { userId, orgId },

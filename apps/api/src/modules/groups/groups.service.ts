@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { prisma } from '@asha/db';
 import type { AuthUser } from '../../common/decorators';
+import { RbacService } from '../../common/rbac.service';
 
 export interface GroupInput {
   name: string;
@@ -35,6 +36,8 @@ const GROUP_INCLUDE = {
 /** Group is tenant-auto-scoped (orgId injected by the Prisma extension). */
 @Injectable()
 export class GroupsService {
+  constructor(private readonly rbac: RbacService) {}
+
   async list() {
     const groups = await prisma.group.findMany({
       orderBy: [{ priority: 'asc' }, { name: 'asc' }],
@@ -60,6 +63,7 @@ export class GroupsService {
     if (exists) throw new BadRequestException('A group with this name already exists');
     await this.assertRolesInScope(user.orgId, dto.roleIds ?? []);
     const roleIds = [...new Set(dto.roleIds ?? [])];
+    await this.assertCanConferRoles(user, roleIds);
     const group = await prisma.group.create({
       data: {
         orgId: user.orgId,
@@ -79,7 +83,10 @@ export class GroupsService {
   async update(user: AuthUser, id: string, dto: Partial<GroupInput>) {
     const g = await prisma.group.findFirst({ where: { id } });
     if (!g) throw new NotFoundException('Group not found');
-    if (dto.roleIds !== undefined) await this.assertRolesInScope(user.orgId, dto.roleIds);
+    if (dto.roleIds !== undefined) {
+      await this.assertRolesInScope(user.orgId, dto.roleIds);
+      await this.assertCanConferRoles(user, [...new Set(dto.roleIds)]);
+    }
     await prisma.$transaction(async (tx) => {
       await tx.group.update({
         where: { id },
@@ -117,6 +124,12 @@ export class GroupsService {
     if (!g) throw new NotFoundException('Group not found');
     const member = await prisma.user.findFirst({ where: { id: userId } }); // org-scoped → confirms user in org
     if (!member) throw new NotFoundException('User not found');
+    // Membership confers the group's roles, so adding someone (including
+    // yourself) to a group is a grant of every permission those roles carry.
+    // Without this, GROUP_MANAGE alone would be enough to join the seeded
+    // "Administrators" group and walk away with the whole catalogue.
+    const groupRoles = await prisma.groupRole.findMany({ where: { groupId: id }, select: { roleId: true } });
+    await this.assertCanConferRoles(user, groupRoles.map((r) => r.roleId));
     await prisma.userGroup.upsert({
       where: { userId_groupId: { userId, groupId: id } },
       create: { orgId: user.orgId, userId, groupId: id },
@@ -130,6 +143,27 @@ export class GroupsService {
     if (!g) throw new NotFoundException('Group not found');
     await prisma.userGroup.deleteMany({ where: { groupId: id, userId } });
     return { ok: true };
+  }
+
+  /**
+   * Prevent privilege escalation through the group path. Attaching a role to a
+   * group — or putting a user into a group that already carries one — hands out
+   * every permission that role holds, so a non-system-admin may only do it with
+   * permissions they hold themselves. This mirrors `RolesService.assertCanGrant`,
+   * which the group path would otherwise bypass entirely.
+   */
+  private async assertCanConferRoles(user: AuthUser, roleIds: string[]) {
+    if (user.isSystemAdmin || !roleIds.length) return;
+    const granted = new Set(await this.rbac.effectivePermissions(user.sub));
+    if (granted.has('*')) return;
+    const rows = await prisma.rolePermission.findMany({
+      where: { roleId: { in: [...new Set(roleIds)] } },
+      select: { permission: { select: { key: true } } },
+    });
+    const over = [...new Set(rows.map((r) => r.permission.key))].filter((k) => !granted.has(k));
+    if (over.length) {
+      throw new ForbiddenException(`Cannot grant permissions you do not hold: ${over.join(', ')}`);
+    }
   }
 
   /**
