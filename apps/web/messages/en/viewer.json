@@ -111,5 +111,56 @@
     "uploadsDisabledToast": "Uploads are disabled",
     "uploadsDisabledToastDescription": "This workspace blocks file uploads (DLP policy).",
     "dropDisabled": "Uploads disabled by policy"
+  },
+  "connect": {
+    "toolbar": {
+      "backToWorkspaces": "Back to Workspaces",
+      "paste": "Paste (local → remote)",
+      "ctrlAltDel": "Ctrl + Alt + Del",
+      "screenshot": "Screenshot",
+      "displayResolution": "Display / resolution",
+      "resolution": "Resolution",
+      "qualityPerformance": "Quality: performance (effects off)",
+      "qualityFull": "Quality: full",
+      "copyViewLink": "Copy view-only link",
+      "fullscreen": "Fullscreen",
+      "controlPanel": "Control Panel",
+      "reconnect": "Reconnect",
+      "endSession": "End session"
+    },
+    "panel": {
+      "open": "Open Control Panel",
+      "close": "Close",
+      "paste": "Paste",
+      "ctrlAltDel": "Ctrl + Alt + Del",
+      "fullscreen": "Fullscreen",
+      "qualityTitle": "Streaming quality",
+      "qualityPerformanceOn": "Performance mode: on",
+      "qualityFull": "Full quality",
+      "reconnectTitle": "Reconnect",
+      "reconnectSubtitle": "Rebuild the session",
+      "workspacesTitle": "Workspaces",
+      "workspacesSubtitle": "Leave this session",
+      "endTitle": "End session",
+      "endSubtitle": "Disconnect"
+    },
+    "state": {
+      "connectingTitle": "Establishing connection",
+      "connectingDescription": "Negotiating the secure RDP tunnel via guacd…",
+      "endedTitle": "Session ended",
+      "endedDescription": "The remote host closed the connection.",
+      "errorTitle": "Couldn't connect",
+      "errorDescription": "The remote connection failed.",
+      "tryAgain": "Try again"
+    },
+    "toasts": {
+      "clipboardBlockedBrowser": "Clipboard access was blocked by the browser.",
+      "pasted": "Pasted to the remote desktop",
+      "nothingToCapture": "Nothing to capture yet.",
+      "screenshotSaved": "Screenshot saved",
+      "viewLinkCopied": "View-only link copied",
+      "clipboardBlocked": "Clipboard access was blocked",
+      "viewLinkCopiedDescription": "Whoever opens it can watch, but not control."
+    }
   }
 }

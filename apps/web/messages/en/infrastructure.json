@@ -61,14 +61,27 @@
       "zone": "Zone",
       "noZones": "No zones — create one first",
       "connectionType": "Connection type",
-      "maxSessions": "Max sessions"
+      "maxSessions": "Max sessions",
+      "username": "Username",
+      "password": "Password",
+      "usernameOptional": "Username (optional)",
+      "passwordOptional": "Password (optional)",
+      "rdpSecurity": "RDP security",
+      "keepCurrent": "Keep current",
+      "rdpSecurityOptions": {
+        "nla": "NLA (Windows default)",
+        "any": "Auto-negotiate",
+        "tls": "TLS",
+        "rdp": "Standard RDP (no NLA)"
+      }
     },
     "toasts": {
       "loadFailed": "Failed to load servers",
       "added": "Server added",
       "addFailed": "Could not add server",
       "removed": "Server removed",
-      "removeFailed": "Could not remove server"
+      "removeFailed": "Could not remove server",
+      "updated": "Server updated"
     }
   },
   "serverPools": {
@@ -330,6 +343,30 @@
       "updateFailed": "Could not update provider",
       "removed": "Provider removed",
       "removeFailed": "Could not remove provider"
+    }
+  },
+  "agentInstall": {
+    "title": "Install the Windows agent",
+    "deployButton": "Deploy to hosts by IP",
+    "description": "Run this on a Windows desktop/server (admin PowerShell) to auto-register it and keep it Online. Generate a registration token under Access → Authentication first.",
+    "copy": "Copy",
+    "downloadTitle": "Download the agent",
+    "filesHint": "<code>install.ps1</code> = install on this machine · <code>remote</code> = push to other hosts by IP (WinRM).",
+    "copiedToast": "Copied to clipboard",
+    "clipboardBlockedToast": "Clipboard access was blocked",
+    "deploy": {
+      "title": "Deploy agent to hosts by IP",
+      "description": "Generates a remote-deploy command (PowerShell Remoting / WinRM) that installs the agent on the hosts you list — run it from a Windows admin box that can reach them. WinRM must be enabled on the targets.",
+      "hostsLabel": "Target hosts (IP or hostname, one per line or comma-separated)",
+      "enableRdp": "Enable Remote Desktop on each host",
+      "commandLabel": "Run this from a Windows admin box",
+      "close": "Close",
+      "generate": "Generate command",
+      "regenerate": "Regenerate",
+      "noHostsToast": "Enter at least one host IP or name.",
+      "demoToast": "Demo mode — token is a placeholder. Connect the live API to mint a real one.",
+      "mintFailedToast": "Could not mint a registration token.",
+      "tokenName": "Agent deploy {date}"
     }
   }
 }

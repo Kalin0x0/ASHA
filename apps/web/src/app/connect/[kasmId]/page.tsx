@@ -533,7 +533,7 @@ export default function ConnectPage() {
     try {
       text = await navigator.clipboard.readText();
     } catch {
-      toast.error('Clipboard access was blocked by the browser.');
+      toast.error(t('connect.toasts.clipboardBlockedBrowser'));
       return;
     }
     if (!text) return;
@@ -549,8 +549,8 @@ export default function ConnectPage() {
         /* tunnel not open — ignore */
       }
     }, 80);
-    toast.success('Pasted to the remote desktop');
-  }, [monitor]);
+    toast.success(t('connect.toasts.pasted'));
+  }, [monitor, t]);
 
   const toggleFullscreen = useCallback(() => {
     const el = containerRef.current;
@@ -638,7 +638,7 @@ export default function ConnectPage() {
   const screenshot = useCallback(() => {
     const dataUrl = captureCanvasThumb(screenRef.current, 100000); // huge maxW → no downscale
     if (!dataUrl) {
-      toast.error('Nothing to capture yet.');
+      toast.error(t('connect.toasts.nothingToCapture'));
       return;
     }
     const a = document.createElement('a');
@@ -647,18 +647,18 @@ export default function ConnectPage() {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    toast.success('Screenshot saved');
-  }, [workspaceName]);
+    toast.success(t('connect.toasts.screenshotSaved'));
+  }, [workspaceName, t]);
 
   // Copy a view-only (monitor) link others can watch without sending input.
   const shareMonitorLink = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(`${window.location.origin}/connect/${kasmId}?monitor=1`);
-      toast.success('View-only link copied', { description: 'Whoever opens it can watch, but not control.' });
+      toast.success(t('connect.toasts.viewLinkCopied'), { description: t('connect.toasts.viewLinkCopiedDescription') });
     } catch {
-      toast.error('Clipboard access was blocked');
+      toast.error(t('connect.toasts.clipboardBlocked'));
     }
-  }, [kasmId]);
+  }, [kasmId, t]);
 
   // Switch the remote resolution (reconnects). `null` = fit the window.
   const setResolution = useCallback((res: { w: number; h: number } | null) => {
@@ -672,7 +672,7 @@ export default function ConnectPage() {
     <div ref={containerRef} className="fixed inset-0 z-50 flex flex-col bg-anthracite-950 text-foreground">
       {resMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setResMenuOpen(false)} aria-hidden />}
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border-subtle bg-[var(--surface-1)] px-2 sm:px-3">
-        <Button variant="ghost" size="icon-sm" onClick={disconnect} aria-label="Back to Workspaces" className="shrink-0 rtl:rotate-180">
+        <Button variant="ghost" size="icon-sm" onClick={disconnect} aria-label={t('connect.toolbar.backToWorkspaces')} className="shrink-0 rtl:rotate-180">
           <ArrowLeft className="size-4" />
         </Button>
         <AppIcon
@@ -704,16 +704,16 @@ export default function ConnectPage() {
         <div className="ms-auto flex items-center gap-0.5">
           {connected && !monitor && (
             <>
-              <ToolBtn icon={ClipboardPaste} label="Paste (local → remote)" onClick={() => void pasteToRemote()} />
-              <ToolBtn icon={Command} label="Ctrl + Alt + Del" onClick={sendCtrlAltDel} />
+              <ToolBtn icon={ClipboardPaste} label={t('connect.toolbar.paste')} onClick={() => void pasteToRemote()} />
+              <ToolBtn icon={Command} label={t('connect.toolbar.ctrlAltDel')} onClick={sendCtrlAltDel} />
             </>
           )}
-          {connected && <ToolBtn icon={Camera} label="Screenshot" onClick={screenshot} />}
+          {connected && <ToolBtn icon={Camera} label={t('connect.toolbar.screenshot')} onClick={screenshot} />}
           <div className="relative">
-            <ToolBtn icon={Monitor} label="Display / resolution" active={resMenuOpen} onClick={() => setResMenuOpen((o) => !o)} />
+            <ToolBtn icon={Monitor} label={t('connect.toolbar.displayResolution')} active={resMenuOpen} onClick={() => setResMenuOpen((o) => !o)} />
             {resMenuOpen && (
               <div className="absolute end-0 top-10 z-50 w-44 overflow-hidden rounded-lg border border-border-subtle bg-anthracite-900/95 py-1 shadow-[var(--shadow-lifted)] backdrop-blur">
-                <p className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Resolution</p>
+                <p className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{t('connect.toolbar.resolution')}</p>
                 {RESOLUTIONS.map((r) => {
                   const isActive = r.w === 0 ? resOverride === null : resOverride?.w === r.w;
                   return (
@@ -732,13 +732,13 @@ export default function ConnectPage() {
               </div>
             )}
           </div>
-          <ToolBtn icon={Gauge} label={perfMode ? 'Quality: performance (effects off)' : 'Quality: full'} active={perfMode} onClick={togglePerf} />
-          <ToolBtn icon={Share2} label="Copy view-only link" onClick={() => void shareMonitorLink()} />
-          <ToolBtn icon={Maximize2} label="Fullscreen" onClick={toggleFullscreen} />
-          <ToolBtn icon={LayoutGrid} label="Control Panel" active={panelOpen} onClick={() => setPanelOpen((o) => !o)} />
+          <ToolBtn icon={Gauge} label={perfMode ? t('connect.toolbar.qualityPerformance') : t('connect.toolbar.qualityFull')} active={perfMode} onClick={togglePerf} />
+          <ToolBtn icon={Share2} label={t('connect.toolbar.copyViewLink')} onClick={() => void shareMonitorLink()} />
+          <ToolBtn icon={Maximize2} label={t('connect.toolbar.fullscreen')} onClick={toggleFullscreen} />
+          <ToolBtn icon={LayoutGrid} label={t('connect.toolbar.controlPanel')} active={panelOpen} onClick={() => setPanelOpen((o) => !o)} />
           {(state === 'disconnected' || state === 'error') && (
             <Button variant="outline" size="sm" onClick={reconnect} className="ms-1">
-              <RefreshCw className="size-3.5" /> <span className="hidden sm:inline">Reconnect</span>
+              <RefreshCw className="size-3.5" /> <span className="hidden sm:inline">{t('connect.toolbar.reconnect')}</span>
             </Button>
           )}
           <Button
@@ -746,7 +746,7 @@ export default function ConnectPage() {
             size="sm"
             onClick={() => void endSession()}
             disabled={ending}
-            title="End session"
+            title={t('connect.toolbar.endSession')}
             className="ms-1"
           >
             {ending ? <Loader2 className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}{' '}
@@ -829,6 +829,7 @@ function ControlPanel({
   onWorkspaces: () => void;
   onEnd: () => void;
 }) {
+  const t = useTranslations('viewer');
   return (
     <>
       {/* Collapsed right-edge tab (always reachable) */}
@@ -836,12 +837,12 @@ function ControlPanel({
         <button
           type="button"
           onClick={onOpen}
-          aria-label="Control Panel öffnen"
+          aria-label={t('connect.panel.open')}
           className="absolute end-0 top-1/2 z-40 flex -translate-y-1/2 flex-col items-center gap-2 rounded-s-xl border border-e-0 border-border-subtle bg-[var(--surface-1)] px-2 py-3 text-muted-foreground shadow-[var(--shadow-lifted)] transition-colors hover:text-foreground ring-gold-focus"
         >
           <LayoutGrid className="size-4 text-gold-300" />
           <span className="rotate-180 text-[10px] font-medium uppercase tracking-wider [writing-mode:vertical-rl]">
-            Control Panel
+            {t('connect.toolbar.controlPanel')}
           </span>
         </button>
       )}
@@ -855,11 +856,11 @@ function ControlPanel({
         )}
       >
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-border-subtle px-4">
-          <span className="font-display text-base font-semibold">Control Panel</span>
+          <span className="font-display text-base font-semibold">{t('connect.toolbar.controlPanel')}</span>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Schließen"
+            aria-label={t('connect.panel.close')}
             className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground ring-gold-focus"
           >
             <X className="size-4" />
@@ -868,25 +869,25 @@ function ControlPanel({
 
         <div className="flex-1 overflow-y-auto p-3">
           <div className="grid grid-cols-3 gap-2">
-            <QuickTile icon={ClipboardPaste} label="Einfügen" onClick={onPaste} disabled={!connected} />
-            <QuickTile icon={Command} label="Strg+Alt+Entf" onClick={onCtrlAltDel} disabled={!connected} />
-            <QuickTile icon={Maximize2} label="Vollbild" onClick={onFullscreen} />
+            <QuickTile icon={ClipboardPaste} label={t('connect.panel.paste')} onClick={onPaste} disabled={!connected} />
+            <QuickTile icon={Command} label={t('connect.panel.ctrlAltDel')} onClick={onCtrlAltDel} disabled={!connected} />
+            <QuickTile icon={Maximize2} label={t('connect.panel.fullscreen')} onClick={onFullscreen} />
           </div>
 
           <div className="mt-3 space-y-1.5">
             <PanelRow
               icon={Gauge}
-              title="Streaming-Qualität"
-              subtitle={perfMode ? 'Performance-Modus: an' : 'Volle Qualität'}
+              title={t('connect.panel.qualityTitle')}
+              subtitle={perfMode ? t('connect.panel.qualityPerformanceOn') : t('connect.panel.qualityFull')}
               onClick={onTogglePerf}
               toggle={perfMode}
             />
-            <PanelRow icon={RefreshCw} title="Neu verbinden" subtitle="Sitzung neu aufbauen" onClick={onReconnect} />
-            <PanelRow icon={LayoutGrid} title="Arbeitsbereich" subtitle="Diese Sitzung verlassen" onClick={onWorkspaces} />
+            <PanelRow icon={RefreshCw} title={t('connect.panel.reconnectTitle')} subtitle={t('connect.panel.reconnectSubtitle')} onClick={onReconnect} />
+            <PanelRow icon={LayoutGrid} title={t('connect.panel.workspacesTitle')} subtitle={t('connect.panel.workspacesSubtitle')} onClick={onWorkspaces} />
             <PanelRow
               icon={Power}
-              title="Sitzung beenden"
-              subtitle="Verbindung trennen"
+              title={t('connect.panel.endTitle')}
+              subtitle={t('connect.panel.endSubtitle')}
               onClick={onEnd}
               destructive
             />
@@ -1001,6 +1002,7 @@ function Overlay({
   errMsg: string;
   onRetry: () => void;
 }) {
+  const t = useTranslations('viewer');
   return (
     <div className="absolute inset-0 grid place-items-center bg-anthracite-950/80 backdrop-blur-sm">
       <div className="flex max-w-sm flex-col items-center gap-4 px-6 text-center">
@@ -1010,8 +1012,8 @@ function Overlay({
               <Loader2 className="size-6 animate-spin" />
             </span>
             <div className="space-y-1">
-              <h2 className="font-display text-lg font-medium">Establishing connection</h2>
-              <p className="text-sm text-muted-foreground">Negotiating the secure RDP tunnel via guacd…</p>
+              <h2 className="font-display text-lg font-medium">{t('connect.state.connectingTitle')}</h2>
+              <p className="text-sm text-muted-foreground">{t('connect.state.connectingDescription')}</p>
             </div>
           </>
         )}
@@ -1021,12 +1023,12 @@ function Overlay({
               <Wifi className="size-6" />
             </span>
             <div className="space-y-1">
-              <h2 className="font-display text-lg font-medium">Session ended</h2>
-              <p className="text-sm text-muted-foreground">The remote host closed the connection.</p>
+              <h2 className="font-display text-lg font-medium">{t('connect.state.endedTitle')}</h2>
+              <p className="text-sm text-muted-foreground">{t('connect.state.endedDescription')}</p>
             </div>
             <Button variant="outline" size="sm" onClick={onRetry}>
               <RefreshCw className="size-3.5" />
-              Reconnect
+              {t('connect.toolbar.reconnect')}
             </Button>
           </>
         )}
@@ -1036,12 +1038,12 @@ function Overlay({
               <MonitorX className="size-6" />
             </span>
             <div className="space-y-1">
-              <h2 className="font-display text-lg font-medium">Couldn&apos;t connect</h2>
-              <p className="text-sm text-muted-foreground">{errMsg || 'The remote connection failed.'}</p>
+              <h2 className="font-display text-lg font-medium">{t('connect.state.errorTitle')}</h2>
+              <p className="text-sm text-muted-foreground">{errMsg || t('connect.state.errorDescription')}</p>
             </div>
             <Button variant="outline" size="sm" onClick={onRetry}>
               <RefreshCw className="size-3.5" />
-              Try again
+              {t('connect.state.tryAgain')}
             </Button>
           </>
         )}
