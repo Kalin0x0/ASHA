@@ -107,6 +107,12 @@ services:
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me-please-32++chars}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me-please-32++chars}
       SESSION_TOKEN_SECRET: ${SESSION_TOKEN_SECRET:-dev-session-token-secret-change-me-32++chars}
+      # Sealing key for stored provider/server credentials. It was missing here,
+      # so every deployment fell back to the schema default — a value published
+      # in this repository — to encrypt RDP passwords and provider secrets at
+      # rest. `:?` rather than a default: refuse to start rather than do that.
+      SECRET_SEAL_KEY: ${SECRET_SEAL_KEY:?SECRET_SEAL_KEY must be set}
+      GUAC_CRYPT_SECRET: ${GUAC_CRYPT_SECRET:?GUAC_CRYPT_SECRET must be set (exactly 32 characters)}
       # Shared secret the manager validates the agent's enrollment against. Must be
       # the SAME value the agent receives (see the agent service below); otherwise
       # the agent gets 401 "Invalid agent token" and never registers, so sessions
