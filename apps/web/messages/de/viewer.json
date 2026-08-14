@@ -111,5 +111,56 @@
     "uploadsDisabledToast": "Uploads sind deaktiviert",
     "uploadsDisabledToastDescription": "Dieser Workspace blockiert Datei-Uploads (DLP-Richtlinie).",
     "dropDisabled": "Uploads durch Richtlinie deaktiviert"
+  },
+  "connect": {
+    "toolbar": {
+      "backToWorkspaces": "Zurück zu Arbeitsbereichen",
+      "paste": "Einfügen (lokal → entfernt)",
+      "ctrlAltDel": "Strg + Alt + Entf",
+      "screenshot": "Bildschirmfoto",
+      "displayResolution": "Anzeige / Auflösung",
+      "resolution": "Auflösung",
+      "qualityPerformance": "Qualität: Leistung (Effekte aus)",
+      "qualityFull": "Qualität: voll",
+      "copyViewLink": "Nur-Ansicht-Link kopieren",
+      "fullscreen": "Vollbild",
+      "controlPanel": "Steuerung",
+      "reconnect": "Neu verbinden",
+      "endSession": "Sitzung beenden"
+    },
+    "panel": {
+      "open": "Steuerung öffnen",
+      "close": "Schließen",
+      "paste": "Einfügen",
+      "ctrlAltDel": "Strg + Alt + Entf",
+      "fullscreen": "Vollbild",
+      "qualityTitle": "Streaming-Qualität",
+      "qualityPerformanceOn": "Leistungsmodus: an",
+      "qualityFull": "Volle Qualität",
+      "reconnectTitle": "Neu verbinden",
+      "reconnectSubtitle": "Sitzung neu aufbauen",
+      "workspacesTitle": "Arbeitsbereiche",
+      "workspacesSubtitle": "Diese Sitzung verlassen",
+      "endTitle": "Sitzung beenden",
+      "endSubtitle": "Verbindung trennen"
+    },
+    "state": {
+      "connectingTitle": "Verbindung wird aufgebaut",
+      "connectingDescription": "Sicherer RDP-Tunnel über guacd wird ausgehandelt…",
+      "endedTitle": "Sitzung beendet",
+      "endedDescription": "Der entfernte Host hat die Verbindung geschlossen.",
+      "errorTitle": "Verbindung fehlgeschlagen",
+      "errorDescription": "Die entfernte Verbindung ist fehlgeschlagen.",
+      "tryAgain": "Erneut versuchen"
+    },
+    "toasts": {
+      "clipboardBlockedBrowser": "Der Browser hat den Zugriff auf die Zwischenablage blockiert.",
+      "pasted": "In den entfernten Desktop eingefügt",
+      "nothingToCapture": "Noch nichts aufzunehmen.",
+      "screenshotSaved": "Bildschirmfoto gespeichert",
+      "viewLinkCopied": "Nur-Ansicht-Link kopiert",
+      "clipboardBlocked": "Zugriff auf die Zwischenablage wurde blockiert",
+      "viewLinkCopiedDescription": "Wer ihn öffnet, kann zusehen, aber nicht steuern."
+    }
   }
 }

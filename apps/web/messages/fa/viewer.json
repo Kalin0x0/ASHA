@@ -111,5 +111,56 @@
     "uploadsDisabledToast": "بارگذاری غیرفعال است",
     "uploadsDisabledToastDescription": "این فضای کاری بارگذاری فایل را مسدود می‌کند (سیاست DLP).",
     "dropDisabled": "بارگذاری بر اساس سیاست غیرفعال است"
+  },
+  "connect": {
+    "toolbar": {
+      "backToWorkspaces": "بازگشت به فضاهای کاری",
+      "paste": "چسباندن (محلی ← راه دور)",
+      "ctrlAltDel": "Ctrl + Alt + Del",
+      "screenshot": "عکس صفحه",
+      "displayResolution": "نمایش / وضوح",
+      "resolution": "وضوح",
+      "qualityPerformance": "کیفیت: کارایی (جلوه‌ها خاموش)",
+      "qualityFull": "کیفیت: کامل",
+      "copyViewLink": "کپی پیوند فقط‌خواندنی",
+      "fullscreen": "تمام‌صفحه",
+      "controlPanel": "کنترل پنل",
+      "reconnect": "اتصال دوباره",
+      "endSession": "پایان نشست"
+    },
+    "panel": {
+      "open": "باز کردن کنترل پنل",
+      "close": "بستن",
+      "paste": "چسباندن",
+      "ctrlAltDel": "Ctrl + Alt + Del",
+      "fullscreen": "تمام‌صفحه",
+      "qualityTitle": "کیفیت پخش",
+      "qualityPerformanceOn": "حالت کارایی: روشن",
+      "qualityFull": "کیفیت کامل",
+      "reconnectTitle": "اتصال دوباره",
+      "reconnectSubtitle": "برقراری دوباره نشست",
+      "workspacesTitle": "فضاهای کاری",
+      "workspacesSubtitle": "خروج از این نشست",
+      "endTitle": "پایان نشست",
+      "endSubtitle": "قطع اتصال"
+    },
+    "state": {
+      "connectingTitle": "در حال برقراری اتصال",
+      "connectingDescription": "در حال مذاکره تونل امن RDP از طریق guacd…",
+      "endedTitle": "نشست پایان یافت",
+      "endedDescription": "میزبان راه دور اتصال را بست.",
+      "errorTitle": "اتصال برقرار نشد",
+      "errorDescription": "اتصال راه دور ناموفق بود.",
+      "tryAgain": "تلاش دوباره"
+    },
+    "toasts": {
+      "clipboardBlockedBrowser": "مرورگر دسترسی به بریده‌دان را مسدود کرد.",
+      "pasted": "در دسکتاپ راه دور چسبانده شد",
+      "nothingToCapture": "هنوز چیزی برای گرفتن نیست.",
+      "screenshotSaved": "عکس صفحه ذخیره شد",
+      "viewLinkCopied": "پیوند فقط‌خواندنی کپی شد",
+      "clipboardBlocked": "دسترسی به بریده‌دان مسدود شد",
+      "viewLinkCopiedDescription": "هر کسی آن را باز کند می‌تواند تماشا کند، اما کنترل نه."
+    }
   }
 }

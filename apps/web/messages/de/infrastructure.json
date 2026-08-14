@@ -61,14 +61,27 @@
       "zone": "Zone",
       "noZones": "Keine Zonen — erstellen Sie zuerst eine",
       "connectionType": "Verbindungstyp",
-      "maxSessions": "Max. Sitzungen"
+      "maxSessions": "Max. Sitzungen",
+      "username": "Benutzername",
+      "password": "Passwort",
+      "usernameOptional": "Benutzername (optional)",
+      "passwordOptional": "Passwort (optional)",
+      "rdpSecurity": "RDP-Sicherheit",
+      "keepCurrent": "Unverändert lassen",
+      "rdpSecurityOptions": {
+        "nla": "NLA (Windows-Standard)",
+        "any": "Automatisch aushandeln",
+        "tls": "TLS",
+        "rdp": "Standard-RDP (ohne NLA)"
+      }
     },
     "toasts": {
       "loadFailed": "Server konnten nicht geladen werden",
       "added": "Server hinzugefügt",
       "addFailed": "Server konnte nicht hinzugefügt werden",
       "removed": "Server entfernt",
-      "removeFailed": "Server konnte nicht entfernt werden"
+      "removeFailed": "Server konnte nicht entfernt werden",
+      "updated": "Server aktualisiert"
     }
   },
   "serverPools": {
@@ -330,6 +343,30 @@
       "updateFailed": "Provider konnte nicht aktualisiert werden",
       "removed": "Provider entfernt",
       "removeFailed": "Provider konnte nicht entfernt werden"
+    }
+  },
+  "agentInstall": {
+    "title": "Windows-Agent installieren",
+    "deployButton": "Auf Hosts per IP verteilen",
+    "description": "Führen Sie dies auf einem Windows-Desktop/-Server aus (PowerShell als Administrator), damit er sich automatisch registriert und online bleibt. Erzeugen Sie zuvor unter Zugriff → Authentifizierung ein Registrierungs-Token.",
+    "copy": "Kopieren",
+    "downloadTitle": "Agent herunterladen",
+    "filesHint": "<code>install.ps1</code> = auf diesem Rechner installieren · <code>remote</code> = per IP auf andere Hosts verteilen (WinRM).",
+    "copiedToast": "In die Zwischenablage kopiert",
+    "clipboardBlockedToast": "Zugriff auf die Zwischenablage wurde blockiert",
+    "deploy": {
+      "title": "Agent per IP auf Hosts verteilen",
+      "description": "Erzeugt einen Remote-Deploy-Befehl (PowerShell Remoting / WinRM), der den Agenten auf den angegebenen Hosts installiert — führen Sie ihn auf einem Windows-Administrationsrechner aus, der diese erreicht. WinRM muss auf den Zielen aktiviert sein.",
+      "hostsLabel": "Ziel-Hosts (IP oder Hostname, einer pro Zeile oder kommagetrennt)",
+      "enableRdp": "Remotedesktop auf jedem Host aktivieren",
+      "commandLabel": "Führen Sie dies auf einem Windows-Administrationsrechner aus",
+      "close": "Schließen",
+      "generate": "Befehl erzeugen",
+      "regenerate": "Neu erzeugen",
+      "noHostsToast": "Geben Sie mindestens eine Host-IP oder einen Hostnamen an.",
+      "demoToast": "Demo-Modus — das Token ist ein Platzhalter. Verbinden Sie die Live-API, um ein echtes zu erzeugen.",
+      "mintFailedToast": "Registrierungs-Token konnte nicht erzeugt werden.",
+      "tokenName": "Agent-Verteilung {date}"
     }
   }
 }
