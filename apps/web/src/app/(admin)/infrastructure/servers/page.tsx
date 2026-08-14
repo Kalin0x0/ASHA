@@ -1,6 +1,7 @@
 'use client';
 
 import { HardDrive, Loader2, MonitorPlay, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -36,6 +37,7 @@ const CONNECTION_TYPES = ['RDP', 'VNC', 'SSH'] as const;
 const SELECT = 'h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm';
 
 export default function ServersPage() {
+  const t = useTranslations('infrastructure.servers');
   const [servers, setServers] = useState<ApiServer[]>([]);
   const [zones, setZones] = useState<ApiZone[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,7 +74,7 @@ export default function ServersPage() {
       setZones(z);
       if (!zoneId && z.length > 0) setZoneId(z[0]!.id);
     } catch {
-      toast.error('Failed to load servers');
+      toast.error(t('toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -97,7 +99,7 @@ export default function ServersPage() {
         ...(password ? { password } : {}),
         ...(connectionType === 'RDP' ? { security: security as 'any' | 'nla' | 'tls' | 'rdp' } : {}),
       });
-      toast.success('Server added');
+      toast.success(t('toasts.added'));
       setHostname('');
       setAddress('');
       setUsername('');
@@ -146,7 +148,7 @@ export default function ServersPage() {
         ...(editForm.password ? { password: editForm.password } : {}),
         ...(editForm.security ? { security: editForm.security as 'nla' } : {}),
       });
-      toast.success('Server updated');
+      toast.success(t('toasts.updated'));
       setEditing(null);
       await refresh();
     } catch (e) {
@@ -161,11 +163,11 @@ export default function ServersPage() {
     setDeleteBusy(true);
     try {
       await deleteServer(deleting.id);
-      toast.success('Server removed');
+      toast.success(t('toasts.removed'));
       setDeleting(null);
       await refresh();
     } catch {
-      toast.error('Could not remove server');
+      toast.error(t('toasts.removeFailed'));
     } finally {
       setDeleteBusy(false);
     }
@@ -176,33 +178,36 @@ export default function ServersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Servers"
-        description="Static servers (RDP/VNC/SSH hosts) that back server-type workspaces. Each server caps its concurrent sessions."
+        title={t('title')}
+        description={t('description')}
       />
 
       <AgentInstallCard />
 
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
-          Server management is live-backend only. Run with{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          {t.rich('liveOnly', {
+            code: (chunks) => (
+              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+            ),
+          })}
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Servers" value={servers.length} icon={HardDrive} primary />
-        <StatCard label="Capacity" value={servers.reduce((a, s) => a + s.maxSessions, 0)} icon={HardDrive} />
-        <StatCard label="In use" value={servers.reduce((a, s) => a + (s.currentSessions ?? 0), 0)} icon={HardDrive} />
+        <StatCard label={t('stats.servers')} value={servers.length} icon={HardDrive} primary />
+        <StatCard label={t('stats.capacity')} value={servers.reduce((a, s) => a + s.maxSessions, 0)} icon={HardDrive} />
+        <StatCard label={t('stats.inUse')} value={servers.reduce((a, s) => a + (s.currentSessions ?? 0), 0)} icon={HardDrive} />
       </div>
 
       <Card elevation={1} className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-border-subtle p-4">
-          <h2 className="font-display text-lg font-medium">Registered servers</h2>
+          <h2 className="font-display text-lg font-medium">{t('registeredServers')}</h2>
           {loading && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
         </div>
         <div className="divide-y divide-border-subtle/60">
           {servers.length === 0 ? (
-            <EmptyState icon={HardDrive} title="No servers registered" description="Add RDP, VNC, or SSH hosts to back server-type workspaces." />
+            <EmptyState icon={HardDrive} title={t('empty.title')} description={t('empty.description')} />
           ) : (
             servers.map((s) => (
               <div key={s.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
@@ -239,24 +244,24 @@ export default function ServersPage() {
       </Card>
 
       <Card elevation={1} className="space-y-4 p-5">
-        <h2 className="font-display text-lg font-medium">Add server</h2>
+        <h2 className="font-display text-lg font-medium">{t('addServer')}</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <Label>Hostname</Label>
+            <Label>{t('form.hostname')}</Label>
             <Input placeholder="win-rdp-01" value={hostname} onChange={(e) => setHostname(e.target.value)} />
           </div>
           <div>
-            <Label>Address</Label>
+            <Label>{t('form.address')}</Label>
             <Input placeholder="10.0.0.21" value={address} onChange={(e) => setAddress(e.target.value)} />
           </div>
           <div>
-            <Label>Zone</Label>
+            <Label>{t('form.zone')}</Label>
             <select
               value={zoneId}
               onChange={(e) => setZoneId(e.target.value)}
               className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
             >
-              {zones.length === 0 && <option value="">No zones — create one first</option>}
+              {zones.length === 0 && <option value="">{t('form.noZones')}</option>}
               {zones.map((z) => (
                 <option key={z.id} value={z.id}>
                   {z.name}
@@ -265,7 +270,7 @@ export default function ServersPage() {
             </select>
           </div>
           <div>
-            <Label>Connection type</Label>
+            <Label>{t('form.connectionType')}</Label>
             <select
               value={connectionType}
               onChange={(e) => setConnectionType(e.target.value as (typeof CONNECTION_TYPES)[number])}
@@ -279,15 +284,15 @@ export default function ServersPage() {
             </select>
           </div>
           <div>
-            <Label>Max sessions</Label>
+            <Label>{t('form.maxSessions')}</Label>
             <Input type="number" min={1} value={maxSessions} onChange={(e) => setMaxSessions(Number(e.target.value))} />
           </div>
           <div>
-            <Label>Username</Label>
+            <Label>{t('form.username')}</Label>
             <Input placeholder="admin" autoComplete="off" value={username} onChange={(e) => setUsername(e.target.value)} />
           </div>
           <div>
-            <Label>Password</Label>
+            <Label>{t('form.password')}</Label>
             <Input
               type="password"
               placeholder="••••••••"
@@ -298,16 +303,16 @@ export default function ServersPage() {
           </div>
           {connectionType === 'RDP' && (
             <div>
-              <Label>RDP security</Label>
+              <Label>{t('form.rdpSecurity')}</Label>
               <select
                 value={security}
                 onChange={(e) => setSecurity(e.target.value)}
                 className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
               >
-                <option value="nla">NLA (Windows default)</option>
-                <option value="any">Auto-negotiate</option>
-                <option value="tls">TLS</option>
-                <option value="rdp">Standard RDP (no NLA)</option>
+                <option value="nla">{t('form.rdpSecurityOptions.nla')}</option>
+                <option value="any">{t('form.rdpSecurityOptions.any')}</option>
+                <option value="tls">{t('form.rdpSecurityOptions.tls')}</option>
+                <option value="rdp">{t('form.rdpSecurityOptions.rdp')}</option>
               </select>
             </div>
           )}
@@ -331,7 +336,7 @@ export default function ServersPage() {
           </DialogHeader>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <Label>Address</Label>
+              <Label>{t('form.address')}</Label>
               <Input
                 dir="ltr"
                 value={editForm.address}
@@ -339,7 +344,7 @@ export default function ServersPage() {
               />
             </div>
             <div>
-              <Label>Connection type</Label>
+              <Label>{t('form.connectionType')}</Label>
               <select
                 className={SELECT}
                 value={editForm.connectionType}
@@ -351,7 +356,7 @@ export default function ServersPage() {
               </select>
             </div>
             <div>
-              <Label>Max sessions</Label>
+              <Label>{t('form.maxSessions')}</Label>
               <Input
                 type="number"
                 min={1}
@@ -360,7 +365,7 @@ export default function ServersPage() {
               />
             </div>
             <div>
-              <Label>Username (optional)</Label>
+              <Label>{t('form.usernameOptional')}</Label>
               <Input
                 autoComplete="off"
                 placeholder="unchanged"
@@ -369,7 +374,7 @@ export default function ServersPage() {
               />
             </div>
             <div>
-              <Label>Password (optional)</Label>
+              <Label>{t('form.passwordOptional')}</Label>
               <Input
                 type="password"
                 autoComplete="new-password"
@@ -380,17 +385,17 @@ export default function ServersPage() {
             </div>
             {editForm.connectionType === 'RDP' && (
               <div>
-                <Label>RDP security</Label>
+                <Label>{t('form.rdpSecurity')}</Label>
                 <select
                   className={SELECT}
                   value={editForm.security}
                   onChange={(e) => setEditForm((f) => ({ ...f, security: e.target.value }))}
                 >
-                  <option value="">Keep current</option>
-                  <option value="nla">NLA (Windows default)</option>
-                  <option value="any">Auto-negotiate</option>
-                  <option value="tls">TLS</option>
-                  <option value="rdp">Standard RDP (no NLA)</option>
+                  <option value="">{t('form.keepCurrent')}</option>
+                  <option value="nla">{t('form.rdpSecurityOptions.nla')}</option>
+                  <option value="any">{t('form.rdpSecurityOptions.any')}</option>
+                  <option value="tls">{t('form.rdpSecurityOptions.tls')}</option>
+                  <option value="rdp">{t('form.rdpSecurityOptions.rdp')}</option>
                 </select>
               </div>
             )}
