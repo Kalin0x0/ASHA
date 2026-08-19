@@ -93,8 +93,28 @@ export class AgentsService {
     });
   }
 
-  async heartbeat(agentId: string, dto: AgentHeartbeatDto) {
+  /**
+   * An agent token proves "some agent", not "this agent". The internal routes
+   * take the agent/session id straight from the URL, so without this check a
+   * minted org-A token could drive org-B's sessions — redirecting a live
+   * RDP/VNC stream to an attacker host, or killing it. A `global` token (the
+   * shared env secret) is the deployment super-admin and stays unconstrained;
+   * a minted org token is pinned to its own org.
+   *
+   * Throws NotFound rather than Forbidden so the routes don't double as an
+   * oracle for which session ids exist in other tenants.
+   */
+  private assertScopeCovers(scope: AgentTokenScope | undefined, orgId: string) {
+    if (scope?.scope === 'org' && scope.orgId !== orgId) {
+      throw new NotFoundException('Not found');
+    }
+  }
+
+  async heartbeat(agentId: string, dto: AgentHeartbeatDto, scope?: AgentTokenScope) {
     await runUnscoped(async () => {
+      const owner = await prisma.agent.findUnique({ where: { id: agentId }, select: { orgId: true } });
+      if (!owner) throw new NotFoundException('Agent not found');
+      this.assertScopeCovers(scope, owner.orgId);
       // A heartbeat reports the agent as live, but a pending admin drain wins:
       // keep DRAINING so the scheduler won't place new sessions on it.
       const agent = await prisma.agent.findUnique({
@@ -131,10 +151,11 @@ export class AgentsService {
     return { ok: true };
   }
 
-  async updateSessionStatus(sessionId: string, dto: SessionStatusDto) {
+  async updateSessionStatus(sessionId: string, dto: SessionStatusDto, scope?: AgentTokenScope) {
     return runUnscoped(async () => {
       const session = await prisma.session.findUnique({ where: { id: sessionId } });
       if (!session) throw new NotFoundException('Session not found');
+      this.assertScopeCovers(scope, session.orgId);
 
       // Lifecycle floor: once a session is TERMINATING/DESTROYED (e.g. the
       // staging reconciler retired a still-PROVISIONING pool session, or a
@@ -267,18 +288,25 @@ export class AgentsService {
     });
   }
 
-  async ingestStats(dto: SessionStatsDto) {
+  async ingestStats(dto: SessionStatsDto, scope?: AgentTokenScope) {
     for (const sample of dto.samples) {
+      // Resolve the owning org FIRST: writing then checking would let a foreign
+      // token overwrite another tenant's resource figures, and emitting before
+      // the check would inject attacker-supplied samples into that org's live
+      // WebSocket feed. Silently skip mismatches — stats are best-effort.
+      const session = await runUnscoped(() =>
+        prisma.session.findUnique({ where: { id: sample.sessionId }, select: { orgId: true } }),
+      ).catch(() => null);
+      if (!session) continue;
+      if (scope?.scope === 'org' && scope.orgId !== session.orgId) continue;
+
       await runUnscoped(() =>
         prisma.session.updateMany({
           where: { id: sample.sessionId },
           data: { resources: { cpuPct: sample.cpuPct, memMb: sample.memMb } as object },
         }),
       ).catch(() => undefined);
-      const session = await prisma.session.findUnique({ where: { id: sample.sessionId } });
-      if (session) {
-        this.gateway.emitToOrg(session.orgId, { type: 'session.stats', payload: sample });
-      }
+      this.gateway.emitToOrg(session.orgId, { type: 'session.stats', payload: sample });
     }
     return { ok: true };
   }

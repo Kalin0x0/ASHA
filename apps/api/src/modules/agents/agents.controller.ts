@@ -34,22 +34,37 @@ export class AgentsController {
     return this.agents.register(dto, req.agentToken);
   }
 
+  // The `id`/`sid` path params are attacker-controlled, so every handler below
+  // forwards the token's scope: a minted org token may only touch its OWN org's
+  // agents and sessions. Without that, any org's token could redirect or kill
+  // another tenant's session (the token proves "an agent", not "which agent").
   @AgentOnly()
   @Post('internal/agents/:id/heartbeat')
-  heartbeat(@Param('id') id: string, @Body(new ZodPipe(agentHeartbeatSchema)) dto: AgentHeartbeatDto) {
-    return this.agents.heartbeat(id, dto);
+  heartbeat(
+    @Req() req: { agentToken?: AgentTokenScope },
+    @Param('id') id: string,
+    @Body(new ZodPipe(agentHeartbeatSchema)) dto: AgentHeartbeatDto,
+  ) {
+    return this.agents.heartbeat(id, dto, req.agentToken);
   }
 
   @AgentOnly()
   @Post('internal/agents/:id/sessions/:sid/status')
-  status(@Param('sid') sid: string, @Body(new ZodPipe(sessionStatusSchema)) dto: SessionStatusDto) {
-    return this.agents.updateSessionStatus(sid, dto);
+  status(
+    @Req() req: { agentToken?: AgentTokenScope },
+    @Param('sid') sid: string,
+    @Body(new ZodPipe(sessionStatusSchema)) dto: SessionStatusDto,
+  ) {
+    return this.agents.updateSessionStatus(sid, dto, req.agentToken);
   }
 
   @AgentOnly()
   @Post('internal/agents/:id/stats')
-  stats(@Body(new ZodPipe(sessionStatsSchema)) dto: SessionStatsDto) {
-    return this.agents.ingestStats(dto);
+  stats(
+    @Req() req: { agentToken?: AgentTokenScope },
+    @Body(new ZodPipe(sessionStatsSchema)) dto: SessionStatsDto,
+  ) {
+    return this.agents.ingestStats(dto, req.agentToken);
   }
 
   // ── Admin ───────────────────────────────────────────────────────────────
