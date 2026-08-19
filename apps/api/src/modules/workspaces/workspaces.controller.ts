@@ -24,10 +24,12 @@ type AssignmentsDto = z.infer<typeof assignmentsSchema>;
 export class WorkspacesController {
   constructor(private readonly workspaces: WorkspacesService) {}
 
+  // WORKSPACE_VIEW is held by every seeded end user, so the service — not this
+  // guard — decides who sees the full catalog and who sees only their grants.
   @RequirePermissions('WORKSPACE_VIEW')
   @Get()
-  list() {
-    return this.workspaces.list();
+  list(@CurrentUser() user: AuthUser) {
+    return this.workspaces.list(user);
   }
 
   /** The workspaces the CURRENT user may launch (access-filtered per assignment). */
@@ -39,8 +41,8 @@ export class WorkspacesController {
 
   @RequirePermissions('WORKSPACE_VIEW')
   @Get(':id')
-  get(@Param('id') id: string) {
-    return this.workspaces.get(id);
+  get(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.workspaces.get(id, user);
   }
 
   @RequirePermissions('WORKSPACE_CREATE')

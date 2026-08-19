@@ -124,7 +124,7 @@ launch → stream flow against a real KasmVNC container.
       cores/memory overrides, and starts the VM; destroyInstance stops + deletes;
       getInstance maps live status. Optional `insecureTls` for self-signed labs.
       18 tests (4 new covering the API call sequence).
-- [x] Security hardening (Postgres RLS backstop, CSP, rate limiting)
+- [x] Security hardening (CSP, rate limiting) — RLS is NOT active, see below
       Rate limiting: `@nestjs/throttler` — 200 req/min global, 10 req/min on
       `AuthController` (login, refresh, TOTP). Health routes skip throttle.
       Helmet: API responses hardened (X-Content-Type-Options, X-Frame-Options,
@@ -133,9 +133,11 @@ launch → stream flow against a real KasmVNC container.
       Referrer-Policy, Permissions-Policy applied to all routes.
       Prisma extension: `findUnique`/`update`/`delete` now also inject `orgId`
       into the WHERE clause (closes the PK-bypass gap at application layer).
-      Postgres RLS backstop: `packages/db/prisma/rls/tenant_isolation.sql` —
-      permissive policies that enforce org-scoping when `app.current_org_id` is
-      set (activated in production via `SET LOCAL` inside transactions).
+      Postgres RLS: `packages/db/prisma/rls/tenant_isolation.sql` exists but is
+      NOT wired up — no deploy path executes it, and the app never issues the
+      `SET LOCAL app.current_org_id` the policies read, so it would be a no-op
+      even if applied. Tenant isolation today rests entirely on the Prisma
+      extension above. Making RLS real is tracked as open work.
 - [x] Reporting + webhooks —
       `WebhooksModule` (`/webhooks`): CRUD + delivery log + `POST /:id/test`,
       HMAC-SHA256 signing (`X-Asha-Signature: sha256=…`), secrets redacted on

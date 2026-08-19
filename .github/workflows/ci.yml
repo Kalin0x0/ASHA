@@ -47,5 +47,10 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # Locale parity is a release gate: a missing key renders a raw
+      # `portal.account.title` to the user rather than failing loudly.
+      - name: i18n parity
+        run: pnpm --filter @asha/web i18n:check
+
       - name: Build
         run: pnpm build

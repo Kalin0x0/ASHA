@@ -62,10 +62,15 @@ export class TariffsService {
     // assignment so resolveForUser() actually falls back to it for everyone.
     if (data.isDefault) {
       await prisma.tariff.updateMany({ where: { orgId, isDefault: true, id: { not: tariff.id } }, data: { isDefault: false } });
+      // Re-point AND re-stock. Carrying the old tariff's balance forward meant
+      // switching the org default from a small plan to a large one left every
+      // default user stuck at the exhausted balance (and on the old period's
+      // reset date) — locked out of the plan they were just given.
+      const orgBalance = data.budgetMinutes != null ? data.budgetMinutes * 60 : 0;
       await prisma.tariffAssignment.upsert({
         where: { orgId_subjectType_subjectId: { orgId, subjectType: 'ORG', subjectId: orgId } },
-        create: { orgId, tariffId: tariff.id, subjectType: 'ORG', subjectId: orgId, remainingSeconds: data.budgetMinutes != null ? data.budgetMinutes * 60 : 0, periodResetAt: this.nextResetAt(data.period) },
-        update: { tariffId: tariff.id },
+        create: { orgId, tariffId: tariff.id, subjectType: 'ORG', subjectId: orgId, remainingSeconds: orgBalance, periodResetAt: this.nextResetAt(data.period) },
+        update: { tariffId: tariff.id, remainingSeconds: orgBalance, periodResetAt: this.nextResetAt(data.period) },
       });
     } else {
       // Clearing the default drops the org-wide fallback (if this tariff held it).
@@ -133,9 +138,16 @@ export class TariffsService {
     if (assignments.length === 0) return null;
 
     const byType = (t: string) => assignments.filter((a) => a.subjectType === t);
+    // "Most restrictive group wins" — but an UNLIMITED tariff stores
+    // `remainingSeconds: 0` (there is no balance to track), which sorted first
+    // under a plain ascending sort and so beat every limited plan. Rank
+    // unlimited as +∞ so a user in both "Contractors (600 min)" and
+    // "All Staff (unlimited)" is correctly held to the contractor budget.
+    const restrictiveness = (a: (typeof assignments)[number]) =>
+      a.tariff.budgetMinutes == null ? Number.POSITIVE_INFINITY : a.remainingSeconds;
     const pick =
       byType('USER')[0] ??
-      byType('GROUP').sort((a, b) => a.remainingSeconds - b.remainingSeconds)[0] ??
+      byType('GROUP').sort((a, b) => restrictiveness(a) - restrictiveness(b))[0] ??
       byType('ORG')[0];
     if (!pick) return null;
     return {

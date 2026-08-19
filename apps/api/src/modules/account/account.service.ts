@@ -100,10 +100,22 @@ export class AccountService {
 
   async changePassword(user: AuthUser, dto: { currentPassword?: string; newPassword: string }) {
     if (dto.newPassword.length < 8) throw new BadRequestException('New password must be at least 8 characters.');
+
+    const target = await prisma.user.findUnique({ where: { id: user.sub }, select: { federatedFrom: true } });
+    if (!target) throw new NotFoundException('User not found');
+    // A federated identity is owned by the IdP. Letting such a user set a local
+    // password creates a second, IdP-independent way in: when HR deprovisions
+    // them upstream, `login()` still succeeds because it only checks
+    // `status === 'ACTIVE'`. `updateProfile` already refuses the e-mail for the
+    // same reason — the password is the bigger half of that hole.
+    if (target.federatedFrom != null) {
+      throw new ForbiddenException('Your sign-in is managed by your identity provider and cannot be changed here.');
+    }
+
     const cred = await prisma.userCredential.findFirst({ where: { userId: user.sub, kind: 'PASSWORD' } });
 
     // If a password already exists, the current one must be proven. Accounts
-    // without one (SSO-provisioned) may set an initial password.
+    // without one may set an initial password.
     if (cred) {
       if (!dto.currentPassword || !(await verifyPassword(dto.currentPassword, cred.secret))) {
         throw new UnauthorizedException('Your current password is incorrect.');
@@ -114,12 +126,21 @@ export class AccountService {
     if (cred) await prisma.userCredential.update({ where: { id: cred.id }, data: { secret } });
     else await prisma.userCredential.create({ data: { userId: user.sub, kind: 'PASSWORD', secret } });
 
+    // Changing the password is the standard response to a compromise, so it has
+    // to end the attacker's sessions too. Without this a stolen refresh token
+    // keeps minting access tokens for its full 30-day lifetime and the
+    // remediation achieves nothing. (Same pattern as the license-expiry path.)
+    const revoked = await prisma.refreshToken.updateMany({
+      where: { userId: user.sub, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
     await this.security.emit({
       action: 'account.password_changed',
       severity: 'warn',
       orgId: user.orgId,
       actorUserId: user.sub,
-      metadata: { initial: !cred },
+      metadata: { initial: !cred, revokedRefreshTokens: revoked.count },
     });
     return { ok: true };
   }
