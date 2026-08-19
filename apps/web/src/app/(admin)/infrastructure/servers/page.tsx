@@ -231,10 +231,10 @@ export default function ServersPage() {
                   <MonitorPlay className="size-3.5" />
                   Connect
                 </Button>
-                <Button variant="ghost" size="icon-sm" aria-label="Edit server" disabled={!isLive} onClick={() => openEdit(s)}>
+                <Button variant="ghost" size="icon-sm" aria-label={t('editServer')} disabled={!isLive} onClick={() => openEdit(s)}>
                   <Pencil className="size-4" />
                 </Button>
-                <Button variant="ghost" size="icon-sm" aria-label="Delete server" disabled={!isLive} onClick={() => setDeleting(s)}>
+                <Button variant="ghost" size="icon-sm" aria-label={t('deleteServer')} disabled={!isLive} onClick={() => setDeleting(s)}>
                   <Trash2 className="size-4 text-destructive" />
                 </Button>
               </div>

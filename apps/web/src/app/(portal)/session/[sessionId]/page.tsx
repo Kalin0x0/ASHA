@@ -617,7 +617,7 @@ export default function StreamingViewerPage() {
         </div>
 
         {connected && (
-          <div className="ml-2 hidden shrink-0 items-center gap-1.5 rounded-md bg-anthracite-900/60 px-2.5 py-1 font-mono text-[11px] text-muted-foreground sm:flex">
+          <div className="ms-2 hidden shrink-0 items-center gap-1.5 rounded-md bg-anthracite-900/60 px-2.5 py-1 font-mono text-[11px] text-muted-foreground sm:flex">
             <Wifi className="size-3 text-success" />
             {t('status.live')} ·{' '}
             <span className={cn(isWebRtc && 'text-gold-400')}>{protocolLabel}</span>
@@ -690,7 +690,7 @@ export default function StreamingViewerPage() {
               <Monitor className={cn('size-4', resMenuOpen && 'text-gold-400')} />
             </ControlButton>
             {resMenuOpen && (
-              <div className="absolute right-0 top-9 z-40 w-48 overflow-hidden rounded-lg border border-white/10 bg-anthracite-900/95 py-1 shadow-[var(--shadow-lifted)] backdrop-blur">
+              <div className="absolute end-0 top-9 z-40 w-48 overflow-hidden rounded-lg border border-white/10 bg-anthracite-900/95 py-1 shadow-[var(--shadow-lifted)] backdrop-blur">
                 <p className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                   {t('toolbar.resolution')}
                 </p>
@@ -732,7 +732,7 @@ export default function StreamingViewerPage() {
           </ControlButton>
           <button
             onClick={() => void onTerminate()}
-            className="ml-1 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-destructive/90 px-3 text-xs font-medium text-destructive-foreground transition-colors hover:bg-destructive ring-gold-focus"
+            className="ms-1 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-destructive/90 px-3 text-xs font-medium text-destructive-foreground transition-colors hover:bg-destructive ring-gold-focus"
           >
             <Power className="size-3.5" /> <span className="hidden sm:inline">{t('toolbar.end')}</span>
           </button>
@@ -1037,7 +1037,7 @@ function WebcamPanel({ isWebRtc, onClose }: { isWebRtc: boolean; onClose: () => 
   }, []);
 
   return (
-    <div className="absolute bottom-4 right-4 z-30 flex w-72 flex-col overflow-hidden rounded-xl border border-white/10 bg-anthracite-900/90 shadow-[var(--shadow-lifted)] backdrop-blur">
+    <div className="absolute bottom-4 end-4 z-30 flex w-72 flex-col overflow-hidden rounded-xl border border-white/10 bg-anthracite-900/90 shadow-[var(--shadow-lifted)] backdrop-blur">
       <div className="flex items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <Camera className="size-3.5 text-gold-400" />

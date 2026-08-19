@@ -773,7 +773,7 @@ export default function ConnectPage() {
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
-          className="pointer-events-none fixed bottom-0 right-0 size-px resize-none border-0 p-0 opacity-0"
+          className="pointer-events-none fixed bottom-0 end-0 size-px resize-none border-0 p-0 opacity-0"
         />
         {state !== 'connected' && <Overlay state={state} errMsg={errMsg} onRetry={reconnect} />}
       </main>

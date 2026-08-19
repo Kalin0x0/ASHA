@@ -40,7 +40,7 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 function DialogCloseButton() {
   const t = useTranslations('common');
   return (
-    <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground opacity-70 transition-opacity hover:opacity-100 ring-gold-focus">
+    <DialogPrimitive.Close className="absolute end-4 top-4 rounded-md p-1 text-muted-foreground opacity-70 transition-opacity hover:opacity-100 ring-gold-focus">
       <X className="size-4" />
       <span className="sr-only">{t('actions.close')}</span>
     </DialogPrimitive.Close>

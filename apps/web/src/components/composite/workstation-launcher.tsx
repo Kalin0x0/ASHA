@@ -270,7 +270,7 @@ export function WorkstationLauncher() {
                       <h2 className="font-display text-xl font-semibold tracking-tight">{t('favorites.title')}</h2>
                       <span className="text-xs text-muted-foreground">({favoriteList.length})</span>
                       {favoriteList.length > 1 && (
-                        <span className="ml-1 hidden text-[11px] text-muted-foreground/50 sm:inline">
+                        <span className="ms-1 hidden text-[11px] text-muted-foreground/50 sm:inline">
                           · {t('favorites.reorderHint')}
                         </span>
                       )}

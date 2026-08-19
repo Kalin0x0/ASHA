@@ -49,7 +49,7 @@ export default function AgentsPage() {
                 <p className="text-sm font-medium">{z.name}</p>
                 <p className="text-xs text-muted-foreground">{z.region}</p>
               </div>
-              <Badge variant="outline" className="ml-2 tnum">
+              <Badge variant="outline" className="ms-2 tnum">
                 {t('agents.zoneLoad', { agents: z.agents, sessions: z.sessions })}
               </Badge>
             </div>
