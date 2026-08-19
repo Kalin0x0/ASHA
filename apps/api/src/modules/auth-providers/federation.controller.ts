@@ -7,8 +7,18 @@ import {
   type LdapTestDto,
   ldapTestSchema,
 } from '@asha/contracts';
+import { z } from 'zod';
 import { type AuthUser, CurrentUser, Public, RequirePermissions } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
+
+// The IdP form-POSTs base64 XML here. The assertion itself is signature-checked
+// downstream, but this route is @Public(), so bound the envelope before any of
+// it reaches the XML parser rather than handing an arbitrary shape to it.
+const samlCallbackSchema = z.object({
+  SAMLResponse: z.string().min(1).max(1_000_000).optional(),
+  RelayState: z.string().max(2048).optional(),
+});
+type SamlCallbackDto = z.infer<typeof samlCallbackSchema>;
 import { AuthService } from '../auth/auth.service';
 import { FederationService } from './federation.service';
 import { LdapService } from './ldap.service';
@@ -50,7 +60,7 @@ export class FederationController {
   @Post('saml/:id/callback')
   async samlCallback(
     @Param('id') id: string,
-    @Body() body: { SAMLResponse?: string; RelayState?: string },
+    @Body(new ZodPipe(samlCallbackSchema)) body: SamlCallbackDto,
     @Req() req: ReqMeta,
   ) {
     if (!body?.SAMLResponse) return { error: 'Missing SAMLResponse' };
