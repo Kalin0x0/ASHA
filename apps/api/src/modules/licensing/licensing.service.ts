@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import { createHash, createPublicKey, verify as edVerify } from 'node:crypto';
 import { z } from 'zod';
 import type { UpsertLicenseDto } from '@asha/contracts';
+import { ACTIVE_SESSION_STATUSES } from '@asha/contracts';
 import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 
@@ -74,7 +75,7 @@ function verifyLicenseKey(licenseKey: string): LicenseClaims {
 @Injectable()
 export class LicensingService {
   // Statuses that count against a CONCURRENT license.
-  private static readonly ACTIVE = ['REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED'];
+  private static readonly ACTIVE = ACTIVE_SESSION_STATUSES;
 
   constructor(private readonly audit: AuditService) {}
 

@@ -6,18 +6,22 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     org: { findFirst: vi.fn() },
     setting: { findUnique: vi.fn() },
-    demoGrant: { findFirst: vi.fn(), create: vi.fn() },
+    demoGrant: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     user: { findFirst: vi.fn(), create: vi.fn() },
     group: { findFirst: vi.fn() },
     userGroup: { create: vi.fn() },
     workspace: { findMany: vi.fn() },
     workspaceUser: { create: vi.fn() },
-    tariff: { findFirst: vi.fn(), create: vi.fn() },
+    tariff: { findFirst: vi.fn(), create: vi.fn(), upsert: vi.fn() },
     tariffAssignment: { upsert: vi.fn() },
   },
 }));
 
-vi.mock('@asha/db', () => ({ prisma: prismaMock }));
+// $transaction runs the callback against the same mock, so the assertions below
+// see every write the transactional block performs.
+vi.mock('@asha/db', () => ({
+  prisma: { ...prismaMock, $transaction: (fn: (tx: unknown) => unknown) => fn(prismaMock) },
+}));
 vi.mock('@asha/crypto', () => ({ hashToken: (s: string) => `hash(${s})` }));
 
 import { DemoService } from './demo.service';
@@ -68,8 +72,7 @@ describe('DemoService.startDemo', () => {
     prismaMock.user.create.mockResolvedValue({ id: 'demo1', orgId: 'org1', email: 'trial@example.com', username: 'demo-x', displayName: 'Demo user' });
     prismaMock.group.findFirst.mockResolvedValue({ id: 'grp-demo' });
     prismaMock.workspace.findMany.mockResolvedValue([{ id: 'ws-firefox' }]);
-    prismaMock.tariff.findFirst.mockResolvedValue(null);
-    prismaMock.tariff.create.mockResolvedValue({ id: 'tar-demo', period: 'MINUTE' });
+    prismaMock.tariff.upsert.mockResolvedValue({ id: 'tar-demo', period: 'MINUTE' });
 
     const res = await svc.startDemo(INPUT);
 
@@ -98,5 +101,63 @@ describe('DemoService.startDemo', () => {
 
     await expect(svc.startDemo(INPUT)).rejects.toBeInstanceOf(ForbiddenException);
     expect(prismaMock.demoGrant.findFirst).not.toHaveBeenCalled();
+  });
+});
+
+describe('DemoService.startDemo — provisioning is atomic and one-shot', () => {
+  const ready = () => {
+    prismaMock.demoGrant.findFirst.mockResolvedValue(null);
+    prismaMock.user.findFirst.mockResolvedValue(null);
+    prismaMock.user.create.mockResolvedValue({ id: 'demo1', orgId: 'org1', email: 'trial@example.com', username: 'demo-x', displayName: 'Demo user' });
+    prismaMock.group.findFirst.mockResolvedValue({ id: 'grp-demo' });
+    prismaMock.workspace.findMany.mockResolvedValue([{ id: 'ws-firefox' }]);
+    prismaMock.tariff.upsert.mockResolvedValue({ id: 'tar-demo', period: 'MINUTE' });
+  };
+
+  it('writes the DemoGrant FIRST so the unique index arbitrates a race', async () => {
+    // Two concurrent requests with different e-mails but the same fingerprint
+    // both cleared the earlier read. Creating the user first left the loser's
+    // account, group membership and workspace grants committed before it died
+    // on the grant's unique index — a permanent orphan holding a seat.
+    const { svc } = makeService();
+    ready();
+    const order: string[] = [];
+    prismaMock.demoGrant.create.mockImplementation(async () => { order.push('grant'); return {}; });
+    prismaMock.user.create.mockImplementation(async () => {
+      order.push('user');
+      return { id: 'demo1', orgId: 'org1', email: 'trial@example.com', username: 'demo-x', displayName: 'Demo user' };
+    });
+
+    await svc.startDemo(INPUT);
+
+    expect(order).toEqual(['grant', 'user']);
+  });
+
+  it('upserts the demo tariff rather than check-then-create', async () => {
+    // Two first-ever signups from different IPs both saw null and both tried to
+    // create it; the loser got a raw P2002 -> 500.
+    const { svc } = makeService();
+    ready();
+
+    await svc.startDemo(INPUT);
+
+    expect(prismaMock.tariff.upsert).toHaveBeenCalled();
+    expect(prismaMock.tariff.create).not.toHaveBeenCalled();
+  });
+
+  it('leaves periodResetAt NULL so the 10-minute budget never refills', async () => {
+    // A MINUTE-period assignment with a reset date was refilled to 600s every
+    // minute forever, which made the tariff half of the time-box meaningless.
+    const { svc } = makeService();
+    ready();
+
+    await svc.startDemo(INPUT);
+
+    const call = prismaMock.tariffAssignment.upsert.mock.calls[0]![0] as {
+      create: { periodResetAt: Date | null };
+      update: { periodResetAt: Date | null };
+    };
+    expect(call.create.periodResetAt).toBeNull();
+    expect(call.update.periodResetAt).toBeNull();
   });
 });

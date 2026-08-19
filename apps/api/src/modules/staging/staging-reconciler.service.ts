@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
+import { POOL_ACTIVE_SESSION_STATUSES } from '@asha/contracts';
 import { prisma } from '@asha/db';
 import { SessionsService } from '../sessions/sessions.service';
 
@@ -25,7 +26,7 @@ import { SessionsService } from '../sessions/sessions.service';
  */
 
 /** Unclaimed pool states that count toward a rule's fill level. */
-const POOL_ACTIVE = ['REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED'] as const;
+const POOL_ACTIVE = POOL_ACTIVE_SESSION_STATUSES;
 /** Retirement preference: not-yet-ready first, then unhealthy, then ready. */
 const RETIRE_RANK: Record<string, number> = {
   REQUESTED: 0,

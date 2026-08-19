@@ -12,10 +12,11 @@ import { CURRENT_USER } from '@/lib/current-user';
 import { useLaunchableWorkspaces, useOwnSessions, usePauseSession, useResumeSession, useTerminateSession } from '@/lib/hooks';
 import { launchTransition } from '@/lib/launch-overlay-store';
 import { useThumbnails } from '@/lib/thumbnail-store';
+import { ACTIVE_SESSION_STATUSES } from '@/lib/types';
 import type { SessionRow, SessionStatus, Workspace } from '@/lib/types';
 import { cn, formatDuration } from '@/lib/utils';
 
-const ACTIVE: SessionStatus[] = ['RUNNING', 'DEGRADED', 'PROVISIONING', 'SCHEDULED', 'PAUSED'];
+const ACTIVE = ACTIVE_SESSION_STATUSES;
 // Server-backed (guacd) sessions open the remote-desktop viewer; the rest the
 // streaming (KasmVNC) viewer.
 const GUAC = new Set(['RDP', 'VNC', 'SSH']);

@@ -9,6 +9,21 @@ export type SessionStatus =
   | 'DESTROYED'
   | 'ERROR';
 
+/**
+ * Session statuses that count as alive in the UI. Three components each had
+ * their own copy, and the portal's two lists omitted REQUESTED — so a session
+ * was invisible between clicking launch and the scheduler picking it up, which
+ * reads as "nothing happened". Mirrors ACTIVE_SESSION_STATUSES in @asha/contracts.
+ */
+export const ACTIVE_SESSION_STATUSES: SessionStatus[] = [
+  'REQUESTED',
+  'SCHEDULED',
+  'PROVISIONING',
+  'RUNNING',
+  'DEGRADED',
+  'PAUSED',
+];
+
 export type AgentStatus = 'ONLINE' | 'OFFLINE' | 'DRAINING' | 'UNHEALTHY';
 
 export type WorkspaceType = 'CONTAINER' | 'SERVER' | 'REMOTE_APP' | 'VM' | 'LINK';

@@ -1,11 +1,12 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
+import { ACTIVE_SESSION_STATUSES } from '@asha/contracts';
 import { prisma } from '@asha/db';
 import { TariffsService } from '../tariffs/tariffs.service';
 import { SessionsService } from './sessions.service';
 
 /** Session statuses that are still alive and therefore reapable. */
-const ACTIVE_STATUSES = ['REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED'] as const;
+const ACTIVE_STATUSES = ACTIVE_SESSION_STATUSES;
 
 /**
  * Statuses the global abandoned-session reaper targets: a container/connection
@@ -64,17 +65,40 @@ export class SessionReaperService {
     });
     if (expired.length === 0) return 0;
 
+    let pruned = 0;
     for (const u of expired) {
-      const live = await prisma.session.findMany({
-        where: { userId: u.id, status: { in: [...ACTIVE_STATUSES] } },
-        select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
-      });
-      for (const s of live) await this.sessions.destroy(s, 'demo_expired');
-      await prisma.tariffAssignment.deleteMany({ where: { orgId: u.orgId, subjectType: 'USER', subjectId: u.id } });
-      await prisma.user.delete({ where: { id: u.id } });
+      // Per-user try/catch: without it a single failing teardown (Redis publish,
+      // audit write, webhook dispatch, an undeletable row) aborted the whole
+      // loop — and since the failing user sorts first every time, every LATER
+      // expired demo was skipped on this tick and on every tick after. Those
+      // stranded accounts keep their seat and stay signed in.
+      try {
+        const live = await prisma.session.findMany({
+          where: { userId: u.id, status: { in: [...ACTIVE_STATUSES] } },
+          select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
+        });
+        for (const s of live) await this.sessions.destroy(s, 'demo_expired');
+
+        // `destroy` only *requests* teardown when the agent is online — it
+        // returns while the session sits in TERMINATING, waiting for the agent's
+        // DESTROYED ack. Session.user is onDelete: Cascade, so deleting the user
+        // here would take the row with it; the ack then finds nothing,
+        // finalizeDestroyed never runs, and the proxy record lingers for its
+        // full hour TTL. Detach the sessions instead of racing the cascade, and
+        // leave the rows for the normal reapers to finalize.
+        await prisma.session.updateMany({ where: { userId: u.id }, data: { userId: null } });
+
+        await prisma.tariffAssignment.deleteMany({ where: { orgId: u.orgId, subjectType: 'USER', subjectId: u.id } });
+        await prisma.user.delete({ where: { id: u.id } });
+        pruned++;
+      } catch (err) {
+        // The DemoGrant survives regardless, so the one-shot property holds even
+        // if the account lingers until the next tick.
+        this.logger.warn(`Failed to prune expired demo user ${u.id}: ${(err as Error).message}`);
+      }
     }
-    this.logger.log(`Pruned ${expired.length} expired demo account(s)`);
-    return expired.length;
+    if (pruned > 0) this.logger.log(`Pruned ${pruned} expired demo account(s)`);
+    return pruned;
   }
 
   /**

@@ -19,7 +19,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* tsconfig.base.json ./
 # ERR_PNPM_WORKSPACE_PKG_NOT_FOUND.
 COPY packages ./packages
 COPY apps/web ./apps/web
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @asha/db run db:generate \
   && pnpm --filter "./packages/*" --workspace-concurrency=1 build \
   && pnpm --filter @asha/web build

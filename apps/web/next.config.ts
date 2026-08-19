@@ -1,19 +1,47 @@
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
+/**
+ * Extra origins the browser may connect to, derived from the configured API/WS
+ * URLs. Returns their origin only (never a path), and silently skips anything
+ * unparseable so a malformed env var cannot produce a broken header.
+ */
+function connectOrigins(): string[] {
+  const out = new Set<string>();
+  for (const raw of [process.env.NEXT_PUBLIC_API_URL, process.env.NEXT_PUBLIC_WS_URL]) {
+    if (!raw) continue;
+    try {
+      const u = new URL(raw);
+      out.add(u.origin);
+      // A WSS endpoint is usually the same host over the ws(s) scheme.
+      out.add(`${u.protocol === 'https:' ? 'wss:' : 'ws:'}//${u.host}`);
+    } catch {
+      /* not a URL — ignore */
+    }
+  }
+  return [...out];
+}
+
 // Content-Security-Policy for the Asha web app.
 // frame-src is intentionally permissive (https:) because the session viewer
 // embeds KasmVNC / remote-desktop iframes from operator-configured domains.
+const isDev = process.env.NODE_ENV !== 'production';
+
 const csp = [
   "default-src 'self'",
-  // Next.js inlines small scripts for hydration; RSC needs 'unsafe-eval' in dev.
-  // In production the nonce approach is preferable but requires middleware rewrites;
-  // 'unsafe-inline' is acceptable here given the tight default-src.
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  // Next.js inlines small hydration scripts, so 'unsafe-inline' stays. But
+  // 'unsafe-eval' is only needed by the dev-mode React refresh runtime — leaving
+  // it on in production removed the main thing CSP buys you against an injected
+  // script. The nonce approach would let us drop 'unsafe-inline' too, but that
+  // needs middleware rewrites; this is the part that costs nothing.
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
-  // API + WebSocket connections
-  "connect-src 'self' ws: wss: https:",
+  // API + WebSocket connections. Same-origin by default; an operator running the
+  // API on a separate host sets NEXT_PUBLIC_API_URL / NEXT_PUBLIC_WS_URL and
+  // those origins are added below. Previously this was a blanket `https:`, which
+  // let any injected script exfiltrate to an arbitrary host.
+  ['connect-src', "'self'", ...connectOrigins()].join(' '),
   // Remote-desktop iframes are served from operator-configured origins
   "frame-src 'self' https:",
   "frame-ancestors 'none'",
