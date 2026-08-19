@@ -214,7 +214,7 @@ docker compose up -d --build
 # api docs: https://asha.local/api/docs
 ```
 
-The `db-migrate` one-shot container syncs the schema with `prisma db push` and runs the idempotent
+The `db-migrate` one-shot container applies the Prisma migrations and runs the idempotent
 seed automatically. Default admin credentials are printed by the seed (see `packages/db/prisma/seed.ts`).
 
 ### Local dev against a real API
@@ -235,7 +235,7 @@ pnpm dev                                        # turbo runs web + api + agent
 | `pnpm dev:web` | Just the Next.js app (mock mode → no backend needed). |
 | `pnpm build` | Build every workspace. |
 | `pnpm typecheck` | Type-check every workspace. |
-| `pnpm db:migrate` / `db:seed` / `db:studio` | Prisma lifecycle. |
+| `pnpm db:migrate` / `db:seed` / `db:studio` | Prisma lifecycle (`db:migrate` = `migrate dev`, for local schema work). |
 | `pnpm test` | Unit tests (Vitest). |
 
 ## 🗺 Roadmap

@@ -8,5 +8,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* tsconfig.base.json ./
 COPY packages/db ./packages/db
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @asha/db run db:generate
-# `db push` syncs the schema without migration history (Phase 1); seed is idempotent.
-CMD ["sh", "-c", "pnpm --filter @asha/db exec prisma db push --skip-generate --accept-data-loss && pnpm --filter @asha/db run seed"]
+# Apply real migrations (never `db push --accept-data-loss`, which silently
+# destroyed data on any schema-narrowing change). deploy.mjs baselines
+# installations created before migrations existed. The seed is idempotent.
+CMD ["sh", "-c", "pnpm --filter @asha/db run deploy && pnpm --filter @asha/db run seed"]
