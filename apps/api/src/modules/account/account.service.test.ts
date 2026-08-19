@@ -6,6 +6,7 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     user: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
     userCredential: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
+    refreshToken: { updateMany: vi.fn() },
   },
 }));
 
@@ -28,6 +29,9 @@ function makeService() {
 
 beforeEach(() => {
   for (const model of Object.values(prismaMock)) for (const fn of Object.values(model)) (fn as ReturnType<typeof vi.fn>).mockReset();
+  // Default: a local (non-federated) account, and no refresh tokens to revoke.
+  prismaMock.user.findUnique.mockResolvedValue({ id: 'u1', email: 'me@example.com', federatedFrom: null });
+  prismaMock.refreshToken.updateMany.mockResolvedValue({ count: 0 });
 });
 
 describe('AccountService.updateProfile', () => {
@@ -87,5 +91,61 @@ describe('AccountService.changePassword', () => {
     expect(prismaMock.userCredential.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ userId: 'u1', kind: 'PASSWORD', secret: 'hashed(firstpassword)' }) }),
     );
+  });
+});
+
+describe('AccountService.changePassword — post-compromise remediation', () => {
+  it('revokes every live refresh token, so a stolen one cannot outlive the change', async () => {
+    // Without this, changing your password after a phish achieves nothing: the
+    // attacker's refresh token keeps minting access tokens for its full 30-day
+    // lifetime.
+    const { svc } = makeService();
+    prismaMock.userCredential.findFirst.mockResolvedValue({ id: 'c1', secret: 'hashed(right)' });
+    prismaMock.refreshToken.updateMany.mockResolvedValue({ count: 3 });
+
+    await svc.changePassword(USER, { currentPassword: 'right', newPassword: 'brandnewpass' });
+
+    expect(prismaMock.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { userId: 'u1', revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+  });
+
+  it('reports how many sessions it killed in the security event', async () => {
+    const { svc, security } = makeService();
+    prismaMock.userCredential.findFirst.mockResolvedValue({ id: 'c1', secret: 'hashed(right)' });
+    prismaMock.refreshToken.updateMany.mockResolvedValue({ count: 2 });
+
+    await svc.changePassword(USER, { currentPassword: 'right', newPassword: 'brandnewpass' });
+
+    expect(security.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'account.password_changed',
+        metadata: expect.objectContaining({ revokedRefreshTokens: 2 }),
+      }),
+    );
+  });
+
+  it('refuses a federated account — an IdP-independent password survives offboarding', async () => {
+    // login() only checks status === ACTIVE, so a local password on an
+    // SSO-provisioned account is a way back in after HR deprovisions the user.
+    const { svc } = makeService();
+    prismaMock.user.findUnique.mockResolvedValue({ id: 'u1', federatedFrom: 'okta-config-id' });
+
+    await expect(svc.changePassword(USER, { newPassword: 'sneakybackdoor' })).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(prismaMock.userCredential.create).not.toHaveBeenCalled();
+    expect(prismaMock.userCredential.update).not.toHaveBeenCalled();
+    expect(prismaMock.refreshToken.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('does not revoke anything when the current password was wrong', async () => {
+    const { svc } = makeService();
+    prismaMock.userCredential.findFirst.mockResolvedValue({ id: 'c1', secret: 'hashed(right)' });
+
+    await expect(svc.changePassword(USER, { currentPassword: 'wrong', newPassword: 'longenough' })).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    expect(prismaMock.refreshToken.updateMany).not.toHaveBeenCalled();
   });
 });
