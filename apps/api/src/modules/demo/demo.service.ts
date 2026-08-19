@@ -95,53 +95,92 @@ export class DemoService {
 
     const now = Date.now();
     const demoExpiresAt = new Date(now + DEMO_SECONDS * 1000);
-
-    // ── Mint the demo user ────────────────────────────────────────────────────
     const username = `demo-${hashToken(email + fingerprintHash).slice(0, 10)}`;
-    const user = await prisma.user.create({
-      data: {
-        orgId,
-        email,
-        username,
-        displayName: 'Demo user',
-        status: 'DEMO',
-        isSystemAdmin: false,
-        locale: 'en',
-        demoExpiresAt,
-      },
-    });
 
-    // Join the dedicated "Demo Users" group (carries the end-user role but no
-    // workspace grants → keeps demo users isolated). Fall back to the org default
-    // group if a deployment hasn't seeded a demo group.
-    const group =
-      (await prisma.group.findFirst({ where: { orgId, name: 'Demo Users' } })) ??
-      (await prisma.group.findFirst({ where: { orgId, isDefault: true } }));
-    if (group) {
-      await prisma.userGroup.create({ data: { orgId, userId: user.id, groupId: group.id } });
-    }
+    // Everything below is ONE transaction. Provisioning used to be eight
+    // sequential writes: two concurrent requests with different e-mails but the
+    // same fingerprint both cleared the dedup read above, both created a user,
+    // and the loser then died on the DemoGrant unique index — after the user,
+    // its group membership and its workspace grants had already committed. That
+    // left a permanent orphan DEMO account holding a licensed seat. The grant is
+    // now written FIRST, so the unique index (not the earlier read) arbitrates,
+    // and any loser rolls back completely.
+    const user = await prisma.$transaction(async (tx) => {
+      await tx.demoGrant.create({
+        data: { orgId, email, fingerprintHash, ip: input.ip ?? null },
+      });
 
-    // Grant every demo-flagged workspace (deny-by-default hides everything else).
-    const demoWorkspaces = await prisma.workspace.findMany({ where: { orgId, isDemo: true, enabled: true }, select: { id: true } });
-    for (const ws of demoWorkspaces) {
-      await prisma.workspaceUser.create({ data: { orgId, workspaceId: ws.id, userId: user.id } });
-    }
+      const created = await tx.user.create({
+        data: {
+          orgId,
+          email,
+          username,
+          displayName: 'Demo user',
+          status: 'DEMO',
+          isSystemAdmin: false,
+          locale: 'en',
+          demoExpiresAt,
+        },
+      });
 
-    // Time-box with a 10-minute tariff (reuses Part A metering + session cap).
-    const tariff =
-      (await prisma.tariff.findFirst({ where: { orgId, name: DEMO_TARIFF_NAME } })) ??
-      (await prisma.tariff.create({
-        data: { orgId, name: DEMO_TARIFF_NAME, period: 'MINUTE', budgetMinutes: DEMO_MINUTES, maxSessionMinutes: DEMO_MINUTES, maxConcurrent: 1 },
-      }));
-    await prisma.tariffAssignment.upsert({
-      where: { orgId_subjectType_subjectId: { orgId, subjectType: 'USER', subjectId: user.id } },
-      create: { orgId, tariffId: tariff.id, subjectType: 'USER', subjectId: user.id, remainingSeconds: DEMO_SECONDS, periodResetAt: demoExpiresAt },
-      update: { tariffId: tariff.id, remainingSeconds: DEMO_SECONDS, periodResetAt: demoExpiresAt },
-    });
+      // Join the dedicated "Demo Users" group (carries the end-user role but no
+      // workspace grants → keeps demo users isolated). Fall back to the org
+      // default group if a deployment hasn't seeded a demo group.
+      const group =
+        (await tx.group.findFirst({ where: { orgId, name: 'Demo Users' } })) ??
+        (await tx.group.findFirst({ where: { orgId, isDefault: true } }));
+      if (group) {
+        await tx.userGroup.create({ data: { orgId, userId: created.id, groupId: group.id } });
+      }
 
-    // Record the one-shot grant (persists even after the user is pruned).
-    await prisma.demoGrant.create({
-      data: { orgId, email, fingerprintHash, ip: input.ip ?? null, userId: user.id },
+      // Grant every demo-flagged workspace (deny-by-default hides everything else).
+      const demoWorkspaces = await tx.workspace.findMany({
+        where: { orgId, isDemo: true, enabled: true },
+        select: { id: true },
+      });
+      for (const ws of demoWorkspaces) {
+        await tx.workspaceUser.create({ data: { orgId, workspaceId: ws.id, userId: created.id } });
+      }
+
+      // Time-box with a 10-minute tariff (reuses the tariff metering + session
+      // cap). `upsert`, not check-then-create: two first-ever signups from
+      // different IPs both saw null and both tried to create it, and the loser
+      // got a raw P2002 → 500.
+      const tariff = await tx.tariff.upsert({
+        where: { orgId_name: { orgId, name: DEMO_TARIFF_NAME } },
+        create: {
+          orgId,
+          name: DEMO_TARIFF_NAME,
+          period: 'MINUTE',
+          budgetMinutes: DEMO_MINUTES,
+          maxSessionMinutes: DEMO_MINUTES,
+          maxConcurrent: 1,
+        },
+        update: {},
+      });
+      // periodResetAt stays NULL on purpose: a demo is one-shot. With a reset
+      // date the MINUTE-period reset job refilled the 10-minute budget every
+      // minute forever, so the tariff limb of the time-box contributed nothing
+      // and a stranded demo user became effectively unlimited.
+      await tx.tariffAssignment.upsert({
+        where: { orgId_subjectType_subjectId: { orgId, subjectType: 'USER', subjectId: created.id } },
+        create: {
+          orgId,
+          tariffId: tariff.id,
+          subjectType: 'USER',
+          subjectId: created.id,
+          remainingSeconds: DEMO_SECONDS,
+          periodResetAt: null,
+        },
+        update: { tariffId: tariff.id, remainingSeconds: DEMO_SECONDS, periodResetAt: null },
+      });
+
+      await tx.demoGrant.update({
+        where: { orgId_email: { orgId, email } },
+        data: { userId: created.id },
+      });
+
+      return created;
     });
 
     await this.security.emit({

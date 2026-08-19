@@ -82,7 +82,9 @@
       "removed": "Server entfernt",
       "removeFailed": "Server konnte nicht entfernt werden",
       "updated": "Server aktualisiert"
-    }
+    },
+    "editServer": "Server bearbeiten",
+    "deleteServer": "Server löschen"
   },
   "serverPools": {
     "title": "Server-Pools",

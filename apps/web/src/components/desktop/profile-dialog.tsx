@@ -17,11 +17,12 @@ import { AvatarError, fileToAvatarDataUrl } from '@/lib/avatar-upload';
 import { useAccount, useChangePassword, useMyTariff, useOwnSessions, useUpdateAccount } from '@/lib/hooks';
 import { LOCALES } from '@/i18n/locales';
 import { useProfileDialog } from '@/lib/profile-store';
+import { ACTIVE_SESSION_STATUSES } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 type Tab = 'profile' | 'security' | 'plan';
 
-const ACTIVE_SESSION_STATUSES = new Set(['REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED']);
+const ACTIVE_STATUS_SET = new Set<string>(ACTIVE_SESSION_STATUSES);
 
 function initialsOf(name: string) {
   return (
@@ -382,7 +383,7 @@ function PlanTab() {
   const t = useTranslations('portal');
   const tariff = useMyTariff();
   const sessions = useOwnSessions();
-  const activeCount = sessions.filter((s) => ACTIVE_SESSION_STATUSES.has(s.status)).length;
+  const activeCount = sessions.filter((s) => ACTIVE_STATUS_SET.has(s.status)).length;
 
   const fmtMin = (m: number) => {
     const h = Math.floor(m / 60);

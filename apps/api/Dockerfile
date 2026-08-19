@@ -7,7 +7,7 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/api ./apps/api
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @asha/db run db:generate \
   && pnpm --filter "./packages/*" --workspace-concurrency=1 build \
   && pnpm --filter @asha/api build

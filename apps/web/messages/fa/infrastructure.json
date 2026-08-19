@@ -82,7 +82,9 @@
       "removed": "سرور حذف شد",
       "removeFailed": "حذف سرور ممکن نشد",
       "updated": "سرور به‌روزرسانی شد"
-    }
+    },
+    "editServer": "ویرایش سرور",
+    "deleteServer": "حذف سرور"
   },
   "serverPools": {
     "title": "استخرهای سرور",

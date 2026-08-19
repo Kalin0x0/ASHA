@@ -1,10 +1,11 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ACTIVE_SESSION_STATUSES } from '@asha/contracts';
 import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
 
 /** Session statuses that hold a slot / consume the usage budget. */
-const ACTIVE = ['REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED'] as const;
+const ACTIVE = ACTIVE_SESSION_STATUSES;
 const CONSUMING = ['RUNNING', 'DEGRADED'] as const;
 
 export interface EffectiveTariff {

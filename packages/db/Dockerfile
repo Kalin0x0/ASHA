@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* tsconfig.base.json ./
 COPY packages/db ./packages/db
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @asha/db run db:generate
 # Apply real migrations (never `db push --accept-data-loss`, which silently
 # destroyed data on any schema-narrowing change). deploy.mjs baselines

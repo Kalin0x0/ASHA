@@ -39,7 +39,7 @@ export const DropdownMenuItem = React.forwardRef<
       'focus:bg-secondary focus:text-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       '[&_svg]:size-4 [&_svg]:text-muted-foreground',
       destructive && 'text-destructive focus:bg-[rgba(210,104,95,0.12)] focus:text-destructive [&_svg]:text-destructive',
-      inset && 'pl-8',
+      inset && 'ps-8',
       className,
     )}
     {...props}
@@ -83,12 +83,12 @@ export const DropdownMenuCheckboxItem = React.forwardRef<
     ref={ref}
     checked={checked}
     className={cn(
-      'relative flex cursor-pointer select-none items-center gap-2 rounded-md py-1.5 pl-8 pr-2.5 text-sm outline-none focus:bg-secondary',
+      'relative flex cursor-pointer select-none items-center gap-2 rounded-md py-1.5 ps-8 pe-2.5 text-sm outline-none focus:bg-secondary',
       className,
     )}
     {...props}
   >
-    <span className="absolute left-2.5 flex size-4 items-center justify-center">
+    <span className="absolute start-2.5 flex size-4 items-center justify-center">
       <DropdownMenuPrimitive.ItemIndicator>
         <Check className="size-4 text-gold-400" />
       </DropdownMenuPrimitive.ItemIndicator>

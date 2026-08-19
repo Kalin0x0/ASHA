@@ -104,7 +104,7 @@ export default function SharingPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">
                       {s.workspaceName ?? s.sessionId}
-                      <span className="ml-2 font-normal text-muted-foreground">· {s.ownerName ?? t('sharing.unknownOwner')}</span>
+                      <span className="ms-2 font-normal text-muted-foreground">· {s.ownerName ?? t('sharing.unknownOwner')}</span>
                     </p>
                     <p className="truncate font-mono text-xs text-muted-foreground">{s.shareKey}</p>
                   </div>

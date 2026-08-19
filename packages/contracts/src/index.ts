@@ -103,6 +103,11 @@ export const createWorkspaceSchema = z.object({
   gpu: gpuConfigSchema.optional(),
   dlp: dlpPolicySchema.optional(),
   dockerConfig: z.record(z.unknown()).default({}),
+  // Offered to 10-minute demo accounts. Demo users are deny-by-default isolated
+  // and granted exactly the isDemo workspaces at sign-up, so without a way to
+  // set this outside the seed an operator who builds their own catalog leaves
+  // every demo user staring at an empty workspace list.
+  isDemo: z.boolean().optional(),
 });
 export type CreateWorkspaceDto = z.infer<typeof createWorkspaceSchema>;
 
@@ -126,6 +131,7 @@ export const updateWorkspaceSchema = z
     dlp: dlpPolicySchema,
     dockerConfig: z.record(z.unknown()),
     enabled: z.boolean(),
+    isDemo: z.boolean(),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
@@ -267,6 +273,37 @@ export const agentHeartbeatSchema = z.object({
   version: z.string(),
 });
 export type AgentHeartbeatDto = z.infer<typeof agentHeartbeatSchema>;
+
+/**
+ * Session statuses that are still ALIVE — the session holds an agent slot, a
+ * licence seat and a tariff budget. This was duplicated verbatim in five places
+ * (reaper, tariffs, licensing, copilot, and the web profile dialog) and had
+ * drifted into four mutually inconsistent variants, so a paused session counted
+ * against a licence but not against a staging slot.
+ */
+export const ACTIVE_SESSION_STATUSES = [
+  'REQUESTED',
+  'SCHEDULED',
+  'PROVISIONING',
+  'RUNNING',
+  'DEGRADED',
+  'PAUSED',
+] as const;
+export type ActiveSessionStatus = (typeof ACTIVE_SESSION_STATUSES)[number];
+
+/**
+ * The staging pool's notion of "alive". Deliberately EXCLUDES `PAUSED`: an
+ * unclaimed pre-warmed session can never be paused (SessionsService refuses to
+ * control one), so a PAUSED row is by definition already claimed and no longer
+ * occupies a pool slot.
+ */
+export const POOL_ACTIVE_SESSION_STATUSES = [
+  'REQUESTED',
+  'SCHEDULED',
+  'PROVISIONING',
+  'RUNNING',
+  'DEGRADED',
+] as const;
 
 export const sessionStatusSchema = z.object({
   status: z.enum(['PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED', 'DESTROYED', 'ERROR']),

@@ -42,11 +42,28 @@ function webglVendor(): string {
   }
 }
 
-/** djb2 — small, dependency-free string hash rendered as hex. */
-function djb2(str: string): string {
-  let h = 5381;
-  for (let i = 0; i < str.length; i++) h = (h * 33) ^ str.charCodeAt(i);
-  return (h >>> 0).toString(16).padStart(8, '0');
+/**
+ * FNV-1a, seeded. One pass gives 32 bits — far too narrow here: the composed
+ * inputs are fleet-identical on standardised corporate hardware (same browser
+ * build, same 1920x1080, same locale and timezone), so a 32-bit digest made
+ * genuine collisions likely. Since a collision means a colleague is refused a
+ * demo they never used — with no admin UI to clear the grant — the width
+ * matters. Four independent seeds give 128 bits.
+ */
+function fnv1a(str: string, seed: number): number {
+  let h = seed;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    // 32-bit FNV prime (16777619) via shifts, staying inside int32 math.
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h >>> 0;
+}
+
+/** 128-bit digest as 32 lowercase hex characters. */
+function wideHash(str: string): string {
+  const seeds = [0x811c9dc5, 0x01000193, 0x9e3779b9, 0x85ebca6b];
+  return seeds.map((seed) => fnv1a(str, seed).toString(16).padStart(8, '0')).join('');
 }
 
 /** Returns a stable-ish fingerprint string for this browser/device. */
@@ -66,5 +83,5 @@ export function computeDeviceFingerprint(): string {
     canvasHash(),
     webglVendor(),
   ];
-  return djb2(parts.join('|'));
+  return wideHash(parts.join('|'));
 }
