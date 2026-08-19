@@ -188,6 +188,26 @@ docker compose ps
 docker compose logs -f api
 ```
 
+### Database schema changes
+
+The `db-migrate` one-shot container applies **Prisma migrations**
+(`packages/db/prisma/migrations/`) on every start, then runs the idempotent seed.
+Earlier releases used `prisma db push --accept-data-loss`, which re-synced the
+schema on every boot and would silently drop a column or table whenever the
+schema narrowed — no history, no prompt.
+
+Upgrading from such a release needs no manual step: the container detects a
+database that has the full schema but no migration history and **baselines** it
+(records `0_init` as already applied) before applying anything newer. Your data
+is not touched. You will see this once in the logs:
+
+```
+[db-migrate] Found 80 existing tables but no migration history — baselining as 0_init (no data is touched).
+```
+
+If a migration ever fails, the stack stops there rather than starting against a
+half-migrated database — check `docker compose logs db-migrate`.
+
 ## 7. Configuration reference
 
 The installer sets these keys in `.env` (see [`.env.example`](../.env.example)
