@@ -12,7 +12,7 @@ Self-hosted · multi-tenant · a modern container-streaming / VDI / DaaS platfor
 <br>
 
 [![License](https://img.shields.io/badge/License-MIT-d4af37?style=for-the-badge)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-510%20passing-4c9a2a?style=for-the-badge)](https://github.com/Kalin0x0/ASHA/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-615%20passing-4c9a2a?style=for-the-badge)](https://github.com/Kalin0x0/ASHA/actions/workflows/ci.yml)
 [![CI](https://img.shields.io/github/actions/workflow/status/Kalin0x0/ASHA/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/Kalin0x0/ASHA/actions/workflows/ci.yml)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Kalin0x0)
 
@@ -89,7 +89,7 @@ Built from scratch or on open-source tooling — **nothing derived from any prop
 | 🔑 | **Passkeys / WebAuthn** — passwordless, phishing-resistant sign-in on `@simplewebauthn/server`, with clone detection. |
 | 🪪 | **SSO** — OIDC (Auth Code + PKCE, JWKS ID-token verification, nonce-binding, RP-logout), SAML 2.0 (SP-initiated + Single Logout), LDAP bind + live-test, with JIT provisioning & attribute→group mapping. |
 | 🔄 | **SCIM 2.0** — automated user + group provisioning (RFC 7643/7644) for Okta, Azure AD, OneLogin. |
-| 🛡 | **Multi-tenancy & RBAC** — 40+ Prisma models, permission matrix, app-layer org scoping + Postgres RLS backstop. |
+| 🛡 | **Multi-tenancy & RBAC** — 79 Prisma models, permission matrix, and app-layer org scoping enforced by a Prisma client extension (with a drift test that fails if a tenant-owned model is ever left unscoped). |
 | 👤 | **Self-service profile** — photo, name, e-mail, password & TOTP two-factor, plus a live plan-&-usage view. |
 | ⏱ | **Tariffs & isolation** — time budgets (per-minute/hour/month) metered & enforced, deny-by-default workspace visibility, and a one-shot **10-minute demo** account. |
 | ✅ | **Approval-gated sign-up** — visitors request a demo/test account at `/request-access`; nothing is created until an admin approves it, optionally time-boxed to an hour, day, week or month. Off by default. |
@@ -133,7 +133,7 @@ TypeScript end-to-end · pnpm + Turborepo monorepo.
 | `@asha/api` | `apps/api` | NestJS Manager/API — REST + WebSocket control plane, OpenAPI at `/api/docs`. |
 | `@asha/agent` | `apps/agent` | Provisions & destroys session containers — Docker (dockerode) **or** Kubernetes driver, plus connectivity sidecars + device passthrough. |
 | `@asha/connection-proxy` | `apps/connection-proxy` | RDP/VNC bridge to **guacd**, SSH bridge via **ssh2** (PTY, resize, key/password auth). |
-| `@asha/db` | `packages/db` | Prisma schema (single source of truth), client, seed, RLS backstop. |
+| `@asha/db` | `packages/db` | Prisma schema (single source of truth), client, seed, tenant-scoping extension. |
 | `@asha/contracts` · `@asha/rbac` | `packages/*` | Shared DTOs / zod schemas / event contracts · permission catalog + role matrix. |
 | `@asha/proxy-labels` · `@asha/events` | `packages/*` | Session → Traefik labels / k8s ingress · typed Redis pub/sub channels. |
 | `@asha/config` · `@asha/crypto` · `@asha/logger` | `packages/*` | Env loading · secret/token crypto · structured logging. |
@@ -236,11 +236,11 @@ pnpm dev                                        # turbo runs web + api + agent
 | `pnpm build` | Build every workspace. |
 | `pnpm typecheck` | Type-check every workspace. |
 | `pnpm db:migrate` / `db:seed` / `db:studio` | Prisma lifecycle. |
-| `pnpm test` | Unit + e2e tests. |
+| `pnpm test` | Unit tests (Vitest). |
 
 ## 🗺 Roadmap
 
-All seven phases are complete — **276 unit tests**, full `typecheck · lint · test · build` green
+All seven phases are complete — **615 unit tests**, full `typecheck · lint · test · build` green
 across 26 workspace tasks. The per-item build log lives in [`TODO.md`](TODO.md).
 
 <details>

@@ -2,11 +2,20 @@
 -- Asha — Postgres Row-Level Security backstop for multi-tenant isolation
 -- ============================================================================
 --
--- PURPOSE
--- -------
--- The Prisma tenant extension (packages/db/src/index.ts) already injects
--- orgId filters at the application layer. This RLS layer adds a database-level
--- backstop: even if a service-layer bug omits an orgId check, Postgres will
+-- ⚠️  STATUS: NOT WIRED UP. This script is a DESIGN SKETCH, not an active
+--     control. Nothing in the repo executes it (no migration, no Dockerfile,
+--     no compose service, no installer step), and the application never issues
+--     the `SET LOCAL app.current_org_id` that the policies below read — so even
+--     if you applied it by hand, `current_org_id()` returns '' and every policy
+--     degenerates to USING (true). Do not count it as a security boundary.
+--     Tenant isolation today rests entirely on the Prisma client extension in
+--     packages/db/src/index.ts.
+--
+-- PURPOSE (once wired up)
+-- -----------------------
+-- The Prisma tenant extension (packages/db/src/index.ts) injects orgId filters
+-- at the application layer. This RLS layer is intended to add a database-level
+-- backstop: even if a service-layer bug omits an orgId check, Postgres would
 -- reject cross-tenant reads and writes.
 --
 -- HOW IT WORKS
