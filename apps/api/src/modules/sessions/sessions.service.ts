@@ -93,6 +93,15 @@ export class SessionsService {
       }
       if (!this.servers) throw new BadRequestException('Server connections are unavailable.');
       const conn = await this.servers.connect(user, workspace.serverId);
+      // `servers.connect` knows nothing about workspaces or tariffs, so it
+      // creates the session without a lifetime cap. Stamp the same caps a
+      // container launch gets — otherwise maxDurationMinutes, the tariff's
+      // maxSessionMinutes and the remaining budget are ALL silently ignored for
+      // every server-backed workspace, and only the idle reaper ever ends it.
+      const serverExpiresAt = await this.launchExpiry(user, workspace);
+      if (serverExpiresAt) {
+        await prisma.session.update({ where: { id: conn.sessionId }, data: { expiresAt: serverExpiresAt } });
+      }
       await this.webhooks?.dispatch(user.orgId, 'session.created', {
         sessionId: conn.sessionId,
         workspaceId: workspace.id,
@@ -127,15 +136,7 @@ export class SessionsService {
       protocol === 'KASMVNC' ? 'KASMVNC'
       : protocol === 'WEBRTC' ? 'NEKO_WEBRTC'
       : 'GUAC_RDP';
-    // Hard lifetime cap: the reaper terminates the session once expiresAt passes.
-    // The effective cap is the MIN of the workspace's own cap and any tariff cap
-    // (per-session limit or the user's remaining time budget, weighted by the
-    // workspace's minuteCostFactor).
-    const caps: number[] = [];
-    if (workspace.maxDurationMinutes) caps.push(workspace.maxDurationMinutes * 60_000);
-    const tariffCapMs = await this.tariffs?.sessionCapMs(user, workspace.minuteCostFactor ?? 1);
-    if (tariffCapMs != null) caps.push(tariffCapMs);
-    const expiresAt = caps.length ? new Date(Date.now() + Math.min(...caps)) : null;
+    const expiresAt = await this.launchExpiry(user, workspace);
 
     // Instant delivery: hand over a pre-warmed (staged) RUNNING session instead
     // of a cold provision when one is ready. Placed AFTER every launch gate
@@ -985,7 +986,14 @@ export class SessionsService {
   async pause(id: string, user: AuthUser) {
     const session = await this.requireControllable(id, ['RUNNING', 'DEGRADED'], user);
     await this.sendControl(session, { action: 'PAUSE' });
-    await prisma.session.update({ where: { id }, data: { status: 'PAUSED', pausedAt: new Date() } });
+    // Settle the segment that just ended. Metering derives usage from
+    // `(now - startedAt) * factor`, so without this the wall-clock spent PAUSED
+    // is billed retroactively the moment the session resumes — a weekend pause
+    // would wipe out a whole month's budget in a single tick.
+    await prisma.session.update({
+      where: { id },
+      data: { status: 'PAUSED', pausedAt: new Date(), consumedSeconds: await this.billedSecondsSoFar(session) },
+    });
     await this.audit.record({
       orgId: session.orgId,
       actorUserId: user.sub,
@@ -1002,9 +1010,15 @@ export class SessionsService {
   async resume(id: string, user: AuthUser) {
     const session = await this.requireControllable(id, ['PAUSED'], user);
     await this.sendControl(session, { action: 'RESUME' });
+    // Restart the billing clock where it stopped: backdate `startedAt` so that
+    // `(now - startedAt) * factor` equals what has already been consumed. That
+    // keeps the metering formula (absolute, and therefore restart-safe) intact
+    // while excluding the paused interval, with no extra column.
+    const factor = await this.billingFactor(session.workspaceId);
+    const resumedStartedAt = new Date(Date.now() - (session.consumedSeconds * 1000) / factor);
     await prisma.session.update({
       where: { id },
-      data: { status: 'RUNNING', lastKeepaliveAt: new Date(), pausedAt: null },
+      data: { status: 'RUNNING', lastKeepaliveAt: new Date(), pausedAt: null, startedAt: resumedStartedAt },
     });
     await this.audit.record({
       orgId: session.orgId,
@@ -1107,6 +1121,43 @@ export class SessionsService {
     const session = await this.findInOrg(id, user.orgId);
     this.assertCanAccess(session, user);
     return prisma.recording.findUnique({ where: { sessionId: id }, include: { artifacts: true } });
+  }
+
+  /**
+   * Hard lifetime cap for a new session: the MIN of the workspace's own
+   * `maxDurationMinutes` and any tariff cap (the plan's per-session limit, and
+   * the holder's remaining budget weighted by the workspace's cost factor).
+   * Null when nothing caps it. The reaper terminates the session once it passes.
+   */
+  private async launchExpiry(
+    user: AuthUser,
+    workspace: { maxDurationMinutes: number | null; minuteCostFactor?: number | null },
+  ): Promise<Date | null> {
+    const caps: number[] = [];
+    if (workspace.maxDurationMinutes) caps.push(workspace.maxDurationMinutes * 60_000);
+    const tariffCapMs = await this.tariffs?.sessionCapMs(user, workspace.minuteCostFactor ?? 1);
+    if (tariffCapMs != null) caps.push(tariffCapMs);
+    return caps.length ? new Date(Date.now() + Math.min(...caps)) : null;
+  }
+
+  /**
+   * The workspace's tariff weight (how fast it burns budget). Server-backed
+   * sessions have no workspace and bill in real time. Guarded against a
+   * zero/negative factor, which would otherwise divide by zero when the billing
+   * clock is rewound on resume.
+   */
+  private async billingFactor(workspaceId: string | null): Promise<number> {
+    if (!workspaceId) return 1;
+    const ws = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { minuteCostFactor: true } });
+    const factor = ws?.minuteCostFactor ?? 1;
+    return factor > 0 ? factor : 1;
+  }
+
+  /** Usage billed for a session up to now, in the same units as `consumedSeconds`. */
+  private async billedSecondsSoFar(session: { startedAt: Date | null; workspaceId: string | null; consumedSeconds: number }) {
+    if (!session.startedAt) return session.consumedSeconds;
+    const factor = await this.billingFactor(session.workspaceId);
+    return Math.max(session.consumedSeconds, Math.floor(((Date.now() - session.startedAt.getTime()) / 1000) * factor));
   }
 
   private async requireControllable(id: string, allowed: string[], user: AuthUser) {
