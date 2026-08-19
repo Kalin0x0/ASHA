@@ -12,6 +12,11 @@
 
 ---
 
+> [!NOTE]
+> This guide targets Ubuntu/Debian. For Docker Desktop, PowerShell, and a
+> contributor-ready Windows setup, see
+> **[Installing Asha on Windows](INSTALL-WINDOWS.md)**.
+
 Asha ships with a single, branded installer — `scripts/install.sh` — that takes a
 plain Ubuntu (or Debian) box from nothing to a **live, signed-in-ready** Asha in
 one command: it installs Docker, generates strong secrets, wires your **domain**

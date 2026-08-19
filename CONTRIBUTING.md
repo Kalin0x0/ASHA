@@ -12,6 +12,10 @@ By participating you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md)
   `corepack enable && corepack prepare pnpm@9.15.9 --activate`.
 - **Docker** (+ Compose) — for Postgres, Redis, and running the full stack.
 
+Windows contributors should follow
+[`docs/INSTALL-WINDOWS.md`](docs/INSTALL-WINDOWS.md) for WSL 2, Docker Desktop,
+PowerShell, local DNS, and TLS setup.
+
 ## Getting started
 
 ```bash

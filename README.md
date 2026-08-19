@@ -192,7 +192,10 @@ sudo bash scripts/install.sh --domain asha.example.com \
 The installer is also your control panel: `status` · `logs` · `restart` · `update` · `uninstall`.
 </details>
 
-**Full guide → [`docs/INSTALL.md`](docs/INSTALL.md).**
+**Installation guides:**
+
+- **Ubuntu/Debian:** [`docs/INSTALL.md`](docs/INSTALL.md)
+- **Windows + Docker Desktop:** [`docs/INSTALL-WINDOWS.md`](docs/INSTALL-WINDOWS.md)
 
 ### Option A — the UI showpiece only (no Docker, fastest)
 
@@ -283,8 +286,9 @@ More platforms activate automatically from [`.github/FUNDING.yml`](.github/FUNDI
 [Sponsoring guide](docs/SPONSORING.md).
 
 > ⭐ Not able to donate? **Starring the repo** and sharing Asha helps just as much — it's free and it
-> genuinely moves the needle. New here? The [installation guide](docs/INSTALL.md) gets you a live
-> Asha in one command.
+> genuinely moves the needle. New here? Use the
+> [Ubuntu/Debian](docs/INSTALL.md) or [Windows](docs/INSTALL-WINDOWS.md)
+> installation guide to get Asha running.
 
 ## 📜 License & ownership
 
