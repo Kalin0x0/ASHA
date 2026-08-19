@@ -1,8 +1,29 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { CreateWorkspaceDto, UpdateWorkspaceDto } from '@asha/contracts';
 import { prisma } from '@asha/db';
 import type { AuthUser } from '../../common/decorators';
+import { RbacService } from '../../common/rbac.service';
 import { SessionsService } from '../sessions/sessions.service';
+
+/**
+ * Permissions that mark a caller as admin-side and therefore entitled to the
+ * FULL catalog including who each workspace is assigned to. `WORKSPACE_VIEW` is
+ * deliberately not among them: every seeded end user (and every 10-minute demo
+ * account) holds it, so gating on it would disclose the whole catalog — and the
+ * per-workspace user roster — to anyone who can log in. The Operator role has
+ * no WORKSPACE_EDIT but does have SESSION_VIEW_ANY, which is why that is in the
+ * list: the admin sessions screen needs workspace names.
+ */
+const CATALOG_ADMIN_PERMISSIONS = ['SESSION_VIEW_ANY', 'WORKSPACE_CREATE', 'WORKSPACE_EDIT', 'IMAGE_MANAGE'];
+
+/**
+ * Drop the access-grant roster before handing a workspace to an ordinary user.
+ * Who else is assigned to a workspace is admin information — knowing it lets a
+ * user enumerate colleagues and infer team structure from the catalog alone.
+ */
+function stripGrants<T extends { groups?: unknown; assignedUsers?: unknown }>(workspaces: T[]) {
+  return workspaces.map(({ groups: _groups, assignedUsers: _assignedUsers, ...rest }) => rest as Omit<T, 'groups' | 'assignedUsers'>);
+}
 
 // Container/Server/Zone are all surfaced so the catalog can show what a
 // workspace runs on (Docker image, RDP/VNC/SSH server, deployment zone).
@@ -18,10 +39,33 @@ const WORKSPACE_INCLUDE = {
 
 @Injectable()
 export class WorkspacesService {
-  constructor(private readonly sessions: SessionsService) {}
+  constructor(
+    private readonly sessions: SessionsService,
+    // Optional so existing unit tests can construct the service positionally.
+    // Absent ⇒ nobody qualifies as admin-side, i.e. it fails CLOSED.
+    @Optional() private readonly rbac?: RbacService,
+  ) {}
 
-  list() {
-    return prisma.workspace.findMany({ include: WORKSPACE_INCLUDE, orderBy: { friendlyName: 'asc' } });
+  /** True when the caller may see the full catalog and its assignment roster. */
+  private async isCatalogAdmin(user: AuthUser): Promise<boolean> {
+    if (user.isSystemAdmin) return true;
+    if (!this.rbac) return false;
+    const granted = await this.rbac.effectivePermissions(user.sub);
+    return CATALOG_ADMIN_PERMISSIONS.some((p) => granted.has(p));
+  }
+
+  /**
+   * The catalog. Admin-side callers get every workspace plus its grants; an
+   * ordinary user gets only what they may actually launch, with the grant
+   * roster stripped — the route is reachable with plain `WORKSPACE_VIEW`, which
+   * every end user holds, so the filtering has to happen here rather than at
+   * the guard.
+   */
+  async list(user: AuthUser) {
+    if (await this.isCatalogAdmin(user)) {
+      return prisma.workspace.findMany({ include: WORKSPACE_INCLUDE, orderBy: { friendlyName: 'asc' } });
+    }
+    return stripGrants(await this.launchableForUser(user));
   }
 
   launchable() {
@@ -75,10 +119,25 @@ export class WorkspacesService {
     return row?.valueJson !== false;
   }
 
-  async get(id: string) {
+  /**
+   * Unfiltered read for internal callers that have already been authorized by
+   * their own route guard (create/update/assignments all return the fresh row).
+   */
+  private async findOrThrow(id: string) {
     const workspace = await prisma.workspace.findUnique({ where: { id }, include: WORKSPACE_INCLUDE });
     if (!workspace) throw new NotFoundException('Workspace not found');
     return workspace;
+  }
+
+  async get(id: string, user: AuthUser) {
+    const workspace = await this.findOrThrow(id);
+    if (await this.isCatalogAdmin(user)) return workspace;
+
+    // An ordinary user may only read a workspace they were actually granted —
+    // 404 rather than 403 so this cannot enumerate the catalog by id.
+    const granted = await this.launchableForUser(user);
+    if (!granted.some((w) => w.id === workspace.id)) throw new NotFoundException('Workspace not found');
+    return stripGrants([workspace])[0]!;
   }
 
   async create(orgId: string, dto: CreateWorkspaceDto) {
@@ -172,7 +231,7 @@ export class WorkspacesService {
       },
     });
     if (res.count === 0) throw new NotFoundException('Workspace not found');
-    return this.get(id);
+    return this.findOrThrow(id);
   }
 
   /**
@@ -203,7 +262,7 @@ export class WorkspacesService {
         },
       },
     });
-    return this.get(id);
+    return this.findOrThrow(id);
   }
 
   async remove(orgId: string, id: string) {

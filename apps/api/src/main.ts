@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -58,7 +58,11 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set('trust proxy', Number(process.env.ASHA_TRUST_PROXY ?? 1));
   app.setGlobalPrefix('api/v1');
   app.enableCors({ origin: corsOrigins(env), credentials: true });
-  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  // No global ValidationPipe: every DTO in this codebase is a `z.infer<>` type,
+  // which is erased at runtime, and there is not a single class-validator
+  // decorator anywhere. The pipe therefore validated nothing while reading like
+  // a guarantee. Request validation is done explicitly, per route, with
+  // `new ZodPipe(schema)` against the shared contract schemas.
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Asha API')

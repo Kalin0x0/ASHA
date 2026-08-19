@@ -40,6 +40,10 @@ export default defineConfig({
       'apps/web/src/**/*.test.ts',
       'apps/api/src/**/*.test.ts',
       'apps/connection-proxy/src/**/*.test.ts',
+      // apps/agent was missing here, so any test written for the Docker/K8s
+      // provisioning path — GPU wiring, device passthrough, sidecar teardown —
+      // would silently never run.
+      'apps/agent/src/**/*.test.ts',
     ],
     environment: 'node',
     passWithNoTests: false,

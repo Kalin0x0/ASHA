@@ -239,3 +239,81 @@ describe('WorkspacesService.remove', () => {
     expect(prismaMock.workspace.deleteMany).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * `GET /workspaces` is guarded by WORKSPACE_VIEW, which the seeded `User` role
+ * (and every 10-minute demo account) holds. Gating the catalog on that
+ * permission alone therefore handed the FULL workspace list — plus the
+ * per-workspace roster of who is assigned to it — to anyone who could log in.
+ * The filtering has to happen in the service, keyed on an admin-side
+ * permission, and it must fail CLOSED when RBAC is unavailable.
+ */
+describe('WorkspacesService.list — catalog disclosure', () => {
+  const ADMIN = { sub: 'u-admin', orgId: 'org1', email: 'a@x', isSystemAdmin: true } as never;
+  const PLAIN = { sub: 'u-plain', orgId: 'org1', email: 'p@x', isSystemAdmin: false } as never;
+
+  const ALL = [
+    { id: 'ws-public', friendlyName: 'Public', groups: [], assignedUsers: [] },
+    { id: 'ws-finance', friendlyName: 'Finance', groups: [{ id: 'g-fin', name: 'Finance' }], assignedUsers: [{ userId: 'u-cfo' }] },
+  ];
+  const GRANTED = [ALL[0]];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    prismaMock.session.findMany.mockResolvedValue([]);
+    prismaMock.userGroup.findMany.mockResolvedValue([]);
+    prismaMock.setting.findUnique.mockResolvedValue(null); // deny-by-default ON
+  });
+
+  const make = (perms: string[] | null) =>
+    new WorkspacesService(
+      { destroy: vi.fn() } as never,
+      perms === null ? undefined : ({ effectivePermissions: async () => new Set(perms) } as never),
+    );
+
+  it('a system admin sees the whole catalog including the assignment roster', async () => {
+    prismaMock.workspace.findMany.mockResolvedValue(ALL);
+
+    const res = (await make([]).list(ADMIN)) as unknown as Record<string, unknown>[];
+
+    expect(res).toHaveLength(2);
+    expect(res[1]).toHaveProperty('assignedUsers');
+  });
+
+  it('an Operator (SESSION_VIEW_ANY, no WORKSPACE_EDIT) still sees the whole catalog', async () => {
+    // Regression guard: tightening the route to WORKSPACE_EDIT would have
+    // broken the admin sessions screen, which Operators legitimately use.
+    prismaMock.workspace.findMany.mockResolvedValue(ALL);
+
+    const res = (await make(['WORKSPACE_VIEW', 'SESSION_VIEW_ANY']).list(ADMIN_LIKE_OPERATOR)) as unknown as Record<string, unknown>[];
+
+    expect(res).toHaveLength(2);
+  });
+
+  it('a plain user gets ONLY their granted workspaces, with the roster stripped', async () => {
+    prismaMock.workspace.findMany.mockResolvedValue(GRANTED);
+
+    const res = (await make(['WORKSPACE_VIEW']).list(PLAIN)) as Record<string, unknown>[];
+
+    expect(res).toHaveLength(1);
+    expect(res[0]!.id).toBe('ws-public');
+    // Who else may use a workspace is admin information.
+    expect(res[0]).not.toHaveProperty('assignedUsers');
+    expect(res[0]).not.toHaveProperty('groups');
+    // It must have gone through the access filter, not the unfiltered catalog.
+    expect(prismaMock.workspace.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ enabled: true }) }),
+    );
+  });
+
+  it('fails closed: with RBAC unavailable a non-admin is NOT treated as admin', async () => {
+    prismaMock.workspace.findMany.mockResolvedValue(GRANTED);
+
+    const res = (await make(null).list(PLAIN)) as Record<string, unknown>[];
+
+    expect(res).toHaveLength(1);
+    expect(res[0]).not.toHaveProperty('assignedUsers');
+  });
+});
+
+const ADMIN_LIKE_OPERATOR = { sub: 'u-op', orgId: 'org1', email: 'o@x', isSystemAdmin: false } as never;

@@ -76,7 +76,27 @@ const TENANT_MODELS = new Set<string>([
   // and resolves its org explicitly, so it is unaffected; listing it here hardens
   // the admin review routes against a cross-tenant id.
   'AccountRequest',
+  // Added after an audit found them scoped only by hand at the service layer —
+  // one forgotten `where` was all that stood between them and a cross-tenant
+  // read. `UserGroup` mattered most: it backs the RBAC permission lookup.
+  // (`RegistrationToken` is still looked up by token hash via `runUnscoped`,
+  // and `DemoGrant`/`AccountRequest` keep their explicit public-path org.)
+  'RegistrationToken',
+  'DemoGrant',
+  'UserGroup',
+  'WorkspaceUser',
+  'SsoMapping',
+  'OrgFeatureFlag',
+  'ImageBuildJob',
+  'Feedback',
 ]);
+
+/**
+ * Exported so a test can assert the set has not drifted from the schema: any
+ * model that gains a non-nullable `orgId` must be listed here, or it silently
+ * loses automatic tenant scoping.
+ */
+export const TENANT_SCOPED_MODELS: ReadonlySet<string> = TENANT_MODELS;
 
 // Batch operations: wrap where in AND so orgId is added as an extra filter.
 const SCOPED_BATCH_OPS = new Set([
