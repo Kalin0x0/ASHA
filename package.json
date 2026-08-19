@@ -2,7 +2,7 @@
   "name": "asha",
   "private": true,
   "version": "0.1.0",
-  "description": "Asha — modern container-streaming / VDI / DaaS platform (anthracite + gold). A Naiemi Group product.",
+  "description": "Asha \u2014 modern container-streaming / VDI / DaaS platform (anthracite + gold). A Naiemi Group product.",
   "author": "Naiemi Group",
   "packageManager": "pnpm@9.15.9",
   "engines": {
@@ -14,7 +14,7 @@
     "dev:web": "pnpm --filter @asha/web dev",
     "dev:api": "pnpm --filter @asha/api start:dev",
     "dev:agent": "pnpm --filter @asha/agent start:dev",
-    "lint": "turbo run lint",
+    "lint": "eslint . && turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -26,10 +26,12 @@
     "clean": "turbo run clean && rimraf node_modules"
   },
   "devDependencies": {
+    "eslint": "^9",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8",
     "vitest": "^2.1.8"
   },
   "pnpm": {

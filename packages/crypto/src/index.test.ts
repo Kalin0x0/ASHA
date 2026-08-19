@@ -71,7 +71,7 @@ describe('seal / unseal (AES-256-GCM)', () => {
 
   it('throws on a tampered token', () => {
     const sealed = seal('data', secret);
-    const [iv, tag, enc] = sealed.split('.');
+    const [iv, tag] = sealed.split('.'); // the ciphertext is replaced below
     const tampered = [iv, tag, Buffer.from('zzzz').toString('base64')].join('.');
     expect(() => unseal(tampered, secret)).toThrow();
   });
