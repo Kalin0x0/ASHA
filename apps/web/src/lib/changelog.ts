@@ -38,6 +38,83 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.32',
+    date: '2026-07-23',
+    title: { en: 'Sign-up requests, access fixes and one language', de: 'Zugangsanfragen, Zugriffs-Fixes und eine Sprache' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Visitors can request a demo or test account from the login screen. Nothing is created until an administrator approves it under Access → Access requests, where each request can be given a time limit and a group on approval. The feature stays off until you switch it on.',
+          de: 'Besucher können über die Anmeldeseite ein Demo- oder Testkonto anfragen. Es entsteht nichts, bevor eine Administratorin oder ein Administrator unter Zugriff → Zugangsanfragen freigibt — dort lässt sich pro Anfrage eine Befristung und eine Gruppe vergeben. Die Funktion bleibt aus, bis Sie sie einschalten.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'A guided Windows installer sets Asha up on a Windows host, with a written walkthrough alongside it.',
+          de: 'Ein geführter Windows-Installer richtet Asha auf einem Windows-Host ein, samt schriftlicher Anleitung.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Assigning a workspace to a person now actually shows it to them. New accounts joined no group, and permissions come only from groups, so they signed in to an empty app and even a directly assigned workspace stayed invisible.',
+          de: 'Wird eine Person einem Arbeitsbereich zugewiesen, sieht sie ihn jetzt auch. Neue Konten landeten in keiner Gruppe, und Rechte kommen ausschließlich über Gruppen — die App blieb leer, und selbst ein direkt zugewiesener Arbeitsbereich war unsichtbar.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'A workspace can no longer be launched by anyone who knows its id, and the catalogue no longer hands its full contents — including who each workspace is assigned to — to every signed-in user.',
+          de: 'Ein Arbeitsbereich lässt sich nicht mehr allein durch Kenntnis seiner ID starten, und der Katalog gibt seinen vollständigen Inhalt — samt Zuweisungen — nicht mehr an jede angemeldete Person heraus.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Signing out clears the cached view of your data, so the next person to sign in on a shared browser no longer sees the previous account’s users, sessions and activity.',
+          de: 'Beim Abmelden wird die zwischengespeicherte Ansicht geleert — wer sich danach an einem geteilten Browser anmeldet, sieht nicht mehr Nutzer, Sitzungen und Aktivitäten des vorigen Kontos.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Long dialogs scroll instead of running off the top and bottom of the window. The New workspace form was unusable below the fold; every dialog in the app was affected.',
+          de: 'Lange Dialoge lassen sich scrollen, statt oben und unten aus dem Fenster zu laufen. Das Formular „Neuer Arbeitsbereich“ war unterhalb des sichtbaren Bereichs nicht bedienbar; betroffen war jeder Dialog der App.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'The interface no longer mixes languages. Parts of the session viewer and the whole Servers page were written in a fixed language and ignored your choice.',
+          de: 'Die Oberfläche mischt keine Sprachen mehr. Teile des Sitzungs-Viewers und die gesamte Server-Seite waren fest in einer Sprache verdrahtet und ignorierten Ihre Auswahl.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'A time budget now ends every one of that person’s sessions when it runs out, not just the one that happened to use up the last minute.',
+          de: 'Ist ein Zeitbudget aufgebraucht, werden jetzt alle Sitzungen der betreffenden Person beendet — nicht nur jene, die zufällig die letzte Minute verbraucht hat.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'Hardening: keys and tokens stop working once the account behind them is disabled, group membership can no longer hand out permissions the granter lacks, a host agent can only act on its own organisation, disabling a directory provider stops logins through it, and the server refuses to start on the example secrets published in the repository.',
+          de: 'Härtung: Schlüssel und Token verlieren ihre Wirkung, sobald das dahinterliegende Konto deaktiviert wird; über Gruppen lassen sich keine Rechte mehr vergeben, die man selbst nicht hat; ein Host-Agent kann nur noch in seiner eigenen Organisation wirken; ein abgeschalteter Verzeichnisdienst erlaubt keine Anmeldung mehr; und der Server startet nicht mehr mit den im Repository veröffentlichten Beispiel-Geheimnissen.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'Upgrades run versioned database migrations instead of force-syncing the schema on every start, so an update can no longer quietly drop data. Existing installations are adopted automatically on the next start.',
+          de: 'Aktualisierungen führen versionierte Datenbank-Migrationen aus, statt das Schema bei jedem Start zu erzwingen — ein Update kann so keine Daten mehr stillschweigend verwerfen. Bestehende Installationen werden beim nächsten Start automatisch übernommen.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.31',
     date: '2026-07-06',
     title: { en: 'User profile', de: 'Benutzerprofil' },
