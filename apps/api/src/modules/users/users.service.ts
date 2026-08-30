@@ -111,7 +111,10 @@ export class UsersService {
         ...SAFE_SELECT,
         groups: {
           select: {
-            group: { select: { name: true } },
+            // The id goes with the name: the assignments UI has to tell "granted to
+            // this person" apart from "granted to a group they are in", and it
+            // cannot match a group grant by name.
+            group: { select: { id: true, name: true } },
           },
         },
       },

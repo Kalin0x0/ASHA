@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  AppWindow,
   Ban,
   CalendarClock,
   Infinity as InfinityIcon,
@@ -15,6 +16,7 @@ import {
   Users as UsersIcon,
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/composite/empty-state';
@@ -435,6 +437,15 @@ export default function UsersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52">
+                        {/* The reason most people open this menu: give someone a
+                            desktop. It used to be reachable only by editing the
+                            workspace, which never mentions the person by name. */}
+                        <DropdownMenuItem asChild>
+                          <Link href={`/assignments?user=${u.id}`}>
+                            <AppWindow className="size-4 text-gold-300" /> {t('users.assignments')}
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem onSelect={() => openRenew(u)}>
                           <RotateCcw className="size-4 text-gold-300" /> {t('users.license.renew')}
                         </DropdownMenuItem>

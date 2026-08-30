@@ -267,6 +267,53 @@ export class WorkspacesService {
     return this.findOrThrow(id);
   }
 
+  /**
+   * Grant or revoke ONE subject at a time, idempotently.
+   *
+   * `setAssignments` replaces the entire roster, which is the right shape for a
+   * form with a Save button and the wrong shape for everything else: two admins
+   * editing the same workspace silently overwrite each other, and a UI that just
+   * wants to flip one person on has to re-send every other grant it happened to
+   * have loaded — so a stale list quietly revokes people. These take a single
+   * pair, so a click means exactly what it says.
+   */
+  async setUserAccess(orgId: string, workspaceId: string, userId: string, granted: boolean) {
+    await this.assertInOrg(orgId, workspaceId);
+    const user = await prisma.user.findFirst({ where: { id: userId, orgId }, select: { id: true } });
+    if (!user) throw new NotFoundException('User not found');
+
+    if (granted) {
+      // Idempotent: re-granting is a no-op, not a unique-constraint error. A
+      // double-click must not turn into a 500.
+      await prisma.workspaceUser.createMany({
+        data: [{ orgId, workspaceId, userId }],
+        skipDuplicates: true,
+      });
+    } else {
+      await prisma.workspaceUser.deleteMany({ where: { workspaceId, userId } });
+    }
+    return this.findOrThrow(workspaceId);
+  }
+
+  async setGroupAccess(orgId: string, workspaceId: string, groupId: string, granted: boolean) {
+    await this.assertInOrg(orgId, workspaceId);
+    const group = await prisma.group.findFirst({ where: { id: groupId, orgId }, select: { id: true } });
+    if (!group) throw new NotFoundException('Group not found');
+
+    await prisma.workspace.update({
+      where: { id: workspaceId },
+      // `connect`/`disconnect` on an implicit m2m are both idempotent, and
+      // neither disturbs the groups this call was not told about.
+      data: { groups: granted ? { connect: { id: groupId } } : { disconnect: { id: groupId } } },
+    });
+    return this.findOrThrow(workspaceId);
+  }
+
+  private async assertInOrg(orgId: string, workspaceId: string) {
+    const ws = await prisma.workspace.findFirst({ where: { id: workspaceId, orgId }, select: { id: true } });
+    if (!ws) throw new NotFoundException('Workspace not found');
+  }
+
   async remove(orgId: string, id: string) {
     const ws = await prisma.workspace.findFirst({ where: { id, orgId }, select: { id: true } });
     if (!ws) throw new NotFoundException('Workspace not found');

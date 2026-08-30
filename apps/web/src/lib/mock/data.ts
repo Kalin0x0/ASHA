@@ -234,6 +234,10 @@ export function buildInitialData(): MockData {
       status: i === 11 ? 'DISABLED' : i === 12 ? 'INVITED' : 'ACTIVE',
       isSystemAdmin: i < 2,
       groups: i < 2 ? ['Administrators', 'All Users'] : ['All Users'],
+      // Ids must match `useGroups()` in hooks.mock — the assignments screen
+      // resolves group grants by id, so mismatched seeds would show every
+      // group-granted desktop as ungranted.
+      groupIds: i < 2 ? ['seed-group-admins', 'seed-group-all'] : ['seed-group-all'],
       twoFactor: rng() > 0.45,
       lastLoginAt: i === 12 ? null : `${Math.floor(between(1, 72))}h ago`,
       deactivatesAt: null,

@@ -2,6 +2,7 @@
 
 import { Container, Loader2, Pencil, Plus, Server, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
@@ -52,6 +53,7 @@ const blankForm = {
 };
 
 export default function WorkspacesPage() {
+  const router = useRouter();
   const t = useTranslations('workspaces');
   const tc = useTranslations('common');
   const workspaces = useWorkspaces();
@@ -281,6 +283,7 @@ export default function WorkspacesPage() {
             onLaunch={onLaunch}
             launching={launchingId === ws.id}
             onEdit={openEdit}
+            onAssign={(id) => router.push(`/assignments?workspace=${id}`)}
             onDelete={(id) => setDeleting(workspaces.find((w) => w.id === id) ?? null)}
           />
         ))}

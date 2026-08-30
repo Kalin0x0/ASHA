@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   type CreateWorkspaceDto,
@@ -71,6 +71,40 @@ export class WorkspacesController {
     @Body(new ZodPipe(assignmentsSchema)) dto: AssignmentsDto,
   ) {
     return this.workspaces.setAssignments(user.orgId, id, dto);
+  }
+
+  // ── Single-subject access, for a UI that toggles one row at a time ──────────
+  // `PATCH :id/assignments` replaces the whole roster, so a client that only
+  // wants to add one person must re-send every other grant — and a stale list
+  // then silently revokes people. These four are idempotent and touch exactly
+  // the pair named in the URL.
+
+  @Audit('workspace.access.grant', { targetType: 'Workspace' })
+  @RequirePermissions('WORKSPACE_EDIT')
+  @Put(':id/access/users/:userId')
+  grantUser(@CurrentUser() user: AuthUser, @Param('id') id: string, @Param('userId') userId: string) {
+    return this.workspaces.setUserAccess(user.orgId, id, userId, true);
+  }
+
+  @Audit('workspace.access.revoke', { targetType: 'Workspace' })
+  @RequirePermissions('WORKSPACE_EDIT')
+  @Delete(':id/access/users/:userId')
+  revokeUser(@CurrentUser() user: AuthUser, @Param('id') id: string, @Param('userId') userId: string) {
+    return this.workspaces.setUserAccess(user.orgId, id, userId, false);
+  }
+
+  @Audit('workspace.access.grant', { targetType: 'Workspace' })
+  @RequirePermissions('WORKSPACE_EDIT')
+  @Put(':id/access/groups/:groupId')
+  grantGroup(@CurrentUser() user: AuthUser, @Param('id') id: string, @Param('groupId') groupId: string) {
+    return this.workspaces.setGroupAccess(user.orgId, id, groupId, true);
+  }
+
+  @Audit('workspace.access.revoke', { targetType: 'Workspace' })
+  @RequirePermissions('WORKSPACE_EDIT')
+  @Delete(':id/access/groups/:groupId')
+  revokeGroup(@CurrentUser() user: AuthUser, @Param('id') id: string, @Param('groupId') groupId: string) {
+    return this.workspaces.setGroupAccess(user.orgId, id, groupId, false);
   }
 
   @RequirePermissions('WORKSPACE_DELETE')

@@ -108,7 +108,7 @@ export interface ApiUser {
   lastLoginAt: string | null;
   /** License/access expiry (ISO). null = perpetual. */
   deactivatesAt: string | null;
-  groups?: { group: { name: string } }[];
+  groups?: { group: { id: string; name: string } }[];
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -442,6 +442,17 @@ export const deleteWorkspace = (id: string) =>
 /** Replace a workspace's access grants (users + groups). Empty arrays ⇒ everyone. */
 export const setWorkspaceAssignments = (id: string, body: { userIds: string[]; groupIds: string[] }) =>
   apiFetch<ApiWorkspace>(`/workspaces/${id}/assignments`, { method: 'PATCH', body });
+
+/**
+ * Grant or revoke ONE subject. Unlike `setWorkspaceAssignments` these touch only
+ * the pair in the URL, so a screen that toggles a single row never has to
+ * re-send the rest of the roster — and therefore can never revoke someone whose
+ * grant it simply had not loaded yet.
+ */
+export const setWorkspaceUserAccess = (id: string, userId: string, granted: boolean) =>
+  apiFetch<ApiWorkspace>(`/workspaces/${id}/access/users/${userId}`, { method: granted ? 'PUT' : 'DELETE' });
+export const setWorkspaceGroupAccess = (id: string, groupId: string, granted: boolean) =>
+  apiFetch<ApiWorkspace>(`/workspaces/${id}/access/groups/${groupId}`, { method: granted ? 'PUT' : 'DELETE' });
 export const getAgents = () => apiFetch<ApiAgent[]>('/agents');
 export const getZones = () => apiFetch<ApiZone[]>('/zones');
 export const getUsers = () => apiFetch<ApiUser[]>('/users');

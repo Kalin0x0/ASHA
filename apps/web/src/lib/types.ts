@@ -143,7 +143,10 @@ export interface UserRow {
   username: string;
   status: 'ACTIVE' | 'DISABLED' | 'INVITED' | 'LOCKED';
   isSystemAdmin: boolean;
+  /** Group names, for display. */
   groups: string[];
+  /** Group ids, so access can be attributed to the group that actually grants it. */
+  groupIds: string[];
   twoFactor: boolean;
   lastLoginAt: string | null;
   /** License/access expiry (ISO). null = perpetual. */

@@ -223,6 +223,7 @@ class MockStore {
       status: 'ACTIVE',
       isSystemAdmin: input.isSystemAdmin ?? false,
       groups: input.isSystemAdmin ? ['Administrators', 'All Users'] : ['All Users'],
+      groupIds: input.isSystemAdmin ? ['seed-group-admins', 'seed-group-all'] : ['seed-group-all'],
       twoFactor: false,
       lastLoginAt: null,
       deactivatesAt: input.deactivatesAt ?? null,
@@ -295,6 +296,28 @@ class MockStore {
     if (patch.enabled !== undefined) ws.enabled = patch.enabled;
     this.emit();
     return ws;
+  }
+
+  /**
+   * Grant or revoke one subject's access to a workspace. Mock mode persists this
+   * in memory so the assignments screen is genuinely usable in the demo — a
+   * no-op stub would make the toggles lie about what they did.
+   */
+  setWorkspaceAccess(id: string, subject: 'user' | 'group', subjectId: string, granted: boolean): void {
+    if (!this.data.workspaces.some((w) => w.id === id)) throw new Error('Workspace not found');
+    const key = subject === 'user' ? 'assignedUserIds' : 'assignedGroupIds';
+    // Replace the row AND the array rather than mutating in place. Consumers
+    // memoise their derived lists on the array identity, so an in-place edit
+    // bumps the version, re-renders — and still shows the old grants.
+    this.data.workspaces = this.data.workspaces.map((w) => {
+      if (w.id !== id) return w;
+      const current = w[key] ?? [];
+      return {
+        ...w,
+        [key]: granted ? [...new Set([...current, subjectId])] : current.filter((x) => x !== subjectId),
+      };
+    });
+    this.emit();
   }
 
   deleteWorkspace(id: string): void {

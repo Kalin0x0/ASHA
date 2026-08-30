@@ -83,6 +83,7 @@ export function mapUser(u: ApiUser): UserRow {
     status: u.status,
     isSystemAdmin: u.isSystemAdmin ?? false,
     groups: (u.groups ?? []).map((g) => g.group.name),
+    groupIds: (u.groups ?? []).map((g) => g.group.id),
     twoFactor: false,
     lastLoginAt: u.lastLoginAt,
     deactivatesAt: u.deactivatesAt ?? null,

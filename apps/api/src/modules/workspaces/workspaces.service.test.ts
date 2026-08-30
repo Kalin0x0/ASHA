@@ -8,10 +8,11 @@ const { prismaMock } = vi.hoisted(() => ({
     server: { findFirst: vi.fn() },
     deploymentZone: { findFirst: vi.fn() },
     userGroup: { findMany: vi.fn() },
-    user: { findMany: vi.fn() },
-    group: { findMany: vi.fn() },
+    user: { findMany: vi.fn(), findFirst: vi.fn() },
+    group: { findMany: vi.fn(), findFirst: vi.fn() },
     setting: { findUnique: vi.fn() },
     session: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+    workspaceUser: { createMany: vi.fn(), deleteMany: vi.fn() },
   },
 }));
 
@@ -196,6 +197,110 @@ describe('WorkspacesService — access control', () => {
   it('setAssignments: 404 when the workspace is not in the caller org', async () => {
     prismaMock.workspace.findFirst.mockResolvedValue(null);
     await expect(svc.setAssignments('org1', 'nope', { userIds: [], groupIds: [] })).rejects.toThrow(/not found/i);
+  });
+
+  // ── Single-subject access ────────────────────────────────────────────────
+  // These exist so a UI can flip one row. The property that matters is that
+  // they touch ONLY the named pair: a screen that had to resend the whole
+  // roster would revoke everyone whose grant it had not loaded yet.
+
+  it('setUserAccess: grants without disturbing the rest of the roster', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'userA' });
+    prismaMock.workspace.findUnique.mockResolvedValue({ id: 'ws1' });
+
+    await svc.setUserAccess('org1', 'ws1', 'userA', true);
+
+    expect(prismaMock.workspaceUser.createMany).toHaveBeenCalledWith({
+      data: [{ orgId: 'org1', workspaceId: 'ws1', userId: 'userA' }],
+      skipDuplicates: true,
+    });
+    // Nothing else may be rewritten — no deleteMany, no `set` on the roster.
+    expect(prismaMock.workspaceUser.deleteMany).not.toHaveBeenCalled();
+    expect(prismaMock.workspace.update).not.toHaveBeenCalled();
+  });
+
+  it('setUserAccess: re-granting is a no-op, not a unique-constraint error', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'userA' });
+    prismaMock.workspace.findUnique.mockResolvedValue({ id: 'ws1' });
+
+    await svc.setUserAccess('org1', 'ws1', 'userA', true);
+
+    // A double-click must not become a 500.
+    const arg = prismaMock.workspaceUser.createMany.mock.calls[0]![0] as { skipDuplicates: boolean };
+    expect(arg.skipDuplicates).toBe(true);
+  });
+
+  it('setUserAccess: revokes only the named pair', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
+    prismaMock.user.findFirst.mockResolvedValue({ id: 'userA' });
+    prismaMock.workspace.findUnique.mockResolvedValue({ id: 'ws1' });
+
+    await svc.setUserAccess('org1', 'ws1', 'userA', false);
+
+    expect(prismaMock.workspaceUser.deleteMany).toHaveBeenCalledWith({
+      where: { workspaceId: 'ws1', userId: 'userA' },
+    });
+    expect(prismaMock.workspaceUser.createMany).not.toHaveBeenCalled();
+  });
+
+  it('setUserAccess: refuses a user from another tenant', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
+    prismaMock.user.findFirst.mockResolvedValue(null); // scoped query found nothing
+
+    await expect(svc.setUserAccess('org1', 'ws1', 'outsider', true)).rejects.toThrow(/user not found/i);
+    // The lookup itself must carry the org, or an id from another tenant would
+    // be found and granted — the mock returns null whatever it is asked.
+    expect(prismaMock.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'outsider', orgId: 'org1' } }),
+    );
+    expect(prismaMock.workspaceUser.createMany).not.toHaveBeenCalled();
+  });
+
+  it('setUserAccess: refuses a workspace from another tenant', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue(null);
+
+    await expect(svc.setUserAccess('org1', 'other-org-ws', 'userA', true)).rejects.toThrow(/workspace not found/i);
+    expect(prismaMock.workspace.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'other-org-ws', orgId: 'org1' } }),
+    );
+    // Bail before touching anything else.
+    expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
+    expect(prismaMock.workspaceUser.createMany).not.toHaveBeenCalled();
+  });
+
+  it('setGroupAccess: connects and disconnects one group, leaving the others', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
+    prismaMock.group.findFirst.mockResolvedValue({ id: 'g1' });
+    prismaMock.workspace.update.mockResolvedValue({});
+    prismaMock.workspace.findUnique.mockResolvedValue({ id: 'ws1' });
+
+    await svc.setGroupAccess('org1', 'ws1', 'g1', true);
+    expect(prismaMock.workspace.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { groups: { connect: { id: 'g1' } } } }),
+    );
+
+    await svc.setGroupAccess('org1', 'ws1', 'g1', false);
+    expect(prismaMock.workspace.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ data: { groups: { disconnect: { id: 'g1' } } } }),
+    );
+    // `set` would replace the whole list — the very thing these avoid.
+    for (const call of prismaMock.workspace.update.mock.calls) {
+      const data = (call[0] as { data: { groups: Record<string, unknown> } }).data;
+      expect(data.groups).not.toHaveProperty('set');
+    }
+  });
+
+  it('setGroupAccess: refuses a group from another tenant', async () => {
+    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
+    prismaMock.group.findFirst.mockResolvedValue(null);
+
+    await expect(svc.setGroupAccess('org1', 'ws1', 'outsider', true)).rejects.toThrow(/group not found/i);
+    expect(prismaMock.group.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'outsider', orgId: 'org1' } }),
+    );
+    expect(prismaMock.workspace.update).not.toHaveBeenCalled();
   });
 });
 

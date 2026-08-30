@@ -54,6 +54,7 @@
     "removeFavorite": "Remove from favorites",
     "actions": "Actions",
     "edit": "Edit",
+    "assign": "Assign access",
     "delete": "Delete"
   },
   "mySessions": {
