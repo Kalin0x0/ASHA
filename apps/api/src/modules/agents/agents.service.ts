@@ -274,8 +274,14 @@ export class AgentsService {
         });
       }
 
-      if (dto.status === 'DESTROYED') {
-        data.destroyedAt = new Date();
+      // Drop the connection-proxy record on ANY terminal state, not just
+      // DESTROYED. The proxy resolves `asha:proxy:session:<kasmId>` at connect
+      // time and never re-checks the session's status, so an ERROR session whose
+      // record survived stayed genuinely connectable for the record's full
+      // 3600s TTL — the DB said ERROR while the viewer still streamed "Live",
+      // which is exactly the state users report as "End does nothing".
+      if (dto.status === 'DESTROYED' || dto.status === 'ERROR') {
+        if (dto.status === 'DESTROYED') data.destroyedAt = new Date();
         await this.redis.del(`asha:proxy:session:${session.kasmId}`);
       }
 

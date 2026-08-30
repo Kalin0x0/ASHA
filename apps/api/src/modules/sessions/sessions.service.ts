@@ -927,7 +927,7 @@ export class SessionsService {
    * one was actually started — we never blindly destroy.
    */
   async failStuckLaunch(
-    session: { id: string; orgId: string; zoneId: string | null; containerId: string | null },
+    session: { id: string; orgId: string; zoneId: string | null; containerId: string | null; kasmId?: string | null },
     reason = 'launch_timeout',
   ) {
     const { count } = await prisma.session.updateMany({
@@ -939,6 +939,10 @@ export class SessionsService {
       },
     });
     if (count === 0) return; // already RUNNING / terminal — nothing to fail
+    // The session is now ERROR. The connection-proxy resolves its record at
+    // connect time and never re-checks status, so leaving it behind keeps a
+    // failed launch dialable for the record's full hour TTL.
+    if (session.kasmId) await this.redis.del(`asha:proxy:session:${session.kasmId}`);
     if (session.containerId) {
       await this.redis.publish(RedisChannels.destroy(await this.zoneNameFor(session.zoneId)), {
         sessionId: session.id,

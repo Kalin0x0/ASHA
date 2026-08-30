@@ -59,8 +59,8 @@ export function CommandPalette() {
   return (
     <DialogPrimitive.Root open={commandOpen} onOpenChange={setCommandOpen}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-anthracite-950/70 backdrop-blur-md data-[state=open]:animate-in data-[state=open]:fade-in-0" />
-        <DialogPrimitive.Content className="gold-hairline glass-strong fixed left-1/2 top-[14%] z-50 w-full max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-border-subtle shadow-[var(--shadow-lifted),0_0_0_1px_rgba(212,175,55,0.07)] data-[state=open]:animate-rise">
+        <DialogPrimitive.Overlay className="fixed inset-0 z-modal bg-anthracite-950/70 backdrop-blur-md data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Content className="gold-hairline glass-strong fixed left-1/2 top-[14%] z-modal w-full max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-border-subtle shadow-[var(--shadow-lifted),0_0_0_1px_rgba(212,175,55,0.07)] data-[state=open]:animate-rise">
           <DialogPrimitive.Title className="sr-only">{t('title')}</DialogPrimitive.Title>
           <Command className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground">
             <div className="flex items-center gap-3 border-b border-border-subtle px-4">

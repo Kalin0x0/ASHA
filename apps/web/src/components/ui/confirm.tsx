@@ -2,7 +2,7 @@
 
 import { AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Button } from './button';
 import {
   Dialog,
@@ -58,6 +58,11 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const resolver = useRef<((value: boolean) => void) | null>(null);
 
   const confirm = useCallback<ConfirmFn>((opts) => {
+    // A second confirm() while one is pending would otherwise overwrite the
+    // resolver and strand the first promise for good — its `await confirm(...)`
+    // never returns, so the caller's finally-block never runs and its button
+    // stays stuck in the busy state. Decline the older prompt instead.
+    resolver.current?.(false);
     setOptions(opts ?? {});
     setOpen(true);
     return new Promise<boolean>((resolve) => {
@@ -70,6 +75,16 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     resolver.current?.(value);
     resolver.current = null;
   }, []);
+
+  // Navigating away with the dialog open unmounts the provider. Without this the
+  // pending promise is dropped on the floor and the caller hangs forever.
+  useEffect(
+    () => () => {
+      resolver.current?.(false);
+      resolver.current = null;
+    },
+    [],
+  );
 
   const destructive = options.destructive ?? true;
 

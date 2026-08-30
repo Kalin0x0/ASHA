@@ -24,6 +24,16 @@ export const ACTIVE_SESSION_STATUSES: SessionStatus[] = [
   'PAUSED',
 ];
 
+/**
+ * Statuses the portal LISTS. Superset of the active ones: a session that failed
+ * still belongs on screen, because otherwise the user has no card and therefore
+ * no End button for it — the row is invisible while its connection can still be
+ * live, which is exactly what "I can't close it" looks like. ERROR must NOT be
+ * in ACTIVE_SESSION_STATUSES though: that set drives licence seats and tariff
+ * budget, and a failed session must not be billed.
+ */
+export const VISIBLE_SESSION_STATUSES: SessionStatus[] = [...ACTIVE_SESSION_STATUSES, 'ERROR'];
+
 export type AgentStatus = 'ONLINE' | 'OFFLINE' | 'DRAINING' | 'UNHEALTHY';
 
 export type WorkspaceType = 'CONTAINER' | 'SERVER' | 'REMOTE_APP' | 'VM' | 'LINK';

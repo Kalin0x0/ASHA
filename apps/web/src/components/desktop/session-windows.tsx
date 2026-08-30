@@ -20,11 +20,12 @@ import {
 } from '@/lib/hooks';
 import { launchTransition } from '@/lib/launch-overlay-store';
 import { useThumbnails } from '@/lib/thumbnail-store';
-import { ACTIVE_SESSION_STATUSES } from '@/lib/types';
+import { VISIBLE_SESSION_STATUSES } from '@/lib/types';
 import type { SessionRow, SessionStatus, Workspace } from '@/lib/types';
 import { cn, formatDuration } from '@/lib/utils';
 
-const ACTIVE = ACTIVE_SESSION_STATUSES;
+// Includes ERROR: a failed session needs to stay visible so it can be ended.
+const ACTIVE = VISIBLE_SESSION_STATUSES;
 const GUAC = new Set(['RDP', 'VNC', 'SSH']);
 
 /** The signed-in user's ACTIVE sessions — shared by the desktop + dock. */
@@ -115,8 +116,17 @@ export function SessionWindows({
     )
       return;
     setBusy((b) => ({ ...b, [s.id]: 'delete' }));
-    terminate(s.id);
-    toast.success(t('mySessions.endedToast'));
+    // Await the result. This used to fire-and-forget and toast success
+    // unconditionally, so a rejected request looked identical to a successful
+    // one — the card stayed, the spinner never cleared, and End "did nothing".
+    try {
+      await terminate(s.id);
+      toast.success(t('mySessions.endedToast'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('mySessions.endFailedToast'));
+    } finally {
+      setBusy(({ [s.id]: _done, ...rest }) => rest);
+    }
   };
 
   return (

@@ -100,6 +100,7 @@
     "title": "End this session?",
     "description": "“{name}” will be shut down and anything not saved inside it is lost. To leave it running, use Back instead.",
     "confirm": "End session",
+    "errorUnresolved": "This session could not be identified — reload the page and try again.",
     "error": "Couldn't end the session",
     "errorDescription": "Please try again."
   },

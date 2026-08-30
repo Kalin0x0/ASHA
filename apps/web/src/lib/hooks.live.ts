@@ -762,13 +762,19 @@ export function useDeleteBug() {
   }, [mutateAsync]);
 }
 
+/**
+ * Ending a session RETURNS A PROMISE so callers can tell success from failure.
+ * It used to be fire-and-forget `mutate`, and every caller toasted "session
+ * ended" the moment it was called — so a 403/500 looked exactly like success,
+ * the row stayed on screen, and the End button appeared to do nothing.
+ */
 export function useTerminateSession() {
   const qc = useQueryClient();
-  const { mutate } = useMutation({
+  const { mutateAsync } = useMutation({
     mutationFn: api.terminateSession,
     onSuccess: () => qc.invalidateQueries({ queryKey: SESSIONS_KEY }),
   });
-  return useCallback((id: string) => mutate(id), [mutate]);
+  return useCallback(async (id: string) => mutateAsync(id), [mutateAsync]);
 }
 
 export function usePauseSession() {

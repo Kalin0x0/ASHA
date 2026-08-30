@@ -110,7 +110,7 @@ export function Desktop() {
         onOpenSession={openSession}
       />
 
-      {/* RDP desktops: "Web Native vs RDP Client" chooser (z-50, above all) */}
+      {/* RDP desktops: "Web Native vs RDP Client" chooser (z-modal, above all) */}
       <LaunchDialog
         workspace={launchTarget}
         open={launchTarget !== null}
@@ -120,7 +120,7 @@ export function Desktop() {
         launching={launchingId !== null}
       />
 
-      {/* Session-opening animation (z-60, above the taskbar/start) */}
+      {/* Session-opening animation (z-overlay, above the taskbar/start) */}
       <LaunchOverlay />
     </div>
   );

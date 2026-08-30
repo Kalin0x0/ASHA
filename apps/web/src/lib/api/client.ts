@@ -26,6 +26,50 @@ interface RequestOptions {
   /** Attach the bearer token (default true). Set false for login/refresh. */
   auth?: boolean;
   signal?: AbortSignal;
+  /** Abort after this many ms. `null` waits forever. Defaults to 30s. */
+  timeoutMs?: number | null;
+}
+
+/**
+ * `fetch` on its own never gives up. A request to an unreachable API — a dead
+ * gateway, a dropped VPN, a proxy that accepts the socket and then goes silent —
+ * stays pending for as long as the tab lives, and every caller awaiting it hangs
+ * with it. That is what turned "End session" into a dead button: the DELETE was
+ * awaited, the button was disabled for the duration, and neither ever came back.
+ * A bounded wait turns that into an error the user can see and retry.
+ */
+const DEFAULT_TIMEOUT_MS = 30_000;
+
+/** Marker for a timeout we raised ourselves, so a caller's own abort still reads as an abort. */
+class TimeoutError extends Error {}
+
+function withTimeout(opts: RequestOptions): { signal?: AbortSignal; done: () => void; timedOut: () => boolean } {
+  const ms = opts.timeoutMs === undefined ? DEFAULT_TIMEOUT_MS : opts.timeoutMs;
+  if (ms === null) return { signal: opts.signal, done: () => {}, timedOut: () => false };
+
+  const ctrl = new AbortController();
+  let fired = false;
+  const timer = setTimeout(() => {
+    fired = true;
+    ctrl.abort(new TimeoutError());
+  }, ms);
+
+  // Forward the caller's own abort. `AbortSignal.any` would do this in one line
+  // but is younger than our browser floor, so wire it by hand.
+  const forward = () => ctrl.abort(opts.signal?.reason);
+  if (opts.signal) {
+    if (opts.signal.aborted) forward();
+    else opts.signal.addEventListener('abort', forward, { once: true });
+  }
+
+  return {
+    signal: ctrl.signal,
+    done: () => {
+      clearTimeout(timer);
+      opts.signal?.removeEventListener('abort', forward);
+    },
+    timedOut: () => fired,
+  };
 }
 
 // Single-flight refresh: concurrent 401s share one refresh round-trip.
@@ -60,12 +104,22 @@ async function rawFetch(path: string, opts: RequestOptions, token: string | null
   const headers: Record<string, string> = {};
   if (opts.body !== undefined) headers['content-type'] = 'application/json';
   if (opts.auth !== false && token) headers.authorization = `Bearer ${token}`;
-  return fetch(`${API_BASE_URL}${path}`, {
-    method: opts.method ?? 'GET',
-    headers,
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-    signal: opts.signal,
-  });
+  const clock = withTimeout(opts);
+  try {
+    return await fetch(`${API_BASE_URL}${path}`, {
+      method: opts.method ?? 'GET',
+      headers,
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      signal: clock.signal,
+    });
+  } catch (e) {
+    // 408 Request Timeout: an ApiError carries a message the UI already knows how
+    // to show, where a bare DOMException would surface as "AbortError".
+    if (clock.timedOut()) throw new ApiError(408, 'The server did not respond in time.');
+    throw e;
+  } finally {
+    clock.done();
+  }
 }
 
 /**

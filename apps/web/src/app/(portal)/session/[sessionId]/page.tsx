@@ -46,6 +46,7 @@ import {
 import { ApiError } from '@/lib/api/client';
 import { isLive } from '@/lib/api/mode';
 import { useLaunchableWorkspaces, useSession } from '@/lib/hooks';
+import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { isLikelyUnreachableUrl } from '@/lib/stream';
 import { cn } from '@/lib/utils';
@@ -461,9 +462,14 @@ export default function StreamingViewerPage() {
     // old `if (session)` guard skipped the call and the desktop kept running).
     // Await the DELETE so it isn't dropped by the immediate navigation, and
     // surface a failure instead of the misleading success toast.
-    if (isLive) {
+    const plan = planSessionExit({ live: isLive, sessionId: params.sessionId });
+    if (plan.action === 'unresolved') {
+      toast.error(t('confirmEnd.error'), { description: t('confirmEnd.errorUnresolved') });
+      return;
+    }
+    if (plan.action === 'terminate') {
       try {
-        await terminateSession(params.sessionId);
+        await terminateSession(plan.sessionId);
       } catch (e) {
         toast.error(t('confirmEnd.error'), {
           description: e instanceof ApiError ? e.message : t('confirmEnd.errorDescription'),
@@ -564,7 +570,7 @@ export default function StreamingViewerPage() {
 
   if (!mounted) return null;
   return createPortal(
-    <div className="on-dark fixed inset-0 z-[100] flex flex-col bg-anthracite-950">
+    <div className="on-dark fixed inset-0 z-viewer flex flex-col bg-anthracite-950">
       {/* Control bar */}
       <div className="glass-strong absolute inset-x-0 top-0 z-20 flex h-14 items-center gap-3 px-3 sm:px-4">
         {/* Back to Workspaces — non-destructive; keeps the session running so the
@@ -794,7 +800,7 @@ export default function StreamingViewerPage() {
             own document (Print + Download), instead of the guest's fragile
             hidden-iframe print. */}
         {printOpen && printPdf && (
-          <div className="absolute inset-0 top-12 z-50 flex flex-col bg-anthracite-950/92 backdrop-blur">
+          <div className="absolute inset-0 top-14 z-50 flex flex-col bg-anthracite-950/92 backdrop-blur">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Printer className="size-4 text-gold-400" /> {t('toolbar.printPreview')}
@@ -840,7 +846,7 @@ export default function StreamingViewerPage() {
 
         {/* Drag-and-drop file upload overlay */}
         {dragActive && (
-          <div className="absolute inset-0 top-12 z-40 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gold-500/60 bg-anthracite-950/80 backdrop-blur-sm">
+          <div className="absolute inset-0 top-14 z-40 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gold-500/60 bg-anthracite-950/80 backdrop-blur-sm">
             <Upload className="size-10 text-gold-400" />
             <p className="font-display text-lg">
               {allow('uploads') ? t('toolbar.dropToUpload') : t('dlp.dropDisabled')}
@@ -853,7 +859,7 @@ export default function StreamingViewerPage() {
             reopened session Back had paused (`!paused`) → a "Resuming…" spinner
             while the auto-resume effect thaws it. */}
         {isPaused && (
-          <div className="absolute inset-0 top-12 z-30 flex flex-col items-center justify-center gap-4 bg-anthracite-950/85 backdrop-blur">
+          <div className="absolute inset-0 top-14 z-30 flex flex-col items-center justify-center gap-4 bg-anthracite-950/85 backdrop-blur">
             {paused ? (
               <>
                 <Pause className="size-12 rounded-full bg-gold-500/15 p-3 text-gold-400" />

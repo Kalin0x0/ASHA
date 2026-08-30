@@ -86,7 +86,17 @@ export class SessionReaperService {
         // finalizeDestroyed never runs, and the proxy record lingers for its
         // full hour TTL. Detach the sessions instead of racing the cascade, and
         // leave the rows for the normal reapers to finalize.
-        await prisma.session.updateMany({ where: { userId: u.id }, data: { userId: null } });
+        // `stagingId` goes too. A session that had a user was CLAIMED, but
+        // claimStagedSession never clears the field — so detaching by userId
+        // alone leaves `userId === null && stagingId !== null`, which is exactly
+        // how requireControllable identifies an *unclaimed* pool row. The
+        // session would then be permanently uncontrollable and its owner would
+        // get 403 from assertSessionScope. Every staging query pairs stagingId
+        // with `userId: null`, so clearing it here is safe.
+        await prisma.session.updateMany({
+          where: { userId: u.id },
+          data: { userId: null, stagingId: null },
+        });
 
         await prisma.tariffAssignment.deleteMany({ where: { orgId: u.orgId, subjectType: 'USER', subjectId: u.id } });
         await prisma.user.delete({ where: { id: u.id } });
@@ -181,7 +191,7 @@ export class SessionReaperService {
         status: { in: ['REQUESTED', 'SCHEDULED', 'PROVISIONING'] },
         createdAt: { lt: cutoff },
       },
-      select: { id: true, orgId: true, zoneId: true, containerId: true },
+      select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
     });
     for (const s of stuck) {
       await this.sessions.failStuckLaunch(s, 'launch_timeout');
@@ -237,7 +247,7 @@ export class SessionReaperService {
         // DESIGN — their lifecycle belongs to the staging reconciler alone.
         userId: { not: null },
       },
-      select: { id: true, orgId: true, zoneId: true, containerId: true },
+      select: { id: true, orgId: true, zoneId: true, containerId: true, kasmId: true, agentId: true },
     });
     for (const s of due) {
       await this.sessions.destroy(s, 'idle_timeout');

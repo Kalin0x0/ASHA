@@ -100,6 +100,7 @@
     "title": "Sitzung beenden?",
     "description": "„{name}“ wird heruntergefahren; alles darin nicht Gespeicherte geht verloren. Zum Weiterlaufenlassen stattdessen „Zurück“ verwenden.",
     "confirm": "Sitzung beenden",
+    "errorUnresolved": "Diese Sitzung konnte nicht zugeordnet werden — Seite neu laden und erneut versuchen.",
     "error": "Sitzung konnte nicht beendet werden",
     "errorDescription": "Bitte erneut versuchen."
   },

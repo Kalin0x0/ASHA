@@ -77,6 +77,19 @@
   --spacing-sidebar: 264px;
   --spacing-sidebar-collapsed: 76px;
   --spacing-topbar: 60px;
+
+  /* Stacking order — the single scale every full-screen surface uses.
+     The session viewers render through `createPortal(..., document.body)` and
+     Radix mounts dialogs/menus/tooltips into <body> too, so their order is
+     decided purely by z-index. Anything the user must be able to click *while a
+     desktop is streaming* (the End confirmation above all) has to out-rank the
+     viewer, or it paints behind an opaque black surface while Radix sets
+     `body { pointer-events: none }` — an invisible modal that freezes the whole
+     viewer, Back included. Toasts sit above everything on sonner's own layer. */
+  --z-index-overlay: 60; /* launch / loading veils over the page */
+  --z-index-viewer: 100; /* full-screen session viewers */
+  --z-index-floating: 200; /* tooltips, dropdowns, popovers */
+  --z-index-modal: 300; /* dialogs, command palette */
 }
 
 /* ============================================================================

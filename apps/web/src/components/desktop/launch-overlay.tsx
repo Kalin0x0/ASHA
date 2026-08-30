@@ -51,7 +51,7 @@ export function LaunchOverlay() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.28, ease: 'easeOut' }}
-          className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-6 bg-background/60 backdrop-blur-2xl backdrop-saturate-150"
+          className="fixed inset-0 z-overlay flex flex-col items-center justify-center gap-6 bg-background/60 backdrop-blur-2xl backdrop-saturate-150"
         >
           <div className="relative flex items-center justify-center">
             {/* Expanding gold ring pulse */}

@@ -273,8 +273,11 @@ export const terminateSession = (id: string) =>
   apiFetch<{ ok: true }>(`/sessions/${id}`, { method: 'DELETE' });
 
 // ── Session control: pause / resume / resize (multi-monitor) ───────────────────
+// Pause is on the "Back to Workspaces" path, so the user is *waiting* on it to
+// leave a screen they already decided to leave. A short leash keeps Back feeling
+// like Back; the caller treats a failure as "leave anyway, it stays running".
 export const pauseSession = (id: string) =>
-  apiFetch<{ ok: true }>(`/sessions/${id}/pause`, { method: 'POST' });
+  apiFetch<{ ok: true }>(`/sessions/${id}/pause`, { method: 'POST', timeoutMs: 8_000 });
 export const resumeSession = (id: string) =>
   apiFetch<{ ok: true }>(`/sessions/${id}/resume`, { method: 'POST' });
 export const resizeSession = (id: string, width: number, height: number) =>

@@ -30,9 +30,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { ApiError } from '@/lib/api/client';
 import { terminateSession } from '@/lib/api/endpoints';
 import { getAccessToken } from '@/lib/api/auth-store';
+import { isLive } from '@/lib/api/mode';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
 import { useLaunchableWorkspaces, useOwnSessions, useSessions } from '@/lib/hooks';
 import { useThumbnails } from '@/lib/thumbnail-store';
+import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { cn } from '@/lib/utils';
 
@@ -489,6 +491,10 @@ export default function ConnectPage() {
     if (autoAttempts >= MAX_AUTO_RECONNECTS) return;
     const delay = Math.min(1000 * 2 ** autoAttempts, 8000);
     const timer = setTimeout(() => {
+      // Re-check on fire, not just on setup: the user may have pressed Back or
+      // End during the backoff, and reconnecting here would rebuild the very
+      // tunnel they just closed — the "End/Back only reloads the desktop" bug.
+      if (leavingRef.current) return;
       setAutoAttempts((a) => a + 1);
       reconnect();
     }, delay);
@@ -610,16 +616,25 @@ export default function ConnectPage() {
       }))
     )
       return;
-    leavingRef.current = true; // before disconnect(): suppress the auto-reconnect
-    try {
-      clientRef.current?.disconnect();
-    } catch {
-      /* already closed */
+    // Resolve the id BEFORE anything is torn down. The old code guarded the
+    // DELETE with `if (session?.id)` and navigated regardless, so whenever the
+    // session lists hadn't resolved this kasmId yet, End quietly did nothing —
+    // the user was returned to the workstation convinced they had ended a
+    // desktop that in fact kept running (and kept consuming their budget).
+    const plan = planSessionExit({ live: isLive, sessionId: session?.id });
+    if (plan.action === 'unresolved') {
+      toast.error(t('confirmEnd.error'), { description: t('confirmEnd.errorUnresolved') });
+      return;
     }
-    if (session?.id) {
+
+    leavingRef.current = true; // suppress the auto-reconnect for whatever follows
+    if (plan.action === 'terminate') {
+      // Terminate FIRST, disconnect after it succeeds: a failed DELETE then
+      // leaves the user with a live, usable desktop instead of a dead canvas
+      // they have to reconnect by hand.
       setEnding(true);
       try {
-        await terminateSession(session.id);
+        await terminateSession(plan.sessionId);
       } catch (e) {
         // Still here, so re-arm the auto-reconnect: the desktop is up and the
         // user may retry or keep working.
@@ -630,6 +645,11 @@ export default function ConnectPage() {
         });
         return; // stay in the viewer so the user sees the error and can retry
       }
+    }
+    try {
+      clientRef.current?.disconnect();
+    } catch {
+      /* already closed */
     }
     router.push('/');
   }, [router, session?.id, confirm, t, workspaceName]);
@@ -669,7 +689,7 @@ export default function ConnectPage() {
   }, []);
 
   return (
-    <div ref={containerRef} className="fixed inset-0 z-50 flex flex-col bg-anthracite-950 text-foreground">
+    <div ref={containerRef} className="fixed inset-0 z-viewer flex flex-col bg-anthracite-950 text-foreground">
       {resMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setResMenuOpen(false)} aria-hidden />}
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border-subtle bg-[var(--surface-1)] px-2 sm:px-3">
         <Button variant="ghost" size="icon-sm" onClick={disconnect} aria-label={t('connect.toolbar.backToWorkspaces')} className="shrink-0 rtl:rotate-180">

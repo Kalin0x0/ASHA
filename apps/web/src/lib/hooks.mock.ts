@@ -213,7 +213,8 @@ export function useDeleteBug() {
 }
 
 export function useTerminateSession() {
-  return useCallback((id: string) => store.terminateSession(id), []);
+  // Async to match the live signature — callers await it and branch on failure.
+  return useCallback(async (id: string) => store.terminateSession(id), []);
 }
 
 export function usePauseSession() {
