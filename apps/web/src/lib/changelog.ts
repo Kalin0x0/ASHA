@@ -38,6 +38,69 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.33',
+    date: '2026-08-31',
+    title: { en: 'One-click assignments, and End really ends', de: 'Zuweisungen mit einem Klick, und Beenden beendet wirklich' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'A new Assignments screen under Access answers "who may open what" from either side: pick a person and switch on the desktops, services and containers they should have, or pick one and see who holds it. Both sides are searchable and filterable by kind, and each switch saves the moment you flip it — no form, no Save button. It is also reachable straight from a person\u2019s row menu and from a workspace card.',
+          de: 'Ein neuer Bereich „Zuweisungen" unter Zugriff beantwortet „wer darf was öffnen" von beiden Seiten: Person auswählen und die Desktops, Dienste und Container einschalten, die sie haben soll — oder umgekehrt sehen, wer einen bestimmten Desktop hat. Beide Seiten sind durchsuchbar und nach Art filterbar, und jeder Schalter speichert sofort beim Umlegen — kein Formular, kein Speichern-Knopf. Erreichbar auch direkt aus dem Zeilenmenü einer Person und von einer Workspace-Kachel.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'Where access comes from is now visible: a desktop someone has through a group names that group, and says so instead of offering a switch that could not remove it anyway.',
+          de: 'Woher ein Zugriff stammt, ist jetzt sichtbar: Ein Desktop, den jemand über eine Gruppe hat, nennt diese Gruppe — statt einen Schalter anzubieten, der ihn ohnehin nicht entfernen könnte.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Ending a session works again. The confirmation dialog was rendering behind the full-screen viewer, so pressing End opened a prompt nobody could see: the session was never ended, and the invisible dialog also froze the viewer, which is why Back stopped returning to the workspace list.',
+          de: 'Das Beenden einer Sitzung funktioniert wieder. Der Bestätigungsdialog wurde hinter dem Vollbild-Viewer gezeichnet — „Beenden" öffnete also eine Abfrage, die niemand sehen konnte: Die Sitzung wurde nie beendet, und der unsichtbare Dialog blockierte zusätzlich den Viewer, weshalb auch „Zurück" nicht mehr zur Workspace-Liste führte.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'A session that failed to start is no longer quietly still connectable, and now stays listed in the portal so you can end it. Previously it could keep streaming while its status already said Error.',
+          de: 'Eine Sitzung, deren Start fehlgeschlagen ist, bleibt nicht mehr stillschweigend verbindbar und wird jetzt im Portal weiter angezeigt, damit man sie beenden kann. Vorher konnte sie weiterlaufen, obwohl ihr Status bereits „Fehler" lautete.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Buttons that talk to the server no longer hang forever when it cannot be reached. A request now gives up after a short wait and tells you what went wrong, instead of leaving the button disabled with nothing happening.',
+          de: 'Schaltflächen, die mit dem Server sprechen, hängen nicht mehr endlos, wenn er nicht erreichbar ist. Eine Anfrage bricht jetzt nach kurzer Zeit ab und meldet den Fehler, statt die Schaltfläche deaktiviert und ohne Reaktion zurückzulassen.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Demo accounts: two people signing up at the same moment can no longer leave a broken half-created account behind or hit an error, and a time-boxed demo no longer had its time budget quietly refilled every minute — which made the limit meaningless.',
+          de: 'Demo-Konten: Zwei gleichzeitige Anmeldungen hinterlassen kein halb angelegtes, defektes Konto mehr und laufen nicht in einen Fehler; und ein befristetes Demo bekam sein Zeitbudget nicht länger jede Minute stillschweigend wieder aufgefüllt — was die Begrenzung wirkungslos machte.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'Administrators now need a confirmed authenticator app before they can sign in as another user. Impersonation is the one action that hands over someone else\u2019s session, so it is the one that asks for a second factor.',
+          de: 'Administratorinnen und Administratoren brauchen jetzt eine bestätigte Authenticator-App, bevor sie sich als anderer Nutzer anmelden können. Das Übernehmen einer fremden Identität ist die eine Aktion, die eine fremde Sitzung aushändigt — also die eine, die einen zweiten Faktor verlangt.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'Uploads are capped per purpose rather than globally: only bug reports and feedback may carry a screenshot-sized payload, everything else is limited to a small request. Persian screens also read correctly right-to-left in more places.',
+          de: 'Uploads sind jetzt zweckgebunden begrenzt statt global: Nur Fehlerberichte und Feedback dürfen ein Bild in Screenshot-Größe mitführen, alles andere ist auf kleine Anfragen beschränkt. Persische Ansichten laufen zudem an mehr Stellen korrekt von rechts nach links.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.32',
     date: '2026-07-23',
     title: { en: 'Sign-up requests, access fixes and one language', de: 'Zugangsanfragen, Zugriffs-Fixes und eine Sprache' },
