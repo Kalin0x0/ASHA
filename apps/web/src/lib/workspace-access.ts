@@ -1,4 +1,4 @@
-import type { UserRow, Workspace } from './types';
+import type { UserRow, Workspace, WorkspaceType } from './types';
 
 /**
  * Why a person can — or cannot — open a workspace.
@@ -50,3 +50,12 @@ export const WORKSPACE_ACCESS_RANK: Record<WorkspaceAccess['kind'], number> = {
   everyone: 2,
   none: 3,
 };
+
+/**
+ * The kinds of thing a person can be given, in the order an operator thinks of
+ * them: the streamed container first, since that is what most catalogs are made
+ * of. "Desktop", "service" and "Docker" are all entries in this one list — the
+ * assignments filter is built from it, so a type missing here is a type nobody
+ * can filter to.
+ */
+export const WORKSPACE_TYPE_ORDER: WorkspaceType[] = ['CONTAINER', 'SERVER', 'REMOTE_APP', 'VM', 'LINK'];

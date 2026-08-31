@@ -21,6 +21,14 @@
       "groups": "گروه‌ها",
       "people": "افراد"
     },
+    "types": {
+      "all": "همه",
+      "CONTAINER": "داکر",
+      "SERVER": "سرویس",
+      "REMOTE_APP": "برنامه",
+      "VM": "ماشین مجازی",
+      "LINK": "پیوند"
+    },
     "badges": {
       "disabled": "خاموش"
     },

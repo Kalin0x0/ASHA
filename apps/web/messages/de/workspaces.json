@@ -54,6 +54,7 @@
       "restricted": "Eingeschränkt",
       "restrictedHint": "Nur die ausgewählten Benutzer / Gruppen.",
       "users": "Benutzer",
+      "searchPeople": "Personen suchen…",
       "groups": "Gruppen",
       "none": "Keine verfügbar"
     },

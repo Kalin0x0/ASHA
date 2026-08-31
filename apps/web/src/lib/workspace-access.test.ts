@@ -1,5 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { WORKSPACE_ACCESS_RANK, workspaceAccessFor } from './workspace-access';
+import { WORKSPACE_ACCESS_RANK, WORKSPACE_TYPE_ORDER, workspaceAccessFor } from './workspace-access';
+
+const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
 
 const ws = (users: string[] = [], groups: string[] = []) => ({
   assignedUserIds: users,
@@ -58,5 +62,31 @@ describe('workspaceAccessFor', () => {
     expect(direct).toBeLessThan(group);
     expect(group).toBeLessThan(everyone);
     expect(everyone).toBeLessThan(none);
+  });
+});
+
+describe('WORKSPACE_TYPE_ORDER', () => {
+  it('covers every workspace type the app knows about', () => {
+    // The assignments filter is built from this list, so a type missing here is
+    // a type nobody can filter to — and the user asked specifically to be able
+    // to assign "a desktop or a service or a Docker container".
+    const declared = /export type WorkspaceType =([^;]+);/.exec(read('./types.ts'))?.[1];
+    expect(declared, 'WorkspaceType must be declared as a union in types.ts').toBeTruthy();
+    const members = [...(declared ?? '').matchAll(/'([A-Z_]+)'/g)].map((m) => m[1]);
+
+    expect(members.length).toBeGreaterThan(0);
+    expect([...WORKSPACE_TYPE_ORDER].sort()).toEqual([...members].sort());
+  });
+
+  it('has a label in every locale for every type', () => {
+    // Without one, the filter chip and the row badge render a raw message key
+    // like "types.VM" at the user.
+    for (const locale of ['en', 'de', 'fa']) {
+      const labels = JSON.parse(read(`../../messages/${locale}/access.json`)).assignments.types;
+      for (const type of WORKSPACE_TYPE_ORDER) {
+        expect(labels[type], `${locale}: missing label for ${type}`).toBeTruthy();
+      }
+      expect(labels.all, `${locale}: missing the "all types" label`).toBeTruthy();
+    }
   });
 });

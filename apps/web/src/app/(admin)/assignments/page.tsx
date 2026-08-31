@@ -22,8 +22,8 @@ import {
   useUsers,
   useWorkspaces,
 } from '@/lib/hooks';
-import type { UserRow, Workspace } from '@/lib/types';
-import { WORKSPACE_ACCESS_RANK, workspaceAccessFor } from '@/lib/workspace-access';
+import type { UserRow, Workspace, WorkspaceType } from '@/lib/types';
+import { WORKSPACE_ACCESS_RANK, WORKSPACE_TYPE_ORDER, workspaceAccessFor } from '@/lib/workspace-access';
 import { cn } from '@/lib/utils';
 
 
@@ -81,8 +81,15 @@ function Assignments() {
     }
     return workspaces
       .filter((w) => !q || w.friendlyName.toLowerCase().includes(q))
-      .map((w) => ({ id: w.id, title: w.friendlyName, subtitle: w.dockerImage || w.category, ws: w }));
-  }, [mode, users, workspaces, subjectQuery]);
+      .map((w) => ({
+        id: w.id,
+        // Lead with the kind: "Service" or "Docker" is what tells two similarly
+        // named entries apart, and the image tag rarely fits anyway.
+        title: w.friendlyName,
+        subtitle: [t(`types.${w.type}`), w.dockerImage || w.category].filter(Boolean).join(' · '),
+        ws: w,
+      }));
+  }, [mode, users, workspaces, subjectQuery, t]);
 
   // Keep a valid selection: switching axis (or filtering the current pick away)
   // must not leave the right-hand pane rendering nothing with no explanation.
@@ -254,9 +261,19 @@ function PersonPane({
   // A group whose name we cannot resolve still has to render something the admin
   // can act on, so fall back to its id rather than an empty quote.
   const groupLabel = (id: string) => groupNames.get(id) ?? id;
+  const [type, setType] = useState<WorkspaceType | 'ALL'>('ALL');
+
+  // Only the kinds this deployment actually has. Offering "VM" to someone who
+  // runs nothing but containers is a filter that can only ever return nothing.
+  const availableTypes = useMemo(() => {
+    const present = new Set(workspaces.map((w) => w.type));
+    return WORKSPACE_TYPE_ORDER.filter((k) => present.has(k));
+  }, [workspaces]);
+
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return workspaces
+      .filter((w) => type === 'ALL' || w.type === type)
       .filter((w) => !q || w.friendlyName.toLowerCase().includes(q))
       .map((w) => ({ ws: w, access: workspaceAccessFor(w, user, denyByDefault) }))
       .sort(
@@ -264,9 +281,14 @@ function PersonPane({
           WORKSPACE_ACCESS_RANK[a.access.kind] - WORKSPACE_ACCESS_RANK[b.access.kind] ||
           a.ws.friendlyName.localeCompare(b.ws.friendlyName),
       );
-  }, [workspaces, user, denyByDefault, query]);
+  }, [workspaces, user, denyByDefault, query, type]);
 
-  const granted = rows.filter((r) => r.access.kind !== 'none').length;
+  // Count over everything, not the filtered view: "3 of 5" has to mean the
+  // person's actual situation, not whatever the chip row happens to show.
+  const granted = useMemo(
+    () => workspaces.filter((w) => workspaceAccessFor(w, user, denyByDefault).kind !== 'none').length,
+    [workspaces, user, denyByDefault],
+  );
 
   return (
     <>
@@ -276,7 +298,27 @@ function PersonPane({
         query={query}
         onQuery={onQuery}
         placeholder={t('searchWorkspaces')}
-      />
+      >
+        {availableTypes.length > 1 && (
+          <div className="flex flex-wrap gap-1.5">
+            {(['ALL', ...availableTypes] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setType(k)}
+                className={cn(
+                  'rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ring-gold-focus',
+                  type === k
+                    ? 'border-gold-500/50 bg-gold-500/10 text-gold-200'
+                    : 'border-border-subtle text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {t(k === 'ALL' ? 'types.all' : `types.${k}`)}
+              </button>
+            ))}
+          </div>
+        )}
+      </PaneHeader>
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {rows.length === 0 ? (
           <p className="px-2 py-6 text-center text-sm text-muted-foreground">{t('noMatches')}</p>
@@ -301,6 +343,9 @@ function PersonPane({
                 <div className="min-w-0 flex-1 leading-tight">
                   <p className="flex items-center gap-2">
                     <span className="truncate text-sm font-medium">{ws.friendlyName}</span>
+                    {/* Desktop, service or container — the three words people use
+                        for these, and previously indistinguishable in any list. */}
+                    <Badge variant="outline">{t(`types.${ws.type}`)}</Badge>
                     {!ws.enabled && <Badge variant="outline">{t('badges.disabled')}</Badge>}
                   </p>
                   <p className="truncate text-[11px] text-muted-foreground">
@@ -443,12 +488,15 @@ function PaneHeader({
   query,
   onQuery,
   placeholder,
+  children,
 }: {
   title: string;
   subtitle: string;
   query: string;
   onQuery: (v: string) => void;
   placeholder: string;
+  /** Optional filter row under the search box. */
+  children?: React.ReactNode;
 }) {
   return (
     <div className="space-y-3 border-b border-border-subtle p-3">
@@ -460,6 +508,7 @@ function PaneHeader({
         <Search className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input value={query} onChange={(e) => onQuery(e.target.value)} placeholder={placeholder} className="ps-8" />
       </div>
+      {children}
     </div>
   );
 }

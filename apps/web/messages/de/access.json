@@ -21,6 +21,14 @@
       "groups": "Gruppen",
       "people": "Personen"
     },
+    "types": {
+      "all": "Alle",
+      "CONTAINER": "Docker",
+      "SERVER": "Dienst",
+      "REMOTE_APP": "App",
+      "VM": "VM",
+      "LINK": "Link"
+    },
     "badges": {
       "disabled": "Aus"
     },
