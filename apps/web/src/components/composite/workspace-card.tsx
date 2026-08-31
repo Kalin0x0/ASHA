@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock, Cpu, Lock, MemoryStick, MoreVertical, Pencil, Play, Sparkles, Star, Trash2 } from 'lucide-react';
+import { Clock, Cpu, Lock, MemoryStick, MoreVertical, Pencil, Play, Sparkles, Star, Trash2, UserCheck } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { AppIcon } from '@/components/composite/app-icon';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,7 @@ export function WorkspaceCard({
   favorite = false,
   onToggleFavorite,
   onEdit,
+  onAssign,
   onDelete,
 }: {
   workspace: Workspace;
@@ -41,6 +42,8 @@ export function WorkspaceCard({
   onToggleFavorite?: (id: string) => void;
   /** Admin-only: when provided, an actions menu (Edit / Delete) is shown. */
   onEdit?: (id: string) => void;
+  /** Jump to this workspace's access list. Admin catalog only. */
+  onAssign?: (id: string) => void;
   onDelete?: (id: string) => void;
 }) {
   const t = useTranslations('portal');
@@ -148,8 +151,8 @@ export function WorkspaceCard({
           </Badge>
         )}
 
-        {/* Admin actions — edit / delete (shown only when handlers are provided) */}
-        {(onEdit || onDelete) && (
+        {/* Admin actions — edit / assign / delete (only when handlers are given) */}
+        {(onEdit || onAssign || onDelete) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -165,6 +168,11 @@ export function WorkspaceCard({
               {onEdit && (
                 <DropdownMenuItem onSelect={() => onEdit(workspace.id)}>
                   <Pencil className="size-4" /> {t('card.edit')}
+                </DropdownMenuItem>
+              )}
+              {onAssign && (
+                <DropdownMenuItem onSelect={() => onAssign(workspace.id)}>
+                  <UserCheck className="size-4" /> {t('card.assign')}
                 </DropdownMenuItem>
               )}
               {onDelete && (

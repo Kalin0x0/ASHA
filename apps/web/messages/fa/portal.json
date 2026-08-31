@@ -54,6 +54,7 @@
     "removeFavorite": "حذف از علاقه‌مندی‌ها",
     "actions": "اقدامات",
     "edit": "ویرایش",
+    "assign": "تخصیص دسترسی",
     "delete": "حذف"
   },
   "mySessions": {
@@ -67,7 +68,8 @@
     "stopAria": "توقف {name}",
     "stoppedToast": "نشست متوقف شد — وضعیت حفظ می‌شود",
     "delete": "حذف",
-    "deleteAria": "حذف {name}"
+    "deleteAria": "حذف {name}",
+    "endFailedToast": "پایان دادن به نشست ممکن نشد"
   },
   "favorites": {
     "title": "علاقه‌مندی‌ها",

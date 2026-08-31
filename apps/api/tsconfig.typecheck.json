@@ -1,0 +1,8 @@
+{
+  // `tsconfig.json` excludes *.test.ts so `nest build` does not emit compiled
+  // tests into the production bundle. Typechecking must still cover them, so it
+  // uses this config, which adds them back.
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

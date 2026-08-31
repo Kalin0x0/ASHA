@@ -15,7 +15,7 @@ export const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideClose?: boolean }
 >(({ className, children, hideClose = false, ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-anthracite-950/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+    <DialogPrimitive.Overlay className="fixed inset-0 z-modal bg-anthracite-950/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
@@ -25,7 +25,7 @@ export const DialogContent = React.forwardRef<
         // Cap it to the viewport and let the panel itself scroll. `dvh` tracks
         // mobile browser chrome; `overscroll-contain` keeps the wheel from
         // chaining to the page once the dialog hits its end.
-        'glass-strong fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-xl p-6 shadow-[var(--shadow-lifted)] data-[state=open]:animate-rise',
+        'glass-strong fixed left-1/2 top-1/2 z-modal grid max-h-[calc(100dvh-2rem)] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto overscroll-contain rounded-xl p-6 shadow-[var(--shadow-lifted)] data-[state=open]:animate-rise',
         className,
       )}
       {...props}
@@ -40,7 +40,7 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 function DialogCloseButton() {
   const t = useTranslations('common');
   return (
-    <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground opacity-70 transition-opacity hover:opacity-100 ring-gold-focus">
+    <DialogPrimitive.Close className="absolute end-4 top-4 rounded-md p-1 text-muted-foreground opacity-70 transition-opacity hover:opacity-100 ring-gold-focus">
       <X className="size-4" />
       <span className="sr-only">{t('actions.close')}</span>
     </DialogPrimitive.Close>

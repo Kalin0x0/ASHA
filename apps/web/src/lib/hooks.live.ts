@@ -762,13 +762,68 @@ export function useDeleteBug() {
   }, [mutateAsync]);
 }
 
+/**
+ * Ending a session RETURNS A PROMISE so callers can tell success from failure.
+ * It used to be fire-and-forget `mutate`, and every caller toasted "session
+ * ended" the moment it was called — so a 403/500 looked exactly like success,
+ * the row stayed on screen, and the End button appeared to do nothing.
+ */
 export function useTerminateSession() {
   const qc = useQueryClient();
-  const { mutate } = useMutation({
+  const { mutateAsync } = useMutation({
     mutationFn: api.terminateSession,
     onSuccess: () => qc.invalidateQueries({ queryKey: SESSIONS_KEY }),
   });
-  return useCallback((id: string) => mutate(id), [mutate]);
+  return useCallback(async (id: string) => mutateAsync(id), [mutateAsync]);
+}
+
+/**
+ * Whether the org runs deny-by-default (a user sees ONLY what is granted to
+ * them) or the legacy open model (an ungranted workspace is visible to
+ * everyone). Absent ⇒ ON, matching the server's own reading of the setting;
+ * getting this backwards would make the assignments screen label workspaces
+ * nobody is granted as "nobody has this" when in fact everybody does.
+ */
+export function useIsolationDenyByDefault(): boolean {
+  const { data } = useQuery({ queryKey: ['settings', 'general'], queryFn: api.getGeneralSettings });
+  const row = data?.find((s) => s.key === 'isolation.denyByDefault');
+  return row?.valueJson !== false;
+}
+
+/**
+ * Toggle ONE person's or ONE group's access to a workspace. Single-pair on the
+ * wire so the assignments screen can flip a row without resending the roster.
+ */
+export function useSetWorkspaceUserAccess() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, userId, granted }: { id: string; userId: string; granted: boolean }) =>
+      api.setWorkspaceUserAccess(id, userId, granted),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: WORKSPACES_KEY });
+      void qc.invalidateQueries({ queryKey: LAUNCHABLE_WORKSPACES_KEY });
+    },
+  });
+  return useCallback(
+    (id: string, userId: string, granted: boolean) => mutateAsync({ id, userId, granted }),
+    [mutateAsync],
+  );
+}
+
+export function useSetWorkspaceGroupAccess() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, groupId, granted }: { id: string; groupId: string; granted: boolean }) =>
+      api.setWorkspaceGroupAccess(id, groupId, granted),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: WORKSPACES_KEY });
+      void qc.invalidateQueries({ queryKey: LAUNCHABLE_WORKSPACES_KEY });
+    },
+  });
+  return useCallback(
+    (id: string, groupId: string, granted: boolean) => mutateAsync({ id, groupId, granted }),
+    [mutateAsync],
+  );
 }
 
 export function usePauseSession() {

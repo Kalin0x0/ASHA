@@ -62,7 +62,7 @@ export function FavoriteQuickLaunch({ limit = 4 }: { limit?: number }) {
               onClick={() => void onLaunch(ws.id)}
               disabled={busy}
               title={t('favorites.launchTitle', { name: ws.friendlyName })}
-              className="group flex items-center gap-1.5 rounded-full border border-border-subtle bg-[var(--surface-2)]/60 py-1 pl-1 pr-2.5 text-xs transition-all duration-200 hover:border-[rgba(212,175,55,0.35)] hover:bg-[var(--surface-2)] hover:shadow-[0_0_0_1px_rgba(212,175,55,0.15)] disabled:opacity-60 ring-gold-focus"
+              className="group flex items-center gap-1.5 rounded-full border border-border-subtle bg-[var(--surface-2)]/60 py-1 ps-1 pe-2.5 text-xs transition-all duration-200 hover:border-[rgba(212,175,55,0.35)] hover:bg-[var(--surface-2)] hover:shadow-[0_0_0_1px_rgba(212,175,55,0.15)] disabled:opacity-60 ring-gold-focus"
             >
               <AppIcon
                 name={ws.friendlyName}

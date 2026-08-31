@@ -2,6 +2,7 @@
 
 import { Container, Loader2, Pencil, Plus, Server, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
@@ -52,6 +53,7 @@ const blankForm = {
 };
 
 export default function WorkspacesPage() {
+  const router = useRouter();
   const t = useTranslations('workspaces');
   const tc = useTranslations('common');
   const workspaces = useWorkspaces();
@@ -77,7 +79,20 @@ export default function WorkspacesPage() {
   // Access control: 'everyone' (no grants) vs 'restricted' (selected users/groups).
   const [accessMode, setAccessMode] = useState<'everyone' | 'restricted'>('everyone');
   const [assignUserIds, setAssignUserIds] = useState<string[]>([]);
+  const [assignQuery, setAssignQuery] = useState('');
   const [assignGroupIds, setAssignGroupIds] = useState<string[]>([]);
+  // Checked people always stay listed, even when the search would hide them —
+  // otherwise filtering looks like it silently dropped their grant.
+  const visibleAssignUsers = useMemo(() => {
+    const q = assignQuery.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(
+      (u) =>
+        assignUserIds.includes(u.id) ||
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q),
+    );
+  }, [users, assignQuery, assignUserIds]);
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
   const selectedServer = servers.find((s) => s.id === form.serverId);
   const editing = editingId !== null;
@@ -281,6 +296,7 @@ export default function WorkspacesPage() {
             onLaunch={onLaunch}
             launching={launchingId === ws.id}
             onEdit={openEdit}
+            onAssign={(id) => router.push(`/assignments?workspace=${id}`)}
             onDelete={(id) => setDeleting(workspaces.find((w) => w.id === id) ?? null)}
           />
         ))}
@@ -515,11 +531,19 @@ export default function WorkspacesPage() {
                     <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       {t('catalog.access.users')}
                     </p>
+                    {/* Every account, unfiltered, was unusable past a couple of
+                        dozen people — you cannot tick a name you cannot find. */}
+                    <Input
+                      value={assignQuery}
+                      onChange={(e) => setAssignQuery(e.target.value)}
+                      placeholder={t('catalog.access.searchPeople')}
+                      className="mb-1 h-8 text-xs"
+                    />
                     <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border border-border-subtle p-2">
-                      {users.length === 0 ? (
+                      {visibleAssignUsers.length === 0 ? (
                         <p className="text-xs text-muted-foreground/70">{t('catalog.access.none')}</p>
                       ) : (
-                        users.map((u) => (
+                        visibleAssignUsers.map((u) => (
                           <label key={u.id} className="flex items-center gap-2 text-sm">
                             <input
                               type="checkbox"

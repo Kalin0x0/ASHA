@@ -110,7 +110,7 @@ export default function ConfigPage() {
               const f = e.target.files?.[0];
               if (f) onFile(f);
             }}
-            className="block w-full text-xs text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-xs"
+            className="block w-full text-xs text-muted-foreground file:me-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-xs"
           />
           <Button size="sm" onClick={() => void onImport()} disabled={!isLive || importing || !payload.trim()}>
             {importing ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}

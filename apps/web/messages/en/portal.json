@@ -54,6 +54,7 @@
     "removeFavorite": "Remove from favorites",
     "actions": "Actions",
     "edit": "Edit",
+    "assign": "Assign access",
     "delete": "Delete"
   },
   "mySessions": {
@@ -67,7 +68,8 @@
     "stopAria": "Pause {name}",
     "stoppedToast": "Session paused — state is kept",
     "delete": "Delete",
-    "deleteAria": "Delete {name}"
+    "deleteAria": "Delete {name}",
+    "endFailedToast": "Could not end the session"
   },
   "favorites": {
     "title": "Favorites",

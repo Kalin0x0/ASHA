@@ -32,7 +32,7 @@ export function ComingSoon({
             unoptimized
             className="opacity-20"
           />
-          <span className="absolute -bottom-2 -right-2 flex size-11 items-center justify-center rounded-xl border border-[rgba(212,175,55,0.3)] bg-gold-500/10 text-gold-300 shadow-[0_0_20px_-4px_rgba(212,175,55,0.3)] ring-1 ring-inset ring-white/5">
+          <span className="absolute -bottom-2 -end-2 flex size-11 items-center justify-center rounded-xl border border-[rgba(212,175,55,0.3)] bg-gold-500/10 text-gold-300 shadow-[0_0_20px_-4px_rgba(212,175,55,0.3)] ring-1 ring-inset ring-white/5">
             <Icon className="size-5" />
           </span>
         </div>

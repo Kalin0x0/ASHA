@@ -17,7 +17,7 @@ export const TooltipContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        'glass-strong z-50 overflow-hidden rounded-md px-2.5 py-1.5 text-xs text-foreground shadow-[var(--shadow-lifted)]',
+        'glass-strong z-floating overflow-hidden rounded-md px-2.5 py-1.5 text-xs text-foreground shadow-[var(--shadow-lifted)]',
         'data-[state=delayed-open]:animate-rise',
         className,
       )}

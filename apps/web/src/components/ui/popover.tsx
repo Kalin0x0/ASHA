@@ -19,7 +19,7 @@ export const PopoverContent = React.forwardRef<
       align={align}
       sideOffset={sideOffset}
       className={cn(
-        'glass-strong z-50 w-72 rounded-xl p-3 shadow-[var(--shadow-lifted)] outline-none',
+        'glass-strong z-floating w-72 rounded-xl p-3 shadow-[var(--shadow-lifted)] outline-none',
         'data-[state=open]:animate-rise',
         className,
       )}

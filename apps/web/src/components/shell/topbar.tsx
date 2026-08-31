@@ -93,7 +93,7 @@ export function Topbar() {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon-sm" aria-label={t('notifications')} className="relative">
             <Bell className="size-4" />
-            <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-gold-500 ring-1 ring-[var(--surface-1)]" />
+            <span className="absolute end-1.5 top-1.5 size-1.5 rounded-full bg-gold-500 ring-1 ring-[var(--surface-1)]" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-80">

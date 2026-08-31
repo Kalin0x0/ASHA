@@ -53,7 +53,19 @@ export class AuthController {
     return this.auth.me(user.sub);
   }
 
+  /**
+   * Acting AS another user is the most abusable action in the product, so it is
+   * the one place the step-up guard is enforced: a plain access token is not
+   * enough, the admin must re-prove possession of their second factor via
+   * POST /auth/step-up first. Until now StepUpGuard was applied to nothing but
+   * its own demo route, so it read like a control while enforcing nothing.
+   *
+   * NOTE: this means a system admin without a confirmed TOTP method cannot
+   * impersonate. That is intentional — but it is a behavioural change for
+   * deployments whose admins never enrolled one.
+   */
   @ApiBearerAuth()
+  @UseGuards(StepUpGuard)
   @Post('impersonate')
   impersonate(@CurrentUser() user: AuthUser, @Body(new ZodPipe(impersonateSchema)) dto: ImpersonateDto) {
     return this.auth.impersonate(user, dto.userId);

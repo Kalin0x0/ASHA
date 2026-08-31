@@ -1,4 +1,48 @@
 {
+  "assignments": {
+    "title": "Zuweisungen",
+    "subtitle": "Wer darf welchen Desktop, Dienst oder Container öffnen? Schalter umlegen — wird sofort gespeichert.",
+    "byPerson": "Nach Person",
+    "byWorkspace": "Nach Desktop",
+    "searchPeople": "Personen suchen…",
+    "searchWorkspaces": "Desktops suchen…",
+    "searchPeopleOrGroups": "Personen oder Gruppen suchen…",
+    "noMatches": "Dazu passt nichts.",
+    "personSummary": "{granted} von {total} Desktops verfügbar",
+    "workspaceSummary": "{users} Personen, {groups} Gruppen",
+    "workspaceUngranted": "Noch niemandem zugewiesen",
+    "viaGroup": "Über die Gruppe „{name}“",
+    "viaGroupHint": "Das kommt über die Gruppe „{name}“. Entferne die Person aus der Gruppe oder nimm die Gruppe von diesem Desktop.",
+    "openToEveryone": "Derzeit für alle sichtbar",
+    "groupSubtitle": "Alle in dieser Gruppe",
+    "toggleAria": "{person} Zugriff auf {workspace} geben",
+    "footnote": "Ein Desktop ohne Zuweisung ist für niemanden sichtbar. Zugriff über eine Gruppe lässt sich nur in der Gruppe ändern.",
+    "sections": {
+      "groups": "Gruppen",
+      "people": "Personen"
+    },
+    "types": {
+      "all": "Alle",
+      "CONTAINER": "Docker",
+      "SERVER": "Dienst",
+      "REMOTE_APP": "App",
+      "VM": "VM",
+      "LINK": "Link"
+    },
+    "badges": {
+      "disabled": "Aus"
+    },
+    "empty": {
+      "noPeople": "Noch keine Personen",
+      "noWorkspaces": "Noch keine Desktops",
+      "description": "Lege zuerst einen an, dann kannst du ihn hier zuweisen."
+    },
+    "toasts": {
+      "granted": "Zugriff erteilt",
+      "revoked": "Zugriff entfernt",
+      "failed": "Zugriff konnte nicht geändert werden"
+    }
+  },
   "users": {
     "title": "Benutzer",
     "description": "Personen mit Zugriff auf diese Asha-Installation.",
@@ -62,7 +106,8 @@
       },
       "customRequired": "Bitte ein Datum wählen.",
       "deactivateConfirm": "Der Zugang von {name} wird sofort beendet und das Konto deaktiviert."
-    }
+    },
+    "assignments": "Desktops & Zugriff"
   },
   "groups": {
     "title": "Gruppen",

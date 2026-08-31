@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { POOL_ACTIVE_SESSION_STATUSES } from '@asha/contracts';
 import type { CreateStagingDto, UpdateStagingDto } from '@asha/contracts';
 import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
@@ -34,7 +35,7 @@ export class StagingService {
       where: {
         stagingId: { in: rules.map((r) => r.id) },
         userId: null,
-        status: { in: ['REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED'] },
+        status: { in: [...POOL_ACTIVE_SESSION_STATUSES] },
       },
       _count: true,
     });

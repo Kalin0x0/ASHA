@@ -9,6 +9,31 @@ export type SessionStatus =
   | 'DESTROYED'
   | 'ERROR';
 
+/**
+ * Session statuses that count as alive in the UI. Three components each had
+ * their own copy, and the portal's two lists omitted REQUESTED — so a session
+ * was invisible between clicking launch and the scheduler picking it up, which
+ * reads as "nothing happened". Mirrors ACTIVE_SESSION_STATUSES in @asha/contracts.
+ */
+export const ACTIVE_SESSION_STATUSES: SessionStatus[] = [
+  'REQUESTED',
+  'SCHEDULED',
+  'PROVISIONING',
+  'RUNNING',
+  'DEGRADED',
+  'PAUSED',
+];
+
+/**
+ * Statuses the portal LISTS. Superset of the active ones: a session that failed
+ * still belongs on screen, because otherwise the user has no card and therefore
+ * no End button for it — the row is invisible while its connection can still be
+ * live, which is exactly what "I can't close it" looks like. ERROR must NOT be
+ * in ACTIVE_SESSION_STATUSES though: that set drives licence seats and tariff
+ * budget, and a failed session must not be billed.
+ */
+export const VISIBLE_SESSION_STATUSES: SessionStatus[] = [...ACTIVE_SESSION_STATUSES, 'ERROR'];
+
 export type AgentStatus = 'ONLINE' | 'OFFLINE' | 'DRAINING' | 'UNHEALTHY';
 
 export type WorkspaceType = 'CONTAINER' | 'SERVER' | 'REMOTE_APP' | 'VM' | 'LINK';
@@ -118,7 +143,10 @@ export interface UserRow {
   username: string;
   status: 'ACTIVE' | 'DISABLED' | 'INVITED' | 'LOCKED';
   isSystemAdmin: boolean;
+  /** Group names, for display. */
   groups: string[];
+  /** Group ids, so access can be attributed to the group that actually grants it. */
+  groupIds: string[];
   twoFactor: boolean;
   lastLoginAt: string | null;
   /** License/access expiry (ISO). null = perpetual. */

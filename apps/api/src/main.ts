@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json } from 'express';
 import helmet from 'helmet';
 import { corsOrigins, loadEnv } from '@asha/config';
 import { AppModule } from './app.module';
@@ -23,8 +24,20 @@ async function bootstrap() {
   // default limit every screenshot 413'd (surfacing as a 500) before the request
   // ever reached the handler, so users couldn't file bugs with a screenshot.
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
-  app.useBodyParser('json', { limit: '9mb' });
-  app.useBodyParser('urlencoded', { extended: true, limit: '9mb' });
+
+  // Only the bug-report/feedback routes carry a screenshot data URL (the
+  // contract allows up to 8 MB). Raising the limit GLOBALLY made every route a
+  // 9 MB sink — and at the default 600 req/min per IP that is ~5 GB/min of
+  // parseable body per client, reachable by any authenticated principal
+  // including a 10-minute demo account. Mount the large parser on those two
+  // paths only; express-json skips a request whose body is already parsed, so
+  // the small global limit below applies to everything else.
+  const LARGE_BODY_ROUTES = ['/api/v1/bug-reports', '/api/v1/feedback'];
+  for (const route of LARGE_BODY_ROUTES) {
+    app.use(route, json({ limit: '9mb' }));
+  }
+  app.useBodyParser('json', { limit: '512kb' });
+  app.useBodyParser('urlencoded', { extended: true, limit: '512kb' });
 
   app.use(
     helmet({

@@ -96,6 +96,25 @@ export function useSetWorkspaceAssignments() {
   return useCallback(async (_id: string, _userIds: string[], _groupIds: string[]) => undefined, []);
 }
 
+export function useIsolationDenyByDefault(): boolean {
+  // Mock mode mirrors the server's secure default.
+  return true;
+}
+
+export function useSetWorkspaceUserAccess() {
+  return useCallback(
+    async (id: string, userId: string, granted: boolean) => store.setWorkspaceAccess(id, 'user', userId, granted),
+    [],
+  );
+}
+
+export function useSetWorkspaceGroupAccess() {
+  return useCallback(
+    async (id: string, groupId: string, granted: boolean) => store.setWorkspaceAccess(id, 'group', groupId, granted),
+    [],
+  );
+}
+
 export function useUsers() {
   return useSnapshot(() => store.getData().users);
 }
@@ -213,7 +232,8 @@ export function useDeleteBug() {
 }
 
 export function useTerminateSession() {
-  return useCallback((id: string) => store.terminateSession(id), []);
+  // Async to match the live signature — callers await it and branch on failure.
+  return useCallback(async (id: string) => store.terminateSession(id), []);
 }
 
 export function usePauseSession() {

@@ -49,6 +49,7 @@ import {
   SlidersHorizontal,
   Timer,
   TrendingUp,
+  UserCheck,
   UserPlus,
   Users,
   UsersRound,
@@ -122,6 +123,10 @@ export const navGroups: NavGroup[] = [
     key: 'access',
     icon: Lock,
     items: [
+      // First in the section on purpose: "who may open what" is the question an
+      // operator arrives with, and it used to be answerable only by opening a
+      // workspace's edit form and scrolling past its resource settings.
+      { key: 'assignments', href: '/assignments', icon: UserCheck, perm: 'WORKSPACE_EDIT' },
       { key: 'users', href: '/users', icon: Users, perm: 'USER_VIEW' },
       { key: 'accessRequests', href: '/access-requests', icon: UserPlus, perm: 'USER_VIEW' },
       { key: 'groups', href: '/groups', icon: UsersRound, perm: 'GROUP_MANAGE' },

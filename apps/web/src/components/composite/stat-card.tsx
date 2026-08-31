@@ -54,7 +54,7 @@ export function StatCard({
     >
       {/* Tone wash in the corner */}
       <div
-        className="pointer-events-none absolute -right-12 -top-12 size-32 rounded-full blur-2xl"
+        className="pointer-events-none absolute -end-12 -top-12 size-32 rounded-full blur-2xl"
         style={{ background: t.glow }}
       />
 

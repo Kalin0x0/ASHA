@@ -1,4 +1,48 @@
 {
+  "assignments": {
+    "title": "Assignments",
+    "subtitle": "Who may open which desktop, service or container. Flip a switch — it saves right away.",
+    "byPerson": "By person",
+    "byWorkspace": "By desktop",
+    "searchPeople": "Search people…",
+    "searchWorkspaces": "Search desktops…",
+    "searchPeopleOrGroups": "Search people or groups…",
+    "noMatches": "Nothing matches that search.",
+    "personSummary": "{granted} of {total} desktops available",
+    "workspaceSummary": "{users} people, {groups} groups",
+    "workspaceUngranted": "Not assigned to anyone yet",
+    "viaGroup": "Via the group “{name}”",
+    "viaGroupHint": "This comes from the group “{name}”. Remove the person from that group, or take the group off this desktop.",
+    "openToEveryone": "Currently visible to everyone",
+    "groupSubtitle": "Everyone in this group",
+    "toggleAria": "Give {person} access to {workspace}",
+    "footnote": "A desktop with no one assigned is hidden from everyone. Access via a group can only be changed at the group.",
+    "sections": {
+      "groups": "Groups",
+      "people": "People"
+    },
+    "types": {
+      "all": "All",
+      "CONTAINER": "Docker",
+      "SERVER": "Service",
+      "REMOTE_APP": "App",
+      "VM": "VM",
+      "LINK": "Link"
+    },
+    "badges": {
+      "disabled": "Off"
+    },
+    "empty": {
+      "noPeople": "No people yet",
+      "noWorkspaces": "No desktops yet",
+      "description": "Create one first, then come back to assign it."
+    },
+    "toasts": {
+      "granted": "Access granted",
+      "revoked": "Access removed",
+      "failed": "Could not change the access"
+    }
+  },
   "users": {
     "title": "Users",
     "description": "People with access to this Asha deployment.",
@@ -62,7 +106,8 @@
       },
       "customRequired": "Please choose a date.",
       "deactivateConfirm": "{name}'s access ends immediately and the account is deactivated."
-    }
+    },
+    "assignments": "Desktops & access"
   },
   "groups": {
     "title": "Groups",

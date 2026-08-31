@@ -89,7 +89,7 @@ function RailItem({
       )}
     >
       {active && (
-        <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-gradient-to-b from-gold-300 to-gold-600" />
+        <span className="absolute inset-y-1.5 start-0 w-0.5 rounded-full bg-gradient-to-b from-gold-300 to-gold-600" />
       )}
       <span className={cn('shrink-0 transition-colors', !active && 'opacity-80 group-hover:opacity-100')}>
         {icon}

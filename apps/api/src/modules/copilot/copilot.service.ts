@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { ACTIVE_SESSION_STATUSES } from '@asha/contracts';
 import { prisma } from '@asha/db';
 
-const ACTIVE = ['REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED'];
+const ACTIVE = ACTIVE_SESSION_STATUSES;
 
 /**
  * KI-Copilot backend (differentiator). Answers natural-language questions about
@@ -23,7 +24,7 @@ export class CopilotService {
       });
       const byStatus = Object.fromEntries(grouped.map((g) => [g.status, g._count._all]));
       const running = byStatus.RUNNING ?? 0;
-      const active = grouped.filter((g) => ACTIVE.includes(g.status)).reduce((s, g) => s + g._count._all, 0);
+      const active = grouped.filter((g) => (ACTIVE as readonly string[]).includes(g.status)).reduce((s, g) => s + g._count._all, 0);
       return {
         intent: 'sessions',
         answer: `${running} session(s) currently RUNNING, ${active} active in total.`,
