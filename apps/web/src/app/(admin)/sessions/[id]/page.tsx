@@ -55,7 +55,13 @@ export default function SessionDetailPage() {
       }))
     )
       return;
-    terminate(session.id);
+    try {
+      await terminate(session.id);
+    } catch (err) {
+      // Never navigate away from a session that is still running.
+      toast.error(err instanceof Error ? err.message : t('detail.toastTerminateFailed'));
+      return;
+    }
     toast.success(t('detail.toastTerminated'));
     router.push('/sessions');
   };

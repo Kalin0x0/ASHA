@@ -21,7 +21,8 @@
     "confirmTitle": "نشست خاتمه داده شود؟",
     "confirmDescription": "با این کار کانتینر <strong>{workspace}</strong> برای <strong>{user}</strong> حذف می‌شود. کارهای ذخیره‌نشده در این نشست از بین خواهند رفت.",
     "confirmDescriptionFallback": "با این کار کانتینر نشست حذف می‌شود.",
-    "staged": "از پیش آماده"
+    "staged": "از پیش آماده",
+    "toastTerminateFailed": "پایان دادن به نشست ممکن نشد"
   },
   "detail": {
     "notFoundTitle": "نشست یافت نشد",
@@ -44,7 +45,8 @@
     "recording": "ضبط",
     "watchLive": "تماشای زنده",
     "watchHint": "این دسکتاپ را زنده و فقط‌خواندنی تماشا کنید — کاربر مزاحم نمی‌شود.",
-    "viewOnly": "فقط مشاهده"
+    "viewOnly": "فقط مشاهده",
+    "toastTerminateFailed": "پایان دادن به نشست ممکن نشد"
   },
   "history": {
     "title": "تاریخچهٔ نشست‌ها",

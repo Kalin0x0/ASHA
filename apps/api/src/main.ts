@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { json } from 'express';
+import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { corsOrigins, loadEnv } from '@asha/config';
 import { AppModule } from './app.module';
@@ -36,6 +36,20 @@ async function bootstrap() {
   for (const route of LARGE_BODY_ROUTES) {
     app.use(route, json({ limit: '9mb' }));
   }
+
+  // Routes whose own Zod schema accepts more than the global limit. Without an
+  // entry here body-parser aborts with entity.too.large BEFORE the handler, so
+  // the request fails as a 413 the schema says should be valid — a CSV import
+  // the schema sizes at 1,000,000 chars died at ~512 kB. Each limit is set just
+  // above its schema, NOT at the 9 MB the two routes above need, so the DoS
+  // surface those limits exist to bound is not reopened.
+  app.use('/api/v1/users/import', json({ limit: '1500kb' }));           // csv: max 1,000,000
+  app.use('/api/v1/account', json({ limit: '2mb' }));                   // avatarUrl: max 1,600,000
+  // SAML assertions arrive form-encoded from the IdP, so this one needs the
+  // urlencoded parser; a signed+encrypted assertion with a certificate chain
+  // clears 512 kB on real directories, and failing here breaks SSO login.
+  app.use('/api/v1/auth/saml', urlencoded({ extended: true, limit: '1500kb' })); // SAMLResponse: max 1,000,000
+
   app.useBodyParser('json', { limit: '512kb' });
   app.useBodyParser('urlencoded', { extended: true, limit: '512kb' });
 

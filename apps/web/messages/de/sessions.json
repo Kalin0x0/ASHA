@@ -21,7 +21,8 @@
     "confirmTitle": "Sitzung beenden?",
     "confirmDescription": "Dadurch wird der <strong>{workspace}</strong>-Container für <strong>{user}</strong> entfernt. Nicht gespeicherte Arbeit in der Sitzung geht verloren.",
     "confirmDescriptionFallback": "Dadurch wird der Sitzungscontainer entfernt.",
-    "staged": "Vorgewärmt"
+    "staged": "Vorgewärmt",
+    "toastTerminateFailed": "Sitzung konnte nicht beendet werden"
   },
   "detail": {
     "notFoundTitle": "Sitzung nicht gefunden",
@@ -44,7 +45,8 @@
     "recording": "Aufzeichnung",
     "watchLive": "Live ansehen",
     "watchHint": "Diesen Desktop live ansehen, nur lesend — der Nutzer wird nicht gestört.",
-    "viewOnly": "Nur ansehen"
+    "viewOnly": "Nur ansehen",
+    "toastTerminateFailed": "Sitzung konnte nicht beendet werden"
   },
   "history": {
     "title": "Sitzungsverlauf",
