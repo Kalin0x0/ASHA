@@ -93,8 +93,13 @@ export class SessionReaperService {
         // session would then be permanently uncontrollable and its owner would
         // get 403 from assertSessionScope. Every staging query pairs stagingId
         // with `userId: null`, so clearing it here is safe.
+        // Scope the detach to rows an ack is still coming for. A DESTROYED or
+        // ERROR session is final — nothing will look it up again — so detaching
+        // it only strips the FK that would have cleaned it up, leaving an
+        // ownerless row no query ever revisits (the demo path used to purge
+        // these via the cascade). Let those go with the user; keep the rest.
         await prisma.session.updateMany({
-          where: { userId: u.id },
+          where: { userId: u.id, status: { notIn: ['DESTROYED', 'ERROR'] } },
           data: { userId: null, stagingId: null },
         });
 

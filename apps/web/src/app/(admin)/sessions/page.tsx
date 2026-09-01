@@ -60,9 +60,18 @@ export default function SessionsPage() {
 
   const target = sessions.find((s) => s.id === confirmId);
 
-  const onTerminate = () => {
+  const onTerminate = async () => {
     if (!confirmId) return;
-    terminate(confirmId);
+    // The hook returns a rejecting promise (mutateAsync). Toasting before it
+    // settles is the bug this release set out to kill on the portal side —
+    // a 403, a 404 on a row the poller has not refreshed, or the new 30s
+    // timeout would all read as success while the session kept running.
+    try {
+      await terminate(confirmId);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('list.toastTerminateFailed'));
+      return; // keep the dialog open so the operator can retry
+    }
     toast.success(t('list.toastTerminated'), { description: t('list.toastTerminatedDescription') });
     setConfirmId(null);
   };
@@ -217,7 +226,7 @@ export default function SessionsPage() {
             <Button variant="secondary" onClick={() => setConfirmId(null)}>
               {tc('actions.cancel')}
             </Button>
-            <Button variant="destructive" onClick={onTerminate}>
+            <Button variant="destructive" onClick={() => void onTerminate()}>
               <XCircle className="size-4" /> {tc('actions.terminate')}
             </Button>
           </DialogFooter>

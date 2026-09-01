@@ -2,7 +2,10 @@ import 'reflect-metadata';
 import { ForbiddenException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { prismaMock } = vi.hoisted(() => ({
+const { prismaMock, txState } = vi.hoisted(() => ({
+  // Records whether the caller was inside the $transaction callback at the
+  // moment a write ran, so a test can pin atomicity rather than write order.
+  txState: { inside: false, calls: 0, wroteOutside: [] as string[] },
   prismaMock: {
     org: { findFirst: vi.fn() },
     setting: { findUnique: vi.fn() },
@@ -18,9 +21,23 @@ const { prismaMock } = vi.hoisted(() => ({
 }));
 
 // $transaction runs the callback against the same mock, so the assertions below
-// see every write the transactional block performs.
+// see every write the transactional block performs. It also flips txState.inside
+// for the duration, which is what lets a test tell "written inside the
+// transaction" from "written next to it" — the shared-handle mock alone cannot,
+// and every assertion here passed with the $transaction wrapper deleted.
 vi.mock('@asha/db', () => ({
-  prisma: { ...prismaMock, $transaction: (fn: (tx: unknown) => unknown) => fn(prismaMock) },
+  prisma: {
+    ...prismaMock,
+    $transaction: async (fn: (tx: unknown) => unknown) => {
+      txState.calls += 1;
+      txState.inside = true;
+      try {
+        return await fn(prismaMock);
+      } finally {
+        txState.inside = false;
+      }
+    },
+  },
 }));
 vi.mock('@asha/crypto', () => ({ hashToken: (s: string) => `hash(${s})` }));
 
@@ -38,6 +55,9 @@ const INPUT = { email: 'Trial@Example.com', fingerprint: 'fp-abc', ip: '1.2.3.4'
 
 beforeEach(() => {
   for (const model of Object.values(prismaMock)) for (const fn of Object.values(model)) (fn as ReturnType<typeof vi.fn>).mockReset();
+  txState.inside = false;
+  txState.calls = 0;
+  txState.wroteOutside = [];
   prismaMock.org.findFirst.mockResolvedValue({ id: 'org1' });
   prismaMock.setting.findUnique.mockResolvedValue(null); // demo enabled by default
 });
@@ -113,6 +133,41 @@ describe('DemoService.startDemo — provisioning is atomic and one-shot', () => 
     prismaMock.workspace.findMany.mockResolvedValue([{ id: 'ws-firefox' }]);
     prismaMock.tariff.upsert.mockResolvedValue({ id: 'tar-demo', period: 'MINUTE' });
   };
+
+  it('performs the provisioning writes INSIDE one transaction', async () => {
+    // The suite around this one asserts the ORDER of the writes, which the
+    // shared-handle mock reports identically whether or not a transaction wraps
+    // them — every assertion here still passed with the $transaction call
+    // deleted. This test pins the property the suite is named for: each write
+    // is recorded with whether it ran inside the callback, so moving any of
+    // them out (a plausible "shorten the transaction" refactor) fails here.
+    const { svc } = makeService();
+    ready();
+
+    const ranAt: string[] = [];
+    const track = (fn: ReturnType<typeof vi.fn>, label: string, value: unknown) => {
+      fn.mockImplementation(() => {
+        ranAt.push(`${label}:${txState.inside ? 'in' : 'OUT'}`);
+        return Promise.resolve(value);
+      });
+    };
+    track(prismaMock.demoGrant.create, 'demoGrant.create', { id: 'grant1' });
+    track(prismaMock.user.create, 'user.create', {
+      id: 'demo1', orgId: 'org1', email: 'trial@example.com', username: 'demo-x', displayName: 'Demo user',
+    });
+    track(prismaMock.userGroup.create, 'userGroup.create', {});
+    track(prismaMock.workspaceUser.create, 'workspaceUser.create', {});
+    track(prismaMock.tariff.upsert, 'tariff.upsert', { id: 'tar-demo', period: 'MINUTE' });
+    track(prismaMock.tariffAssignment.upsert, 'tariffAssignment.upsert', {});
+
+    await svc.startDemo(INPUT);
+
+    expect(txState.calls).toBe(1);
+    // Nothing that must commit together may have run outside the callback.
+    expect(ranAt.filter((w) => w.endsWith(':OUT'))).toEqual([]);
+    // And the writes really did happen — an empty list would satisfy the line above.
+    expect(ranAt.length).toBeGreaterThanOrEqual(5);
+  });
 
   it('writes the DemoGrant FIRST so the unique index arbitrates a race', async () => {
     // Two concurrent requests with different e-mails but the same fingerprint

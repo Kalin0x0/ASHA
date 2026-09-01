@@ -21,7 +21,8 @@
     "confirmTitle": "Terminate session?",
     "confirmDescription": "This will destroy the <strong>{workspace}</strong> container for <strong>{user}</strong>. Unsaved work in the session will be lost.",
     "confirmDescriptionFallback": "This will destroy the session container.",
-    "staged": "Staged"
+    "staged": "Staged",
+    "toastTerminateFailed": "Could not end the session"
   },
   "detail": {
     "notFoundTitle": "Session not found",
@@ -44,7 +45,8 @@
     "recording": "Recording",
     "watchLive": "Watch live",
     "watchHint": "Watch this desktop live, view-only — the user is not interrupted.",
-    "viewOnly": "View only"
+    "viewOnly": "View only",
+    "toastTerminateFailed": "Could not end the session"
   },
   "history": {
     "title": "Session History",
