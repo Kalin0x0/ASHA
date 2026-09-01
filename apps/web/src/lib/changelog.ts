@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.34',
+    date: '2026-09-01',
+    title: { en: 'Take one desktop away from one person', de: 'Einer Person einen Desktop wegnehmen' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'You can now switch a desktop off for a single person even when a group gives it to them. Previously that switch was greyed out and the only advice was to remove them from the group — impossible when the group is “All Users” — or to take the group off the desktop, which changes it for everybody. The row tells you where the access would have come from, so an off switch is never unexplained, and switching it back on hands the person back to their group.',
+          de: 'Sie können einen Desktop jetzt für eine einzelne Person abschalten, auch wenn eine Gruppe ihn ihr gibt. Bisher war dieser Schalter ausgegraut, und der einzige Rat lautete, die Person aus der Gruppe zu nehmen — bei „All Users“ unmöglich — oder die Gruppe vom Desktop zu lösen, was ihn für alle ändert. Die Zeile nennt jetzt, woher der Zugriff gekommen wäre, damit ein abgeschalteter Schalter nie unerklärt bleibt; beim Wiedereinschalten gilt wieder die Gruppe.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'A person switched off this way loses the desktop everywhere, not just from their list: the check that decides what you see and the check that decides what you may start are now one and the same. Saving a workspace in the older edit dialog also no longer clears these exceptions.',
+          de: 'Wer so abgeschaltet wird, verliert den Desktop überall — nicht nur aus der Liste: Die Prüfung, was jemand sieht, und die Prüfung, was jemand starten darf, sind jetzt dieselbe. Das Speichern eines Workspace im älteren Bearbeiten-Dialog löscht diese Ausnahmen zudem nicht mehr.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.33',
     date: '2026-08-31',
     title: { en: 'One-click assignments, and End really ends', de: 'Zuweisungen mit einem Klick, und Beenden beendet wirklich' },
