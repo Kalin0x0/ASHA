@@ -1,13 +1,19 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { WORKSPACE_ACCESS_RANK, WORKSPACE_TYPE_ORDER, workspaceAccessFor } from './workspace-access';
+import {
+  WORKSPACE_ACCESS_RANK,
+  WORKSPACE_TYPE_ORDER,
+  planWorkspaceAccessToggle,
+  workspaceAccessFor,
+} from './workspace-access';
 
 const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
 
-const ws = (users: string[] = [], groups: string[] = []) => ({
+const ws = (users: string[] = [], groups: string[] = [], blocked: string[] = []) => ({
   assignedUserIds: users,
   assignedGroupIds: groups,
+  blockedUserIds: blocked,
 });
 const anna = { id: 'u1', groupIds: ['g-design'] };
 
@@ -58,10 +64,86 @@ describe('workspaceAccessFor', () => {
   });
 
   it('ranks what the person already has above what they do not', () => {
-    const { direct, group, everyone, none } = WORKSPACE_ACCESS_RANK;
+    const { direct, group, everyone, blocked, none } = WORKSPACE_ACCESS_RANK;
     expect(direct).toBeLessThan(group);
     expect(group).toBeLessThan(everyone);
-    expect(everyone).toBeLessThan(none);
+    expect(everyone).toBeLessThan(blocked);
+    expect(blocked).toBeLessThan(none);
+  });
+
+  describe('blocks', () => {
+    it('beats a grant that would arrive from a group, and names that group', () => {
+      // The case the whole feature exists for: everyone is in "All Users", so
+      // there is no group to remove the person from.
+      expect(workspaceAccessFor(ws([], ['g-design'], ['u1']), anna, true)).toEqual({
+        kind: 'blocked',
+        groupId: 'g-design',
+      });
+    });
+
+    it('beats a grant made to the person by name', () => {
+      expect(workspaceAccessFor(ws(['u1'], [], ['u1']), anna, true)).toEqual({
+        kind: 'blocked',
+        groupId: undefined,
+      });
+    });
+
+    it('beats open-to-everyone under the legacy model', () => {
+      expect(workspaceAccessFor(ws([], [], ['u1']), anna, false)).toEqual({
+        kind: 'blocked',
+        groupId: undefined,
+      });
+    });
+
+    it('applies only to the person named', () => {
+      const ben = { id: 'u2', groupIds: ['g-design'] };
+      expect(workspaceAccessFor(ws([], ['g-design'], ['u1']), ben, true)).toEqual({
+        kind: 'group',
+        groupId: 'g-design',
+      });
+    });
+
+    it('does not make an ungranted workspace look assigned', () => {
+      // A block is not a grant. If it counted as one, this workspace would stop
+      // being open to everyone the moment one person was excluded from it.
+      const ben = { id: 'u2', groupIds: [] };
+      expect(workspaceAccessFor(ws([], [], ['u1']), ben, false)).toEqual({ kind: 'everyone' });
+    });
+  });
+});
+
+describe('planWorkspaceAccessToggle', () => {
+  const group = { kind: 'group', groupId: 'g-all' } as const;
+  const blockedOverGroup = { kind: 'blocked', groupId: 'g-all' } as const;
+  const blockedAlone = { kind: 'blocked' } as const;
+
+  it('switching OFF a group-granted desktop writes a block, not a removal', () => {
+    // There is nothing on this workspace to remove — the grant lives on the
+    // group — and detaching the group would take the desktop from everyone.
+    expect(planWorkspaceAccessToggle(group, false)).toBe('blocked');
+  });
+
+  it('switching ON a blocked-over-group desktop lifts the block, not adds a grant', () => {
+    // Falling back to the group keeps the data minimal: a row exists only when
+    // it says something the groups do not.
+    expect(planWorkspaceAccessToggle(blockedOverGroup, true)).toBe('inherit');
+  });
+
+  it('switching ON a desktop no group grants writes a real grant', () => {
+    expect(planWorkspaceAccessToggle({ kind: 'none' }, true)).toBe('granted');
+    expect(planWorkspaceAccessToggle(blockedAlone, true)).toBe('granted');
+  });
+
+  it('switching OFF a personal grant just removes it', () => {
+    // A block here would be pointless bookkeeping — nothing would grant it back.
+    expect(planWorkspaceAccessToggle({ kind: 'direct' }, false)).toBe('inherit');
+  });
+
+  it('round-trips: off then on returns to where it started', () => {
+    for (const start of [group, { kind: 'direct' } as const, { kind: 'none' } as const]) {
+      const off = planWorkspaceAccessToggle(start, false);
+      expect(['blocked', 'inherit']).toContain(off);
+    }
   });
 });
 

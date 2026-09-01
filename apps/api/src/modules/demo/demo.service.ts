@@ -139,7 +139,7 @@ export class DemoService {
         select: { id: true },
       });
       for (const ws of demoWorkspaces) {
-        await tx.workspaceUser.create({ data: { orgId, workspaceId: ws.id, userId: created.id } });
+        await tx.workspaceUser.create({ data: { orgId, workspaceId: ws.id, userId: created.id, denied: false } });
       }
 
       // Time-box with a 10-minute tariff (reuses the tariff metering + session

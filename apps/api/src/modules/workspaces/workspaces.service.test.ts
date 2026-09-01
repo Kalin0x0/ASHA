@@ -12,7 +12,7 @@ const { prismaMock } = vi.hoisted(() => ({
     group: { findMany: vi.fn(), findFirst: vi.fn() },
     setting: { findUnique: vi.fn() },
     session: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
-    workspaceUser: { createMany: vi.fn(), deleteMany: vi.fn() },
+    workspaceUser: { createMany: vi.fn(), deleteMany: vi.fn(), upsert: vi.fn() },
   },
 }));
 
@@ -123,13 +123,18 @@ describe('WorkspacesService — access control', () => {
     prismaMock.setting.findUnique.mockResolvedValue(null); // absent ⇒ deny-by-default ON
     prismaMock.userGroup.findMany.mockResolvedValue([{ groupId: 'g1' }, { groupId: 'g2' }]);
     await svc.launchableForUser(userA);
-    const arg = prismaMock.workspace.findMany.mock.calls[0]![0] as { where: { OR: unknown[] } };
+    const arg = prismaMock.workspace.findMany.mock.calls[0]![0] as {
+      where: { OR: unknown[]; assignedUsers: unknown };
+    };
     expect(arg.where.OR).toEqual([
-      { assignedUsers: { some: { userId: 'userA' } } },
+      // `denied: false`: a block row must never read as a grant.
+      { assignedUsers: { some: { userId: 'userA', denied: false } } },
       { groups: { some: { id: { in: ['g1', 'g2'] } } } },
     ]);
     // The "unassigned ⇒ everyone" clause must be absent under deny-by-default.
-    expect(arg.where.OR).not.toContainEqual({ groups: { none: {} }, assignedUsers: { none: {} } });
+    expect(arg.where.OR).not.toContainEqual({ groups: { none: {} }, assignedUsers: { none: { denied: false } } });
+    // ANDed alongside the OR, so it overrides every branch of it.
+    expect(arg.where.assignedUsers).toEqual({ none: { userId: 'userA', denied: true } });
   });
 
   it('launchableForUser: legacy open mode (setting=false) → unassigned + direct + group grants', async () => {
@@ -140,9 +145,13 @@ describe('WorkspacesService — access control', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           enabled: true,
+          assignedUsers: { none: { userId: 'userA', denied: true } },
           OR: expect.arrayContaining([
-            { groups: { none: {} }, assignedUsers: { none: {} } },
-            { assignedUsers: { some: { userId: 'userA' } } },
+            // `none: { denied: false }` and not `none: {}` — a workspace whose
+            // only row is a block is still an UNGRANTED workspace. Counting the
+            // block would invert it into "visible only to the person denied".
+            { groups: { none: {} }, assignedUsers: { none: { denied: false } } },
+            { assignedUsers: { some: { userId: 'userA', denied: false } } },
             { groups: { some: { id: { in: ['g1'] } } } },
           ]),
         }),
@@ -155,7 +164,7 @@ describe('WorkspacesService — access control', () => {
     prismaMock.userGroup.findMany.mockResolvedValue([]);
     await svc.launchableForUser(userA);
     const arg = prismaMock.workspace.findMany.mock.calls[0]![0] as { where: { OR: unknown[] } };
-    expect(arg.where.OR).toEqual([{ assignedUsers: { some: { userId: 'userA' } } }]);
+    expect(arg.where.OR).toEqual([{ assignedUsers: { some: { userId: 'userA', denied: false } } }]);
   });
 
   it('setAssignments: replaces group + user grants, org-scoped', async () => {
@@ -171,7 +180,14 @@ describe('WorkspacesService — access control', () => {
         where: { id: 'ws1' },
         data: expect.objectContaining({
           groups: { set: [{ id: 'g1' }] },
-          assignedUsers: { deleteMany: {}, create: [{ orgId: 'org1', userId: 'userA' }] },
+          // `deleteMany: { denied: false }`, not `{}`: this form replaces the
+          // GRANTS. Blocks are exceptions someone set deliberately and have no
+          // field here, so wiping them would silently re-admit an excluded
+          // person the next time anyone saved the workspace for another reason.
+          assignedUsers: {
+            deleteMany: { denied: false },
+            create: [{ orgId: 'org1', userId: 'userA', denied: false }],
+          },
         }),
       }),
     );
@@ -188,7 +204,7 @@ describe('WorkspacesService — access control', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           groups: { set: [] },
-          assignedUsers: { deleteMany: {}, create: [] },
+          assignedUsers: { deleteMany: { denied: false }, create: [] },
         }),
       }),
     );
@@ -204,70 +220,90 @@ describe('WorkspacesService — access control', () => {
   // they touch ONLY the named pair: a screen that had to resend the whole
   // roster would revoke everyone whose grant it had not loaded yet.
 
-  it('setUserAccess: grants without disturbing the rest of the roster', async () => {
+  const foundInOrg = () => {
     prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
     prismaMock.user.findFirst.mockResolvedValue({ id: 'userA' });
     prismaMock.workspace.findUnique.mockResolvedValue({ id: 'ws1' });
+  };
 
-    await svc.setUserAccess('org1', 'ws1', 'userA', true);
+  it('setUserAccess: grants without disturbing the rest of the roster', async () => {
+    foundInOrg();
 
-    expect(prismaMock.workspaceUser.createMany).toHaveBeenCalledWith({
-      data: [{ orgId: 'org1', workspaceId: 'ws1', userId: 'userA' }],
-      skipDuplicates: true,
+    await svc.setUserAccess('org1', 'ws1', 'userA', 'granted');
+
+    expect(prismaMock.workspaceUser.upsert).toHaveBeenCalledWith({
+      where: { workspaceId_userId: { workspaceId: 'ws1', userId: 'userA' } },
+      create: { orgId: 'org1', workspaceId: 'ws1', userId: 'userA', denied: false },
+      update: { denied: false },
     });
     // Nothing else may be rewritten — no deleteMany, no `set` on the roster.
     expect(prismaMock.workspaceUser.deleteMany).not.toHaveBeenCalled();
     expect(prismaMock.workspace.update).not.toHaveBeenCalled();
   });
 
-  it('setUserAccess: re-granting is a no-op, not a unique-constraint error', async () => {
-    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
-    prismaMock.user.findFirst.mockResolvedValue({ id: 'userA' });
-    prismaMock.workspace.findUnique.mockResolvedValue({ id: 'ws1' });
+  it('setUserAccess: writes a BLOCK, which is what overrides a group grant', async () => {
+    foundInOrg();
 
-    await svc.setUserAccess('org1', 'ws1', 'userA', true);
+    await svc.setUserAccess('org1', 'ws1', 'userA', 'blocked');
 
-    // A double-click must not become a 500.
-    const arg = prismaMock.workspaceUser.createMany.mock.calls[0]![0] as { skipDuplicates: boolean };
-    expect(arg.skipDuplicates).toBe(true);
+    // The whole point: you cannot take someone out of the everyone-group, so
+    // "not this person" has to be recorded on the workspace instead.
+    expect(prismaMock.workspaceUser.upsert).toHaveBeenCalledWith({
+      where: { workspaceId_userId: { workspaceId: 'ws1', userId: 'userA' } },
+      create: { orgId: 'org1', workspaceId: 'ws1', userId: 'userA', denied: true },
+      update: { denied: true },
+    });
+    // A block must never touch the group link — that would change the desktop
+    // for everyone else in the group.
+    expect(prismaMock.workspace.update).not.toHaveBeenCalled();
   });
 
-  it('setUserAccess: revokes only the named pair', async () => {
-    prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
-    prismaMock.user.findFirst.mockResolvedValue({ id: 'userA' });
-    prismaMock.workspace.findUnique.mockResolvedValue({ id: 'ws1' });
+  it('setUserAccess: upserts, so moving between granted and blocked is not a 500', async () => {
+    foundInOrg();
+    await svc.setUserAccess('org1', 'ws1', 'userA', 'granted');
+    await svc.setUserAccess('org1', 'ws1', 'userA', 'blocked');
 
-    await svc.setUserAccess('org1', 'ws1', 'userA', false);
+    // The pair is unique; a plain create would collide on the second write.
+    expect(prismaMock.workspaceUser.upsert).toHaveBeenCalledTimes(2);
+    expect(prismaMock.workspaceUser.createMany).not.toHaveBeenCalled();
+  });
+
+  it('setUserAccess: inherit clears only the named pair', async () => {
+    foundInOrg();
+
+    await svc.setUserAccess('org1', 'ws1', 'userA', 'inherit');
 
     expect(prismaMock.workspaceUser.deleteMany).toHaveBeenCalledWith({
       where: { workspaceId: 'ws1', userId: 'userA' },
     });
-    expect(prismaMock.workspaceUser.createMany).not.toHaveBeenCalled();
+    expect(prismaMock.workspaceUser.upsert).not.toHaveBeenCalled();
   });
 
   it('setUserAccess: refuses a user from another tenant', async () => {
     prismaMock.workspace.findFirst.mockResolvedValue({ id: 'ws1' });
     prismaMock.user.findFirst.mockResolvedValue(null); // scoped query found nothing
 
-    await expect(svc.setUserAccess('org1', 'ws1', 'outsider', true)).rejects.toThrow(/user not found/i);
+    await expect(svc.setUserAccess('org1', 'ws1', 'outsider', 'granted')).rejects.toThrow(/user not found/i);
     // The lookup itself must carry the org, or an id from another tenant would
     // be found and granted — the mock returns null whatever it is asked.
     expect(prismaMock.user.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'outsider', orgId: 'org1' } }),
     );
-    expect(prismaMock.workspaceUser.createMany).not.toHaveBeenCalled();
+    expect(prismaMock.workspaceUser.upsert).not.toHaveBeenCalled();
   });
 
   it('setUserAccess: refuses a workspace from another tenant', async () => {
     prismaMock.workspace.findFirst.mockResolvedValue(null);
 
-    await expect(svc.setUserAccess('org1', 'other-org-ws', 'userA', true)).rejects.toThrow(/workspace not found/i);
+    await expect(svc.setUserAccess('org1', 'other-org-ws', 'userA', 'granted')).rejects.toThrow(
+      /workspace not found/i,
+    );
     expect(prismaMock.workspace.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'other-org-ws', orgId: 'org1' } }),
     );
     // Bail before touching anything else.
     expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
-    expect(prismaMock.workspaceUser.createMany).not.toHaveBeenCalled();
+    expect(prismaMock.workspaceUser.upsert).not.toHaveBeenCalled();
   });
 
   it('setGroupAccess: connects and disconnects one group, leaving the others', async () => {

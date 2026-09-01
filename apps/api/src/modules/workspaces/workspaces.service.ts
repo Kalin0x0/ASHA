@@ -4,6 +4,10 @@ import { prisma } from '@asha/db';
 import type { AuthUser } from '../../common/decorators';
 import { RbacService } from '../../common/rbac.service';
 import { SessionsService } from '../sessions/sessions.service';
+import { workspaceAccessWhere } from './workspace-access.where';
+
+/** A person's standing on one workspace. See `setUserAccess`. */
+export type WorkspaceUserAccess = 'granted' | 'blocked' | 'inherit';
 
 /**
  * Permissions that mark a caller as admin-side and therefore entitled to the
@@ -34,7 +38,7 @@ const WORKSPACE_INCLUDE = {
   server: { include: { zone: true } },
   zone: true,
   groups: { select: { id: true, name: true } },
-  assignedUsers: { select: { userId: true } },
+  assignedUsers: { select: { userId: true, denied: true } },
 } as const;
 
 @Injectable()
@@ -89,17 +93,17 @@ export class WorkspacesService {
       prisma.userGroup.findMany({ where: { userId: user.sub }, select: { groupId: true } }),
       this.isDenyByDefault(user.orgId),
     ]);
-    const groupIds = memberships.map((m) => m.groupId);
-    const grantClauses = [
-      { assignedUsers: { some: { userId: user.sub } } }, // direct grant
-      ...(groupIds.length ? [{ groups: { some: { id: { in: groupIds } } } }] : []), // via group
-    ];
     return prisma.workspace.findMany({
       where: {
         enabled: true,
-        OR: denyByDefault
-          ? grantClauses
-          : [{ groups: { none: {} }, assignedUsers: { none: {} } }, ...grantClauses], // legacy: unassigned ⇒ everyone
+        // Shared with the launch guard in SessionsService — see the module for
+        // the rules. Seeing a workspace and being allowed to start it must never
+        // be two different questions.
+        ...workspaceAccessWhere({
+          userId: user.sub,
+          groupIds: memberships.map((m) => m.groupId),
+          denyByDefault,
+        }),
       },
       include: WORKSPACE_INCLUDE,
       orderBy: { friendlyName: 'asc' },
@@ -259,8 +263,12 @@ export class WorkspacesService {
       data: {
         groups: { set: validGroups.map((g) => ({ id: g.id })) },
         assignedUsers: {
-          deleteMany: {},
-          create: validUsers.map((u) => ({ orgId, userId: u.id })),
+          // Only the GRANTS are replaced. A block is an exception someone set
+          // deliberately ("everyone except her"), and this form has no field for
+          // it — wiping blocks here would silently re-admit the excluded person
+          // the next time anyone saved the workspace for an unrelated reason.
+          deleteMany: { denied: false },
+          create: validUsers.map((u) => ({ orgId, userId: u.id, denied: false })),
         },
       },
     });
@@ -276,21 +284,34 @@ export class WorkspacesService {
    * wants to flip one person on has to re-send every other grant it happened to
    * have loaded — so a stale list quietly revokes people. These take a single
    * pair, so a click means exactly what it says.
+   *
+   * A person has three possible standings on a workspace, not two:
+   *
+   *   granted  — an explicit yes for this person
+   *   blocked  — an explicit no that overrides a grant they would inherit from a
+   *              group. Without it, "everyone except her" is unexpressible: you
+   *              cannot remove someone from the everyone-group, and detaching
+   *              the group from the workspace changes it for the whole company.
+   *   inherit  — no row; whatever their groups say
    */
-  async setUserAccess(orgId: string, workspaceId: string, userId: string, granted: boolean) {
+  async setUserAccess(orgId: string, workspaceId: string, userId: string, state: WorkspaceUserAccess) {
     await this.assertInOrg(orgId, workspaceId);
     const user = await prisma.user.findFirst({ where: { id: userId, orgId }, select: { id: true } });
     if (!user) throw new NotFoundException('User not found');
 
-    if (granted) {
-      // Idempotent: re-granting is a no-op, not a unique-constraint error. A
-      // double-click must not turn into a 500.
-      await prisma.workspaceUser.createMany({
-        data: [{ orgId, workspaceId, userId }],
-        skipDuplicates: true,
-      });
-    } else {
+    if (state === 'inherit') {
+      // No row at all: whatever the person's groups say now applies. This is how
+      // both a direct grant and a block are lifted.
       await prisma.workspaceUser.deleteMany({ where: { workspaceId, userId } });
+    } else {
+      // Upsert, not create: a person can move between granted and blocked, and
+      // the pair is unique — a plain create would be a 500 on the second click.
+      const denied = state === 'blocked';
+      await prisma.workspaceUser.upsert({
+        where: { workspaceId_userId: { workspaceId, userId } },
+        create: { orgId, workspaceId, userId, denied },
+        update: { denied },
+      });
     }
     return this.findOrThrow(workspaceId);
   }

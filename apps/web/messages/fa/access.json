@@ -13,6 +13,8 @@
     "workspaceUngranted": "هنوز به کسی تخصیص نیافته است",
     "viaGroup": "از طریق گروه «{name}»",
     "viaGroupHint": "این دسترسی از گروه «{name}» می‌آید. شخص را از آن گروه حذف کنید یا گروه را از این دسکتاپ بردارید.",
+    "blocked": "برای این شخص خاموش شده است",
+    "blockedDespiteGroup": "از «{name}» می‌آمد — برای این شخص خاموش شده است",
     "openToEveryone": "در حال حاضر برای همه قابل مشاهده است",
     "groupSubtitle": "همهٔ اعضای این گروه",
     "toggleAria": "دادن دسترسی {workspace} به {person}",

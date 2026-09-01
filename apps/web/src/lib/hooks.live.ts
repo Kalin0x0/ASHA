@@ -10,6 +10,9 @@ import { downloadRdpFile } from '@/lib/rdp';
 import { formatRelativeTime } from '@/lib/utils';
 import type { ActivityItem, Agent, BugFixRow, BugReportInput, BugReportRow, BugResolveInput, BugStats, BugStatus, CreateFeedbackInput, CreateUserInput, CreateWorkspaceInput, FeedbackItem, MaintenanceRunRow, MaintenanceTaskInput, MaintenanceTaskRow, ManagedImage, RecordingRow, ServerOption, SessionRow, UpdateFeedbackInput, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
 
+/** A person's standing on one workspace: an explicit yes, an explicit no, or "ask their groups". */
+type WorkspaceAccessState = 'granted' | 'blocked' | 'inherit';
+
 const SESSIONS_KEY = ['sessions'] as const;
 const WORKSPACES_KEY = ['workspaces'] as const;
 const AGENTS_KEY = ['agents'] as const;
@@ -797,15 +800,15 @@ export function useIsolationDenyByDefault(): boolean {
 export function useSetWorkspaceUserAccess() {
   const qc = useQueryClient();
   const { mutateAsync } = useMutation({
-    mutationFn: ({ id, userId, granted }: { id: string; userId: string; granted: boolean }) =>
-      api.setWorkspaceUserAccess(id, userId, granted),
+    mutationFn: ({ id, userId, state }: { id: string; userId: string; state: WorkspaceAccessState }) =>
+      api.setWorkspaceUserAccess(id, userId, state),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: WORKSPACES_KEY });
       void qc.invalidateQueries({ queryKey: LAUNCHABLE_WORKSPACES_KEY });
     },
   });
   return useCallback(
-    (id: string, userId: string, granted: boolean) => mutateAsync({ id, userId, granted }),
+    (id: string, userId: string, state: WorkspaceAccessState) => mutateAsync({ id, userId, state }),
     [mutateAsync],
   );
 }

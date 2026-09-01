@@ -299,24 +299,45 @@ class MockStore {
   }
 
   /**
-   * Grant or revoke one subject's access to a workspace. Mock mode persists this
-   * in memory so the assignments screen is genuinely usable in the demo — a
-   * no-op stub would make the toggles lie about what they did.
+   * Grant or revoke a GROUP's access to a workspace. Mock mode persists this in
+   * memory so the assignments screen is genuinely usable in the demo — a no-op
+   * stub would make the toggles lie about what they did.
    */
-  setWorkspaceAccess(id: string, subject: 'user' | 'group', subjectId: string, granted: boolean): void {
-    if (!this.data.workspaces.some((w) => w.id === id)) throw new Error('Workspace not found');
-    const key = subject === 'user' ? 'assignedUserIds' : 'assignedGroupIds';
-    // Replace the row AND the array rather than mutating in place. Consumers
-    // memoise their derived lists on the array identity, so an in-place edit
-    // bumps the version, re-renders — and still shows the old grants.
-    this.data.workspaces = this.data.workspaces.map((w) => {
-      if (w.id !== id) return w;
-      const current = w[key] ?? [];
+  setWorkspaceGroupAccess(id: string, groupId: string, granted: boolean): void {
+    this.patchWorkspace(id, (w) => {
+      const current = w.assignedGroupIds ?? [];
       return {
-        ...w,
-        [key]: granted ? [...new Set([...current, subjectId])] : current.filter((x) => x !== subjectId),
+        assignedGroupIds: granted ? [...new Set([...current, groupId])] : current.filter((x) => x !== groupId),
       };
     });
+  }
+
+  /**
+   * Set one person's standing on a workspace: an explicit grant, an explicit
+   * block that overrides what their groups give them, or neither.
+   *
+   * The three states are mutually exclusive, so each write clears the other two
+   * lists first — a person left in both would make the UI's own reading of the
+   * data ambiguous.
+   */
+  setWorkspaceUserAccess(id: string, userId: string, state: 'granted' | 'blocked' | 'inherit'): void {
+    this.patchWorkspace(id, (w) => {
+      const granted = (w.assignedUserIds ?? []).filter((x) => x !== userId);
+      const blocked = (w.blockedUserIds ?? []).filter((x) => x !== userId);
+      if (state === 'granted') granted.push(userId);
+      if (state === 'blocked') blocked.push(userId);
+      return { assignedUserIds: granted, blockedUserIds: blocked };
+    });
+  }
+
+  /**
+   * Replace the row AND the array rather than mutating in place. Consumers
+   * memoise their derived lists on the array identity, so an in-place edit bumps
+   * the version, re-renders — and still shows the old grants.
+   */
+  private patchWorkspace(id: string, patch: (w: Workspace) => Partial<Workspace>): void {
+    if (!this.data.workspaces.some((w) => w.id === id)) throw new Error('Workspace not found');
+    this.data.workspaces = this.data.workspaces.map((w) => (w.id === id ? { ...w, ...patch(w) } : w));
     this.emit();
   }
 

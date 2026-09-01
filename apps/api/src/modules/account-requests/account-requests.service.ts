@@ -357,7 +357,7 @@ export class AccountRequestsService {
         await tx.userGroup.create({ data: { orgId: user.orgId, userId: newUser.id, groupId: group.id } });
       }
       for (const ws of demoWorkspaces) {
-        await tx.workspaceUser.create({ data: { orgId: user.orgId, workspaceId: ws.id, userId: newUser.id } });
+        await tx.workspaceUser.create({ data: { orgId: user.orgId, workspaceId: ws.id, userId: newUser.id, denied: false } });
       }
       // Link the account back to the request now that it has an id.
       await tx.accountRequest.update({ where: { id: req.id }, data: { createdUserId: newUser.id } });

@@ -13,6 +13,8 @@
     "workspaceUngranted": "Noch niemandem zugewiesen",
     "viaGroup": "Über die Gruppe „{name}“",
     "viaGroupHint": "Das kommt über die Gruppe „{name}“. Entferne die Person aus der Gruppe oder nimm die Gruppe von diesem Desktop.",
+    "blocked": "Für diese Person abgeschaltet",
+    "blockedDespiteGroup": "Käme über „{name}“ — für diese Person abgeschaltet",
     "openToEveryone": "Derzeit für alle sichtbar",
     "groupSubtitle": "Alle in dieser Gruppe",
     "toggleAria": "{person} Zugriff auf {workspace} geben",

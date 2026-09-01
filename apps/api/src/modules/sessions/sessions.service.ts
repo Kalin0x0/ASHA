@@ -20,6 +20,7 @@ import {
 } from '@asha/events';
 import { AuditService } from '../../common/audit.service';
 import type { AuthUser } from '../../common/decorators';
+import { workspaceAccessWhere } from '../workspaces/workspace-access.where';
 import { RbacService } from '../../common/rbac.service';
 import { RedisService } from '../../common/redis.service';
 import { resolveTokens, type TokenContext } from '../../common/tokens';
@@ -245,12 +246,11 @@ export class SessionsService {
    * cap is enforced separately in `create()`.
    */
   /**
-   * Refuse to launch a workspace the caller was not granted. This mirrors the
-   * filter `WorkspacesService.launchableForUser` applies to the catalog — a
-   * direct `WorkspaceUser` grant, or one via a group the user belongs to — and
-   * honours the same `isolation.denyByDefault` ORG setting (absent ⇒ ON; only an
-   * explicit `false` restores the legacy "unassigned means everyone" model).
-   * System admins bypass, as everywhere else.
+   * Refuse to launch a workspace the caller was not granted. The predicate is
+   * shared with `WorkspacesService.launchableForUser`, which filters the catalog
+   * — see `workspace-access.where` for the rules. It used to be a second copy of
+   * the same conditions here, which is how a guard drifts away from the listing
+   * it is supposed to mirror. System admins bypass, as everywhere else.
    */
   private async assertWorkspaceGranted(user: AuthUser, workspaceId: string) {
     if (user.isSystemAdmin) return;
@@ -269,20 +269,15 @@ export class SessionsService {
         select: { valueJson: true },
       }),
     ]);
-    const denyByDefault = isolation?.valueJson !== false;
-    const groupIds = memberships.map((m) => m.groupId);
-
-    const grantClauses = [
-      { assignedUsers: { some: { userId: user.sub } } },
-      ...(groupIds.length ? [{ groups: { some: { id: { in: groupIds } } } }] : []),
-    ];
 
     const granted = await prisma.workspace.findFirst({
       where: {
         id: workspaceId,
-        OR: denyByDefault
-          ? grantClauses
-          : [{ groups: { none: {} }, assignedUsers: { none: {} } }, ...grantClauses],
+        ...workspaceAccessWhere({
+          userId: user.sub,
+          groupIds: memberships.map((m) => m.groupId),
+          denyByDefault: isolation?.valueJson !== false,
+        }),
       },
       select: { id: true },
     });

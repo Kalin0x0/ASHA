@@ -13,7 +13,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   useGroups,
   useIsolationDenyByDefault,
@@ -23,7 +22,13 @@ import {
   useWorkspaces,
 } from '@/lib/hooks';
 import type { UserRow, Workspace, WorkspaceType } from '@/lib/types';
-import { WORKSPACE_ACCESS_RANK, WORKSPACE_TYPE_ORDER, workspaceAccessFor } from '@/lib/workspace-access';
+import {
+  type WorkspaceAccess,
+  WORKSPACE_ACCESS_RANK,
+  WORKSPACE_TYPE_ORDER,
+  planWorkspaceAccessToggle,
+  workspaceAccessFor,
+} from '@/lib/workspace-access';
 import { cn } from '@/lib/utils';
 
 
@@ -206,8 +211,12 @@ function Assignments() {
               query={targetQuery}
               onQuery={setTargetQuery}
               busy={busy}
-              onToggle={(ws, granted) =>
-                run(`${ws.id}:${selected.id}`, () => setUserAccess(ws.id, selected.id, granted), granted)
+              onToggle={(ws, access, on) =>
+                run(
+                  `${ws.id}:${selected.id}`,
+                  () => setUserAccess(ws.id, selected.id, planWorkspaceAccessToggle(access, on)),
+                  on,
+                )
               }
             />
           ) : (
@@ -218,8 +227,13 @@ function Assignments() {
               query={targetQuery}
               onQuery={setTargetQuery}
               busy={busy}
-              onToggleUser={(userId, granted) =>
-                run(`${selected.id}:${userId}`, () => setUserAccess(selected.id, userId, granted), granted)
+              denyByDefault={denyByDefault}
+              onToggleUser={(userId, access, on) =>
+                run(
+                  `${selected.id}:${userId}`,
+                  () => setUserAccess(selected.id, userId, planWorkspaceAccessToggle(access, on)),
+                  on,
+                )
               }
               onToggleGroup={(groupId, granted) =>
                 run(`${selected.id}:${groupId}`, () => setGroupAccess(selected.id, groupId, granted), granted)
@@ -255,7 +269,7 @@ function PersonPane({
   query: string;
   onQuery: (v: string) => void;
   busy: Set<string>;
-  onToggle: (ws: Workspace, granted: boolean) => void;
+  onToggle: (ws: Workspace, access: WorkspaceAccess, on: boolean) => void;
 }) {
   const t = useTranslations('access.assignments');
   // A group whose name we cannot resolve still has to render something the admin
@@ -286,7 +300,11 @@ function PersonPane({
   // Count over everything, not the filtered view: "3 of 5" has to mean the
   // person's actual situation, not whatever the chip row happens to show.
   const granted = useMemo(
-    () => workspaces.filter((w) => workspaceAccessFor(w, user, denyByDefault).kind !== 'none').length,
+    () =>
+      workspaces.filter((w) => {
+        const kind = workspaceAccessFor(w, user, denyByDefault).kind;
+        return kind !== 'none' && kind !== 'blocked';
+      }).length,
     [workspaces, user, denyByDefault],
   );
 
@@ -326,7 +344,6 @@ function PersonPane({
           rows.map(({ ws, access }) => {
             const key = `${ws.id}:${user.id}`;
             const pending = busy.has(key);
-            const lockedByGroup = access.kind === 'group';
             return (
               <div
                 key={ws.id}
@@ -351,29 +368,25 @@ function PersonPane({
                   <p className="truncate text-[11px] text-muted-foreground">
                     {access.kind === 'group'
                       ? t('viaGroup', { name: groupLabel(access.groupId) })
-                      : access.kind === 'everyone'
-                        ? t('openToEveryone')
-                        : ws.dockerImage || ws.category}
+                      : access.kind === 'blocked'
+                        ? access.groupId
+                          ? t('blockedDespiteGroup', { name: groupLabel(access.groupId) })
+                          : t('blocked')
+                        : access.kind === 'everyone'
+                          ? t('openToEveryone')
+                          : ws.dockerImage || ws.category}
                   </p>
                 </div>
                 {pending ? (
                   <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                ) : lockedByGroup ? (
-                  // A group grant is not this person's to lose. Showing an
-                  // enabled switch here would let an admin "turn it off" and
-                  // watch the row snap back — so say why instead.
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex">
-                        <Switch checked disabled aria-label={t('viaGroup', { name: groupLabel(access.groupId) })} />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('viaGroupHint', { name: groupLabel(access.groupId) })}</TooltipContent>
-                  </Tooltip>
                 ) : (
                   <Switch
-                    checked={access.kind === 'direct'}
-                    onCheckedChange={(next) => onToggle(ws, next)}
+                    // On means "this person can open it", whatever the reason —
+                    // so a group grant reads as on. Switching it off writes an
+                    // explicit block rather than trying to edit the group, which
+                    // would change the desktop for everyone else in it.
+                    checked={access.kind !== 'none' && access.kind !== 'blocked'}
+                    onCheckedChange={(next) => onToggle(ws, access, next)}
                     aria-label={t('toggleAria', { workspace: ws.friendlyName, person: user.name })}
                   />
                 )}
@@ -394,6 +407,7 @@ function WorkspacePane({
   query,
   onQuery,
   busy,
+  denyByDefault,
   onToggleUser,
   onToggleGroup,
 }: {
@@ -403,8 +417,9 @@ function WorkspacePane({
   query: string;
   onQuery: (v: string) => void;
   busy: Set<string>;
-  onToggleUser: (userId: string, granted: boolean) => void;
+  onToggleUser: (userId: string, access: WorkspaceAccess, on: boolean) => void;
   onToggleGroup: (groupId: string, granted: boolean) => void;
+  denyByDefault: boolean;
 }) {
   const t = useTranslations('access.assignments');
   const grantedUsers = workspace.assignedUserIds ?? [];
@@ -412,11 +427,15 @@ function WorkspacePane({
   const q = query.trim().toLowerCase();
 
   const groupRows = groups.filter((g) => !q || g.name.toLowerCase().includes(q));
+  // Same reading of the data as the person axis — the two views must not
+  // disagree about who has what.
   const userRows = users
     .filter((u) => !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    .map((u) => ({ user: u, access: workspaceAccessFor(workspace, u, denyByDefault) }))
     .sort(
       (a, b) =>
-        Number(grantedUsers.includes(b.id)) - Number(grantedUsers.includes(a.id)) || a.name.localeCompare(b.name),
+        WORKSPACE_ACCESS_RANK[a.access.kind] - WORKSPACE_ACCESS_RANK[b.access.kind] ||
+        a.user.name.localeCompare(b.user.name),
     );
 
   const open = grantedUsers.length === 0 && grantedGroups.length === 0;
@@ -457,21 +476,25 @@ function WorkspacePane({
         {userRows.length === 0 ? (
           <p className="px-2 pb-2 text-xs text-muted-foreground/70">{t('noMatches')}</p>
         ) : (
-          userRows.map((u) => {
-            const viaGroup = grantedGroups.find((g) => u.groupIds.includes(g));
+          userRows.map(({ user: u, access }) => {
+            const groupName = (id: string) => groups.find((g) => g.id === id)?.name ?? id;
             return (
               <Row
                 key={u.id}
                 title={u.name}
                 subtitle={
-                  viaGroup
-                    ? t('viaGroup', { name: groups.find((g) => g.id === viaGroup)?.name ?? viaGroup })
-                    : u.email
+                  access.kind === 'group'
+                    ? t('viaGroup', { name: groupName(access.groupId) })
+                    : access.kind === 'blocked'
+                      ? access.groupId
+                        ? t('blockedDespiteGroup', { name: groupName(access.groupId) })
+                        : t('blocked')
+                      : u.email
                 }
                 avatar={<Monogram name={u.name} className="size-9" />}
-                checked={grantedUsers.includes(u.id)}
+                checked={access.kind !== 'none' && access.kind !== 'blocked'}
                 pending={busy.has(`${workspace.id}:${u.id}`)}
-                onChange={(next) => onToggleUser(u.id, next)}
+                onChange={(next) => onToggleUser(u.id, access, next)}
                 aria={t('toggleAria', { workspace: workspace.friendlyName, person: u.name })}
               />
             );
