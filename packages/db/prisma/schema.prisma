@@ -600,14 +600,26 @@ model UserGroup {
   @@index([groupId])
 }
 
-/// Direct workspace→user grant. A workspace with NO group grants AND no user
-/// grants is visible to EVERYONE; any grant restricts it to the listed users
-/// plus the members of its assigned groups (Workspace.groups / GroupWorkspaces).
+/// Per-user access rule for a workspace. `denied = false` is a direct grant;
+/// `denied = true` is an explicit BLOCK that overrides any grant the user would
+/// otherwise inherit from a group.
+///
+/// The block exists because a group grant is not otherwise removable per person:
+/// the everyone-group ("All Users") cannot have someone taken out of it, and
+/// detaching the group from the workspace would change it for the whole company.
+/// Without a block, "this one person may not open this one desktop" was
+/// unexpressible.
+///
+/// A workspace with no group grants AND no *granting* user rows is visible to
+/// EVERYONE (under the legacy open model). Blocks must not count towards that —
+/// a workspace whose only rows are blocks is still an ungranted workspace, and
+/// counting them would flip it to "visible only to the people explicitly denied".
 model WorkspaceUser {
   id          String   @id @default(cuid())
   orgId       String
   workspaceId String
   userId      String
+  denied      Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

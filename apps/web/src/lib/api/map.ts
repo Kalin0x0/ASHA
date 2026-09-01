@@ -53,7 +53,11 @@ export function mapWorkspace(w: ApiWorkspace, activeSessions = 0): Workspace {
     zoneName: w.zone?.name ?? w.server?.zone?.name,
     activeSessions,
     assignedGroupIds: (w.groups ?? []).map((g) => g.id),
-    assignedUserIds: (w.assignedUsers ?? []).map((a) => a.userId),
+    assignedUserIds: (w.assignedUsers ?? []).filter((a) => !a.denied).map((a) => a.userId),
+    // Blocks are NOT grants: they must not count towards "this workspace is
+    // assigned to somebody", or an ungranted workspace with one block would look
+    // restricted to exactly the person it excludes.
+    blockedUserIds: (w.assignedUsers ?? []).filter((a) => a.denied).map((a) => a.userId),
   };
 }
 

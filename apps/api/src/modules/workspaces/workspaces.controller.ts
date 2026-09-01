@@ -12,6 +12,11 @@ import { type AuthUser, CurrentUser, RequirePermissions } from '../../common/dec
 import { ZodPipe } from '../../common/zod.pipe';
 import { WorkspacesService } from './workspaces.service';
 
+const userAccessSchema = z.object({
+  state: z.enum(['granted', 'blocked']),
+});
+type UserAccessDto = z.infer<typeof userAccessSchema>;
+
 const assignmentsSchema = z.object({
   userIds: z.array(z.string()).max(1000).default([]),
   groupIds: z.array(z.string()).max(1000).default([]),
@@ -79,18 +84,28 @@ export class WorkspacesController {
   // then silently revokes people. These four are idempotent and touch exactly
   // the pair named in the URL.
 
-  @Audit('workspace.access.grant', { targetType: 'Workspace' })
+  // A person has three standings, not two: an explicit grant, an explicit block
+  // that overrides what a group would give them, and no row at all (inherit).
+  // The block is the only way to say "everyone except her" — you cannot remove
+  // someone from the everyone-group.
+  @Audit('workspace.access.set', { targetType: 'Workspace' })
   @RequirePermissions('WORKSPACE_EDIT')
   @Put(':id/access/users/:userId')
-  grantUser(@CurrentUser() user: AuthUser, @Param('id') id: string, @Param('userId') userId: string) {
-    return this.workspaces.setUserAccess(user.orgId, id, userId, true);
+  setUserAccess(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body(new ZodPipe(userAccessSchema)) dto: UserAccessDto,
+  ) {
+    return this.workspaces.setUserAccess(user.orgId, id, userId, dto.state);
   }
 
-  @Audit('workspace.access.revoke', { targetType: 'Workspace' })
+  /** Clear any explicit grant or block — the person falls back to their groups. */
+  @Audit('workspace.access.set', { targetType: 'Workspace' })
   @RequirePermissions('WORKSPACE_EDIT')
   @Delete(':id/access/users/:userId')
-  revokeUser(@CurrentUser() user: AuthUser, @Param('id') id: string, @Param('userId') userId: string) {
-    return this.workspaces.setUserAccess(user.orgId, id, userId, false);
+  clearUserAccess(@CurrentUser() user: AuthUser, @Param('id') id: string, @Param('userId') userId: string) {
+    return this.workspaces.setUserAccess(user.orgId, id, userId, 'inherit');
   }
 
   @Audit('workspace.access.grant', { targetType: 'Workspace' })

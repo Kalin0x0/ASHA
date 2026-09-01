@@ -85,6 +85,13 @@ export interface Workspace {
   /** Access grants — empty/undefined on BOTH ⇒ visible to everyone. */
   assignedGroupIds?: string[];
   assignedUserIds?: string[];
+  /**
+   * People explicitly BLOCKED, overriding any grant they'd inherit from a group.
+   * Deliberately separate from `assignedUserIds`: a block is not a grant, and
+   * folding the two together would make an ungranted workspace carrying a single
+   * block look like it was assigned to the very person it excludes.
+   */
+  blockedUserIds?: string[];
 }
 
 export interface SessionRow {

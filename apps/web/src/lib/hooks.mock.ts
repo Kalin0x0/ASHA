@@ -103,14 +103,15 @@ export function useIsolationDenyByDefault(): boolean {
 
 export function useSetWorkspaceUserAccess() {
   return useCallback(
-    async (id: string, userId: string, granted: boolean) => store.setWorkspaceAccess(id, 'user', userId, granted),
+    async (id: string, userId: string, state: 'granted' | 'blocked' | 'inherit') =>
+      store.setWorkspaceUserAccess(id, userId, state),
     [],
   );
 }
 
 export function useSetWorkspaceGroupAccess() {
   return useCallback(
-    async (id: string, groupId: string, granted: boolean) => store.setWorkspaceAccess(id, 'group', groupId, granted),
+    async (id: string, groupId: string, granted: boolean) => store.setWorkspaceGroupAccess(id, groupId, granted),
     [],
   );
 }

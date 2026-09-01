@@ -412,9 +412,20 @@ describe('SessionsService.create workspace access grant', () => {
     const where = prismaMock.workspace.findFirst.mock.calls[0]![0].where;
     expect(where.id).toBe('ws1');
     expect(where.OR).toEqual([
-      { assignedUsers: { some: { userId: 'bob' } } },
+      { assignedUsers: { some: { userId: 'bob', denied: false } } },
       { groups: { some: { id: { in: ['g1'] } } } },
     ]);
+  });
+
+  it('refuses a blocked user even when a group would grant the workspace', async () => {
+    prismaMock.userGroup.findMany.mockResolvedValue([{ groupId: 'g1' }]);
+    prismaMock.workspace.findFirst.mockResolvedValue(null);
+    await svc.create(BOB, { workspaceId: 'ws1' } as never).catch(() => undefined);
+    const where = prismaMock.workspace.findFirst.mock.calls[0]![0].where;
+    // The guard has to honour the block, not just the catalog listing: without
+    // this the desktop merely disappears from the list while its id still
+    // launches, which is not a restriction at all.
+    expect(where.assignedUsers).toEqual({ none: { userId: 'bob', denied: true } });
   });
 
   it('restores the legacy open model when isolation.denyByDefault is explicitly false', async () => {
@@ -422,7 +433,9 @@ describe('SessionsService.create workspace access grant', () => {
     prismaMock.workspace.findFirst.mockResolvedValue(null);
     await svc.create(BOB, { workspaceId: 'ws1' } as never).catch(() => undefined);
     const where = prismaMock.workspace.findFirst.mock.calls[0]![0].where;
-    expect(where.OR[0]).toEqual({ groups: { none: {} }, assignedUsers: { none: {} } });
+    expect(where.OR[0]).toEqual({ groups: { none: {} }, assignedUsers: { none: { denied: false } } });
+    // Even wide open, a block still applies.
+    expect(where.assignedUsers).toEqual({ none: { userId: 'bob', denied: true } });
   });
 
   it('does not gate system admins', async () => {
