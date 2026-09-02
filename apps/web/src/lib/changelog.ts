@@ -38,6 +38,34 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.35',
+    date: '2026-09-02',
+    title: { en: 'Pause keeps the session', de: 'Pausieren behält die Sitzung' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'A paused session is no longer shut down for being idle. Idleness is measured from the viewer\u2019s heartbeat, and a paused desktop has no viewer by definition \u2014 so it was torn down as \u201cidle\u201d as soon as the workspace\u2019s idle timeout elapsed, destroying exactly the state you paused to keep. Paused sessions are now governed only by the separate maximum-pause limit, as intended.',
+          de: 'Eine pausierte Sitzung wird nicht mehr wegen Untätigkeit beendet. Untätigkeit wird am Lebenszeichen des Viewers gemessen, und ein pausierter Desktop hat per Definition keinen \u2014 er wurde daher als „untätig“ abgeräumt, sobald das Untätigkeits-Zeitlimit des Workspace ablief, und zerstörte genau den Zustand, den Sie mit dem Pausieren erhalten wollten. Für pausierte Sitzungen gilt jetzt nur noch das separate Maximum für die Pausendauer, wie vorgesehen.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'On a deployment with more than one agent per zone, every launch started a container on every agent. Only one was ever tracked; the rest ran unnoticed until the host was rebuilt, and the scheduler\u2019s view of free capacity was correspondingly wrong. A launch is now sent to the one agent it was scheduled on.',
+          de: 'Bei mehr als einem Agenten pro Zone startete jeder Start einen Container auf jedem Agenten. Nur einer wurde je erfasst; die übrigen liefen unbemerkt weiter, bis der Host neu aufgesetzt wurde, und die Kapazitätsrechnung des Schedulers war entsprechend falsch. Ein Start geht jetzt an genau den Agenten, für den er eingeplant wurde.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Three permissions could be ticked on a role but never took effect, so SCIM token management, remote apps and scheduled maintenance stayed reachable by system administrators alone. All three work now: SCIM tokens sit with the other identity-provider rights, remote apps with workspace editing, and maintenance has the entry it was missing.',
+          de: 'Drei Berechtigungen ließen sich an einer Rolle anhaken, wirkten aber nie \u2014 SCIM-Token-Verwaltung, Remote-Apps und geplante Wartung blieben allein für System-Administratoren erreichbar. Alle drei funktionieren jetzt: SCIM-Token liegen bei den übrigen Identity-Provider-Rechten, Remote-Apps beim Bearbeiten von Workspaces, und der Wartung fehlte schlicht ihr Eintrag.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.34',
     date: '2026-09-01',
     title: { en: 'Take one desktop away from one person', de: 'Einer Person einen Desktop wegnehmen' },
