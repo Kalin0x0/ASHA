@@ -21,6 +21,7 @@ import { CastingModule } from './modules/casting/casting.module';
 import { ConnectivityModule } from './modules/connectivity/connectivity.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { HealthModule } from './modules/health/health.module';
+import { SessionAuthModule } from './modules/session-auth/session-auth.module';
 import { LicensingModule } from './modules/licensing/licensing.module';
 import { TariffsModule } from './modules/tariffs/tariffs.module';
 import { LogForwardingModule } from './modules/log-forwarding/log-forwarding.module';
@@ -91,6 +92,7 @@ import { ZonesModule } from './modules/zones/zones.module';
     DevApiModule,
     CatalogModule,
     HealthModule,
+    SessionAuthModule,
     StorageModule,
     SharingModule,
     RecordingsModule,

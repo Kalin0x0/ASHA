@@ -254,7 +254,9 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     // Explicit router→service link (required with >1 service on the container).
     labels[`traefik.http.routers.${audioRouter}.service`] = audioRouter;
     labels[`traefik.http.middlewares.${audioRouter}-strip.stripprefix.prefixes`] = audioPath;
-    labels[`traefik.http.routers.${audioRouter}.middlewares`] = `${audioRouter}-strip,${router}-auth,sess-auth@file`;
+    // sess-auth first, for the same reason as the main router: the gate reads the
+    // session id out of the path, and the strip would have taken it away.
+    labels[`traefik.http.routers.${audioRouter}.middlewares`] = `sess-auth@file,${audioRouter}-strip,${router}-auth`;
     labels[`traefik.http.services.${audioRouter}.loadbalancer.server.port`] = '4901';
     labels[`traefik.http.services.${audioRouter}.loadbalancer.server.scheme`] = 'https';
     labels[`traefik.http.services.${audioRouter}.loadbalancer.serverstransport`] = 'asha-insecure@file';

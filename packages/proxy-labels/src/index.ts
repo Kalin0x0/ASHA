@@ -59,12 +59,17 @@ export function sessionTraefikLabels(input: SessionRouteInput): Record<string, s
 
   const middlewares: string[] = [];
 
+  // Auth FIRST, then rewrite. Traefik runs middlewares in order and hands the
+  // forward-auth gate the request as it stands at that point — so with the strip
+  // ahead of it the gate would be told the path is `/`, with the session id it
+  // must check the token against already removed. Authenticating before the URL
+  // is rewritten is also just the right order.
+  if (input.forwardAuthMiddleware) {
+    middlewares.push(input.forwardAuthMiddleware);
+  }
   if (mode === 'path') {
     labels[`traefik.http.middlewares.${router}-strip.stripprefix.prefixes`] = sessionPath(input.kasmId);
     middlewares.push(`${router}-strip`);
-  }
-  if (input.forwardAuthMiddleware) {
-    middlewares.push(input.forwardAuthMiddleware);
   }
   if (middlewares.length) {
     labels[`traefik.http.routers.${router}.middlewares`] = middlewares.join(',');

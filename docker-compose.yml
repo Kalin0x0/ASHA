@@ -107,6 +107,8 @@ services:
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-change-me-please-32++chars}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me-please-32++chars}
       SESSION_TOKEN_SECRET: ${SESSION_TOKEN_SECRET:-dev-session-token-secret-change-me-32++chars}
+      SESSION_COOKIE_TTL: ${SESSION_COOKIE_TTL:-43200}
+      SESSION_COOKIE_SAMESITE: ${SESSION_COOKIE_SAMESITE:-Lax}
       # Sealing key for stored provider/server credentials. It was missing here,
       # so every deployment fell back to the schema default — a value published
       # in this repository — to encrypt RDP passwords and provider secrets at

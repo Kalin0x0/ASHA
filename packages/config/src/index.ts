@@ -22,6 +22,24 @@ export const envSchema = z.object({
 
   SESSION_TOKEN_SECRET: z.string().min(16).default('dev-session-token-secret-change-me-32++chars'),
   SESSION_TOKEN_TTL: z.coerce.number().default(120),
+  /**
+   * Lifetime of the cookie the session forward-auth gate hands out, in seconds.
+   *
+   * Deliberately much longer than SESSION_TOKEN_TTL: that token is a one-shot
+   * bearer for the first navigation, while this cookie carries the whole viewing
+   * session — at 120s the stream would drop on the first socket reconnect. A
+   * stale cookie unlocks nothing, because the session's Traefik route disappears
+   * with its container.
+   */
+  SESSION_COOKIE_TTL: z.coerce.number().default(43_200),
+  /**
+   * SameSite for that cookie. `Lax` is right when workspaces are served from the
+   * app's own site (the default), and blocks a foreign page from framing a live
+   * desktop and driving it. Set `None` only when WORKSPACE_PUBLIC_BASE_URL puts
+   * sessions on a genuinely different site, where the viewer's iframe is
+   * cross-site and Lax would never send the cookie at all.
+   */
+  SESSION_COOKIE_SAMESITE: z.enum(['Lax', 'None', 'Strict']).default('Lax'),
 
   SECRET_SEAL_KEY: z.string().default('0123456789abcdef0123456789abcdef'),
   GUAC_CRYPT_SECRET: z.string().length(32).default('MySuperSecretKeyForParamsToken12'),
