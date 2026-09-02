@@ -42,6 +42,7 @@ const PERMISSIONS: Array<{ key: string; category: string; description: string }>
   { key: 'POOL_MANAGE', category: 'Infrastructure', description: 'Manage server pools' },
   { key: 'AUTOSCALE_MANAGE', category: 'Infrastructure', description: 'Manage autoscale configs' },
   { key: 'PROVIDER_MANAGE', category: 'Infrastructure', description: 'Manage VM/DNS providers' },
+  { key: 'MAINTENANCE_MANAGE', category: 'Infrastructure', description: 'Manage scheduled maintenance & automation tasks' },
   // Storage / connectivity
   { key: 'STORAGE_MANAGE', category: 'Storage', description: 'Manage storage & file mappings' },
   { key: 'CONNECTIVITY_MANAGE', category: 'Connectivity', description: 'Manage proxies/egress/filtering' },

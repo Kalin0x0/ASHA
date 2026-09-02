@@ -11,13 +11,13 @@ import { WindowsService } from './windows.service';
 export class WindowsController {
   constructor(private readonly svc: WindowsService) {}
 
-  @RequirePermissions('WORKSPACE_MANAGE')
+  @RequirePermissions('WORKSPACE_EDIT')
   @Get()
   list(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {
     return this.svc.listRemoteApps(user.orgId, workspaceId);
   }
 
-  @RequirePermissions('WORKSPACE_MANAGE')
+  @RequirePermissions('WORKSPACE_EDIT')
   @Post()
   create(
     @CurrentUser() user: AuthUser,
@@ -26,7 +26,7 @@ export class WindowsController {
     return this.svc.createRemoteApp(user.orgId, user.sub, dto);
   }
 
-  @RequirePermissions('WORKSPACE_MANAGE')
+  @RequirePermissions('WORKSPACE_EDIT')
   @Patch(':id')
   update(
     @CurrentUser() user: AuthUser,
@@ -37,7 +37,7 @@ export class WindowsController {
     return this.svc.updateRemoteApp(user.orgId, user.sub, workspaceId, id, dto);
   }
 
-  @RequirePermissions('WORKSPACE_MANAGE')
+  @RequirePermissions('WORKSPACE_EDIT')
   @Delete(':id')
   remove(
     @CurrentUser() user: AuthUser,

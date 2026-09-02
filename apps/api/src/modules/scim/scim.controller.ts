@@ -234,14 +234,18 @@ export class ScimController {
   }
 
   // ── Token management (admin-only, requires JWT) ────────────────────────────
+  // AUTH_MANAGE, not the former ORG_MANAGE: that key is not in the permission
+  // catalog, so no role could hold it and only system admins could ever mint or
+  // revoke a SCIM token. SCIM is directory provisioning and belongs with the
+  // identity-provider configuration these same admins already manage.
 
-  @RequirePermissions('ORG_MANAGE')
+  @RequirePermissions('AUTH_MANAGE')
   @Post('tokens')
   issueToken(@CurrentUser() user: AuthUser) {
     return this.scim.issueToken(user.orgId, user.sub);
   }
 
-  @RequirePermissions('ORG_MANAGE')
+  @RequirePermissions('AUTH_MANAGE')
   @Delete('tokens/:id')
   @HttpCode(204)
   revokeToken(@CurrentUser() user: AuthUser, @Param('id') id: string) {

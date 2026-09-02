@@ -129,12 +129,35 @@ export interface SessionSidecar {
   devices?: string[];
 }
 
+/**
+ * Whether a provision command is this agent's to act on.
+ *
+ * Lives with the contract rather than in the agent so the rule cannot drift from
+ * the field it reads. Absent `agentId` means the command predates targeting and
+ * every listener should take it — that is what keeps a newly-deployed agent
+ * working against a manager that has not been upgraded yet.
+ */
+export function isProvisionForAgent(cmd: Pick<ProvisionCommand, 'agentId'>, agentId: string): boolean {
+  return !cmd.agentId || cmd.agentId === agentId;
+}
+
 export interface ProvisionCommand {
   sessionId: string;
   kasmId: string;
   orgId: string;
   workspaceId: string;
   zone: string;
+  /**
+   * The ONE agent this command is for.
+   *
+   * The channel is per-zone, so every agent in the zone receives every command.
+   * The scheduler, however, picks a single agent by capacity and records it on
+   * the session — so without a recipient here, each of N agents in a zone
+   * provisioned every session and the N-1 losers' containers were never tracked
+   * and never destroyed. Optional so an agent newer than its manager keeps
+   * working: absent means "whoever hears this", the pre-targeting behaviour.
+   */
+  agentId?: string;
   protocol: 'KASMVNC' | 'RDP' | 'VNC' | 'SSH' | 'WEBRTC';
   runConfig: RunConfig;
   /** Data-loss-prevention policy applied to the session container. */

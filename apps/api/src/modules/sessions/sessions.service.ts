@@ -720,6 +720,10 @@ export class SessionsService {
       orgId: session.orgId,
       workspaceId: workspace.id,
       zone: zoneName,
+      // The scheduler already reserved capacity on ONE agent and wrote it to the
+      // session before we got here. Name it: the channel is zone-wide, so every
+      // other agent in the zone is about to read this too.
+      ...(session.agentId ? { agentId: session.agentId } : {}),
       protocol,
       runConfig,
       ...(Object.keys(dlp).length > 0 ? { dlp } : {}),
