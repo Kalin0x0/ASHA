@@ -6,8 +6,11 @@ import { AuditService } from '../../common/audit.service';
 /**
  * Windows / RDS: manage RemoteApp entries published from RDS farms or
  * standalone Windows servers. Apps are scoped to a Workspace; callers must
- * hold `WORKSPACE_MANAGE` permission. The workspace itself is already
- * org-scoped so all queries here join through it.
+ * hold `WORKSPACE_EDIT` — remote apps are workspace configuration, and
+ * `WORKSPACE_MANAGE` (what this used to require) is not in the permission
+ * catalog, so no role could ever hold it and the whole module was reachable by
+ * system admins alone. The workspace itself is already org-scoped so all
+ * queries here join through it.
  */
 @Injectable()
 export class WindowsService {

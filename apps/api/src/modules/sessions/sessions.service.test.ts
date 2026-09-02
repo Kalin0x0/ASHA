@@ -67,7 +67,9 @@ describe('SessionsService.create', () => {
     prismaMock.workspace.findUnique.mockResolvedValue(WORKSPACE);
     prismaMock.deploymentZone.findFirst.mockResolvedValue({ id: 'zone1', name: 'default', isDefault: true });
     prismaMock.session.create.mockResolvedValue({ id: 'sess1', kasmId: 'kid', orgId: 'org1', zoneId: 'zone1' });
-    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', kasmId: 'kid', orgId: 'org1', zoneId: 'zone1' });
+    // `agentId` is set by the SCHEDULED update before dispatchProvision re-reads
+    // the row, so the fixture mirrors what the real flow produces.
+    prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', kasmId: 'kid', orgId: 'org1', zoneId: 'zone1', agentId: 'agent1' });
     prismaMock.session.update.mockResolvedValue({});
     prismaMock.volumeMapping.findMany.mockResolvedValue([]); // E1: no admin volume mappings
     prismaMock.fileMapping.findMany.mockResolvedValue([]); // E4: no admin file mappings
@@ -132,6 +134,18 @@ describe('SessionsService.create', () => {
       expect.objectContaining({ data: { status: 'PROVISIONING' } }),
     );
     expect(audit.record).toHaveBeenCalled();
+  });
+
+  it('addresses the provision command to the ONE agent the scheduler picked', async () => {
+    scheduler.pickAgent.mockResolvedValue({ id: 'agent1' });
+
+    await svc.create(USER, { workspaceId: 'ws1' });
+
+    // The channel is per-zone, so every agent in the zone reads this message.
+    // Without a recipient each of them provisions, and the manager only ever
+    // learns about one container — the rest leak for the life of the host.
+    const [, command] = redis.publish.mock.calls.find(([ch]) => String(ch).endsWith(':provision'))!;
+    expect((command as { agentId?: string }).agentId).toBe('agent1');
   });
 
   it('fails fast (ERROR + 503, no silent timeout) when no agent is available', async () => {

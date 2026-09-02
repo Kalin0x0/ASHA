@@ -3,6 +3,7 @@ import {
   type AgentCommand,
   type DestroyCommand,
   type ImageCommand,
+  isProvisionForAgent,
   type ProvisionCommand,
   RedisChannels,
   type SessionControlCommand,
@@ -141,6 +142,16 @@ async function handleProvision(
   bySession: Map<string, string>,
   byContainer: Map<string, string>,
 ): Promise<void> {
+  // The provision channel is per-ZONE, so every agent in this zone receives every
+  // command — but the manager's scheduler reserved capacity on exactly one of us.
+  // Without this check each of N agents provisioned each session, and the N-1
+  // containers the manager never learned about leaked for the life of the host.
+  // A command with no `agentId` predates targeting: honour it, so an agent that
+  // is newer than its manager still works.
+  if (!isProvisionForAgent(cmd, agentId)) {
+    log.debug({ sessionId: cmd.sessionId, target: cmd.agentId }, 'provision command is for another agent — ignoring');
+    return;
+  }
   log.info({ sessionId: cmd.sessionId, image: cmd.runConfig.dockerImage }, 'provisioning session');
   await manager.reportStatus(agentId, cmd.sessionId, { status: 'PROVISIONING' }).catch(() => undefined);
   let result;

@@ -230,4 +230,25 @@ describe('SessionReaperService', () => {
     expect(prismaMock.agent.deleteMany).not.toHaveBeenCalled();
     delete process.env.ASHA_AGENT_PRUNE_DAYS;
   });
+
+  it('never idle-reaps a PAUSED session', async () => {
+    // Idleness is measured from `lastKeepaliveAt`, which only a live viewer
+    // refreshes — a paused session has no viewer by definition, so including
+    // PAUSED here destroyed exactly the state the user paused to keep, with
+    // reason `idle_timeout` and long before ASHA_MAX_PAUSED_MINUTES (the cap
+    // that actually governs paused sessions, see `reapPaused`). The UI promises
+    // "paused — state is kept", so this broke the feature outright.
+    prismaMock.session.findMany.mockResolvedValue([]);
+    prismaMock.workspace.findMany.mockResolvedValue([{ id: 'ws1', idleTimeoutMinutes: 10 }]);
+
+    await svc.reap();
+
+    const idleQuery = prismaMock.session.findMany.mock.calls
+      .map(([arg]) => arg as { where?: { workspaceId?: string; status?: { in?: string[] } } })
+      .find((a) => a?.where?.workspaceId === 'ws1');
+    expect(idleQuery, 'the per-workspace idle sweep must have run').toBeDefined();
+    expect(idleQuery!.where!.status!.in).not.toContain('PAUSED');
+    // It must still reap the states that DO have a live viewer.
+    expect(idleQuery!.where!.status!.in).toEqual(expect.arrayContaining(['RUNNING', 'DEGRADED']));
+  });
 });

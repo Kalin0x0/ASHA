@@ -374,7 +374,14 @@ export class SessionReaperService {
       const idle = await prisma.session.findMany({
         where: {
           workspaceId: ws.id,
-          status: { in: [...ACTIVE_STATUSES] },
+          // Same set as the global abandoned reaper, and for the same reason:
+          // idleness is measured from `lastKeepaliveAt`, which only a LIVE viewer
+          // refreshes. A PAUSED session has no viewer by definition, so including
+          // it here destroyed exactly the state the user paused to keep — with
+          // reason `idle_timeout`, well before ASHA_MAX_PAUSED_MINUTES, which is
+          // the cap that actually governs paused sessions (see `reapPaused`).
+          // Pre-RUNNING states belong to the launch-timeout reaper.
+          status: { in: [...ABANDONABLE_STATUSES] },
           lastKeepaliveAt: { lt: cutoff },
           // Unclaimed staged pool sessions are idle by definition — the staging
           // reconciler owns their lifecycle, not the per-workspace idle policy.
