@@ -57,10 +57,15 @@ describe('sessionTraefikLabels — subdomain mode', () => {
 });
 
 describe('sessionTraefikLabels — forward auth', () => {
-  it('appends the forward-auth middleware after stripprefix', () => {
+  it('runs the forward-auth gate BEFORE stripprefix', () => {
+    // Order is load-bearing, not cosmetic. Traefik applies middlewares in
+    // sequence and shows the forward-auth gate the request as it stands at that
+    // point — so with the strip first the gate is handed a path of `/`, with the
+    // session id it must check the token against already removed. It would then
+    // have nothing to compare, and any session's token would open any session.
     const labels = sessionTraefikLabels({ ...base, forwardAuthMiddleware: 'sess-auth@file' });
     expect(labels['traefik.http.routers.sess-abc123.middlewares']).toBe(
-      'sess-abc123-strip,sess-auth@file',
+      'sess-auth@file,sess-abc123-strip',
     );
   });
 

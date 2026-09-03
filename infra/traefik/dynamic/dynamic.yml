@@ -6,13 +6,23 @@ http:
       insecureSkipVerify: true
 
   middlewares:
-    # Forward-auth gate for session streams. The manager validates the per-session
-    # short-lived JWT before Traefik proxies the websocket.
-    # Phase 1: points at a always-200 health endpoint so the slice works end to end.
-    # Phase 3: replace the address with the real /internal/session-auth validator.
+    # Forward-auth gate for session streams. The manager verifies the per-session
+    # JWT before Traefik proxies anything — including the stream websocket.
+    #
+    # This used to point at /health/live, which returns 200 for everyone, so the
+    # gate was decorative: any kasmId opened the desktop, with the Basic
+    # credentials injected below on the way in.
+    #
+    # The validator answers three ways. 204 → forward. 401 → refuse. 302 with a
+    # Set-Cookie → the request carried the one-shot `?token=`, which is traded
+    # for a session-scoped cookie and the browser is bounced to the same URL
+    # without it (the websocket and every asset that follow carry no token, so
+    # something durable has to take over). The 302 is load-bearing: Traefik
+    # returns a non-2xx auth response to the browser verbatim, but folds a 2xx
+    # one into the upstream request — a Set-Cookie on a 200 would never arrive.
     sess-auth:
       forwardAuth:
-        address: 'http://api:4000/api/v1/health/live'
+        address: 'http://api:4000/api/v1/internal/session-auth'
 
 # With routers declaring `tls: true` and no resolver configured, Traefik serves its
 # built-in self-signed certificate (expect a browser warning on asha.local).
