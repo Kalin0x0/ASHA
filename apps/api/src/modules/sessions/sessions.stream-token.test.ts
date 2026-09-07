@@ -75,11 +75,25 @@ describe('SessionsService — stream token freshness', () => {
     expect(jwt.signAsync).not.toHaveBeenCalled();
   });
 
-  it('keeps every other query parameter intact', async () => {
+  it('leaves the rest of the URL byte-for-byte alone', async () => {
+    // Rebuilding it through URL/searchParams would percent-escape the slashes in
+    // `path=session/<id>/websockify`, which is how the KasmVNC client finds its
+    // websocket.
     const out = await svc.connection('sess1', USER);
-    const url = new URL(out.connectionUrl!);
-    expect(url.pathname).toBe('/session/kid1/');
-    expect(url.searchParams.get('path')).toBe('session/kid1/websockify');
+    expect(out.connectionUrl).toBe(
+      'https://asha.example.com/session/kid1/?path=session/kid1/websockify&token=fresh.token.signed-now',
+    );
+  });
+
+  it('replaces only the token when it is not the last parameter', async () => {
+    prismaMock.session.findFirst.mockResolvedValue({
+      ...SESSION,
+      connectionUrl: `https://asha.example.com/session/kid1/?token=${STORED_TOKEN}&resize=remote`,
+    });
+    const out = await svc.connection('sess1', USER);
+    expect(out.connectionUrl).toBe(
+      'https://asha.example.com/session/kid1/?token=fresh.token.signed-now&resize=remote',
+    );
   });
 
   it('leaves a session without a connection URL alone', async () => {

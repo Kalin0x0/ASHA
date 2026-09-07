@@ -91,9 +91,14 @@ export class SessionsService {
         { sid: session.id, kasmId: session.kasmId },
         { secret: this.env.SESSION_TOKEN_SECRET, expiresIn: this.env.SESSION_TOKEN_TTL },
       );
-      const url = new URL(session.connectionUrl);
-      url.searchParams.set('token', token);
-      return { ...session, connectionUrl: url.toString() };
+      // Swap the token in place rather than rebuilding the URL: URL/searchParams
+      // re-encodes everything it round-trips, and `path=session/<id>/websockify`
+      // — which the KasmVNC client reads to find its websocket — would come back
+      // percent-escaped.
+      return {
+        ...session,
+        connectionUrl: session.connectionUrl.replace(/([?&]token=)[^&]*/, `$1${encodeURIComponent(token)}`),
+      };
     } catch {
       // A malformed stored URL must not make the session unreadable.
       return session;

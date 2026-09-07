@@ -57,6 +57,7 @@ export class SessionAuthController {
   gate(
     @Headers('x-forwarded-uri') forwardedUri: string | undefined,
     @Headers('x-forwarded-host') forwardedHost: string | undefined,
+    @Headers('x-forwarded-proto') forwardedProto: string | undefined,
     @Headers('cookie') cookieHeader: string | undefined,
     @Res() res: Response,
   ): void {
@@ -99,7 +100,18 @@ export class SessionAuthController {
       `SameSite=${this.env.SESSION_COOKIE_SAMESITE}`,
     ];
     res.setHeader('Set-Cookie', attrs.join('; '));
-    res.setHeader('Location', verdict.location);
+    // The location has to go out absolute, however much a relative one would
+    // prefer to stay that way. Traefik resolves the auth response's Location
+    // against the URL it called — `http://api:4000/api/v1/internal/session-auth`
+    // — so a relative path came back to the browser as `http://api:4000/session/…`,
+    // an internal Docker name that resolves nowhere. Measured on a live install:
+    // the browser gave up with ERR_NAME_NOT_RESOLVED and no desktop ever loaded.
+    // The host comes from Traefik's own forwarded headers, and the path is the
+    // one this gate computed, never one supplied by the caller.
+    res.setHeader(
+      'Location',
+      forwardedHost ? `${forwardedProto || 'https'}://${forwardedHost}${verdict.location}` : verdict.location,
+    );
     // 302, not 307: the follow-up must be a GET even if the gated request was
     // not, and the browser must not replay a body it already sent.
     res.status(302).end();
