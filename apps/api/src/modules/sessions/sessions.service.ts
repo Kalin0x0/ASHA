@@ -1,11 +1,15 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
   Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import type { Env } from '@asha/config';
+import { ENV } from '../../common/env.module';
 import type { CreateSessionDto } from '@asha/contracts';
 import { prisma } from '@asha/db';
 import {
@@ -60,7 +64,41 @@ export class SessionsService {
     // resolves a caller's effective permissions for the owner-vs-any terminate
     // check the route guard can't make (it has no row-level session context).
     @Optional() private readonly rbac?: RbacService,
+    // Optional, and after `rbac` so positional unit-test construction is
+    // unaffected: mints the short-lived stream token handed to the browser.
+    @Optional() private readonly jwt?: JwtService,
+    @Optional() @Inject(ENV) private readonly env?: Env,
   ) {}
+
+  /**
+   * Hand the caller a connection URL whose stream token is valid NOW.
+   *
+   * The token is minted once, when the agent reports the session RUNNING, and
+   * stored inside `connectionUrl`. It lives for SESSION_TOKEN_TTL (120s by
+   * default), which was harmless while the Traefik gate accepted everything —
+   * but the gate validates the token now, so the stored URL stops working two
+   * minutes after launch and every later visit to a still-running desktop is
+   * refused. Re-signing on read keeps the token short-lived without tying the
+   * life of the desktop to it.
+   */
+  private async withFreshStreamToken<T extends { id: string; kasmId: string | null; connectionUrl: string | null }>(
+    session: T,
+  ): Promise<T> {
+    if (!session.connectionUrl || !this.jwt || !this.env) return session;
+    if (!session.connectionUrl.includes('token=')) return session;
+    try {
+      const token = await this.jwt.signAsync(
+        { sid: session.id, kasmId: session.kasmId },
+        { secret: this.env.SESSION_TOKEN_SECRET, expiresIn: this.env.SESSION_TOKEN_TTL },
+      );
+      const url = new URL(session.connectionUrl);
+      url.searchParams.set('token', token);
+      return { ...session, connectionUrl: url.toString() };
+    } catch {
+      // A malformed stored URL must not make the session unreadable.
+      return session;
+    }
+  }
 
   async create(user: AuthUser, dto: CreateSessionDto) {
     // License gate first — refuse before we allocate any resources.
@@ -769,7 +807,7 @@ export class SessionsService {
   async get(id: string, user: AuthUser) {
     const session = await this.findInOrg(id, user.orgId);
     await this.assertSessionScope(session, user, 'SESSION_VIEW_ANY');
-    return session;
+    return this.withFreshStreamToken(session);
   }
 
   /**
@@ -972,8 +1010,9 @@ export class SessionsService {
     const workspace = session.workspaceId
       ? await prisma.workspace.findUnique({ where: { id: session.workspaceId } })
       : null;
+    const fresh = await this.withFreshStreamToken(session);
     return {
-      connectionUrl: session.connectionUrl,
+      connectionUrl: fresh.connectionUrl,
       status: session.status,
       // Populated when a launch failed/timed out so the viewer can show the
       // reason instead of a generic disconnect.
