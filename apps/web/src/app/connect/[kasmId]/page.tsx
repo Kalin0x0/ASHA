@@ -38,6 +38,7 @@ import { captureCanvasThumb } from '@/lib/capture-thumb';
 import { useLaunchableWorkspaces, useOwnSessions, useSessions } from '@/lib/hooks';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import { attachTouchInput, isTouchDevice } from '@/lib/touch-input';
+import { forwardsToRemote } from '@/lib/remote-keys';
 import { attachTextEntry } from '@/lib/touch-keyboard';
 import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
@@ -45,6 +46,7 @@ import { cn } from '@/lib/utils';
 
 // X11 keysyms for the control-menu shortcuts.
 const KEYSYM = { CTRL: 0xffe3, ALT: 0xffe9, DEL: 0xffff, V: 0x0076 } as const;
+
 
 // Resolution presets for the toolbar (w:0 = fit the window).
 const RESOLUTIONS = [
@@ -393,6 +395,9 @@ export default function ConnectPage() {
       mouse.onmouseup = sendMouse;
       mouse.onmousemove = sendMouse;
       keyboard.onkeydown = (keysym) => {
+        // AltGr is local: forwarding it makes guacd apply the modifier twice and
+        // the character never arrives. See lib/remote-keys.
+        if (!forwardsToRemote(keysym)) return true;
         if (PASTE_MODS.has(keysym)) modActive = true;
         // Ctrl/Cmd+V: don't send V yet — let the browser `paste` event fire and
         // push the local clipboard to the desktop first; the paste handler then
@@ -418,6 +423,7 @@ export default function ConnectPage() {
         return true;
       };
       keyboard.onkeyup = (keysym) => {
+        if (!forwardsToRemote(keysym)) return true;
         if (PASTE_MODS.has(keysym)) modActive = false;
         safeKey(0, keysym);
         return true;
