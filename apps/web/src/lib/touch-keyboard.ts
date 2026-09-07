@@ -1,17 +1,22 @@
 /**
- * Text entry from a soft keyboard.
+ * Text entry for keys the browser cannot name.
  *
  * Guacamole.Keyboard is built around physical key events. Phone keyboards are
  * not: Android's GBoard routes most characters through the composition path and
  * reports keyCode 229 ("Unidentified"), which produces no keysym at all, so
- * typing silently did nothing. iOS does emit real key events, so the two paths
- * have to coexist without doubling every character.
+ * typing silently did nothing. The same is true of a dead key on a hardware
+ * German keyboard — the accent that turns e into é is composed, not pressed.
  *
- * The bridge therefore watches the same hidden textarea the browser types into:
- *   - our sink listener clears the flag at the start of every key,
- *   - Guacamole.Keyboard sets it when IT managed to map that key (call
- *     `noteKeysymSent` from its onkeydown),
- *   - the `input` event then only re-sends what Guacamole could not map.
+ * The bridge watches the hidden textarea the browser types into and re-sends
+ * only what nobody else could have sent. It decides that from the DOM event
+ * alone: a key the browser named is a key Guacamole.Keyboard has already
+ * handled, and one it could not name is one only this path can deliver.
+ *
+ * It deliberately does NOT ask Guacamole what it managed to map. That handshake
+ * existed here once and was inert: guacamole-common-js registers its listeners
+ * on `document` in the CAPTURE phase, so it runs BEFORE a target-phase listener
+ * on the sink — every flag this file set was overwritten a moment later, and
+ * Enter went out twice on every hardware keyboard.
  */
 
 /** X11 keysyms used by the on-screen key bar and this bridge. */
@@ -41,6 +46,15 @@ export function keysymFromCodePoint(cp: number): number {
   return 0x01000000 + cp;
 }
 
+/**
+ * True when the browser could not say which key this was — the only case this
+ * bridge is here for. Everything else has a name, and therefore a keysym that
+ * Guacamole.Keyboard has already put on the wire.
+ */
+export function isUnnamedKey(e: Pick<KeyboardEvent, 'key' | 'keyCode' | 'isComposing'>): boolean {
+  return e.keyCode === 229 || e.key === 'Unidentified' || e.isComposing === true;
+}
+
 export interface TextEntryOptions {
   /** The focusable element the soft keyboard types into. */
   sink: HTMLTextAreaElement;
@@ -49,23 +63,32 @@ export interface TextEntryOptions {
 }
 
 export interface TextEntry {
-  /** Tell the bridge Guacamole.Keyboard already handled the current key. */
-  noteKeysymSent: () => void;
   detach: () => void;
 }
 
 export function attachTextEntry({ sink, tap }: TextEntryOptions): TextEntry {
-  let handledByKeydown = false;
+  // State of the key currently in flight, read by the input events that follow.
+  let sawKeydown = false;
+  let unnamed = false;
 
-  // Runs before Guacamole's document-level handler (the sink is the target, so
-  // its own listeners fire first), giving every key a clean slate.
-  const onKeyDown = () => {
-    handledByKeydown = false;
+  const onKeyDown = (e: Event) => {
+    sawKeydown = true;
+    unnamed = isUnnamedKey(e as KeyboardEvent);
   };
+
+  // A key that produced no text at all (arrows, F-keys) must not leave its state
+  // behind for the next soft-keyboard character to trip over.
+  const onKeyUp = () => {
+    sawKeydown = false;
+    unnamed = false;
+  };
+
+  /** Some soft keyboards emit no key event whatsoever — then nothing else sent it. */
+  const mine = (e: InputEvent) => !e.isComposing && (unnamed || !sawKeydown);
 
   const onBeforeInput = (e: Event) => {
     const ie = e as InputEvent;
-    if (handledByKeydown) return;
+    if (!mine(ie)) return;
     if (ie.inputType === 'deleteContentBackward') tap(KEYSYMS.BACKSPACE);
     else if (ie.inputType === 'insertLineBreak' || ie.inputType === 'insertParagraph') tap(KEYSYMS.RETURN);
   };
@@ -76,13 +99,9 @@ export function attachTextEntry({ sink, tap }: TextEntryOptions): TextEntry {
     // Always drain the sink: it exists only to make the soft keyboard appear,
     // never to hold text.
     sink.value = '';
-    if (handledByKeydown) {
-      handledByKeydown = false;
-      return;
-    }
+    if (!mine(ie)) return;
     // beforeinput already turned these into Return/BackSpace; the line feed they
-    // also deliver would otherwise arrive a second time as a bare U+000A keysym,
-    // so every newline typed on a soft keyboard was doubled.
+    // also deliver would otherwise arrive a second time as a bare U+000A keysym.
     if (!text) return;
     if (ie.inputType?.startsWith('delete')) return;
     if (ie.inputType === 'insertLineBreak' || ie.inputType === 'insertParagraph') return;
@@ -93,15 +112,14 @@ export function attachTextEntry({ sink, tap }: TextEntryOptions): TextEntry {
   };
 
   sink.addEventListener('keydown', onKeyDown);
+  sink.addEventListener('keyup', onKeyUp);
   sink.addEventListener('beforeinput', onBeforeInput);
   sink.addEventListener('input', onInput);
 
   return {
-    noteKeysymSent: () => {
-      handledByKeydown = true;
-    },
     detach: () => {
       sink.removeEventListener('keydown', onKeyDown);
+      sink.removeEventListener('keyup', onKeyUp);
       sink.removeEventListener('beforeinput', onBeforeInput);
       sink.removeEventListener('input', onInput);
     },

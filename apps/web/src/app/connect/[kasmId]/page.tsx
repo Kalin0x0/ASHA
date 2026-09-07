@@ -418,7 +418,6 @@ export default function ConnectPage() {
           // permission-free `paste` event actually fires into the focused sink.
           return true;
         }
-        textEntry?.noteKeysymSent();
         safeKey(1, keysym);
         return true;
       };
