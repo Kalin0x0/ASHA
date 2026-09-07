@@ -113,7 +113,8 @@
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "wallpaper": "Wallpaper"
+    "wallpaper": "Wallpaper",
+    "desktopStyleHandheld": "On a phone the portal always opens the classic launcher; this choice applies on a computer."
   },
   "desktop": {
     "windows": {

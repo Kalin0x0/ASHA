@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { BACKGROUNDS } from '@/lib/backgrounds';
 import { useBackground } from '@/lib/background-store';
 import { type ShellMode, useShell } from '@/lib/shell-store';
+import { useIsHandheld } from '@/lib/use-handheld';
 import { themeTransition } from '@/lib/theme-transition';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +37,9 @@ export function BackgroundPicker() {
   const shellMode = useShell((s) => s.mode);
   const setShellMode = useShell((s) => s.setMode);
   const { resolvedTheme, setTheme } = useTheme();
+  // The portal forces the classic launcher on a handheld, so the picker must not
+  // report a Windows/macOS selection this device will never render.
+  const handheld = useIsHandheld();
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -97,10 +101,16 @@ export function BackgroundPicker() {
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {t('appearance.desktopStyle')}
         </p>
+        {handheld && (
+          <p className="mb-1.5 text-[11px] leading-snug text-muted-foreground">
+            {t('appearance.desktopStyleHandheld')}
+          </p>
+        )}
         <div className="grid grid-cols-3 gap-1.5">
           {(['windows', 'macos', 'classic'] as ShellMode[]).map((mode) => {
             const Icon = SHELL_ICONS[mode];
-            const active = activeShell === mode;
+            // On a handheld only 'classic' is ever rendered, whatever is stored.
+            const active = handheld ? mode === 'classic' : activeShell === mode;
             return (
               <button
                 key={mode}

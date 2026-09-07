@@ -157,6 +157,9 @@ export default function ConnectPage() {
   const [kbOpen, setKbOpen] = useState(false);
   const kbOpenRef = useRef(false);
   kbOpenRef.current = kbOpen;
+  // Read inside the connection effect, which must not depend on either value.
+  const touchRef = useRef(false);
+  touchRef.current = touch;
   // Pinch zoom. `userZoomed` stops the automatic fit from undoing a zoom the
   // user chose when the remote or the window resizes.
   const [zoom, setZoom] = useState(1);
@@ -202,6 +205,29 @@ export default function ConnectPage() {
     toast(t('connect.touch.hintTitle'), { description: t('connect.touch.hint'), duration: 8000 });
   }, [touch, connected, monitor, t]);
 
+  // Follow the visual viewport while the soft keyboard is open. `interactive-widget`
+  // in the viewport meta handles this on Chromium, but iOS ignores it: there the
+  // layout viewport keeps its full height, so a fixed, full-height container puts
+  // the key bar — and the bottom of the desktop — behind the keyboard.
+  useEffect(() => {
+    const vv = typeof window === 'undefined' ? null : window.visualViewport;
+    const el = containerRef.current;
+    if (!vv || !el || !kbOpen) return;
+    const apply = () => {
+      el.style.height = `${vv.height}px`;
+      el.style.transform = `translateY(${vv.offsetTop}px)`;
+    };
+    apply();
+    vv.addEventListener('resize', apply);
+    vv.addEventListener('scroll', apply);
+    return () => {
+      vv.removeEventListener('resize', apply);
+      vv.removeEventListener('scroll', apply);
+      el.style.height = '';
+      el.style.transform = '';
+    };
+  }, [kbOpen]);
+
   useEffect(() => {
     const token = getAccessToken();
     const screen = screenRef.current;
@@ -230,6 +256,12 @@ export default function ConnectPage() {
     const display = client.getDisplay();
     const el = display.getElement();
     screen.replaceChildren(el);
+    // A new Display starts at scale 1 with no zoom of its own, but the ref
+    // describing "the user has zoomed in" survives the effect. Left set from the
+    // previous connection it would make the fit below look like a zoom-out and
+    // be skipped, stranding the reconnected desktop at 1:1.
+    userZoomedRef.current = false;
+    screen.scrollTo({ left: 0, top: 0 });
 
     // Scale the remote desktop to fit the viewport (letterboxed); rescale when the
     // remote resolution changes or the window resizes.
@@ -306,28 +338,31 @@ export default function ConnectPage() {
     };
     // Touch → server. Guacamole.Mouse listens for real mouse events only, so
     // without this a phone can look at the desktop but never touch it.
-    const detachTouch =
-      touch && !monitor
-        ? attachTouchInput({
-            viewport: screen,
-            display: el,
-            send: (s) => {
-              try {
-                client.sendMouseState(s);
-              } catch {
-                /* tunnel not open yet — drop the event */
-              }
-            },
-            getScale: () => display.getScale() || 1,
-            setScale: (s) => {
-              userZoomedRef.current = s > fitScale() + 0.001;
-              display.scale(s);
-            },
-            getFitScale: fitScale,
-            onScaleChange: setZoom,
-            onLongPress: () => navigator.vibrate?.(12),
-          })
-        : null;
+    // Attached regardless of device: touch events simply never fire under a
+    // mouse, whereas gating on the `touch` state would make it a dependency of
+    // this effect — which resolves only after mount, so every touch device would
+    // open a tunnel, tear it down and open a second one on first paint.
+    const detachTouch = monitor
+      ? null
+      : attachTouchInput({
+          viewport: screen,
+          display: el,
+          send: (s) => {
+            try {
+              client.sendMouseState(s);
+            } catch {
+              /* tunnel not open yet — drop the event */
+            }
+          },
+          getScale: () => display.getScale() || 1,
+          setScale: (s) => {
+            userZoomedRef.current = s > fitScale() + 0.001;
+            display.scale(s);
+          },
+          getFitScale: fitScale,
+          onScaleChange: setZoom,
+          onLongPress: () => navigator.vibrate?.(12),
+        });
 
     // Keyboard → server (whole document so shortcuts reach the desktop).
     const keyboard = new Guacamole.Keyboard(document);
@@ -391,7 +426,7 @@ export default function ConnectPage() {
 
     // Soft keyboards mostly do not produce usable key events, so the same hidden
     // sink that captures pastes doubles as the text-entry bridge on touch.
-    if (touch && !monitor && sinkRef.current) {
+    if (!monitor && sinkRef.current) {
       textEntry = attachTextEntry({
         sink: sinkRef.current,
         tap: (keysym) => {
@@ -443,7 +478,12 @@ export default function ConnectPage() {
       // into the focused sink textarea — we forward it to the remote ourselves.
       e.preventDefault();
       if (sinkRef.current) sinkRef.current.value = '';
-      if (!text) return;
+      if (!text || monitor) return;
+      // Was this paste actually initiated by Ctrl/Cmd+V? Only then is a modifier
+      // held on the remote and only then may we inject V. A paste from anywhere
+      // else — the browser's own context menu, a phone's paste bubble — would
+      // otherwise type a bare "v" into the desktop.
+      const fromCtrlV = pendingPasteV !== null;
       if (pendingPasteV) {
         clearTimeout(pendingPasteV);
         pendingPasteV = null;
@@ -451,7 +491,7 @@ export default function ConnectPage() {
       pushToRemote(text);
       // Inject V now that the clipboard is pushed (Ctrl/Cmd is already held on the
       // remote from the physical key) so the desktop pastes the up-to-date text.
-      if (!monitor) {
+      if (fromCtrlV) {
         safeKey(1, 0x76);
         safeKey(0, 0x76);
       }
@@ -463,6 +503,9 @@ export default function ConnectPage() {
     // Best-effort: needs clipboard-read permission (granted once via the toolbar
     // Paste button or the browser prompt); the paste event + toolbar work without it.
     const syncFromLocal = () => {
+      // View-only means view only. This poll ran unguarded, so an admin watching
+      // someone else's desktop pushed their own clipboard into it every 1.5s.
+      if (monitor) return;
       if (typeof document === 'undefined' || !document.hasFocus()) return;
       navigator.clipboard
         .readText()
@@ -485,6 +528,11 @@ export default function ConnectPage() {
     // only absorbs the paste. Skipped in view-only monitor mode.
     const focusSink = () => {
       if (monitor) return;
+      // On a touch device the sink is focused only while the on-screen keyboard
+      // is open. Without this, "hide keyboard" blurred the sink and the blur
+      // handler below refocused it a tick later, so the keyboard never closed.
+      // (Ctrl+V, the reason the sink is kept focused, needs a hardware keyboard.)
+      if (touchRef.current && !kbOpenRef.current) return;
       try {
         sinkRef.current?.focus({ preventScroll: true });
       } catch {
@@ -553,7 +601,7 @@ export default function ConnectPage() {
       }
       clientRef.current = null;
     };
-  }, [kasmId, attempt, perfMode, monitor, resOverride, touch]);
+  }, [kasmId, attempt, perfMode, monitor, resOverride]);
 
   const togglePerf = useCallback(() => {
     setPerfMode((p) => {
@@ -651,16 +699,17 @@ export default function ConnectPage() {
   /** Open or close the phone's keyboard. The focus() call has to happen inside
    *  the tap handler — mobile browsers ignore programmatic focus otherwise. */
   const toggleKeyboard = useCallback(() => {
-    setKbOpen((open) => {
-      const next = !open;
-      try {
-        if (next) sinkRef.current?.focus({ preventScroll: true });
-        else sinkRef.current?.blur();
-      } catch {
-        /* element gone */
-      }
-      return next;
-    });
+    const next = !kbOpenRef.current;
+    // Set the ref before the blur: the sink's blur handler refocuses on the next
+    // tick unless it can see that the keyboard is meant to be closed.
+    kbOpenRef.current = next;
+    setKbOpen(next);
+    try {
+      if (next) sinkRef.current?.focus({ preventScroll: true });
+      else sinkRef.current?.blur();
+    } catch {
+      /* element gone */
+    }
   }, []);
 
   /** Back to "whole desktop visible" after pinching in. */
@@ -883,13 +932,13 @@ export default function ConnectPage() {
                 icon={ClipboardPaste}
                 label={t('connect.toolbar.paste')}
                 onClick={() => void pasteToRemote()}
-                className="hidden sm:inline-flex"
+                className={cn(touch && 'hidden sm:inline-flex')}
               />
               <ToolBtn
                 icon={Command}
                 label={t('connect.toolbar.ctrlAltDel')}
                 onClick={sendCtrlAltDel}
-                className="hidden sm:inline-flex"
+                className={cn(touch && 'hidden sm:inline-flex')}
               />
             </>
           )}
@@ -898,10 +947,10 @@ export default function ConnectPage() {
               icon={Camera}
               label={t('connect.toolbar.screenshot')}
               onClick={screenshot}
-              className="hidden sm:inline-flex"
+              className={cn(touch && 'hidden sm:inline-flex')}
             />
           )}
-          <div className="relative hidden sm:block">
+          <div className={cn('relative', touch && 'hidden sm:block')}>
             <ToolBtn icon={Monitor} label={t('connect.toolbar.displayResolution')} active={resMenuOpen} onClick={() => setResMenuOpen((o) => !o)} />
             {resMenuOpen && (
               <div className="absolute end-0 top-10 z-50 w-44 overflow-hidden rounded-lg border border-border-subtle bg-anthracite-900/95 py-1 shadow-[var(--shadow-lifted)] backdrop-blur">
@@ -929,7 +978,7 @@ export default function ConnectPage() {
             icon={Share2}
             label={t('connect.toolbar.copyViewLink')}
             onClick={() => void shareMonitorLink()}
-            className="hidden sm:inline-flex"
+            className={cn(touch && 'hidden sm:inline-flex')}
           />
           <ToolBtn icon={Maximize2} label={t('connect.toolbar.fullscreen')} onClick={toggleFullscreen} />
           <ToolBtn icon={LayoutGrid} label={t('connect.toolbar.controlPanel')} active={panelOpen} onClick={() => setPanelOpen((o) => !o)} />
@@ -969,7 +1018,13 @@ export default function ConnectPage() {
             pull-to-refresh mid-session. */}
         <div
           ref={screenRef}
-          className="relative isolate z-0 grid h-full w-full touch-none overflow-auto overscroll-contain [place-content:safe_center] [scrollbar-width:none] [&_canvas]:block [&::-webkit-scrollbar]:hidden"
+          className={cn(
+            'relative isolate z-0 grid h-full w-full overflow-auto overscroll-contain [place-content:safe_center] [scrollbar-width:none] [&_canvas]:block [&::-webkit-scrollbar]:hidden',
+            // Only claim the gestures where we actually handle them. In view-only
+            // mode no touch layer is attached, so `touch-none` would just take
+            // the browser's own panning away and leave nothing in its place.
+            !monitor && 'touch-none',
+          )}
         />
         {/* Off-screen, focusable paste target: makes Ctrl+V fire a permission-free
             `paste` event so the local clipboard reaches the remote desktop. On a

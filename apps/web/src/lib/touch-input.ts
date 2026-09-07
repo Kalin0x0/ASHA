@@ -164,7 +164,10 @@ export function attachTouchInput(opts: TouchInputOptions): () => void {
       }, LONG_PRESS_MS);
       return;
     }
-    if (e.touches.length === 2) {
+    if (e.touches.length >= 2) {
+      // Any additional finger ends the one-finger interaction. Matching only
+      // `=== 2` let a touch that jumped straight from one finger to three keep
+      // the long-press armed, and it fired a right click into the desktop.
       releasePointer();
       const a = e.touches[0];
       const b = e.touches[1];
@@ -249,7 +252,10 @@ export function attachTouchInput(opts: TouchInputOptions): () => void {
       if (pointerActive) {
         cancelLongPress();
         if (committed === 'drag') at(lastX, lastY);
-        else if (!committed && Date.now() - startAt < TAP_MS) click(startX, startY, 'left');
+        // Anything released without committing is a click, however long it was
+        // held: a press that outlasts the long-press timer has already committed
+        // as 'longpress', so there is no window left in which a tap does nothing.
+        else if (!committed) click(startX, startY, 'left');
         pointerActive = false;
         committed = null;
       }

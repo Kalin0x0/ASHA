@@ -113,7 +113,8 @@
     "theme": "Design",
     "themeLight": "Hell",
     "themeDark": "Dunkel",
-    "wallpaper": "Hintergrund"
+    "wallpaper": "Hintergrund",
+    "desktopStyleHandheld": "Auf dem Handy öffnet das Portal immer den klassischen Launcher; diese Wahl gilt am Computer."
   },
   "desktop": {
     "windows": {

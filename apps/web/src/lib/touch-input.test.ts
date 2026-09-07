@@ -176,6 +176,28 @@ describe('attachTouchInput', () => {
     expect(h.sent.at(-1)?.left).toBe(false);
   });
 
+  it('clicks a tap held longer than the tap window but released before the long press', () => {
+    // The gap between TAP_MS (260) and LONG_PRESS_MS (500): a motionless press
+    // released in there committed to nothing and used to send absolutely nothing.
+    const h = harness();
+    h.fire('touchstart', [{ x: 100, y: 100 }]);
+    vi.advanceTimersByTime(400);
+    h.fire('touchend', []);
+    expect(h.sent.map((s) => s.left)).toEqual([false, true, false]);
+  });
+
+  it('does not fire a right click when a touch jumps straight to three fingers', () => {
+    const h = harness();
+    h.fire('touchstart', [{ x: 100, y: 100 }]);
+    h.fire('touchstart', [
+      { x: 100, y: 100 },
+      { x: 200, y: 100 },
+      { x: 300, y: 100 },
+    ]);
+    vi.advanceTimersByTime(900);
+    expect(h.sent.filter((s) => s.right)).toHaveLength(0);
+  });
+
   it('detaches every listener', () => {
     const h = harness();
     h.detach();

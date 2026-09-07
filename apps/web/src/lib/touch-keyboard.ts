@@ -80,7 +80,12 @@ export function attachTextEntry({ sink, tap }: TextEntryOptions): TextEntry {
       handledByKeydown = false;
       return;
     }
-    if (!text || ie.inputType?.startsWith('delete')) return;
+    // beforeinput already turned these into Return/BackSpace; the line feed they
+    // also deliver would otherwise arrive a second time as a bare U+000A keysym,
+    // so every newline typed on a soft keyboard was doubled.
+    if (!text) return;
+    if (ie.inputType?.startsWith('delete')) return;
+    if (ie.inputType === 'insertLineBreak' || ie.inputType === 'insertParagraph') return;
     for (const ch of text) {
       const cp = ch.codePointAt(0);
       if (cp !== undefined) tap(keysymFromCodePoint(cp));

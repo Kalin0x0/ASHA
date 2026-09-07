@@ -113,7 +113,8 @@
     "theme": "پوسته",
     "themeLight": "روشن",
     "themeDark": "تیره",
-    "wallpaper": "تصویر پس‌زمینه"
+    "wallpaper": "تصویر پس‌زمینه",
+    "desktopStyleHandheld": "روی گوشی، پورتال همیشه لانچر کلاسیک را باز می‌کند؛ این انتخاب روی رایانه اعمال می‌شود."
   },
   "desktop": {
     "windows": {

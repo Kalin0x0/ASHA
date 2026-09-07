@@ -2,7 +2,7 @@
 
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { KEYSYMS } from '@/lib/touch-keyboard';
 import { cn } from '@/lib/utils';
 
@@ -48,20 +48,24 @@ function Key({
       type="button"
       aria-label={label}
       aria-pressed={active}
-      // The bar must never steal focus from the sink, or the soft keyboard
-      // closes the instant a modifier is tapped.
+      // onClick only. A touchstart handler would fire a second time via the
+      // browser's compatibility click, and the usual preventDefault() cure does
+      // not work here: React registers touchstart passively at the root, so the
+      // cancel is discarded and every key would be sent twice — which for a
+      // sticky modifier means pressed and immediately released, i.e. never held.
+      // The viewport is width=device-width, so there is no tap delay to avoid.
+      //
+      // Cancelling mousedown is still right and still works (it is not passive):
+      // it stops the bar taking focus off the sink, which would close the soft
+      // keyboard the moment a modifier is tapped.
       onMouseDown={(e) => e.preventDefault()}
-      onTouchStart={(e) => {
-        e.preventDefault();
-        onPress();
-      }}
       onClick={onPress}
       className={cn(
         'inline-flex h-11 shrink-0 items-center justify-center rounded-lg border px-3 text-xs font-medium transition-colors ring-gold-focus',
         wide && 'px-4',
         active
-          ? 'border-[rgba(212,175,55,0.45)] bg-gold-500/20 text-gold-200'
-          : 'border-border-subtle bg-anthracite-900/80 text-muted-foreground active:bg-white/10',
+          ? 'border-[rgba(212,175,55,0.45)] bg-gold-500/20 text-gold-700 dark:text-gold-200'
+          : 'border-border-subtle bg-secondary text-muted-foreground active:bg-secondary/70',
       )}
     >
       {children}
@@ -82,6 +86,15 @@ export function TouchKeyBar({
 }) {
   const t = useTranslations('viewer');
   const [sticky, setSticky] = useState<number[]>([]);
+
+  // Whatever is still held has to come back up when the bar goes away — hiding
+  // the keyboard or ending the session would otherwise leave Ctrl or Alt pressed
+  // on the remote desktop, where every later keystroke becomes a shortcut.
+  const stickyRef = useRef<number[]>([]);
+  stickyRef.current = sticky;
+  const releaseRef = useRef(release);
+  releaseRef.current = release;
+  useEffect(() => () => stickyRef.current.forEach((k) => releaseRef.current(k)), []);
 
   const toggleModifier = useCallback(
     (keysym: number) => {
