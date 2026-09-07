@@ -78,8 +78,8 @@ export class SessionsService {
    * default), which was harmless while the Traefik gate accepted everything —
    * but the gate validates the token now, so the stored URL stops working two
    * minutes after launch and every later visit to a still-running desktop is
-   * refused. Re-signing on read keeps the token short-lived without tying the
-   * life of the desktop to it.
+   * refused. Re-signing when the viewer asks to connect keeps the token
+   * short-lived without tying the life of the desktop to it.
    */
   private async withFreshStreamToken<T extends { id: string; kasmId: string | null; connectionUrl: string | null }>(
     session: T,
@@ -807,7 +807,10 @@ export class SessionsService {
   async get(id: string, user: AuthUser) {
     const session = await this.findInOrg(id, user.orgId);
     await this.assertSessionScope(session, user, 'SESSION_VIEW_ANY');
-    return this.withFreshStreamToken(session);
+    // Deliberately the STORED url: the portal polls this row every 15 seconds,
+    // and a token that changed on every poll would swap the stream's src and
+    // reload the desktop under the user. Fresh tokens come from connection().
+    return session;
   }
 
   /**

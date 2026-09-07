@@ -162,7 +162,12 @@ export default function StreamingViewerPage() {
   // Keep the session alive while it's live so the idle reaper doesn't terminate
   // a desktop the user is actively watching/using.
   useKeepalive(session?.id, isRunning);
-  const connectionUrl = session?.connectionUrl;
+  // Fetched once per live session from /connection (see below). Live mode waits
+  // for it rather than mounting the polled row's URL, whose token was minted at
+  // launch and is refused by the edge gate once it expires — the frame would
+  // load an error page and report itself ready. Mock mode has no such endpoint.
+  const [streamUrl, setStreamUrl] = useState<string | null>(null);
+  const connectionUrl = isLive ? streamUrl : session?.connectionUrl;
   // Remote-desktop sessions (RDP/VNC/SSH) render on the guacd canvas at /connect,
   // not in an embedded iframe — the stored connectionUrl points at the proxy's
   // /session/<kasmId> path (same-origin → collides with this route + X-Frame).
@@ -281,15 +286,25 @@ export default function StreamingViewerPage() {
     return () => clearTimeout(id);
   }, [isRunning, isError, session?.id]);
 
-  // Pull the DLP policy so the toolbar can grey out disallowed controls.
+  // Pull the DLP policy so the toolbar can grey out disallowed controls — and
+  // with it the stream URL, whose token is signed at that moment. The polled
+  // session row still carries the token minted at launch, which the edge gate
+  // refuses once it expires; and taking the URL from the poll would swap the
+  // frame's src every 15 seconds, reloading the desktop under the user.
   useEffect(() => {
     if (!isLive || !session?.id || !isRunning) return;
     let cancelled = false;
     getSessionConnection(session.id)
       .then((c) => {
-        if (!cancelled && c.dlp) setDlp(c.dlp);
+        if (cancelled) return;
+        if (c.dlp) setDlp(c.dlp);
+        setStreamUrl(c.connectionUrl ?? session.connectionUrl ?? null);
       })
-      .catch(() => undefined);
+      // Endpoint unreachable: fall back to the stored URL rather than leaving
+      // the user on a placeholder with a running desktop behind it.
+      .catch(() => {
+        if (!cancelled) setStreamUrl(session.connectionUrl ?? null);
+      });
     return () => {
       cancelled = true;
     };

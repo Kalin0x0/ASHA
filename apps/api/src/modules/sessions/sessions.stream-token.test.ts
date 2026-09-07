@@ -55,8 +55,8 @@ describe('SessionsService — stream token freshness', () => {
     prismaMock.workspace.findUnique.mockResolvedValue({ id: 'ws1', dlp: {} });
   });
 
-  it('re-signs the stored token when a session is read', async () => {
-    const out = await svc.get('sess1', USER);
+  it('signs a fresh token when the viewer asks to connect', async () => {
+    const out = await svc.connection('sess1', USER);
     expect(out.connectionUrl).toContain('token=fresh.token.signed-now');
     expect(out.connectionUrl).not.toContain(STORED_TOKEN);
     // Same session, same claims — only the expiry moves.
@@ -66,13 +66,17 @@ describe('SessionsService — stream token freshness', () => {
     );
   });
 
-  it('re-signs on the viewer connection endpoint too', async () => {
-    const out = await svc.connection('sess1', USER);
-    expect(out.connectionUrl).toContain('token=fresh.token.signed-now');
+  it('leaves the polled session row alone', async () => {
+    // The portal refetches this row every 15 seconds. A token that changed on
+    // every poll would swap the stream's src and reload the desktop under the
+    // user, so reading a session must not rotate it.
+    const out = await svc.get('sess1', USER);
+    expect(out.connectionUrl).toContain(STORED_TOKEN);
+    expect(jwt.signAsync).not.toHaveBeenCalled();
   });
 
   it('keeps every other query parameter intact', async () => {
-    const out = await svc.get('sess1', USER);
+    const out = await svc.connection('sess1', USER);
     const url = new URL(out.connectionUrl!);
     expect(url.pathname).toBe('/session/kid1/');
     expect(url.searchParams.get('path')).toBe('session/kid1/websockify');
@@ -80,22 +84,22 @@ describe('SessionsService — stream token freshness', () => {
 
   it('leaves a session without a connection URL alone', async () => {
     prismaMock.session.findFirst.mockResolvedValue({ ...SESSION, connectionUrl: null });
-    const out = await svc.get('sess1', USER);
+    const out = await svc.connection('sess1', USER);
     expect(out.connectionUrl).toBeNull();
     expect(jwt.signAsync).not.toHaveBeenCalled();
   });
 
-  it('does not touch a URL that carries no token (RDP goes through the proxy)', async () => {
+  it('does not touch a URL that carries no token (server sessions reach guacd through the proxy)', async () => {
     const plain = 'https://asha.example.com/connect/kid1';
     prismaMock.session.findFirst.mockResolvedValue({ ...SESSION, connectionUrl: plain });
-    const out = await svc.get('sess1', USER);
+    const out = await svc.connection('sess1', USER);
     expect(out.connectionUrl).toBe(plain);
     expect(jwt.signAsync).not.toHaveBeenCalled();
   });
 
   it('still returns the session when signing fails', async () => {
     jwt.signAsync.mockRejectedValue(new Error('key unavailable'));
-    const out = await svc.get('sess1', USER);
+    const out = await svc.connection('sess1', USER);
     expect(out.connectionUrl).toContain(STORED_TOKEN);
   });
 });
