@@ -38,6 +38,41 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.36',
+    date: '2026-09-07',
+    title: { en: 'Asha on a phone', de: 'Asha auf dem Handy' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'The remote-desktop viewer now accepts touch. Tap to click, hold for a right click, drag to drag, and use two fingers to zoom into a desktop that would otherwise be too small to read, or to scroll. Until now the viewer listened for a real mouse only, so on a phone a desktop could be watched but not used.',
+          de: 'Der Desktop-Viewer nimmt jetzt Berührungen an. Tippen ist ein Klick, Halten ein Rechtsklick, Ziehen zieht, und mit zwei Fingern zoomen Sie in einen sonst unlesbar kleinen Desktop hinein oder scrollen. Bisher lauschte der Viewer nur auf eine echte Maus — auf dem Handy ließ sich ein Desktop ansehen, aber nicht bedienen.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'A keyboard button opens the phone’s keyboard over the desktop, with a bar for the keys phones do not have: Esc, Tab, the arrows, Del and sticky Ctrl / Alt / Shift / Win, so Ctrl+C is two taps. Ctrl+Alt+Del is there too. The keyboard sliding in no longer resizes the remote desktop to the strip of screen left above it.',
+          de: 'Eine Tastatur-Schaltfläche öffnet die Handy-Tastatur über dem Desktop, mit einer Leiste für die Tasten, die Handys nicht haben: Esc, Tab, Pfeile, Entf und feststellbares Strg / Alt / Umschalt / Win — Strg+C sind damit zwei Tipper. Strg+Alt+Entf ist ebenfalls dabei. Die aufklappende Tastatur verkleinert den entfernten Desktop nicht mehr auf den Streifen, der über ihr übrig bleibt.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'On a phone the portal always opens as the classic launcher. The Windows and macOS desktop styles assume a pointer and about a thousand pixels of width — icons dragged across a grid, a taskbar and floating windows do not survive a six-inch screen. Your chosen style is untouched and still applies on a computer.',
+          de: 'Auf dem Handy öffnet das Portal immer den klassischen Launcher. Die Desktop-Stile Windows und macOS setzen einen Mauszeiger und rund tausend Pixel Breite voraus — über ein Raster gezogene Symbole, eine Taskleiste und schwebende Fenster überstehen kein Sechs-Zoll-Display. Ihre gewählte Darstellung bleibt unverändert und gilt am Computer weiter.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Two labels in the viewer were hard-coded in German whatever language you had chosen: the “view only” badge and the button that ends a session.',
+          de: 'Zwei Beschriftungen im Viewer waren unabhängig von der gewählten Sprache fest auf Deutsch: die Markierung „Nur ansehen“ und die Schaltfläche zum Beenden einer Sitzung.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.35',
     date: '2026-09-02',
     title: { en: 'Pause keeps the session', de: 'Pausieren behält die Sitzung' },
