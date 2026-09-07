@@ -35,9 +35,15 @@ const GUACD_PORT = Number(process.env.GUACD_PORT ?? 4822);
 const DEFAULT_WIDTH = Number(process.env.GUAC_DEFAULT_WIDTH ?? 1280);
 const DEFAULT_HEIGHT = Number(process.env.GUAC_DEFAULT_HEIGHT ?? 720);
 const DEFAULT_DPI = 96;
+/**
+ * Keyboard layout of the REMOTE desktops, e.g. `de-de-qwertz`. Empty leaves
+ * guacd on its own default (en-us-qwerty), which mistypes every key that
+ * differs on a German keyboard: z/y swapped, the whole AltGr row, the umlauts.
+ */
+const SERVER_LAYOUT = process.env.GUAC_RDP_SERVER_LAYOUT ?? '';
 
 /** Build the value for each parameter guacd asks for, from the session record. */
-function resolveParam(name: string, session: SessionRecord): string {
+export function resolveParam(name: string, session: SessionRecord): string {
   const protocol = session.protocol === 'RDP' ? 'rdp' : 'vnc';
   const host = session.internalHost ?? 'localhost';
   const port = String(session.internalPort ?? (protocol === 'rdp' ? 3389 : 5900));
@@ -66,21 +72,28 @@ function resolveParam(name: string, session: SessionRecord): string {
       return String(DEFAULT_HEIGHT);
     case 'dpi':
       return String(DEFAULT_DPI);
-    // Full desktop experience. guacd DISABLES these by default as an RDP
-    // bandwidth optimization → the desktop renders a black background (no
-    // wallpaper/theme). Enable them so the real desktop wallpaper shows.
+    case 'server-layout':
+      return SERVER_LAYOUT;
+    // How the desktop looks standing still: wallpaper, window theming, font
+    // smoothing. guacd disables these by default as a bandwidth optimisation,
+    // which renders a black background and no theme — so they are on, and the
+    // viewer's quality toggle is what turns them off.
     case 'enable-wallpaper':
       return 'true';
     case 'enable-theming':
       return 'true';
     case 'enable-font-smoothing':
       return 'true';
+    // Motion, not fidelity: Aero translucency, dragging a window with its full
+    // contents rather than an outline, and animated menus. Each turns an
+    // otherwise static screen into a stream of repaints, and every repaint is
+    // re-encoded and pushed down a link shared by every other desktop. A desktop
+    // standing still looks identical without them, so they stay off in both
+    // quality modes.
     case 'enable-full-window-drag':
-      return 'true';
     case 'enable-desktop-composition':
-      return 'true';
     case 'enable-menu-animations':
-      return 'true';
+      return 'false';
     // Dynamic resolution: let the RDP session resize to match the browser window
     // on the fly (Windows 8.1+/RDP display-update channel), so any viewport size
     // fits with no letterbox.
@@ -239,8 +252,11 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
         // args = [protocolVersion, ...paramNames]
         const version = args[0] ?? 'VERSION_1_0_0';
         const paramNames = args.slice(1);
-        // In performance mode the desktop-experience flags are turned OFF (black
-        // background, no theming) to save bandwidth; otherwise ON (full visuals).
+        // In performance mode the *appearance* flags are turned OFF (black
+        // background, no theming) to save bandwidth; otherwise ON. The motion
+        // flags are not listed here at all — resolveParam keeps them off in
+        // both modes, because they buy nothing on a still screen and cost a
+        // repaint stream on a moving one.
         const exp = reqDims.perf ? 'false' : 'true';
         const overrides: Record<string, string> = {
           width: String(reqDims.width),
@@ -248,9 +264,6 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
           'enable-wallpaper': exp,
           'enable-theming': exp,
           'enable-font-smoothing': exp,
-          'enable-full-window-drag': exp,
-          'enable-desktop-composition': exp,
-          'enable-menu-animations': exp,
         };
         const values = paramNames.map((name) => overrides[name] ?? resolveParam(name, session));
 
