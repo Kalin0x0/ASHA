@@ -34,6 +34,12 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = {
   themeColor: '#1a1a2e',
+  // Draw under the notch and the home indicator: without viewport-fit=cover the
+  // safe-area insets the viewer's key bar relies on all report zero.
+  viewportFit: 'cover',
+  // Let a soft keyboard shrink the layout instead of covering it, so the on-screen
+  // key bar stays above the keyboard rather than behind it.
+  interactiveWidget: 'resizes-content',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

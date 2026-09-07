@@ -127,7 +127,10 @@
       "fullscreen": "Fullscreen",
       "controlPanel": "Control Panel",
       "reconnect": "Reconnect",
-      "endSession": "End session"
+      "endSession": "End session",
+      "viewOnly": "View only",
+      "end": "End",
+      "ending": "Ending…"
     },
     "panel": {
       "open": "Open Control Panel",
@@ -162,6 +165,13 @@
       "viewLinkCopied": "View-only link copied",
       "clipboardBlocked": "Clipboard access was blocked",
       "viewLinkCopiedDescription": "Whoever opens it can watch, but not control."
+    },
+    "touch": {
+      "keyboard": "Keyboard",
+      "hideKeyboard": "Hide keyboard",
+      "resetZoom": "Fit to screen",
+      "hintTitle": "Touch controls",
+      "hint": "Tap to click, hold for a right click, two fingers to zoom and scroll."
     }
   }
 }

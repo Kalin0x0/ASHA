@@ -127,7 +127,10 @@
       "fullscreen": "Vollbild",
       "controlPanel": "Steuerung",
       "reconnect": "Neu verbinden",
-      "endSession": "Sitzung beenden"
+      "endSession": "Sitzung beenden",
+      "viewOnly": "Nur ansehen",
+      "end": "Beenden",
+      "ending": "Wird beendet…"
     },
     "panel": {
       "open": "Steuerung öffnen",
@@ -162,6 +165,13 @@
       "viewLinkCopied": "Nur-Ansicht-Link kopiert",
       "clipboardBlocked": "Zugriff auf die Zwischenablage wurde blockiert",
       "viewLinkCopiedDescription": "Wer ihn öffnet, kann zusehen, aber nicht steuern."
+    },
+    "touch": {
+      "keyboard": "Tastatur",
+      "hideKeyboard": "Tastatur ausblenden",
+      "resetZoom": "An Bildschirm anpassen",
+      "hintTitle": "Touch-Steuerung",
+      "hint": "Tippen = Klick, Halten = Rechtsklick, zwei Finger zum Zoomen und Scrollen."
     }
   }
 }

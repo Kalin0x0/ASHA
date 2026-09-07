@@ -8,6 +8,7 @@ import {
   Command,
   Eye,
   Gauge,
+  Keyboard as KeyboardIcon,
   LayoutGrid,
   Loader2,
   Maximize2,
@@ -18,6 +19,7 @@ import {
   Share2,
   Wifi,
   X,
+  ZoomOut,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -27,6 +29,7 @@ import { AppIcon } from '@/components/composite/app-icon';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { TouchKeyBar } from '@/components/viewer/touch-key-bar';
 import { ApiError } from '@/lib/api/client';
 import { terminateSession } from '@/lib/api/endpoints';
 import { getAccessToken } from '@/lib/api/auth-store';
@@ -34,6 +37,8 @@ import { isLive } from '@/lib/api/mode';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
 import { useLaunchableWorkspaces, useOwnSessions, useSessions } from '@/lib/hooks';
 import { useThumbnails } from '@/lib/thumbnail-store';
+import { attachTouchInput, isTouchDevice } from '@/lib/touch-input';
+import { attachTextEntry } from '@/lib/touch-keyboard';
 import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { cn } from '@/lib/utils';
@@ -56,11 +61,13 @@ function ToolBtn({
   label,
   onClick,
   active,
+  className,
 }: {
   icon: typeof Camera;
   label: string;
   onClick: () => void;
   active?: boolean;
+  className?: string;
 }) {
   return (
     <Tooltip>
@@ -70,7 +77,9 @@ function ToolBtn({
           onClick={onClick}
           aria-label={label}
           className={cn(
-            'inline-flex size-9 items-center justify-center rounded-md transition-colors ring-gold-focus',
+            // 44px on touch, the compact 36px once there is a pointer.
+            'inline-flex size-11 items-center justify-center rounded-md transition-colors ring-gold-focus sm:size-9',
+            className,
             active ? 'bg-gold-500/15 text-gold-300' : 'text-muted-foreground hover:bg-white/10 hover:text-foreground',
           )}
         >
@@ -139,6 +148,21 @@ export default function ConnectPage() {
   // below would race the exit and rebuild the tunnel we just closed, which is
   // what users saw as "End/Back just reloads the session".
   const leavingRef = useRef(false);
+  // Touch mode is decided after mount: reading it during render would make the
+  // server-rendered markup disagree with the client's.
+  const [touch, setTouch] = useState(false);
+  useEffect(() => setTouch(isTouchDevice()), []);
+  // On-screen key bar + soft keyboard. Held in a ref as well because the resize
+  // handler inside the connection effect has to see the current value.
+  const [kbOpen, setKbOpen] = useState(false);
+  const kbOpenRef = useRef(false);
+  kbOpenRef.current = kbOpen;
+  // Pinch zoom. `userZoomed` stops the automatic fit from undoing a zoom the
+  // user chose when the remote or the window resizes.
+  const [zoom, setZoom] = useState(1);
+  const userZoomedRef = useRef(false);
+  const setDisplayScaleRef = useRef<((scale: number) => void) | null>(null);
+  const fitScaleRef = useRef<(() => number) | null>(null);
 
   // Resolve the session → workspace so the toolbar shows the name + description.
   // Check BOTH the admin list (/sessions, admins only) and the owner list
@@ -157,10 +181,26 @@ export default function ConnectPage() {
   const workspaceDescription = ws?.description;
   const protocolLabel = session?.connectionType ?? 'RDP';
   const connected = state === 'connected';
+  // Only offer "fit to screen" while actually pinched in, so the control isn't
+  // dead weight in every session.
+  const zoomed = touch && zoom > (fitScaleRef.current?.() ?? Infinity) * 1.02;
 
   // Keep the session alive while connected so the idle reaper never terminates a
   // desktop the user is actively using (previously NOTHING refreshed keepalive).
   useKeepalive(session?.id, connected);
+
+  // Explain the gestures once per device: "hold for a right click" and "two
+  // fingers to scroll" are otherwise invisible affordances.
+  useEffect(() => {
+    if (!touch || !connected || monitor) return;
+    try {
+      if (window.localStorage.getItem('asha-touch-hint') === '1') return;
+      window.localStorage.setItem('asha-touch-hint', '1');
+    } catch {
+      /* storage unavailable — showing the hint again is harmless */
+    }
+    toast(t('connect.touch.hintTitle'), { description: t('connect.touch.hint'), duration: 8000 });
+  }, [touch, connected, monitor, t]);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -193,13 +233,26 @@ export default function ConnectPage() {
 
     // Scale the remote desktop to fit the viewport (letterboxed); rescale when the
     // remote resolution changes or the window resizes.
-    const rescale = () => {
+    const fitScale = () => {
       const w = display.getWidth();
       const h = display.getHeight();
-      if (w > 0 && h > 0 && screen.clientWidth > 0 && screen.clientHeight > 0) {
-        display.scale(Math.min(screen.clientWidth / w, screen.clientHeight / h));
-      }
+      if (w <= 0 || h <= 0 || screen.clientWidth <= 0 || screen.clientHeight <= 0) return 1;
+      return Math.min(screen.clientWidth / w, screen.clientHeight / h);
     };
+    const rescale = () => {
+      const fit = fitScale();
+      // A pinch-zoom is the user's decision: a later resize may only raise the
+      // floor (so the desktop never ends up smaller than the viewport), never
+      // throw the zoom away.
+      if (userZoomedRef.current) {
+        if (display.getScale() >= fit) return;
+        userZoomedRef.current = false;
+      }
+      display.scale(fit);
+      setZoom(fit);
+    };
+    fitScaleRef.current = fitScale;
+    setDisplayScaleRef.current = (s: number) => display.scale(s);
     display.onresize = rescale;
     // On window resize, ask the RDP session to adopt the new viewport size
     // (dynamic resolution via resize-method=display-update); the resulting
@@ -208,12 +261,17 @@ export default function ConnectPage() {
     const onWindowResize = () => {
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        const w = clampEven(screen.clientWidth || reqW, 640, 3840);
-        const h = clampEven(screen.clientHeight || reqH, 480, 2160);
-        try {
-          client.sendSize(w, h);
-        } catch {
-          /* not connected yet */
+        // A soft keyboard sliding in fires the same resize event as a real window
+        // change. Resizing the desktop to the few hundred pixels left above the
+        // keyboard would reflow every window on it — and undo it on every hide.
+        if (!kbOpenRef.current) {
+          const w = clampEven(screen.clientWidth || reqW, 640, 3840);
+          const h = clampEven(screen.clientHeight || reqH, 480, 2160);
+          try {
+            client.sendSize(w, h);
+          } catch {
+            /* not connected yet */
+          }
         }
         rescale();
       }, 250);
@@ -246,6 +304,31 @@ export default function ConnectPage() {
         /* tunnel not open yet — drop the event */
       }
     };
+    // Touch → server. Guacamole.Mouse listens for real mouse events only, so
+    // without this a phone can look at the desktop but never touch it.
+    const detachTouch =
+      touch && !monitor
+        ? attachTouchInput({
+            viewport: screen,
+            display: el,
+            send: (s) => {
+              try {
+                client.sendMouseState(s);
+              } catch {
+                /* tunnel not open yet — drop the event */
+              }
+            },
+            getScale: () => display.getScale() || 1,
+            setScale: (s) => {
+              userZoomedRef.current = s > fitScale() + 0.001;
+              display.scale(s);
+            },
+            getFitScale: fitScale,
+            onScaleChange: setZoom,
+            onLongPress: () => navigator.vibrate?.(12),
+          })
+        : null;
+
     // Keyboard → server (whole document so shortcuts reach the desktop).
     const keyboard = new Guacamole.Keyboard(document);
     // Guacamole throws synchronously (InvalidStateError: WebSocket still in
@@ -266,6 +349,8 @@ export default function ConnectPage() {
     const PASTE_MODS = new Set([0xffe3, 0xffe4, 0xffe7, 0xffe8]); // L/R Ctrl, L/R Meta(Cmd)
     let modActive = false;
     let pendingPasteV: ReturnType<typeof setTimeout> | null = null;
+    // Assigned below, once the key handlers that reference it exist.
+    let textEntry: ReturnType<typeof attachTextEntry> | null = null;
     // In view-only monitor mode we deliberately attach NO input handlers, so the
     // admin can watch without sending a single keystroke or click to the user.
     if (!monitor) {
@@ -293,6 +378,7 @@ export default function ConnectPage() {
           // permission-free `paste` event actually fires into the focused sink.
           return true;
         }
+        textEntry?.noteKeysymSent();
         safeKey(1, keysym);
         return true;
       };
@@ -301,6 +387,18 @@ export default function ConnectPage() {
         safeKey(0, keysym);
         return true;
       };
+    }
+
+    // Soft keyboards mostly do not produce usable key events, so the same hidden
+    // sink that captures pastes doubles as the text-entry bridge on touch.
+    if (touch && !monitor && sinkRef.current) {
+      textEntry = attachTextEntry({
+        sink: sinkRef.current,
+        tap: (keysym) => {
+          safeKey(1, keysym);
+          safeKey(0, keysym);
+        },
+      });
     }
 
     // ── Bidirectional clipboard bridge (local OS ↔ remote desktop) ──────────
@@ -425,6 +523,10 @@ export default function ConnectPage() {
       screen.removeEventListener('mousedown', focusSink);
       if (refocusTimer) clearTimeout(refocusTimer);
       if (pendingPasteV) clearTimeout(pendingPasteV);
+      detachTouch?.();
+      textEntry?.detach();
+      setDisplayScaleRef.current = null;
+      fitScaleRef.current = null;
       display.onresize = null;
       // No-ops rather than null: Guacamole.Keyboard keeps its own `document`
       // listeners after unmount (it has no public teardown), so a keystroke fired
@@ -451,7 +553,7 @@ export default function ConnectPage() {
       }
       clientRef.current = null;
     };
-  }, [kasmId, attempt, perfMode, monitor, resOverride]);
+  }, [kasmId, attempt, perfMode, monitor, resOverride, touch]);
 
   const togglePerf = useCallback(() => {
     setPerfMode((p) => {
@@ -530,6 +632,46 @@ export default function ConnectPage() {
       /* tunnel not open — ignore */
     }
   }, [monitor]);
+
+  /** Single keysym down/up for the on-screen key bar. */
+  const pressKey = useCallback(
+    (pressed: 0 | 1, keysym: number) => {
+      if (monitor) return;
+      try {
+        clientRef.current?.sendKeyEvent(pressed, keysym);
+      } catch {
+        /* tunnel not open — ignore */
+      }
+    },
+    [monitor],
+  );
+  const keyDown = useCallback((keysym: number) => pressKey(1, keysym), [pressKey]);
+  const keyUp = useCallback((keysym: number) => pressKey(0, keysym), [pressKey]);
+
+  /** Open or close the phone's keyboard. The focus() call has to happen inside
+   *  the tap handler — mobile browsers ignore programmatic focus otherwise. */
+  const toggleKeyboard = useCallback(() => {
+    setKbOpen((open) => {
+      const next = !open;
+      try {
+        if (next) sinkRef.current?.focus({ preventScroll: true });
+        else sinkRef.current?.blur();
+      } catch {
+        /* element gone */
+      }
+      return next;
+    });
+  }, []);
+
+  /** Back to "whole desktop visible" after pinching in. */
+  const resetZoom = useCallback(() => {
+    const fit = fitScaleRef.current?.();
+    if (fit === undefined) return;
+    userZoomedRef.current = false;
+    setDisplayScaleRef.current?.(fit);
+    setZoom(fit);
+    screenRef.current?.scrollTo({ left: 0, top: 0 });
+  }, []);
 
   /** Copy the local clipboard into the remote, then issue Ctrl+V to paste it. */
   const pasteToRemote = useCallback(async () => {
@@ -717,19 +859,49 @@ export default function ConnectPage() {
         </div>
         {monitor && (
           <span className="ms-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-info/40 bg-info/10 px-2.5 py-1 text-[11px] font-medium text-info">
-            <Eye className="size-3.5" /> Nur ansehen
+            <Eye className="size-3.5" /> {t('connect.toolbar.viewOnly')}
           </span>
         )}
 
         <div className="ms-auto flex items-center gap-0.5">
+          {/* Touch-only controls: without them a phone cannot type at all, and a
+              pinched-in desktop has no way back to "everything visible". */}
+          {connected && !monitor && touch && (
+            <ToolBtn
+              icon={KeyboardIcon}
+              label={t('connect.touch.keyboard')}
+              active={kbOpen}
+              onClick={toggleKeyboard}
+            />
+          )}
+          {connected && touch && zoomed && (
+            <ToolBtn icon={ZoomOut} label={t('connect.touch.resetZoom')} onClick={resetZoom} />
+          )}
           {connected && !monitor && (
             <>
-              <ToolBtn icon={ClipboardPaste} label={t('connect.toolbar.paste')} onClick={() => void pasteToRemote()} />
-              <ToolBtn icon={Command} label={t('connect.toolbar.ctrlAltDel')} onClick={sendCtrlAltDel} />
+              <ToolBtn
+                icon={ClipboardPaste}
+                label={t('connect.toolbar.paste')}
+                onClick={() => void pasteToRemote()}
+                className="hidden sm:inline-flex"
+              />
+              <ToolBtn
+                icon={Command}
+                label={t('connect.toolbar.ctrlAltDel')}
+                onClick={sendCtrlAltDel}
+                className="hidden sm:inline-flex"
+              />
             </>
           )}
-          {connected && <ToolBtn icon={Camera} label={t('connect.toolbar.screenshot')} onClick={screenshot} />}
-          <div className="relative">
+          {connected && (
+            <ToolBtn
+              icon={Camera}
+              label={t('connect.toolbar.screenshot')}
+              onClick={screenshot}
+              className="hidden sm:inline-flex"
+            />
+          )}
+          <div className="relative hidden sm:block">
             <ToolBtn icon={Monitor} label={t('connect.toolbar.displayResolution')} active={resMenuOpen} onClick={() => setResMenuOpen((o) => !o)} />
             {resMenuOpen && (
               <div className="absolute end-0 top-10 z-50 w-44 overflow-hidden rounded-lg border border-border-subtle bg-anthracite-900/95 py-1 shadow-[var(--shadow-lifted)] backdrop-blur">
@@ -753,7 +925,12 @@ export default function ConnectPage() {
             )}
           </div>
           <ToolBtn icon={Gauge} label={perfMode ? t('connect.toolbar.qualityPerformance') : t('connect.toolbar.qualityFull')} active={perfMode} onClick={togglePerf} />
-          <ToolBtn icon={Share2} label={t('connect.toolbar.copyViewLink')} onClick={() => void shareMonitorLink()} />
+          <ToolBtn
+            icon={Share2}
+            label={t('connect.toolbar.copyViewLink')}
+            onClick={() => void shareMonitorLink()}
+            className="hidden sm:inline-flex"
+          />
           <ToolBtn icon={Maximize2} label={t('connect.toolbar.fullscreen')} onClick={toggleFullscreen} />
           <ToolBtn icon={LayoutGrid} label={t('connect.toolbar.controlPanel')} active={panelOpen} onClick={() => setPanelOpen((o) => !o)} />
           {(state === 'disconnected' || state === 'error') && (
@@ -770,7 +947,9 @@ export default function ConnectPage() {
             className="ms-1"
           >
             {ending ? <Loader2 className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}{' '}
-            <span className="hidden sm:inline">{ending ? 'Beende…' : 'End'}</span>
+            <span className="hidden sm:inline">
+              {ending ? t('connect.toolbar.ending') : t('connect.toolbar.end')}
+            </span>
           </Button>
         </div>
       </header>
@@ -781,10 +960,22 @@ export default function ConnectPage() {
             default desktop layer canvas with z-index:-1, which would otherwise
             render BEHIND the opaque <main> background (bg-black) → black screen
             with only the cursor (a higher-z layer) visible. The grid centers the
-            scaled remote display within the viewport. */}
-        <div ref={screenRef} className="relative isolate z-0 grid h-full w-full place-items-center [&_canvas]:block" />
+            scaled remote display within the viewport.
+            `place-content: safe center` rather than centred items: once a pinch
+            makes the desktop larger than the viewport, plain centring would push
+            the top-left corner out of reach of any scroll. `touch-none` hands
+            every gesture to the touch layer instead of the browser's own
+            pan/zoom, and `overscroll-contain` keeps a swipe from triggering
+            pull-to-refresh mid-session. */}
+        <div
+          ref={screenRef}
+          className="relative isolate z-0 grid h-full w-full touch-none overflow-auto overscroll-contain [place-content:safe_center] [scrollbar-width:none] [&_canvas]:block [&::-webkit-scrollbar]:hidden"
+        />
         {/* Off-screen, focusable paste target: makes Ctrl+V fire a permission-free
-            `paste` event so the local clipboard reaches the remote desktop. */}
+            `paste` event so the local clipboard reaches the remote desktop. On a
+            phone it is also what the soft keyboard types into — it has to stay a
+            real, focusable field, so it is hidden by opacity rather than by
+            `display:none`, which would keep the keyboard from ever opening. */}
         <textarea
           ref={sinkRef}
           aria-hidden
@@ -792,11 +983,21 @@ export default function ConnectPage() {
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
+          inputMode="text"
           spellCheck={false}
           className="pointer-events-none fixed bottom-0 end-0 size-px resize-none border-0 p-0 opacity-0"
         />
         {state !== 'connected' && <Overlay state={state} errMsg={errMsg} onRetry={reconnect} />}
       </main>
+
+      {kbOpen && connected && !monitor && (
+        <TouchKeyBar
+          press={keyDown}
+          release={keyUp}
+          onCtrlAltDel={sendCtrlAltDel}
+          onHide={toggleKeyboard}
+        />
+      )}
 
       <ControlPanel
         open={panelOpen}
