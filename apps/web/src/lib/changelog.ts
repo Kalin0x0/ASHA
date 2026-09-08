@@ -38,6 +38,55 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.37',
+    date: '2026-09-08',
+    title: { en: 'Keys that arrive, desktops that keep up', de: 'Tasten kommen an, Desktops halten mit' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'On a German keyboard the whole AltGr row reached no desktop at all — @ \\ | { } [ ] ~ €, which is most of what an address or a line of code needs. The browser keeps AltGr to itself now and lets the remote work out which keys it needs for the character; typed plainly those characters always arrived, which is why the fault survived so long.',
+          de: 'Auf einer deutschen Tastatur kam die gesamte AltGr-Reihe in keinem Desktop an — @ \\ | { } [ ] ~ €, also fast alles, was eine Adresse oder eine Zeile Code braucht. Der Browser behält AltGr jetzt für sich und überlässt der Gegenseite, welche Tasten sie für das Zeichen drückt; ohne AltGr getippt kamen dieselben Zeichen immer an, weshalb der Fehler so lange überlebt hat.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Enter and Backspace were sent twice from a hardware keyboard: two line breaks per press, two messages in a chat window, two submits in a form. The on-screen keyboard added for phones was asking the wrong question about which keys had already been sent.',
+          de: 'Enter und Rücktaste gingen von einer echten Tastatur doppelt raus: zwei Zeilenumbrüche pro Druck, zwei Nachrichten im Chat, zwei Absenden im Formular. Die für Handys ergänzte Bildschirmtastatur hatte die falsche Frage gestellt, welche Tasten bereits gesendet waren.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'Remote desktops feel smoother. The stream is compressed on the way to the browser — measured on a real session, a quarter of it was encoding padding — and the server no longer queues up frames the connection cannot carry, so a large repaint no longer pushes seconds of stale picture in front of what you just typed.',
+          de: 'Entfernte Desktops laufen flüssiger. Der Bildstrom wird auf dem Weg zum Browser komprimiert — an einer echten Sitzung gemessen war ein Viertel davon reine Kodier-Auffüllung — und der Server staut keine Bilder mehr auf, die die Verbindung nicht tragen kann. Ein großer Neuaufbau schiebt damit keine Sekunden altes Bild mehr vor das, was Sie gerade getippt haben.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'A container desktop left open for more than two minutes could not be reopened, and the button that was supposed to lead back into it produced a blank page. Both came from the same session ticket: it was issued once at launch and never renewed, and the address it pointed at was one only the server itself could reach.',
+          de: 'Ein Container-Desktop, der länger als zwei Minuten offen stand, ließ sich nicht wieder öffnen, und die Schaltfläche zurück hinein führte auf eine leere Seite. Beides ging auf dieselbe Sitzungskarte zurück: sie wurde einmal beim Start ausgestellt und nie erneuert, und sie verwies auf eine Adresse, die nur der Server selbst erreichen konnte.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'Windows desktops no longer stream their own animations. Translucency, dragging a window with its full contents and animated menus look the same on a screen standing still, and each of them turned every interaction into a stream of repaints. The keyboard layout of the remote machine is also passed on now, so accented characters land where they belong.',
+          de: 'Windows-Desktops übertragen ihre Animationen nicht mehr mit. Transparenz, Fenster mit vollem Inhalt ziehen und animierte Menüs sehen am stehenden Bild gleich aus und machten aus jeder Interaktion einen Strom von Neuzeichnungen. Außerdem wird die Tastaturbelegung der Gegenstelle jetzt mitgegeben, damit Sonderzeichen dort landen, wo sie hingehören.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Security updates across the dependency tree: 35 known advisories down to one, which needs a framework upgrade and is deliberately held back.',
+          de: 'Sicherheitsaktualisierungen im gesamten Abhängigkeitsbaum: von 35 bekannten Meldungen auf eine, die einen Framework-Wechsel erfordert und bewusst zurückgestellt ist.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.36',
     date: '2026-09-07',
     title: { en: 'Asha on a phone', de: 'Asha auf dem Handy' },
