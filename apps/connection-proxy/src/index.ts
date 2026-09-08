@@ -32,7 +32,28 @@ async function main(): Promise<void> {
     res.writeHead(404).end();
   });
 
-  const wss = new WebSocketServer({ noServer: true });
+  // Everything guacd sends the browser is Guacamole's text protocol, so every
+  // image region travels as base64 and a flat third of the desktop stream is
+  // encoding padding. Deflate takes almost all of that back: base64 spends 8
+  // bits on 64 symbols, and a Huffman table recovers the difference even when
+  // the underlying bytes are already-compressed JPEG or WebP. On a site whose
+  // uplink is the binding constraint, that is the cheapest bandwidth there is.
+  //
+  // Level 1 on purpose — the win is the symbol table, not match-finding, and the
+  // higher levels only cost CPU. `threshold` leaves the small instructions (key,
+  // mouse, sync) uncompressed, so nothing is added to the input or
+  // frame-acknowledgement path. No context takeover keeps memory flat per
+  // connection.
+  const wss = new WebSocketServer({
+    noServer: true,
+    perMessageDeflate: {
+      threshold: 1024,
+      zlibDeflateOptions: { level: 1, memLevel: 8 },
+      serverNoContextTakeover: true,
+      clientNoContextTakeover: true,
+      concurrencyLimit: 10,
+    },
+  });
 
   httpServer.on('upgrade', (req, socket, head) => {
     const url = req.url ?? '';

@@ -181,6 +181,42 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
   })();
   const guacd = net.createConnection(GUACD_PORT, GUACD_HOST);
   const parser = new GuacamoleParser();
+
+  /**
+   * Stop reading from guacd while the browser is behind.
+   *
+   * guacd is reached over the LAN and the browser over a link that is the real
+   * constraint, so without this the proxy drains guacd at LAN speed and parks
+   * the difference in Node's send queue — which has no ceiling. That queue then
+   * IS the lag: the desktop renders a keystroke instantly, but its pixels wait
+   * behind however many megabytes of already-obsolete frames are still in front
+   * of them. It reads as "fine when idle, seconds behind the moment anything
+   * repaints", which is exactly what users describe.
+   *
+   * Pausing the socket closes guacd's TCP window; guacd then coalesces the
+   * frames it could not send, so the browser receives the CURRENT screen instead
+   * of replaying an old one. The ceiling on staleness becomes HIGH_WATER divided
+   * by the link rate — at 256 KB and 2.5 MB/s, about a tenth of a second.
+   */
+  const HIGH_WATER = 256 * 1024;
+  const LOW_WATER = 64 * 1024;
+  let drainTimer: ReturnType<typeof setInterval> | undefined;
+  const applyBackpressure = () => {
+    if (ws.bufferedAmount <= HIGH_WATER || guacd.isPaused()) return;
+    guacd.pause();
+    drainTimer ??= setInterval(() => {
+      if (ws.readyState !== ws.OPEN) {
+        clearInterval(drainTimer);
+        drainTimer = undefined;
+        return;
+      }
+      if (ws.bufferedAmount < LOW_WATER) {
+        clearInterval(drainTimer);
+        drainTimer = undefined;
+        guacd.resume();
+      }
+    }, 20);
+  };
   // guacd → browser must be TEXT frames: guacamole-common-js's WebSocketTunnel
   // calls .indexOf on every message, so binary frames throw "i.indexOf is not a
   // function". StringDecoder reassembles UTF-8 split across TCP chunks.
@@ -217,6 +253,10 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
       clearTimeout(handshakeTimer);
       handshakeTimer = undefined;
     }
+    if (drainTimer) {
+      clearInterval(drainTimer);
+      drainTimer = undefined;
+    }
   };
 
   guacd.once('connect', () => {
@@ -240,7 +280,10 @@ export function handleGuacamole(ws: WebSocket, req: IncomingMessage, session: Se
       if (n > 0) {
         const frame = pendingOut.slice(0, n);
         pendingOut = pendingOut.slice(n);
-        if (ws.readyState === ws.OPEN) ws.send(frame);
+        if (ws.readyState === ws.OPEN) {
+          ws.send(frame);
+          applyBackpressure();
+        }
       }
       return;
     }
