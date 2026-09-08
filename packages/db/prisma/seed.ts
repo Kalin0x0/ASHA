@@ -18,6 +18,7 @@ const PERMISSIONS: Array<{ key: string; category: string; description: string }>
   { key: 'SESSION_TERMINATE_ANY', category: 'Sessions', description: 'Terminate any session' },
   { key: 'SESSION_CONTROL_ANY', category: 'Sessions', description: 'Take control of any session' },
   { key: 'SESSION_SHARE', category: 'Sessions', description: 'Share sessions' },
+  { key: 'SESSION_OBSERVE', category: 'Sessions', description: 'Observe live sessions' },
   { key: 'RECORDING_VIEW', category: 'Sessions', description: 'View session recordings' },
   // Workspaces
   { key: 'WORKSPACE_VIEW', category: 'Workspaces', description: 'View workspaces' },
@@ -78,6 +79,7 @@ const ROLE_DEFS: Array<{ name: string; description: string; keys: string[] }> = 
       'SESSION_LAUNCH',
       'SESSION_TERMINATE_ANY',
       'SESSION_CONTROL_ANY',
+      'SESSION_OBSERVE',
       'RECORDING_VIEW',
       'WORKSPACE_VIEW',
       'AGENT_VIEW',

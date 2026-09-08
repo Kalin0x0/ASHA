@@ -336,6 +336,40 @@ export const sessionStatsSchema = z.object({
 });
 export type SessionStatsDto = z.infer<typeof sessionStatsSchema>;
 
+// ── Live observation (an admin watching a running session) ───────────────────
+/**
+ * Agent → manager. One sample taken inside the session container. Everything
+ * beyond kasmId/capturedAt is optional: workspace images are third-party, so a
+ * missing helper (ffmpeg, xprop, wmctrl) degrades the sample instead of failing
+ * it. `image` is a bare base64 WebP — capped well above the ~2.5 KB a 320 px
+ * frame measures, and far below anything that could be a full screenshot dump.
+ */
+export const sessionObservationSchema = z.object({
+  kasmId: z.string().min(1).max(64),
+  title: z.string().max(512).optional(),
+  appClass: z.string().max(256).optional(),
+  windowCount: z.number().int().min(0).max(9999).optional(),
+  image: z.string().max(131_072).optional(),
+  imageWidth: z.number().int().min(1).max(4096).optional(),
+  imageHeight: z.number().int().min(1).max(4096).optional(),
+  capturedAt: z.string().datetime(),
+  degraded: z.string().max(256).optional(),
+});
+export type SessionObservationDto = z.infer<typeof sessionObservationSchema>;
+
+/**
+ * Admin → manager. Opens (or renews) an observation window on one session.
+ * The window is deliberately short-lived: the agent stops capturing on its own
+ * once it is not renewed, so a closed browser tab cannot leave capture running.
+ */
+export const startObservationSchema = z.object({
+  /** Sampling cadence. 0 disables capture and leaves metadata only. */
+  intervalMs: z.number().int().min(0).max(60_000).default(5_000),
+  /** Thumbnail width in pixels; height follows the aspect ratio. */
+  thumbWidth: z.number().int().min(160).max(640).default(320),
+});
+export type StartObservationDto = z.infer<typeof startObservationSchema>;
+
 // ── Identity: auth providers (OIDC / SAML / LDAP) ────────────────────────────
 export const createAuthConfigSchema = z.object({
   type: z.enum(['LOCAL', 'LDAP', 'SAML', 'OIDC']),
