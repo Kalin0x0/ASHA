@@ -14,7 +14,9 @@ import { describe, expect, it } from 'vitest';
  *  • whoever is watching holds the observation window open, because that window
  *    IS the notice and the record behind it lapses after 90 s;
  *  • the element a viewer puts into fullscreen contains the notice, because
- *    element fullscreen paints nothing outside the subtree it was handed.
+ *    element fullscreen paints nothing outside the subtree it was handed;
+ *  • nothing is captured while the watching tab is in the background, which is
+ *    the same promise made in words in the wall's own header.
  */
 
 const SRC = fileURLToPath(new URL('..', import.meta.url));
@@ -56,4 +58,45 @@ describe('the notice survives fullscreen', () => {
     expect(src).toMatch(/<div ref=\{rootRef\}[^>]*fixed inset-0/);
     expect(src).toContain('<ObservationNotice');
   });
+
+  it('the portal viewer never lets the stream frame hold fullscreen', () => {
+    // KasmVNC ships its own fullscreen button inside the frame. Granted the
+    // permission, that button makes the IFRAME the fullscreen element — and the
+    // browser then paints only its subtree, which is the one place in this page
+    // the notice is not. The grant is withheld, and because a same-origin frame
+    // still inherits the feature from this document's default allowlist, the
+    // fullscreen element is checked as well.
+    const src = read('app/(portal)/session/[sessionId]/page.tsx');
+    expect(src).not.toMatch(/^\s*allowFullScreen$/m);
+    expect(/allow="[^"]*fullscreen/.test(src)).toBe(false);
+    expect(src).toContain("document.addEventListener('fullscreenchange'");
+  });
+
+  it('the guacamole viewer fullscreens the root that carries the notice', () => {
+    const src = read('app/connect/[kasmId]/page.tsx');
+    // Fullscreen is requested on containerRef — the fixed root that holds the
+    // toolbar, the notice and the canvas — not on the stage under it.
+    expect(src).toMatch(/const el = containerRef\.current;[\s\S]{0,240}el\.requestFullscreen/);
+    expect(src).toMatch(/<div ref=\{containerRef\}[^>]*fixed inset-0/);
+    // The notice is a child of that root, overlaid on the stage inside it.
+    expect(src).toContain('<ObservationNotice');
+  });
+});
+
+describe('capture stops with the tab', () => {
+  const CAPTURING_SURFACES: Array<[string, string]> = [
+    ['the wall', 'app/(admin)/sessions/monitor/page.tsx'],
+    ['the live view', 'app/observe/[sessionId]/page.tsx'],
+  ];
+
+  for (const [name, path] of CAPTURING_SURFACES) {
+    it(`${name} stops asking for frames once its tab is hidden`, () => {
+      // An admin who switched away is not watching, and the live view is the
+      // expensive one: a 960 px frame every 700 ms, taken inside somebody's
+      // desktop, for a picture nobody is looking at.
+      const src = read(path);
+      expect(src).toContain("document.addEventListener('visibilitychange'");
+      expect(src).toContain("document.visibilityState === 'hidden'");
+    });
+  }
 });

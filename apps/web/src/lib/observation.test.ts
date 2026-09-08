@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FIRST_FRAME_TIMEOUT_MS,
   NO_OBSERVATION_NOTICE,
   type ObservationSample,
+  WINDOW_REFUSED,
   applyObservedPush,
   applyObservedRead,
+  degradedReason,
   formatAppClass,
+  isDurableDegradation,
   isObservableSession,
   isObservationFresh,
   isRemintable,
@@ -355,5 +359,96 @@ describe('resolveLiveView', () => {
     });
     expect(view.status).toBe('unavailable');
     expect(view.src).toBeUndefined();
+  });
+
+  it('keeps the last picture when one pass comes back without one', () => {
+    // A grab killed inside a loaded container is the ordinary state of the
+    // container worth watching. Swapping the desktop for a page of explanation
+    // every few seconds is not an improvement on a frame one tick old.
+    const frame = sample({ image: 'UklGRg==', capturedAt: new Date(NOW - 700).toISOString() });
+    const missed = sample({ degraded: 'no-image', capturedAt: new Date(NOW).toISOString() });
+    const view = resolveLiveView({ sample: missed, frame, capability: capture, now: NOW });
+    expect(view.status).toBe('live');
+    expect(view.src).toBe('data:image/webp;base64,UklGRg==');
+  });
+
+  it('calls that kept picture stalled once the passes really have stopped', () => {
+    const frame = sample({ image: 'UklGRg==', capturedAt: new Date(NOW - 30_000).toISOString() });
+    const view = resolveLiveView({ sample: sample({ degraded: 'timeout' }), frame, capability: capture, now: NOW });
+    expect(view.status).toBe('stalled');
+    expect(view.src).toBe('data:image/webp;base64,UklGRg==');
+  });
+
+  it('still explains itself when the reason will not fix itself', () => {
+    // No later pass is going to find an ffmpeg the image does not ship, so a
+    // frame from before it was noticed would only be a stale desktop under a
+    // "live" label.
+    const frame = sample({ image: 'UklGRg==' });
+    const view = resolveLiveView({
+      sample: sample({ degraded: 'missing:ffmpeg' }),
+      frame,
+      capability: capture,
+      now: NOW,
+    });
+    expect(view).toEqual({ status: 'degraded', detail: 'missing:ffmpeg' });
+  });
+
+  it('stops waiting for a first frame that is never coming', () => {
+    // `thumbnails` is answered from the session row, so an agent that died
+    // under a row still reading RUNNING promises a picture forever.
+    const dead = { sample: undefined, capability: capture, now: NOW };
+    expect(resolveLiveView({ ...dead, waitingSince: NOW - FIRST_FRAME_TIMEOUT_MS }).status).toBe('unavailable');
+    // Inside the deadline a slow first frame is still just a slow first frame.
+    expect(resolveLiveView({ ...dead, waitingSince: NOW - 1_000 }).status).toBe('waiting');
+  });
+
+  it('names the thin capture when the deadline passes with samples but no picture', () => {
+    const view = resolveLiveView({
+      sample: sample({ degraded: 'no-image' }),
+      capability: capture,
+      waitingSince: NOW - FIRST_FRAME_TIMEOUT_MS,
+      now: NOW,
+    });
+    expect(view).toEqual({ status: 'degraded', detail: 'no-image' });
+  });
+
+  it('shows the refusal rather than a spinner when the first window was refused', () => {
+    // The session ended, or the org switched observation off, between opening
+    // the wall and opening this view.
+    const view = resolveLiveView({
+      sample: undefined,
+      capability: { thumbnails: false, reason: WINDOW_REFUSED },
+      now: NOW,
+    });
+    expect(view.status).toBe('unavailable');
+  });
+});
+
+describe('degradedReason', () => {
+  it('explains the missing picture, not the missing window count', () => {
+    // The agent appends its tokens as it finds them and the metadata helpers
+    // come first, so reading the first one blamed a black view on wmctrl.
+    expect(degradedReason('missing:wmctrl,no-image')).toEqual({ key: 'noImage' });
+    expect(degradedReason('missing:xprop,missing:wmctrl,missing:ffmpeg')).toEqual({
+      key: 'missingTool',
+      tool: 'ffmpeg',
+    });
+    expect(degradedReason('missing:xprop,timeout')).toEqual({ key: 'timeout' });
+  });
+
+  it('falls back to the only token there is', () => {
+    expect(degradedReason('missing:xprop')).toEqual({ key: 'missingTool', tool: 'xprop' });
+    expect(degradedReason('image-too-large')).toEqual({ key: 'tooLarge' });
+    expect(degradedReason('')).toEqual({ key: 'unknown' });
+  });
+});
+
+describe('isDurableDegradation', () => {
+  it('separates a container that cannot capture from one that is merely busy', () => {
+    expect(isDurableDegradation('missing:ffmpeg')).toBe(true);
+    expect(isDurableDegradation('unsupported:kubernetes')).toBe(true);
+    expect(isDurableDegradation('missing:wmctrl,timeout')).toBe(false);
+    expect(isDurableDegradation('no-image')).toBe(false);
+    expect(isDurableDegradation(undefined)).toBe(false);
   });
 });

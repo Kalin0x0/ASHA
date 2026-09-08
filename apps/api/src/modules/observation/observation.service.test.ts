@@ -68,6 +68,8 @@ interface Hold {
   windowId: string;
   since: string;
   expiresAt: number;
+  intervalMs: number;
+  thumbWidth: number;
 }
 
 /** The watch record as ObservationService keeps it: one entry per hold. */
@@ -77,8 +79,19 @@ const held = (...holds: Array<Partial<Hold> & { observerUserId: string }>) => ({
     windowId: 'default',
     since: '2026-09-08T10:00:00.000Z',
     expiresAt: Date.now() + 90_000,
+    ...DTO,
     ...h,
   })),
+});
+
+/** What the read-only live view holds a window at: measured, and far heavier. */
+const LIVE_DTO = { intervalMs: 700, thumbWidth: 960 };
+const observeStart = (over: Partial<{ intervalMs: number; thumbWidth: number }> = {}) => ({
+  action: 'OBSERVE_START',
+  kasmId: 'kid1',
+  ttlMs: 60_000,
+  ...DTO,
+  ...over,
 });
 
 describe('ObservationService', () => {
@@ -254,7 +267,12 @@ describe('ObservationService', () => {
     it('captures nothing at interval 0', async () => {
       const res = await svc.start(ADMIN, 'sess1', { intervalMs: 0, thumbWidth: 320 });
       expect(res).toMatchObject({ thumbnails: false, reason: 'capture_disabled' });
-      expect(sessions.sendControl).not.toHaveBeenCalled();
+      // Nobody on this session is asking for frames, so the agent is told to
+      // stop rather than left to its own 60 s deadline.
+      expect(sessions.sendControl).toHaveBeenCalledWith(CONTAINER_SESSION, {
+        action: 'OBSERVE_STOP',
+        kasmId: 'kid1',
+      });
     });
   });
 
@@ -524,7 +542,16 @@ describe('ObservationService', () => {
       const store = memoryRedis();
       store.set('asha:obs:watch:kid1', held(ADA, BOB));
       await svc.stop(ADMIN2, 'sess1');
-      expect(sessions.sendControl).not.toHaveBeenCalled();
+      // Capture goes on, re-stated for the hold that is left rather than simply
+      // not stopped: the command carries the dead-man deadline as well.
+      expect(sessions.sendControl).toHaveBeenCalledWith(
+        expect.objectContaining({ kasmId: 'kid1' }),
+        expect.objectContaining({ action: 'OBSERVE_START' }),
+      );
+      expect(sessions.sendControl).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ action: 'OBSERVE_STOP' }),
+      );
     });
 
     it('leaves no hold behind for the observer who stopped, while the other keeps theirs', async () => {
@@ -571,6 +598,76 @@ describe('ObservationService', () => {
       await svc.start(ADMIN2, 'sess1', DTO);
       expect(storedHolds().map((h) => h.observerUserId)).toEqual(['admin2']);
       expect(auditActions()).toEqual(['observation.start']);
+    });
+
+    describe('the cadence they share', () => {
+      it('captures at the shortest interval and widest frame anyone asked for', async () => {
+        memoryRedis();
+        await svc.start(ADMIN, 'sess1', LIVE_DTO, 'view');
+        sessions.sendControl.mockClear();
+        // A colleague's wall renews its tile on its own 20 s timer. Sending its
+        // own 5 s / 320 px dropped the live view to a thumbnail every five
+        // seconds, and the live view went on calling that "live".
+        await svc.start(ADMIN2, 'sess1', DTO, 'wall');
+        expect(sessions.sendControl).toHaveBeenCalledWith(
+          expect.objectContaining({ kasmId: 'kid1' }),
+          observeStart(LIVE_DTO),
+        );
+      });
+
+      it("holds that cadence through the wall's own renewals", async () => {
+        memoryRedis();
+        await svc.start(ADMIN, 'sess1', LIVE_DTO, 'view');
+        for (let i = 0; i < 3; i += 1) await svc.start(ADMIN2, 'sess1', DTO, 'wall');
+        const sent = sessions.sendControl.mock.calls.map((call) => call[1]);
+        expect(sent.every((cmd) => (cmd as { intervalMs: number }).intervalMs === 700)).toBe(true);
+      });
+
+      it('hands the session back to whoever is left when the demanding observer stops', async () => {
+        memoryRedis();
+        await svc.start(ADMIN2, 'sess1', DTO, 'wall');
+        await svc.start(ADMIN, 'sess1', LIVE_DTO, 'view');
+        sessions.sendControl.mockClear();
+        await svc.stop(ADMIN, 'sess1', 'view');
+        // Not merely "not stopped": the wall is still watching, and leaving the
+        // session at 700 ms / 960 px would bill the departed observer's cost to
+        // a thumbnail nobody enlarged.
+        expect(sessions.sendControl).toHaveBeenCalledWith(
+          expect.objectContaining({ kasmId: 'kid1' }),
+          observeStart(),
+        );
+      });
+
+      it("does the same when that observer's hold lapses instead", async () => {
+        const store = memoryRedis();
+        // What the sweep reads: the live sessions a hold could be sitting under.
+        prismaMock.session.findMany.mockResolvedValue([
+          { id: 'sess1', orgId: 'org1', kasmId: 'kid1', userId: 'worker1', zoneId: 'zone1', agentId: 'agent1', containerId: 'cont1' },
+        ]);
+        store.set(
+          'asha:obs:watch:kid1',
+          held(
+            { ...ADA, windowId: 'view', ...LIVE_DTO, expiresAt: Date.now() - 1 },
+            { ...BOB, windowId: 'wall' },
+          ),
+        );
+        await svc.sweepLapsedHolds();
+        expect(sessions.sendControl).toHaveBeenCalledWith(
+          expect.objectContaining({ kasmId: 'kid1' }),
+          observeStart(),
+        );
+      });
+
+      it('stops the capture once the last observer who wanted frames is gone', async () => {
+        memoryRedis();
+        await svc.start(ADMIN, 'sess1', LIVE_DTO, 'view');
+        sessions.sendControl.mockClear();
+        await svc.stop(ADMIN, 'sess1', 'view');
+        expect(sessions.sendControl).toHaveBeenCalledWith(expect.objectContaining({ kasmId: 'kid1' }), {
+          action: 'OBSERVE_STOP',
+          kasmId: 'kid1',
+        });
+      });
     });
   });
 
@@ -715,7 +812,10 @@ describe('ObservationService', () => {
       store.set('asha:obs:watch:kid1', held({ ...ADA, ...lapsed }, BOB));
       await svc.sweepLapsedHolds();
       expect(store.has('asha:obs:watch:kid1')).toBe(true);
-      expect(sessions.sendControl).not.toHaveBeenCalled();
+      expect(sessions.sendControl).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ action: 'OBSERVE_STOP' }),
+      );
       expect(notices()).toEqual([
         { sessionId: 'sess1', observerName: 'Bob Kahn', since: BOB.since, active: true },
       ]);

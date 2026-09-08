@@ -24,19 +24,20 @@ import { SessionsService } from '../sessions/sessions.service';
 /** Newest sample for one session. */
 const sampleKey = (kasmId: string) => `asha:obs:${kasmId}`;
 /**
- * Who is watching one session right now — drives the notice the user sees, and
- * the forward-auth gate's answer on the container `/observe` route. Exported
- * because that gate has to read the same record rather than keep its own idea
- * of who is watching.
+ * Who is watching one session right now — the record the notice on the watched
+ * person's screen is built from, and the one thing a running observation is
+ * revoked through.
  *
- * The value is `{ holds: WatchHold[] }`, and everything that revokes a running
- * stream reads it: this service, `SessionsService`, the gate, and the
- * connection-proxy's `isWatchActive`. Whether one observer may still stream is
- * answered from `observerUserId` and `expiresAt`, never from the key existing —
- * the key outlives its longest hold, and one of several observers stopping does
- * not delete it.
+ * The value is `{ holds: WatchHold[] }` and it has three readers, none of which
+ * imports this: this service, `SessionsService.observationHolds` (the banner a
+ * viewer reads back after a reload), and the connection-proxy's `isWatchActive`,
+ * which spells the key out as a literal in session-store.ts because it shares no
+ * code with the API. Whether one observer may still watch is answered from
+ * `observerUserId` and `expiresAt`, never from the key existing — the key
+ * outlives its longest hold, and one of several observers stopping does not
+ * delete it.
  */
-export const watchKey = (kasmId: string) => `asha:obs:watch:${kasmId}`;
+const watchKey = (kasmId: string) => `asha:obs:watch:${kasmId}`;
 
 // A frame of someone's desktop is the most sensitive artefact this product
 // holds. Samples live in Redis for half a minute and reach neither Postgres nor
@@ -94,7 +95,7 @@ const RECORD_GRACE_SEC = 30;
  * or stop the other's capture — `SessionObservedEvent.active` has always been
  * documented as "false once the LAST observer leaves".
  */
-export interface WatchHold {
+interface WatchHold {
   observerUserId: string;
   observerName: string;
   /** Distinguishes several holds by the same observer. */
@@ -103,9 +104,16 @@ export interface WatchHold {
   since: string;
   /** Epoch ms this hold lapses at unless it is renewed. */
   expiresAt: number;
+  /**
+   * What this hold asked the capture to be. Kept on the hold rather than acted
+   * on directly, because the agent has one capture window per session and every
+   * hold on that session has to be weighed against it — see `captureWindow`.
+   */
+  intervalMs: number;
+  thumbWidth: number;
 }
 
-export interface WatchRecord {
+interface WatchRecord {
   holds: WatchHold[];
 }
 
@@ -167,7 +175,7 @@ type ResolvedTarget = { kind: 'guac'; token: string } | Exclude<WatchTarget, { k
  * renewals. Anything that is not a hold list — a record written by an older
  * build, a half-written value — reads as nobody watching.
  */
-export function liveHolds(record: WatchRecord | null, now: number): WatchHold[] {
+function liveHolds(record: WatchRecord | null, now: number): WatchHold[] {
   return allHolds(record).filter((h) => h.expiresAt > now);
 }
 
@@ -186,6 +194,39 @@ function allHolds(record: WatchRecord | null): WatchHold[] {
 /** How many people are behind those holds — one observer may hold several. */
 function observerCount(holds: WatchHold[]): number {
   return new Set(holds.map((h) => h.observerUserId)).size;
+}
+
+// What a hold written before it carried its own parameters was asking for. The
+// wall was the only caller then, and its defaults are the schema's.
+const LEGACY_INTERVAL_MS = 5_000;
+const LEGACY_THUMB_WIDTH = 320;
+
+/**
+ * How the session has to be captured to satisfy every hold on it at once.
+ *
+ * The agent keeps ONE capture window per session, so the parameters are a
+ * property of the session and not of whoever posted last. Forwarding each
+ * caller's own values made every renewal a re-tune: a wall left open in another
+ * tab dropped a colleague's live view from 960 px every 700 ms to 320 px every
+ * five seconds, roughly every twenty seconds, and the live view went on calling
+ * that "live" because five seconds is inside its stall window.
+ *
+ * The shortest interval and the widest frame anyone is waiting for, therefore —
+ * the most demanding observer sets the cadence, and everyone else is served by
+ * it. Null when nobody wants frames at all (every hold sits at interval 0, the
+ * "metadata only" setting), which is a stop rather than a slower capture.
+ */
+function captureWindow(holds: WatchHold[]): { intervalMs: number; thumbWidth: number } | null {
+  const wanted = holds.map((h) => ({
+    intervalMs: typeof h.intervalMs === 'number' ? h.intervalMs : LEGACY_INTERVAL_MS,
+    thumbWidth: typeof h.thumbWidth === 'number' ? h.thumbWidth : LEGACY_THUMB_WIDTH,
+  }));
+  const capturing = wanted.filter((w) => w.intervalMs > 0);
+  if (capturing.length === 0) return null;
+  return {
+    intervalMs: Math.min(...capturing.map((w) => w.intervalMs)),
+    thumbWidth: Math.max(...capturing.map((w) => w.thumbWidth)),
+  };
 }
 
 /**
@@ -248,16 +289,6 @@ export class ObservationService {
 
     const target = await this.resolveTarget(user, session);
 
-    if (capture) {
-      await this.sessions.sendControl(session, {
-        action: 'OBSERVE_START',
-        kasmId: session.kasmId,
-        intervalMs: dto.intervalMs,
-        ttlMs: CAPTURE_TTL_MS,
-        thumbWidth: dto.thumbWidth,
-      });
-    }
-
     // Read-modify-write on a plain key: two calls landing in the same
     // millisecond can lose one hold, which the loser re-asserts on its next
     // renewal 20 s later. A Redis set per session would trade that for a second
@@ -273,6 +304,8 @@ export class ObservationService {
       // restarting it, so the banner keeps counting from when they arrived.
       since: mine[0]?.since ?? new Date(now).toISOString(),
       expiresAt: now + WATCH_TTL_SEC * 1000,
+      intervalMs: dto.intervalMs,
+      thumbWidth: dto.thumbWidth,
     };
     const holds: WatchHold[] = [
       ...before.filter((h) => h.observerUserId !== user.sub),
@@ -282,6 +315,7 @@ export class ObservationService {
       ),
     ];
     await this.redis.set(watchKey(session.kasmId), { holds } satisfies WatchRecord, this.recordTtlSec(holds, now));
+    await this.retuneCapture(session, holds);
 
     // Everything below is about the transition. A renewal changes nothing the
     // watched person or the audit trail needs to hear about, and announcing it
@@ -321,6 +355,37 @@ export class ObservationService {
     });
 
     return this.windowFor(session, windowId, target, capture, reason);
+  }
+
+  /**
+   * Tell the agent what this session is to be captured at now.
+   *
+   * A command is a statement about the session, never about the caller: the
+   * agent holds one window per session, so the values are reconciled across
+   * every hold still standing before they are sent. It runs on each open,
+   * renewal and release — a renewal because the command carries the dead-man
+   * deadline the agent stops itself on, and a release because the observer who
+   * left must not leave the session captured at the cadence they asked for.
+   */
+  private async retuneCapture(
+    session: { id: string; zoneId: string | null; kasmId: string; agentId: string | null; containerId: string | null },
+    holds: WatchHold[],
+  ): Promise<void> {
+    // No agent inside it, so there is nothing to capture and nothing to stop —
+    // a fixed server is watched through the proxy instead.
+    if (!session.agentId || !session.containerId) return;
+    const window = captureWindow(holds);
+    if (!window) {
+      await this.sessions.sendControl(session, { action: 'OBSERVE_STOP', kasmId: session.kasmId });
+      return;
+    }
+    await this.sessions.sendControl(session, {
+      action: 'OBSERVE_START',
+      kasmId: session.kasmId,
+      intervalMs: window.intervalMs,
+      ttlMs: CAPTURE_TTL_MS,
+      thumbWidth: window.thumbWidth,
+    });
   }
 
   /**
@@ -477,9 +542,6 @@ export class ObservationService {
 
     if (holds.length === 0) {
       await this.redis.del(watchKey(session.kasmId));
-      if (session.agentId && session.containerId) {
-        await this.sessions.sendControl(session, { action: 'OBSERVE_STOP', kasmId: session.kasmId });
-      }
       this.gateway.emitToSession(session.id, {
         type: 'session.observed',
         payload: {
@@ -504,6 +566,7 @@ export class ObservationService {
         });
       }
     }
+    await this.retuneCapture(session, holds);
 
     if (closed) {
       await this.security.emit({
@@ -585,9 +648,6 @@ export class ObservationService {
 
     if (holds.length === 0) {
       await this.redis.del(watchKey(session.kasmId));
-      if (session.agentId && session.containerId) {
-        await this.sessions.sendControl(session, { action: 'OBSERVE_STOP', kasmId: session.kasmId });
-      }
       this.gateway.emitToSession(session.id, {
         type: 'session.observed',
         payload: {
@@ -617,6 +677,7 @@ export class ObservationService {
         });
       }
     }
+    await this.retuneCapture(session, holds);
 
     for (const observerUserId of gone) {
       await this.security.emit({

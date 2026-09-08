@@ -19,9 +19,10 @@ const MIN_TTL_MS = 5_000;
 const MAX_TTL_MS = 600_000;
 const DEFAULT_THUMB_WIDTH = 320;
 const MIN_THUMB_WIDTH = 160;
-// The ceiling the live view asks for. Kept in step with startObservationSchema
-// and with clampThumbWidth in the drivers: a width past what the wire contract
-// carries would only produce frames the manager rejects.
+// The ceiling the wire contract carries, not the width anything asks for — the
+// live view asks for 960 px and the wall for 320. Kept in step with
+// startObservationSchema and with clampThumbWidth in the drivers: a width past
+// it would only produce frames the manager rejects.
 const MAX_THUMB_WIDTH = 1280;
 
 export interface ObservationRunnerDeps {
@@ -113,6 +114,10 @@ export function createObservationRunner(deps: ObservationRunnerDeps): Observatio
       const thumbWidth = bounded(cmd.thumbWidth, DEFAULT_THUMB_WIDTH, MIN_THUMB_WIDTH, MAX_THUMB_WIDTH);
       const expiresAt = Date.now() + bounded(cmd.ttlMs, DEFAULT_TTL_MS, MIN_TTL_MS, MAX_TTL_MS);
 
+      // One window per session, overwritten by whatever the manager last said.
+      // That is not last-writer-wins between observers: the manager reconciles
+      // every hold on the session into one set of parameters before it sends
+      // them, so what arrives here is already the whole session's demand.
       const existing = windows.get(cmd.sessionId);
       if (existing) {
         existing.expiresAt = expiresAt;

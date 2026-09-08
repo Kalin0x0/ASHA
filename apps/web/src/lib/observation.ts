@@ -55,6 +55,23 @@ export const OBSERVE_LIVE_THUMB_WIDTH = 960;
 export const LIVE_STALL_MS = 6_000;
 
 /**
+ * How long the view waits for its FIRST frame before it says something instead
+ * of spinning.
+ *
+ * `capability.thumbnails` is answered from the session row — an agent id and a
+ * container id — not from the agent replying, so an agent that died under a row
+ * still reading RUNNING promises a picture that will never arrive, and the stall
+ * rule cannot help because it only applies once a frame exists.
+ *
+ * Three times the stall window. A first frame has to clear the control message
+ * to the agent, one capture (~540 ms measured, and the agent skips a pass whose
+ * predecessor is still running) and the trip back — and if the socket never
+ * connects it arrives on the 8 s poll behind it instead. 18 s clears two of
+ * those polls, so nothing that is merely slow is called dead.
+ */
+export const FIRST_FRAME_TIMEOUT_MS = 3 * LIVE_STALL_MS;
+
+/**
  * How often an open window is renewed. The agent stops capturing 60s after the
  * last request it saw, so renewing well inside that keeps the wall alive without
  * re-posting once per frame at the 3s cadence.
@@ -80,9 +97,16 @@ export const OBSERVATION_MAX_AGE_MS = 30_000;
  */
 export interface ObservationCapability {
   thumbnails: boolean;
-  /** `no_agent`, `capture_disabled` — the machine tokens the API answers with. */
+  /**
+   * `no_agent`, `capture_disabled` — the machine tokens the API answers with —
+   * plus `window_refused`, which the API never sends because it is what the
+   * caller records when the API refused to answer at all.
+   */
   reason?: string;
 }
+
+/** No window was opened: the session ended, or the org switched observation off. */
+export const WINDOW_REFUSED = 'window_refused';
 
 export function isObservationFresh(sample: ObservationSample, now = Date.now()): boolean {
   const at = Date.parse(sample.capturedAt);
@@ -139,19 +163,57 @@ export function formatAppClass(appClass: string | undefined): string | undefined
 }
 
 /**
+ * Which of the tokens in a degraded sample explains the missing picture.
+ *
+ * The agent appends them in the order it discovers them, and the metadata
+ * helpers come first: an image without `wmctrl` that ALSO failed its grab
+ * reports `missing:wmctrl,no-image`, and reading the first token explained a
+ * black view as a missing window counter. `xprop` and `wmctrl` cost a title and
+ * a window count; only these tokens cost the frame.
+ */
+function imageToken(tokens: string[]): string | undefined {
+  return tokens.find(
+    (t) =>
+      t === 'missing:ffmpeg' ||
+      t === 'timeout' ||
+      t === 'image-too-large' ||
+      t === 'no-image' ||
+      t.startsWith('unsupported:'),
+  );
+}
+
+/**
  * The agent reports why a capture came back thin as machine tokens
  * (`missing:ffmpeg`, `timeout`, `image-too-large`, `no-image`,
  * `unsupported:kubernetes`) rather than prose, because prose in the agent would
  * be untranslatable. Turn one into a message key plus the tool it names.
  */
 export function degradedReason(degraded: string): { key: string; tool?: string } {
-  const first = degraded.split(/[\s,]+/).filter(Boolean)[0] ?? '';
-  if (first.startsWith('missing:')) return { key: 'missingTool', tool: first.slice('missing:'.length) };
-  if (first.startsWith('unsupported:')) return { key: 'unsupportedDriver' };
-  if (first === 'timeout') return { key: 'timeout' };
-  if (first === 'image-too-large') return { key: 'tooLarge' };
-  if (first === 'no-image') return { key: 'noImage' };
+  const tokens = degraded.split(/[\s,]+/).filter(Boolean);
+  const token = imageToken(tokens) ?? tokens[0] ?? '';
+  if (token.startsWith('missing:')) return { key: 'missingTool', tool: token.slice('missing:'.length) };
+  if (token.startsWith('unsupported:')) return { key: 'unsupportedDriver' };
+  if (token === 'timeout') return { key: 'timeout' };
+  if (token === 'image-too-large') return { key: 'tooLarge' };
+  if (token === 'no-image') return { key: 'noImage' };
   return { key: 'unknown' };
+}
+
+/**
+ * Whether a thin capture will stay thin.
+ *
+ * A workspace image that ships no ffmpeg, or a driver that cannot grab a frame
+ * at all, will not grow one mid-session — nothing better is coming, so the view
+ * may as well explain itself. A grab that timed out or returned nothing is the
+ * container being busy, which is the ordinary state of the container worth
+ * watching, and the next pass may well succeed.
+ */
+export function isDurableDegradation(degraded: string | undefined): boolean {
+  if (!degraded) return false;
+  return degraded
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .some((t) => t === 'missing:ffmpeg' || t.startsWith('unsupported:'));
 }
 
 /** Why a tile has no picture — each maps to its own line of copy. */
@@ -275,29 +337,47 @@ export function applyObservedRead(
  * `stalled` keeps the last frame on screen and says so, rather than blanking:
  * the observer needs to know the picture stopped, and a frozen desktop with no
  * label is exactly the lie the wall's 30 s freshness rule exists to prevent.
- * `degraded` is the sample arriving without a picture in it — a workspace image
- * that ships no ffmpeg — which would otherwise spin forever.
+ * `degraded` is reserved for a container that cannot produce a picture at all —
+ * a workspace image with no ffmpeg — because it replaces the desktop with a
+ * page of explanation, and doing that over one skipped grab took the picture
+ * away every few seconds on exactly the loaded container worth watching.
  */
 export type LiveViewStatus = 'live' | 'stalled' | 'waiting' | 'degraded' | 'unavailable';
 
 export function resolveLiveView(args: {
   sample: ObservationSample | undefined;
+  /**
+   * The newest sample that actually carried a picture. Passes arrive without
+   * one whenever the grab is killed inside the container, and the last good
+   * frame under a "stalled" label says more than an error page does.
+   */
+  frame?: ObservationSample;
   capability: ObservationCapability | undefined;
+  /** Epoch ms this view (re)started asking for frames — the deadline runs from here. */
+  waitingSince?: number;
   now?: number;
 }): { status: LiveViewStatus; src?: string; detail?: string } {
-  const { sample, capability, now = Date.now() } = args;
-  // The API answered that nothing can be captured here — no agent, or capture
-  // switched off org-wide. There is no second stream to fall back to.
+  const { sample, frame, capability, waitingSince, now = Date.now() } = args;
+  // The API answered that nothing can be captured here — no agent, capture
+  // switched off org-wide, or the window refused outright. There is no second
+  // stream to fall back to.
   if (capability && !capability.thumbnails) return { status: 'unavailable' };
-  const src = observationImageSrc(sample?.image);
+  // A missing helper or a driver that cannot grab will not fix itself, so the
+  // explanation is the whole truth and a stale frame under it would be a lie.
+  if (isDurableDegradation(sample?.degraded)) return { status: 'degraded', detail: sample?.degraded };
+  const shown = sample?.image ? sample : frame;
+  const src = observationImageSrc(shown?.image);
   if (src) {
     // An unparseable timestamp reads as stale, which is the honest direction.
-    const age = now - Date.parse(sample?.capturedAt ?? '');
+    const age = now - Date.parse(shown?.capturedAt ?? '');
     return { status: age < LIVE_STALL_MS ? 'live' : 'stalled', src };
   }
-  // The capture came back thin. Workspace images are third-party, so this is a
-  // missing helper far more often than it is a fault, and the agent names which.
-  if (sample?.degraded) return { status: 'degraded', detail: sample.degraded };
+  // Nothing with a picture in it has ever arrived. Past the deadline that is
+  // worth saying: either every pass came back thin, or — with no sample at all —
+  // the agent is not answering, which is what the unavailable panel describes.
+  if (waitingSince !== undefined && now - waitingSince >= FIRST_FRAME_TIMEOUT_MS) {
+    return sample?.degraded ? { status: 'degraded', detail: sample.degraded } : { status: 'unavailable' };
+  }
   return { status: 'waiting' };
 }
 

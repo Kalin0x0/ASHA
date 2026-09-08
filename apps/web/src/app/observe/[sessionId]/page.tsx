@@ -16,6 +16,7 @@ import {
   OBSERVE_LIVE_INTERVAL_MS,
   OBSERVE_LIVE_THUMB_WIDTH,
   OBSERVE_RENEW_MS,
+  WINDOW_REFUSED,
   applyObservedPush,
   applyObservedRead,
   degradedReason,
@@ -29,8 +30,8 @@ import { createWindowId } from '@/lib/observation-windows';
 import { useRealtimeEvents } from '@/lib/realtime';
 import { cn } from '@/lib/utils';
 
-/** A refused renewal — the session ended, or policy changed under us — must not
- *  tear the picture down; the status line says when frames stop. */
+/** Releasing a window that has already gone — the session ended, the record
+ *  lapsed — is nothing to report on the way out of the page. */
 const ignoreWindowError = (): void => {};
 
 /** How often the age of the newest frame is re-read, so "stalled" can appear
@@ -130,25 +131,54 @@ export default function ObserveSessionPage() {
   const stopRef = useRef(stopObservation);
   stopRef.current = stopObservation;
 
+  // Nothing is captured while this tab is in the background — the rule the wall
+  // already keeps, and this view is the expensive one: a 960 px frame every
+  // 700 ms is roughly 0.8 of a core on the agent host and 53 kB/s off the uplink,
+  // spent on a picture nobody is looking at.
+  const [backgrounded, setBackgrounded] = useState(false);
+  useEffect(() => {
+    const sync = () => setBackgrounded(document.visibilityState === 'hidden');
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    return () => document.removeEventListener('visibilitychange', sync);
+  }, []);
+
+  // When this view last started asking for frames. The deadline for the first
+  // one runs from here rather than from the mount, so time spent with the tab
+  // hidden — when nothing was being captured — is not counted against the agent.
+  const [waitingSince, setWaitingSince] = useState(() => Date.now());
+
   // The window this page holds asks for the live cadence, not the wall's: here
   // the capture IS the picture, so it is taken as fast as the container manages.
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || backgrounded) return;
+    let answered = false;
     const open = () =>
       void startObservation(
         sessionId,
         { intervalMs: OBSERVE_LIVE_INTERVAL_MS, thumbWidth: OBSERVE_LIVE_THUMB_WIDTH },
         windowId,
       )
-        .then((win) => setCapability({ thumbnails: win.thumbnails, ...(win.reason ? { reason: win.reason } : {}) }))
-        .catch(ignoreWindowError);
+        .then((win) => {
+          answered = true;
+          setCapability({ thumbnails: win.thumbnails, ...(win.reason ? { reason: win.reason } : {}) });
+        })
+        .catch(() => {
+          // A refused RENEWAL must not tear the picture down: there is a frame
+          // and a status line by then, and the status line is what says the
+          // frames stopped. A refused FIRST window has neither — the session
+          // ended, or the org switched observation off — and leaving that to the
+          // spinner told the observer nothing at all.
+          if (!answered) setCapability({ thumbnails: false, reason: WINDOW_REFUSED });
+        });
+    setWaitingSince(Date.now());
     open();
     const timer = window.setInterval(open, OBSERVE_RENEW_MS);
     return () => {
       window.clearInterval(timer);
       void stopRef.current(sessionId, windowId).catch(ignoreWindowError);
     };
-  }, [sessionId, windowId, startObservation]);
+  }, [sessionId, windowId, startObservation, backgrounded]);
 
   // The socket is the fast path. The poll behind it is what puts a picture up at
   // all when the socket cannot connect — slowly, and labelled stale, which still
@@ -169,7 +199,13 @@ export default function ObserveSessionPage() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const view = resolveLiveView({ sample, capability, now });
+  // The newest sample that carried a picture. A pass that came back without one
+  // — the grab killed inside a container under load — must not take the desktop
+  // off the screen: the age of this frame is what says the picture stopped.
+  const frameRef = useRef<ObservationSample | undefined>(undefined);
+  if (sample?.image) frameRef.current = sample;
+
+  const view = resolveLiveView({ sample, frame: frameRef.current, capability, waitingSince, now });
   const appClass = formatAppClass(sample?.appClass);
   const degraded = view.status === 'degraded' ? degradedReason(view.detail ?? '') : undefined;
 
@@ -215,7 +251,11 @@ export default function ObserveSessionPage() {
             <MonitorX className="size-9 text-muted-foreground" />
             <p className="font-display text-lg">{t('observe.unavailableTitle')}</p>
             <p className="max-w-md text-sm text-muted-foreground">
-              {degraded ? td(degraded.key, { tool: degraded.tool ?? '' }) : t('observe.unavailableDescription')}
+              {degraded
+                ? td(degraded.key, { tool: degraded.tool ?? '' })
+                : capability?.reason === WINDOW_REFUSED
+                  ? t('observe.refusedDescription')
+                  : t('observe.unavailableDescription')}
             </p>
             <Button variant="secondary" size="sm" onClick={back} className="mt-1">
               {t('observe.backToMonitor')}

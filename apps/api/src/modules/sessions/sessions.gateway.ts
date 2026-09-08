@@ -22,7 +22,16 @@ import { SessionsService } from './sessions.service';
  * single-replica deployment; a second replica needs the adapter before anything
  * may rely on a client seeing every event.
  */
-@WebSocketGateway({ namespace: '/ws', cors: { origin: '*' } })
+/**
+ * `path` is the HTTP endpoint socket.io actually serves; `namespace` is only a
+ * label inside the connection. Left at its default the handshake goes to
+ * `/socket.io/`, which Traefik routes to the web container — the api router
+ * matches `/api` and `/ws` (docker-compose.yml) — so the socket never reached
+ * this gateway at all and every realtime update, the "you are being watched"
+ * notice included, silently fell back to polling or nothing. Serving it under
+ * `/ws` puts it inside the rule that already exists.
+ */
+@WebSocketGateway({ namespace: '/ws', path: '/ws/socket.io', cors: { origin: '*' } })
 export class SessionsGateway implements OnGatewayConnection {
   @WebSocketServer() server!: Server;
 

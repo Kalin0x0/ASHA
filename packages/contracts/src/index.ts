@@ -346,11 +346,12 @@ export type SessionStatsDto = z.infer<typeof sessionStatsSchema>;
  * `image` is a bare base64 WebP, and the cap is a CHARACTER count while the
  * agent's is a byte count — base64 grows 3 bytes into 4, so 393_216 characters
  * is 294_912 bytes of WebP. That is sized for the live view, not for the wall:
- * a 320 px frame measures ~2.4 KB, and the 1280 px one the live view asks for
- * covers sixteen times the pixels, so even at a linear worst case it lands near
- * 40 KB and the cap leaves it sevenfold headroom. It also stays inside the
- * global 512 kB JSON body limit main.ts sets, with the rest of the sample (title,
- * appClass, degraded — about a kilobyte together) counted in.
+ * the 320 px wall thumbnail measures ~8.4 KB and the 960 px frame the live view
+ * asks for ~37 KB, both against a container with a real page on screen (the
+ * measured table sits beside OBSERVE_LIVE_* in apps/web/src/lib/observation.ts),
+ * so the cap leaves the larger of the two eightfold headroom. It also stays
+ * inside the global 512 kB JSON body limit main.ts sets, with the rest of the
+ * sample (title, appClass, degraded — about a kilobyte together) counted in.
  */
 export const sessionObservationSchema = z.object({
   kasmId: z.string().min(1).max(64),
@@ -372,10 +373,12 @@ export type SessionObservationDto = z.infer<typeof sessionObservationSchema>;
  *
  * The bounds span two very different callers. The wall asks for a 320 px frame
  * every five seconds across every tile on screen; the read-only live view asks
- * one session for 1280 px twice a second, because for a container desktop that
- * stream IS the live view. The agent clamps to the same range and skips a tick
- * whose predecessor is still running, so asking for more than a container can
- * deliver costs frames, never execs.
+ * one session for a 960 px frame every 700 ms, because for a container desktop
+ * that stream IS the live view. Those two are what ships — the range around them
+ * is headroom — and both are measured rather than chosen: see OBSERVE_LIVE_* in
+ * apps/web/src/lib/observation.ts. The agent clamps to the same range and skips
+ * a tick whose predecessor is still running, so asking for more than a container
+ * can deliver costs frames, never execs.
  */
 export const startObservationSchema = z.object({
   /** Sampling cadence. 0 disables capture and leaves metadata only. */

@@ -571,6 +571,32 @@ export default function StreamingViewerPage() {
     }
   };
 
+  // Second lock on the same door as the iframe's withheld fullscreen grant
+  // (see the <iframe> further down). A SAME-ORIGIN frame still inherits
+  // `fullscreen` from this document's own default allowlist, so KasmVNC's
+  // in-frame control bar can still make the frame the fullscreen element — and
+  // the browser then paints only that subtree, which does not contain the "an
+  // administrator is watching" strip. Whenever the frame ends up holding
+  // fullscreen, hand it to the viewer root instead: same picture, same gesture,
+  // and the strip stays on screen. Swapping the element is allowed while a
+  // fullscreen session is already running, so no fresh user gesture is needed;
+  // if the swap is refused all the same, leaving fullscreen is the honest
+  // fallback, because a desktop full of screen with no notice on it is the one
+  // outcome this feature may not produce.
+  useEffect(() => {
+    const onChange = () => {
+      if (!document.fullscreenElement || document.fullscreenElement !== kasmFrameRef.current) return;
+      const root = rootRef.current;
+      const leave = () => void document.exitFullscreen?.().catch(() => {});
+      if (!root) return leave();
+      const swap = root.requestFullscreen?.();
+      if (swap) void swap.catch(leave);
+      else leave();
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
   const fullscreen = () => {
     // The toolbar is inside the fullscreen element now, so the same button has
     // to lead back out of it.
@@ -1024,9 +1050,12 @@ function LiveStream({
         title={`${workspaceName} — ${isWebRtc ? 'WebRTC/H.264' : t('status.liveStream')}`}
         onLoad={handleLoad}
         className="size-full border-0 bg-anthracite-950"
-        // Neko/KasmVNC both need scripts + clipboard/pointer/fullscreen + WebRTC media.
-        allow="fullscreen; clipboard-read; clipboard-write; autoplay; microphone; camera; display-capture"
-        allowFullScreen
+        // Neko/KasmVNC both need scripts + clipboard/pointer + WebRTC media.
+        // Fullscreen is deliberately not among them and allowFullScreen is gone
+        // with it: KasmVNC's own control bar would otherwise make this FRAME the
+        // fullscreen element, and the notice lives outside it — see the
+        // fullscreenchange handler in the page above.
+        allow="clipboard-read; clipboard-write; autoplay; microphone; camera; display-capture"
       />
       {!ready && (
         <div className="absolute inset-0 top-14 flex flex-col items-center justify-center gap-3 bg-aurora">

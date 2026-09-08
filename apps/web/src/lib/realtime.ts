@@ -81,6 +81,9 @@ export function connectRealtime({ sessionId, onEvent, onStatus }: RealtimeConnec
     presented = token;
     onStatus('connecting');
     socket = io(`${WS_URL}/ws`, {
+      // Must match the gateway's own `path`: the default `/socket.io/` is not
+      // routed to the API, so the handshake would reach the web container.
+      path: '/ws/socket.io',
       auth: (cb) => cb({ token: getAccessToken() ?? '', ...(sessionId ? { sessionId } : {}) }),
       reconnectionDelayMax: 10_000,
     });

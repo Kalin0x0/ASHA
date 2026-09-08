@@ -528,9 +528,9 @@ const CAPTURE_TIMEOUT_MS = 5_000;
  * running, and there is no API to kill an exec — so a display that stopped
  * answering would otherwise leave an `sh` and an `ffmpeg` behind on every pass.
  * A property read takes milliseconds and the 320 px frame grab was measured at
- * ~300 ms; a 1280 px one covers sixteen times the pixels and stays well inside
- * the frame limit, which is chosen so a wedged pass is gone long before it could
- * accumulate.
+ * ~300 ms; the 960 px one the live view asks for covers nine times the pixels
+ * and stays well inside the frame limit, which is chosen so a wedged pass is
+ * gone long before it could accumulate.
  */
 const CAPTURE_META_KILL_SEC = 1;
 const CAPTURE_FRAME_KILL_SEC = 4;
@@ -543,8 +543,9 @@ const MAX_CAPTURE_BYTES = 393_216;
 /**
  * Largest frame that still fits the wire contract: the sample carries the image
  * base64-encoded in a 393_216-character field, and base64 grows 3 bytes into 4.
- * Sized for the 1280 px frame the live view asks for — sixteen times the pixels
- * of the 320 px wall thumbnail, which measures ~2.4 KB.
+ * Sized for the 960 px frame the live view asks for — nine times the pixels of
+ * the 320 px wall thumbnail, and measured at ~37 KB against ~8.4 KB, so a real
+ * frame lands eightfold inside this.
  */
 const MAX_IMAGE_BYTES = 294_912;
 

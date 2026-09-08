@@ -178,7 +178,7 @@
       "hint": "Tap to click, hold for a right click, two fingers to zoom and scroll."
     }
   },
-"observe": {
+  "observe": {
     "back": "Back to live monitoring",
     "subtitle": "View only — nothing you do reaches this desktop",
     "streamTitle": "Live view",
@@ -197,6 +197,7 @@
     },
     "unavailableTitle": "There is nothing to watch here",
     "unavailableDescription": "The live view of a container desktop is the picture its agent takes inside it. No agent is reporting for this session, so there is none to show.",
+    "refusedDescription": "This live view could not be opened. Either the session has ended, or live observation is switched off for this organisation.",
     "backToMonitor": "Go to live monitoring"
   },
   "observed": {

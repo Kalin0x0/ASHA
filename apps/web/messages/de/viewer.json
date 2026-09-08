@@ -178,7 +178,7 @@
       "hint": "Tippen = Klick, Halten = Rechtsklick, zwei Finger zum Zoomen und Scrollen."
     }
   },
-"observe": {
+  "observe": {
     "back": "Zurück zur Live-Überwachung",
     "subtitle": "Nur ansehen — nichts davon erreicht diesen Desktop",
     "streamTitle": "Live-Bild",
@@ -197,6 +197,7 @@
     },
     "unavailableTitle": "Hier gibt es nichts anzusehen",
     "unavailableDescription": "Das Live-Bild eines Container-Desktops entsteht im Container selbst, über dessen Agenten. Für diese Sitzung meldet sich keiner — also gibt es auch kein Bild.",
+    "refusedDescription": "Dieses Live-Bild ließ sich nicht öffnen. Entweder ist die Sitzung beendet, oder die Live-Beobachtung ist für diese Organisation ausgeschaltet.",
     "backToMonitor": "Zur Live-Überwachung"
   },
   "observed": {
