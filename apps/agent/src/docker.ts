@@ -148,6 +148,12 @@ export interface ProvisionResult {
   internalHost: string;
   port: number;
   routerName: string;
+  /**
+   * Whether the read-only KasmVNC account really exists in this image. False for
+   * anything that only resembles Kasm, and the manager then withholds the live
+   * view instead of sending an admin to a 401.
+   */
+  viewerAuth: boolean;
 }
 
 /** Host devices to pass through, including the VAAPI render node when selected. */
@@ -200,12 +206,60 @@ async function bootstrapCups(container: Docker.Container): Promise<void> {
   await exec.start({ Detach: true });
 }
 
+/**
+ * Give the image's read-only KasmVNC account a password of our own.
+ *
+ * kasmweb images ship `kasm_viewer` (read, no write) next to `kasm_user`, but
+ * nothing sets its password, so it answers 401 — and `VNC_VIEW_ONLY_PW` in the
+ * container env does NOT set it either (measured). Writing the entry directly
+ * is what works. Runs as the image's default user: kasm-user owns
+ * `~/.kasmpasswd`, and the root that bootstrapCups needs would write a file the
+ * VNC server cannot read.
+ *
+ * `printf` rather than `echo -e`: /bin/sh is dash in these images and would
+ * pass `-e` through as text, making it the first line of the password.
+ */
+async function bootstrapViewerPassword(
+  container: Docker.Container,
+  password: string,
+): Promise<boolean> {
+  // Attached, not detached like the other bootstraps, because the ANSWER
+  // matters: images that only look like Kasm (the linuxserver ones serve their
+  // desktop through nginx and ship no kasmvncpasswd) would otherwise get an
+  // observe route that authenticates nobody, and an admin would click "watch"
+  // into a 401. Reporting the failure lets the manager withhold the offer.
+  const script =
+    'command -v kasmvncpasswd >/dev/null 2>&1 || exit 1; ' +
+    `printf '%s\n%s\n' '${password}' '${password}' | ` +
+    'kasmvncpasswd -u kasm_viewer -r "${HOME:-/home/kasm-user}/.kasmpasswd" >/dev/null 2>&1 ' +
+    "&& printf 'ok'";
+  try {
+    const exec = await container.exec({
+      Cmd: ['/bin/sh', '-c', script],
+      AttachStdout: true,
+      AttachStderr: false,
+    });
+    const stream = (await exec.start({ hijack: true, stdin: false })) as Duplex;
+    const { stdout } = await readExecStdout(stream, 1024, 5_000);
+    return stdout.toString('utf8').includes('ok');
+  } catch {
+    return false;
+  }
+}
+
 export async function provisionContainer(cmd: ProvisionCommand): Promise<ProvisionResult> {
   await ensureImage(cmd.runConfig.dockerImage);
 
   const port = cmd.runConfig.ports[0] ?? 6901;
   const router = routerName(cmd.kasmId);
   const vncPw = randomBytes(9).toString('base64url');
+  // Second, weaker credential for the same desktop: it may look, never touch.
+  // Same charset as vncPw, so neither ends up needing quoting in a shell or a
+  // Basic header.
+  const viewPw = randomBytes(9).toString('base64url');
+  // Set once the read-only account answers; the manager only offers a live view
+  // for a session where it does.
+  let viewerAuth = false;
 
   // Custom labels must NOT register their own Traefik routers (cross-tenant
   // route-hijack guard); strip any traefik.* keys before merging.
@@ -262,6 +316,32 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     labels[`traefik.http.services.${audioRouter}.loadbalancer.server.port`] = '4901';
     labels[`traefik.http.services.${audioRouter}.loadbalancer.server.scheme`] = 'https';
     labels[`traefik.http.services.${audioRouter}.loadbalancer.serverstransport`] = 'asha-insecure@file';
+
+    // Observation: a THIRD router onto the same 6901 stream, differing only in
+    // which account it authenticates as. The route above carries kasm_user and
+    // is write-capable by construction, so an administrator watching a desktop
+    // needs a route of its own — read-only is then enforced by KasmVNC itself
+    // (kasm_viewer has write:false) rather than by whichever client is loaded,
+    // and joining does not evict the person working
+    // (`new_session_disconnects_existing_exclusive_session: false`).
+    const observeRouter = `${router}-observe`;
+    const observePath = `${sessionPath(cmd.kasmId)}/observe`;
+    const observeBasic = Buffer.from(`kasm_viewer:${viewPw}`).toString('base64');
+    labels[`traefik.http.middlewares.${observeRouter}-auth.headers.customrequestheaders.Authorization`] =
+      `Basic ${observeBasic}`;
+    labels[`traefik.http.routers.${observeRouter}.rule`] = `PathPrefix(\`${observePath}\`)`;
+    labels[`traefik.http.routers.${observeRouter}.entrypoints`] = 'websecure';
+    labels[`traefik.http.routers.${observeRouter}.tls`] = 'true';
+    labels[`traefik.http.routers.${observeRouter}.priority`] = '100';
+    // Explicit router→service link (required with >1 service on the container).
+    labels[`traefik.http.routers.${observeRouter}.service`] = observeRouter;
+    labels[`traefik.http.middlewares.${observeRouter}-strip.stripprefix.prefixes`] = observePath;
+    // sess-auth first, for the same reason as the audio router.
+    labels[`traefik.http.routers.${observeRouter}.middlewares`] =
+      `sess-auth@file,${observeRouter}-strip,${observeRouter}-auth`;
+    labels[`traefik.http.services.${observeRouter}.loadbalancer.server.port`] = String(port);
+    labels[`traefik.http.services.${observeRouter}.loadbalancer.server.scheme`] = 'https';
+    labels[`traefik.http.services.${observeRouter}.loadbalancer.serverstransport`] = 'asha-insecure@file';
   }
 
   // ── Container-security sanitization (shared multi-tenant hosts) ─────────────
@@ -371,7 +451,15 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
       await bootstrapCups(container).catch(() => undefined); // best-effort, never fail a session
     }
 
-    return { containerId: container.id, internalHost: ip, port, routerName: router };
+    // The observe router above already carries kasm_viewer; the account only
+    // starts answering once it has this password. A third-party image without
+    // kasmvncpasswd loses the read-only route, which must not cost the user
+    // their desktop — best-effort, exactly like the CUPS bootstrap.
+    if (cmd.protocol === 'KASMVNC') {
+      viewerAuth = await bootstrapViewerPassword(container, viewPw).catch(() => false);
+    }
+
+    return { containerId: container.id, internalHost: ip, port, routerName: router, viewerAuth };
   } catch (e) {
     // Provisioning failed after the container was created. The manager never
     // learns the container id (provisionContainer rejects), so it can't call
@@ -522,6 +610,17 @@ export async function applyStreamProfile(idOrName: string, profile: StreamProfil
 
 /** A wedged container must not pin the agent: abort the read past this. */
 const CAPTURE_TIMEOUT_MS = 5_000;
+/**
+ * Ceilings for the helpers themselves. Abandoning the read only drops the
+ * agent's end of the exec — Docker keeps the processes inside the container
+ * running, and there is no API to kill an exec — so a display that stopped
+ * answering would otherwise leave an `sh` and an `ffmpeg` behind on every pass.
+ * A property read takes milliseconds and the frame grab was measured at ~300 ms;
+ * both limits are headroom chosen so a wedged pass is gone before the pass after
+ * next starts.
+ */
+const CAPTURE_META_KILL_SEC = 1;
+const CAPTURE_FRAME_KILL_SEC = 4;
 /** Hard read cap, so a stream that never ends cannot grow the agent's heap. */
 const MAX_CAPTURE_BYTES = 131_072;
 /**
@@ -554,24 +653,25 @@ export async function captureObservation(
   const nonce = randomBytes(9).toString('hex');
   const script = `
 export DISPLAY=:1
+if command -v timeout >/dev/null 2>&1; then tm="timeout ${CAPTURE_META_KILL_SEC}"; tf="timeout ${CAPTURE_FRAME_KILL_SEC}"; else tm=""; tf=""; fi
 if command -v xprop >/dev/null 2>&1; then
-  aw=$(xprop -root _NET_ACTIVE_WINDOW 2>/dev/null | sed 's/.*# //;s/,.*//' | tr -d ' ')
+  aw=$($tm xprop -root _NET_ACTIVE_WINDOW 2>/dev/null | sed 's/.*# //;s/,.*//' | tr -d ' ')
   if [ -n "$aw" ] && [ "$aw" != "0x0" ]; then
-    xprop -id "$aw" _NET_WM_NAME 2>/dev/null | sed 's/^/T /'
-    xprop -id "$aw" WM_CLASS 2>/dev/null | sed 's/^/C /'
+    $tm xprop -id "$aw" _NET_WM_NAME 2>/dev/null | sed 's/^/T /'
+    $tm xprop -id "$aw" WM_CLASS 2>/dev/null | sed 's/^/C /'
   fi
 else
   echo "D xprop"
 fi
 if command -v wmctrl >/dev/null 2>&1; then
-  echo "W $(wmctrl -l 2>/dev/null | wc -l | tr -d ' ')"
+  echo "W $($tm wmctrl -l 2>/dev/null | wc -l | tr -d ' ')"
 else
   echo "D wmctrl"
 fi
 command -v ffmpeg >/dev/null 2>&1 || echo "D ffmpeg"
 echo ${nonce}
 if command -v ffmpeg >/dev/null 2>&1; then
-  ffmpeg -loglevel error -f x11grab -draw_mouse 1 -i :1 -frames:v 1 -vf scale=${width}:-2 -f image2 -vcodec libwebp -quality 55 -
+  $tf ffmpeg -loglevel error -f x11grab -draw_mouse 1 -i :1 -frames:v 1 -vf scale=${width}:-2 -f image2 -vcodec libwebp -quality 55 -
 fi
 `;
 

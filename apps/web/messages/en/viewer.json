@@ -174,6 +174,15 @@
       "hint": "Tap to click, hold for a right click, two fingers to zoom and scroll."
     }
   },
+  "observe": {
+    "back": "Back to live monitoring",
+    "subtitle": "View only — nothing you do reaches this desktop",
+    "streamTitle": "View-only stream",
+    "connecting": "Opening the view-only stream…",
+    "unavailableTitle": "There is nothing to watch here",
+    "unavailableDescription": "A view-only stream is opened from live monitoring and stays valid only briefly. Open it again from there.",
+    "backToMonitor": "Go to live monitoring"
+  },
   "observed": {
     "title": "An administrator is watching this session",
     "by": "{name} · since {time}",

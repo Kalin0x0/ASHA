@@ -25,6 +25,15 @@ import type { SessionRecord } from '../session-store.js';
 
 const log = createLogger('proxy:ssh');
 
+/**
+ * "This session cannot be watched at all", as opposed to the desktop handler's
+ * "nothing to watch right now": there is no way to attach to a running shell, so
+ * no observer will ever see one. The reason repeats the code for the same reason
+ * the other close codes do — the viewer reads the reason, not `event.code`.
+ */
+export const CLOSE_VIEW_UNSUPPORTED = 4011;
+const REASON_VIEW_UNSUPPORTED = `${CLOSE_VIEW_UNSUPPORTED} A terminal session cannot be watched`;
+
 const DEFAULT_SSH_PORT = 22;
 const DEFAULT_COLS = 80;
 const DEFAULT_ROWS = 24;
@@ -61,6 +70,17 @@ export function handleSSH(
   const host = session.internalHost;
   const port = session.internalPort ?? DEFAULT_SSH_PORT;
   const username = session.sshUser ?? 'kasm-user';
+
+  // ssh2 cannot attach to the shell somebody is working in — `conn.shell()`
+  // allocates a new PTY. So a view-mode connection here would be a second login
+  // as the session user: a real entry in the target's auth log, another slot
+  // against MaxSessions, the user's login scripts run again, and an empty prompt
+  // rather than a view of anything. Refuse it; watching may not create sessions.
+  if (mode === 'view') {
+    log.warn({ sessionId: session.sessionId }, 'view mode on an ssh session — refusing to open a second login');
+    ws.close(CLOSE_VIEW_UNSUPPORTED, REASON_VIEW_UNSUPPORTED);
+    return;
+  }
 
   if (!host) {
     ws.send('\r\n\x1b[31m[Asha] SSH target not ready — no container host on record.\x1b[0m\r\n');
@@ -123,9 +143,6 @@ export function handleSSH(
 
   // Browser → PTY (+ control frames)
   ws.on('message', (data: WebSocket.RawData, isBinary: boolean) => {
-    // An observer watches the terminal and nothing more: even a resize would
-    // reach into the shell the user is working in.
-    if (mode === 'view') return;
     const control = parseControlFrame(data, isBinary);
     if (control) {
       cols = control.cols;

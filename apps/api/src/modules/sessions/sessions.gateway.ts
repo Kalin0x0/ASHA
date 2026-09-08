@@ -32,7 +32,7 @@ export class SessionsGateway implements OnGatewayConnection {
   ) {}
 
   /**
-   * Both rooms are derived from a VERIFIED access token. The org room used to be
+   * Every room is derived from a VERIFIED access token. The org room used to be
    * joined from `handshake.query.orgId` — a value the client picks — so any
    * socket could sit in another tenant's room and read its session stream; the
    * session room was joined with no ownership check at all. Session frames and
@@ -46,6 +46,14 @@ export class SessionsGateway implements OnGatewayConnection {
       return;
     }
     client.join(`org:${user.orgId}`);
+    // Org membership buys the low-sensitivity stream — session status, stats,
+    // health. A frame of a colleague's desktop and the title of the window they
+    // have open is a different thing entirely, so it gets its own room and the
+    // socket has to earn it with the permission GET sessions/observations
+    // demands. Without this, joining the org room WAS the whole authorization.
+    if (await this.mayObserve(user)) {
+      client.join(`observe:${user.orgId}`);
+    }
 
     const auth = client.handshake.auth as { sessionId?: unknown } | undefined;
     const sessionId = handshakeString(auth?.sessionId) ?? handshakeString(client.handshake.query.sessionId);
@@ -58,6 +66,11 @@ export class SessionsGateway implements OnGatewayConnection {
 
   emitToOrg(orgId: string, event: WsServerEvent): void {
     this.server?.to(`org:${orgId}`).emit('event', event);
+  }
+
+  /** Observation samples, and nothing else — see the room join in handleConnection. */
+  emitToObservers(orgId: string, event: WsServerEvent): void {
+    this.server?.to(`observe:${orgId}`).emit('event', event);
   }
 
   emitToSession(sessionId: string, event: WsServerEvent): void {
@@ -74,10 +87,23 @@ export class SessionsGateway implements OnGatewayConnection {
     const token = handshakeString(auth?.token) ?? handshakeString(client.handshake.query.token);
     if (!token) return null;
     try {
-      return await this.jwt.verifyAsync<AuthUser>(token, { secret: this.env.JWT_ACCESS_SECRET });
+      const payload = await this.jwt.verifyAsync<AuthUser & { typ?: string }>(token, {
+        secret: this.env.JWT_ACCESS_SECRET,
+      });
+      // A watch token verifies under this secret too — the connection-proxy has
+      // no other one — but it is a capability for one desktop, not an identity.
+      // The HTTP guard refuses it for the same reason.
+      return payload.typ === undefined ? payload : null;
     } catch {
       return null;
     }
+  }
+
+  /** System admin or a real SESSION_OBSERVE holder — the same test the REST route makes. */
+  private async mayObserve(user: AuthUser): Promise<boolean> {
+    if (user.isSystemAdmin) return true;
+    const granted = await this.rbac.effectivePermissions(user.sub);
+    return granted.has('SESSION_OBSERVE') || granted.has('*');
   }
 
   /** Owner, system admin, or a real SESSION_VIEW_ANY holder — nobody else. */

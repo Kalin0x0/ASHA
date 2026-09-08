@@ -94,6 +94,23 @@ describe('captureObservation — the exec it runs', () => {
     }
   });
 
+  it('bounds the helpers inside the container, not only the read of them', async () => {
+    respond((nonce) => [frame(`W 2
+${nonce}
+`)]);
+    await captureObservation('asha-sess-k1');
+
+    const script = lastScript();
+    // Abandoning the stream on the read deadline leaves the exec running —
+    // Docker has no kill for one — so a display that stopped answering would
+    // leave an sh and an ffmpeg behind on every pass, every few seconds, until
+    // the desktop runs out of X clients.
+    expect(script).toContain('command -v timeout >/dev/null 2>&1');
+    expect(script).toMatch(/\$tf ffmpeg /);
+    expect(script).toMatch(/\$tm xprop -root/);
+    expect(script).toMatch(/\$tm wmctrl -l/);
+  });
+
   it('clamps the thumbnail width and formats it itself', async () => {
     respond((nonce) => [frame(`${nonce}\n`)]);
 

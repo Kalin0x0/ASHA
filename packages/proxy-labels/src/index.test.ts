@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   routerName,
   sessionConnectionUrl,
+  sessionObserveUrl,
   sessionHost,
   sessionPath,
   sessionTraefikLabels,
@@ -110,6 +111,49 @@ describe('sessionConnectionUrl', () => {
       }),
     ).toBe(
       'https://asha.local/session/abc123/?path=session/abc123/websockify&resize=remote&quality=8&enable_webp=true&token=t0k',
+    );
+  });
+});
+
+describe('sessionObserveUrl', () => {
+  const CONNECTION =
+    'https://asha.local/session/abc123/?path=session/abc123/websockify&resize=remote&quality=8&enable_webp=true&token=t0k';
+
+  it('moves the page AND the stream socket onto the observe router', () => {
+    expect(sessionObserveUrl({ connectionUrl: CONNECTION, kasmId: 'abc123', token: 'fresh' })).toBe(
+      'https://asha.local/session/abc123/observe/?path=session/abc123/observe/websockify' +
+        '&resize=remote&quality=8&enable_webp=true&token=fresh',
+    );
+  });
+
+  it('leaves `path` unescaped, because the KasmVNC client reads it back verbatim', () => {
+    const url = sessionObserveUrl({ connectionUrl: CONNECTION, kasmId: 'abc123', token: 'a b' }) ?? '';
+    expect(url).toContain('path=session/abc123/observe/websockify');
+    expect(url).toContain('token=a%20b');
+  });
+
+  it('refuses a URL it could only half rewrite', () => {
+    // Half a rewrite would leave the stream socket on the main router, which
+    // carries the write credential — no URL at all is the safe answer.
+    expect(
+      sessionObserveUrl({
+        connectionUrl: 'https://abc123.sessions.asha.local/?token=t0k',
+        kasmId: 'abc123',
+        token: 'fresh',
+      }),
+    ).toBeNull();
+    expect(
+      sessionObserveUrl({ connectionUrl: 'https://asha.local/session/abc123/?token=t0k', kasmId: 'abc123', token: 'f' }),
+    ).toBeNull();
+    expect(
+      sessionObserveUrl({ connectionUrl: CONNECTION.replace(/&token=.*/, ''), kasmId: 'abc123', token: 'f' }),
+    ).toBeNull();
+  });
+
+  it('keeps the zone host the session already resolved to', () => {
+    const zoned = CONNECTION.replace('https://asha.local', 'https://ws.zone-b.example.com');
+    expect(sessionObserveUrl({ connectionUrl: zoned, kasmId: 'abc123', token: 'fresh' })).toContain(
+      'https://ws.zone-b.example.com/session/abc123/observe/?',
     );
   });
 });

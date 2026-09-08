@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { encodeInstruction, GuacamoleParser } from './guac-protocol';
+import { encodeInstruction, GuacamoleParser, GuacamoleProtocolError, MAX_PENDING } from './guac-protocol';
 
 describe('encodeInstruction', () => {
   it('encodes opcode + args with character lengths', () => {
@@ -40,5 +40,47 @@ describe('GuacamoleParser', () => {
     const p = new GuacamoleParser();
     // value "1.0" has length 3 and contains a '.'
     expect(p.push('3.1.0;')).toEqual([['1.0']]);
+  });
+});
+
+/**
+ * In view mode this parser is fed by the browser, so these cases are what a
+ * hand-written client sends — not what guacd or guacamole-common-js ever does.
+ */
+describe('GuacamoleParser — input that is not the protocol', () => {
+  it('gives up on a separator the protocol does not allow', () => {
+    const p = new GuacamoleParser();
+    // Treated as "incomplete", this byte would sit at the front of the buffer
+    // for the life of the socket: nothing behind it ever parses again, and
+    // every later frame is appended to a buffer that is never drained.
+    expect(() => p.push('4.sync,4.1234X')).toThrow(GuacamoleProtocolError);
+  });
+
+  it('gives up on a length prefix that is not a plain number', () => {
+    // A negative length puts the value's end BEFORE the cursor, so the scan
+    // restarts at the same offset with the same bytes — an endless loop inside
+    // the event loop, which stops the proxy serving every other session too.
+    expect(() => new GuacamoleParser().push('1.a,-4.xyz')).toThrow(GuacamoleProtocolError);
+    expect(() => new GuacamoleParser().push('0x10.abcdefghijklmnop;')).toThrow(GuacamoleProtocolError);
+    expect(() => new GuacamoleParser().push('1e3.abc')).toThrow(GuacamoleProtocolError);
+  });
+
+  it('stops buffering once nothing held can still complete', () => {
+    const p = new GuacamoleParser();
+    expect(() => p.push('A'.repeat(MAX_PENDING + 1))).toThrow(GuacamoleProtocolError);
+  });
+
+  it('refuses a length no instruction could ever reach', () => {
+    const p = new GuacamoleParser();
+    // Declared but never sent: without the ceiling the socket may keep the
+    // buffer growing towards it for as long as it stays open.
+    expect(() => p.push(`${MAX_PENDING + 1}.abc`)).toThrow(GuacamoleProtocolError);
+  });
+
+  it('still waits for an instruction that is only incomplete', () => {
+    const p = new GuacamoleParser();
+    expect(p.push('8000.')).toEqual([]);
+    expect(p.push('x'.repeat(8000))).toEqual([]);
+    expect(p.push(';')).toEqual([['x'.repeat(8000)]]);
   });
 });

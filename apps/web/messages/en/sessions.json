@@ -245,6 +245,13 @@
     "emptyDescription": "Sessions appear here as soon as somebody launches a workspace.",
     "emptyFilteredTitle": "No session matches your filters",
     "emptyFilteredDescription": "Try clearing the search or the status filter.",
-    "watchFailed": "Could not open the live view"
+    "deniedTitle": "You may not see the running sessions",
+    "deniedDescription": "Watching a desktop and listing the desktops are two separate permissions. Ask an administrator for the second one.",
+    "watchFailed": "Could not open the live view",
+    "watchUnavailable": {
+      "no_shared_terminal": "This session cannot be watched live: a terminal session has no shared screen.",
+      "no_viewer_account": "This session cannot be watched live: the image has no read-only account.",
+      "unknown": "This session cannot be watched live."
+    }
   }
 }

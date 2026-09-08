@@ -122,7 +122,12 @@ export default function StreamingViewerPage() {
   const params = useParams<{ sessionId: string }>();
   const router = useRouter();
   const session = useSession(params.sessionId);
-  const stageRef = useRef<HTMLDivElement>(null);
+  // The whole viewer, control bar and observation notice included. Fullscreen is
+  // taken on this and not on the stage below it: element fullscreen paints only
+  // the subtree it was given, so fullscreening the stage would leave the "an
+  // administrator is watching" strip off the screen while the watching goes on
+  // — and full screen is how a remote desktop is normally used.
+  const rootRef = useRef<HTMLDivElement>(null);
   // Handle to the embedded KasmVNC iframe so toolbar buttons can drive its
   // same-origin DOM controls (clipboard + settings panels). KasmVNC does NOT
   // expose its UI object on `window`, so we go through the control-bar DOM.
@@ -567,7 +572,10 @@ export default function StreamingViewerPage() {
   };
 
   const fullscreen = () => {
-    stageRef.current?.requestFullscreen?.().catch(() => {});
+    // The toolbar is inside the fullscreen element now, so the same button has
+    // to lead back out of it.
+    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+    else void rootRef.current?.requestFullscreen?.().catch(() => {});
   };
   const onShare = async () => {
     if (!session) return;
@@ -589,7 +597,7 @@ export default function StreamingViewerPage() {
 
   if (!mounted) return null;
   return createPortal(
-    <div className="on-dark fixed inset-0 z-viewer flex flex-col bg-anthracite-950">
+    <div ref={rootRef} className="on-dark fixed inset-0 z-viewer flex flex-col bg-anthracite-950">
       {/* Control bar */}
       <div className="glass-strong absolute inset-x-0 top-0 z-20 flex h-14 items-center gap-3 px-3 sm:px-4">
         {/* Back to Workspaces — non-destructive; keeps the session running so the
@@ -771,7 +779,6 @@ export default function StreamingViewerPage() {
 
       {/* Stage */}
       <div
-        ref={stageRef}
         className="relative flex-1 overflow-hidden bg-anthracite-950 touch-manipulation"
         onDragOver={(e) => {
           if (isRunning) {

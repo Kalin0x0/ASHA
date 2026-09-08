@@ -35,7 +35,8 @@ import { terminateSession } from '@/lib/api/endpoints';
 import { getAccessToken } from '@/lib/api/auth-store';
 import { isLive } from '@/lib/api/mode';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
-import { useLaunchableWorkspaces, useOwnSessions, useSessions } from '@/lib/hooks';
+import { useLaunchableWorkspaces, useOwnSessions, useSessions, useStartObservation, useStopObservation } from '@/lib/hooks';
+import { OBSERVE_RENEW_MS, OBSERVE_THUMB_WIDTH } from '@/lib/observation';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import { attachTouchInput, isTouchDevice } from '@/lib/touch-input';
 import { forwardsToRemote } from '@/lib/remote-keys';
@@ -47,6 +48,10 @@ import { cn } from '@/lib/utils';
 
 // X11 keysyms for the control-menu shortcuts.
 const KEYSYM = { CTRL: 0xffe3, ALT: 0xffe9, DEL: 0xffff, V: 0x0076 } as const;
+
+/** A refused renewal — the session ended, or policy changed under us — must not
+ *  tear the picture down; the stream itself says when it is gone. */
+const ignoreWindowError = (): void => {};
 
 
 // Resolution presets for the toolbar (w:0 = fit the window).
@@ -203,6 +208,32 @@ export default function ConnectPage() {
 
   // Told to whoever is at this desktop while an administrator watches it.
   const observed = useSessionObserved(session?.id);
+
+  // An observer arrives here with a watch token, and the observation window it
+  // was minted from is what that notice is made of. The record behind it lapses
+  // after 90 s, so the viewer doing the watching holds the window open for as
+  // long as it is open itself and closes it on the way out: the notice then
+  // tracks the live desktop on this screen rather than a thumbnail on a wall
+  // nobody is in front of any more. Metadata only — the picture is already
+  // here, and asking the agent for thumbnails would read the same desktop twice.
+  const watchedSessionId = watchToken ? session?.id : undefined;
+  const startObservation = useStartObservation();
+  const stopObservation = useStopObservation();
+  const stopObservationRef = useRef(stopObservation);
+  stopObservationRef.current = stopObservation;
+  useEffect(() => {
+    if (!watchedSessionId) return;
+    const hold = () =>
+      void startObservation(watchedSessionId, { intervalMs: 0, thumbWidth: OBSERVE_THUMB_WIDTH }).catch(
+        ignoreWindowError,
+      );
+    hold();
+    const timer = window.setInterval(hold, OBSERVE_RENEW_MS);
+    return () => {
+      window.clearInterval(timer);
+      void stopObservationRef.current(watchedSessionId).catch(ignoreWindowError);
+    };
+  }, [watchedSessionId, startObservation]);
 
   // Explain the gestures once per device: "hold for a right click" and "two
   // fingers to scroll" are otherwise invisible affordances.

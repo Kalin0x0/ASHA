@@ -1,7 +1,7 @@
 'use client';
 
 import type { WsServerEvent } from '@asha/events';
-import { AppWindow, Eye, Radio, ScanEye } from 'lucide-react';
+import { AppWindow, Eye, Lock, Radio, ScanEye } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -15,8 +15,12 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { SessionStatusPill } from '@/components/ui/status-pill';
+import { useAuth } from '@/lib/api/auth-context';
+import { isLive } from '@/lib/api/mode';
 import { useObservations, useSessions, useStartObservation, useStopObservation } from '@/lib/hooks';
+import { canAccessRoute } from '@/lib/nav';
 import { DEFAULT_OBSERVE_INTERVAL, OBSERVE_INTERVALS, OBSERVE_RENEW_MS, OBSERVE_THUMB_WIDTH, degradedReason, formatAppClass, mergeObservation, observableSessions, resolveTilePreview, type ObservationSample, type ObserveInterval } from '@/lib/observation';
+import { createObservationWindows } from '@/lib/observation-windows';
 import { useRealtimeEvents } from '@/lib/realtime';
 import type { SessionRow, SessionStatus } from '@/lib/types';
 import { cn, formatDuration } from '@/lib/utils';
@@ -40,6 +44,7 @@ export default function SessionMonitorPage() {
   const t = useTranslations('sessions.monitor');
   const tc = useTranslations('common');
   const router = useRouter();
+  const { user } = useAuth();
   const sessions = useSessions();
   const polled = useObservations();
   const startObservation = useStartObservation();
@@ -63,6 +68,13 @@ export default function SessionMonitorPage() {
 
   const capturing = intervalMs > 0 && !backgrounded;
 
+  // The wall opens its windows with SESSION_OBSERVE but draws its tiles from
+  // the session list, which is SESSION_VIEW_ANY. Someone holding only the first
+  // gets an empty list, and "no desktop is running" would blame the fleet for a
+  // permission they are missing.
+  const mayList =
+    !isLive || !user || canAccessRoute('/sessions/monitor', user.permissions, user.isSystemAdmin);
+
   const live = useMemo(() => observableSessions(sessions), [sessions]);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -79,6 +91,14 @@ export default function SessionMonitorPage() {
     });
   }, [live, query, status]);
 
+  // Which windows are open, and which have been passed on to a viewer. Kept so
+  // a change to the search box only opens what joined the wall and closes what
+  // left it — tearing every window down and rebuilding it on each keystroke
+  // would write an audit pair per session per character typed.
+  const openWindows = useRef(createObservationWindows());
+  const stopRef = useRef(stopObservation);
+  stopRef.current = stopObservation;
+
   /**
    * Mint the watch token at the moment of the click, not when the tile opened:
    * it lives 120 s, and an admin who scrolls the wall for a while would
@@ -89,7 +109,28 @@ export default function SessionMonitorPage() {
     async (sessionId: string) => {
       try {
         const win = await startObservation(sessionId, { intervalMs, thumbWidth: OBSERVE_THUMB_WIDTH });
-        router.push(win.watchUrl);
+        // The viewer takes this window over and renews it while it watches, so
+        // the wall lets go of it BEFORE navigating: the push unmounts this page,
+        // and the cleanup below would otherwise close the window it just opened
+        // — the watched person's notice would go dark at the moment full-screen
+        // watching begins, and the audit trail would record a second of it.
+        // The API refuses a way in for a session nothing can watch — a terminal
+        // with no shared view, or a container image whose read-only account does
+        // not exist. Say which, rather than navigating to nowhere.
+        if (win.watchKind === 'none' || !win.watchUrl) {
+          toast.error(t(`watchUnavailable.${win.watchReason ?? 'unknown'}`));
+          return;
+        }
+        openWindows.current.handOff(sessionId);
+        // A container desktop is streamed straight from Traefik and answers the
+        // proxy's guacamole route with nothing at all, so the two kinds cannot
+        // share a viewer. The API says which one it handed out rather than
+        // leaving the wall to re-read the connection type.
+        router.push(
+          win.watchKind === 'iframe'
+            ? `/observe/${encodeURIComponent(sessionId)}?src=${encodeURIComponent(win.watchUrl)}`
+            : win.watchUrl,
+        );
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t('watchFailed'));
       }
@@ -104,30 +145,11 @@ export default function SessionMonitorPage() {
     () => (capturing && watchKey ? watchKey.split(',') : []),
     [capturing, watchKey],
   );
-  const watchedRef = useRef(watched);
-  watchedRef.current = watched;
-
-  // Windows currently open. Kept so a change to the search box only opens what
-  // joined the wall and closes what left it — tearing every window down and
-  // rebuilding it on each keystroke would write an audit pair per session per
-  // character typed.
-  const openWindows = useRef(new Set<string>());
-  const stopRef = useRef(stopObservation);
-  stopRef.current = stopObservation;
 
   useEffect(() => {
-    const open = openWindows.current;
-    const next = new Set(watched);
+    const { open, close } = openWindows.current.sync(watched);
+    for (const id of close) void stopRef.current(id).catch(ignoreWindowError);
     for (const id of open) {
-      if (next.has(id)) continue;
-      open.delete(id);
-      void stopRef.current(id).catch(ignoreWindowError);
-    }
-    // Every wanted tile is (re)opened, not only the new ones: the agent takes
-    // its cadence from the last request it saw, so a changed interval has to
-    // reach the sessions that were already being captured.
-    for (const id of next) {
-      open.add(id);
       void startObservation(id, { intervalMs, thumbWidth: OBSERVE_THUMB_WIDTH }).catch(ignoreWindowError);
     }
   }, [watched, intervalMs, startObservation]);
@@ -138,7 +160,7 @@ export default function SessionMonitorPage() {
     // renewed well inside that rather than once per captured frame — at the 3s
     // cadence that would be one POST per tile per frame for no added safety.
     const timer = window.setInterval(() => {
-      for (const id of watchedRef.current) {
+      for (const id of openWindows.current.renew()) {
         void startObservation(id, { intervalMs, thumbWidth: OBSERVE_THUMB_WIDTH }).catch(ignoreWindowError);
       }
     }, OBSERVE_RENEW_MS);
@@ -148,10 +170,9 @@ export default function SessionMonitorPage() {
   // Leaving the page must never leave capture running. A hard close the browser
   // gives us no chance to react to is covered by the agent's dead-man switch.
   useEffect(() => {
-    const open = openWindows.current;
+    const held = openWindows.current;
     return () => {
-      for (const id of open) void stopRef.current(id).catch(ignoreWindowError);
-      open.clear();
+      for (const id of held.release()) void stopRef.current(id).catch(ignoreWindowError);
     };
   }, []);
 
@@ -254,11 +275,15 @@ export default function SessionMonitorPage() {
 
       {filtered.length === 0 ? (
         <Card elevation={1}>
-          <EmptyState
-            icon={AppWindow}
-            title={live.length === 0 ? t('emptyTitle') : t('emptyFilteredTitle')}
-            description={live.length === 0 ? t('emptyDescription') : t('emptyFilteredDescription')}
-          />
+          {mayList ? (
+            <EmptyState
+              icon={AppWindow}
+              title={live.length === 0 ? t('emptyTitle') : t('emptyFilteredTitle')}
+              description={live.length === 0 ? t('emptyDescription') : t('emptyFilteredDescription')}
+            />
+          ) : (
+            <EmptyState icon={Lock} title={t('deniedTitle')} description={t('deniedDescription')} />
+          )}
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

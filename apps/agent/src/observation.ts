@@ -74,6 +74,13 @@ export function createObservationRunner(deps: ObservationRunnerDeps): Observatio
     window.busy = true;
     try {
       const capture = await deps.capture(window.containerIdOrName, { thumbWidth: window.thumbWidth });
+      // The window can close while the exec runs — OBSERVE_STOP, the deadline,
+      // or the container being destroyed. By then the API has told the watched
+      // person that observation ended and taken their banner down, so this
+      // frame would put a picture of their desktop on the wall after the notice
+      // said nobody is looking. A renewal keeps the same window object; only a
+      // stop replaces it.
+      if (windows.get(sessionId) !== window || Date.now() >= window.expiresAt) return;
       await deps.publish({ ...capture, kasmId: window.kasmId, capturedAt: new Date().toISOString() });
     } catch (e) {
       deps.onError?.(`observation capture for ${sessionId} failed: ${(e as Error).message}`);

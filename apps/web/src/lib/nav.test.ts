@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findNavItem, visibleNavGroups } from './nav';
+import { canAccessRoute, findNavItem, visibleNavGroups } from './nav';
 
 const itemsFor = (perms: string[] | undefined, isSystemAdmin = false) =>
   visibleNavGroups(perms, isSystemAdmin).flatMap((g) => g.items.map((i) => i.href));
@@ -28,14 +28,28 @@ describe('assignments navigation', () => {
 });
 
 describe('live monitor navigation', () => {
-  it('is reachable by anyone who may observe a session', () => {
-    // SESSION_OBSERVE is the permission the observe endpoints require. An
-    // Operator who holds it but cannot see the item has no way to the wall.
-    expect(itemsFor(['SESSION_OBSERVE'])).toContain('/sessions/monitor');
+  it('needs observing AND listing, because the wall is a session list first', () => {
+    // SESSION_OBSERVE opens the observation windows, but every tile comes from
+    // GET /sessions, which is SESSION_VIEW_ANY. Offered on the first alone, an
+    // Operator lands on a wall the API refuses to fill and reads the empty
+    // state as "nobody is working".
+    expect(itemsFor(['SESSION_OBSERVE', 'SESSION_VIEW_ANY'])).toContain('/sessions/monitor');
+    expect(itemsFor(['SESSION_OBSERVE'])).not.toContain('/sessions/monitor');
   });
 
   it('is hidden from someone who may only list sessions', () => {
     expect(itemsFor(['SESSION_VIEW_ANY'])).not.toContain('/sessions/monitor');
+  });
+
+  it('turns a deep link away from someone who may observe but not list', () => {
+    expect(canAccessRoute('/sessions/monitor', ['SESSION_OBSERVE'], false)).toBe(false);
+    expect(canAccessRoute('/sessions/monitor', ['SESSION_OBSERVE', 'SESSION_VIEW_ANY'], false)).toBe(true);
+  });
+
+  it('leaves the plain OR items alone', () => {
+    // The extra requirement is per item; nothing else may start demanding two
+    // permissions because the wall does.
+    expect(itemsFor(['REPORTING_VIEW'])).toContain('/dashboard');
   });
 
   it('is visible to a system admin', () => {

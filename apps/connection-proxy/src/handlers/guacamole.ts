@@ -25,6 +25,12 @@
  * second RDP/VNC logon on the target. That is how an observer watches a desktop
  * without touching the session the user is working in — the join answers
  * `read-only` with 'true', so guacd itself refuses input from it.
+ *
+ * An observer ONLY ever joins. With no uuid to join, or a join guacd refuses,
+ * the socket closes with CLOSE_NO_LIVE_CONNECTION. Opening a connection instead
+ * would log in a second time with the session's own credentials, and a
+ * single-session Windows host answers that by moving the user's desktop onto the
+ * observer — the very thing watching exists not to do.
  */
 
 import type { IncomingMessage } from 'node:http';
@@ -34,9 +40,21 @@ import { createLogger } from '@asha/logger';
 import type WebSocket from 'ws';
 import type { StreamMode } from '../auth.js';
 import type { GuacUuidStore, SessionRecord } from '../session-store.js';
-import { encodeInstruction, GuacamoleParser } from './guac-protocol.js';
+import { encodeInstruction, GuacamoleParser, MAX_PENDING } from './guac-protocol.js';
 
 const log = createLogger('proxy:guacamole');
+
+/**
+ * "There is nothing to watch": no live connection to join, so the observer is
+ * refused rather than logged in a second time. The viewer needs it apart from a
+ * 4003 to say that nobody is at this desktop right now, instead of blaming the
+ * observer's rights. The reason repeats the code because guacamole-common-js
+ * reads the close REASON, not `event.code` (see proxy.ts).
+ */
+export const CLOSE_NO_LIVE_CONNECTION = 4010;
+const REASON_NO_LIVE_CONNECTION = `${CLOSE_NO_LIVE_CONNECTION} Nobody is connected to this desktop`;
+/** A frame that is not the Guacamole protocol. Only a hand-written client sends one. */
+const CLOSE_BAD_FRAME = 1008;
 
 const GUACD_HOST = process.env.GUACD_HOST ?? 'localhost';
 const GUACD_PORT = Number(process.env.GUACD_PORT ?? 4822);
@@ -225,8 +243,21 @@ export async function handleGuacamole(
 
   // An observer joins the connection the session's own viewer already has open,
   // so the uuid guacd handed out for it has to be known before the handshake
-  // starts. Nothing stored — or Redis down — just means a fresh connection.
+  // starts.
   const joinUuid = mode === 'view' && store ? await store.getGuacUuid(session.kasmId) : null;
+  if (mode === 'view' && joinUuid === null) {
+    // Nobody is streaming this desktop through the proxy — or Redis could not
+    // say, which from here is the same thing. Connecting anyway would mean a
+    // logon with the session's credentials, and on a single-session Windows host
+    // that hands the user's desktop to the observer and drops the user. So an
+    // observer is told there is nothing to watch, and no connection is opened.
+    log.info(
+      { sessionId: session.sessionId, kasmId: session.kasmId },
+      'no live connection to join — refusing to watch',
+    );
+    ws.close(CLOSE_NO_LIVE_CONNECTION, REASON_NO_LIVE_CONNECTION);
+    return;
+  }
 
   /**
    * Stop reading from guacd while the browser is behind.
@@ -297,8 +328,6 @@ export async function handleGuacamole(
     () => failFast(4504, 'Remote gateway (guacd) did not respond in time — please reconnect.'),
     CONNECT_TIMEOUT_MS,
   );
-  // One budget for both attempts: a refused join and the fresh connection that
-  // replaces it must not be able to double the time the browser waits.
   let handshakeTimer: ReturnType<typeof setTimeout> | undefined = setTimeout(() => {
     if (!connected) failFast(4504, 'The remote desktop did not finish starting — please reconnect.');
   }, HANDSHAKE_TIMEOUT_MS);
@@ -314,7 +343,7 @@ export async function handleGuacamole(
     }
   };
 
-  /** Open and drive one attempt at a guacd connection. */
+  /** Open and drive the guacd connection: a join for an observer, else a logon. */
   const openGuacd = (joinId: string | null): void => {
     const parser = new GuacamoleParser();
     // guacd → browser must be TEXT frames: guacamole-common-js's WebSocketTunnel
@@ -325,8 +354,6 @@ export async function handleGuacamole(
     guacd = sock;
     pendingOut = '';
     readyScanned = false;
-    /** Set when this attempt has been replaced, so its close is not the ws's. */
-    let abandoned = false;
 
     sock.once('connect', () => {
       clearTimeout(connectTimer);
@@ -356,14 +383,24 @@ export async function handleGuacamole(
           pendingOut = pendingOut.slice(n);
           if (!readyScanned) {
             readyScanned = true;
-            const ready = new GuacamoleParser().push(frame).find((inst) => inst[0] === 'ready');
-            const uuid = ready?.[1]?.replace(/^\$/, '');
-            // Only the connection somebody is working in is worth joining.
-            // Publishing an observer's own uuid would let observers chain onto
-            // each other and outlive the session they were watching.
-            if (uuid && mode === 'control' && store) {
-              publishedUuid = uuid;
-              void store.setGuacUuid(session.kasmId, uuid);
+            try {
+              const ready = new GuacamoleParser().push(frame).find((inst) => inst[0] === 'ready');
+              const uuid = ready?.[1]?.replace(/^\$/, '');
+              // Only the connection somebody is working in is worth joining.
+              // Publishing an observer's own uuid would let observers chain onto
+              // each other and outlive the session they were watching.
+              if (uuid && mode === 'control' && store) {
+                publishedUuid = uuid;
+                void store.setGuacUuid(session.kasmId, uuid);
+              }
+            } catch (e) {
+              // The frame is already whole instructions, so this cannot happen
+              // from guacd — and losing the uuid must not cost the user the
+              // desktop that is otherwise streaming fine.
+              log.warn(
+                { sessionId: session.sessionId, err: (e as Error).message },
+                'could not read the connection uuid — observers will find nothing to join',
+              );
             }
           }
           if (ws.readyState === ws.OPEN) {
@@ -375,19 +412,23 @@ export async function handleGuacamole(
       }
 
       // During the handshake, parse instructions to find `args`.
-      for (const inst of parser.push(text)) {
+      let handshake: string[][];
+      try {
+        handshake = parser.push(text);
+      } catch (e) {
+        log.warn({ sessionId: session.sessionId, err: (e as Error).message }, 'unreadable handshake from guacd');
+        failFast(1011, 'The remote gateway answered with something unreadable — please reconnect.');
+        return;
+      }
+
+      for (const inst of handshake) {
         const [opcode, ...args] = inst;
         if (opcode === 'error' && joinId !== null) {
           // "No such connection": the owner disconnected between the uuid being
-          // published and this join. Open a fresh connection rather than hand
-          // the observer a dead socket.
-          log.info(
-            { sessionId: session.sessionId, err: args[0] },
-            'guacd refused the join — opening a fresh connection',
-          );
-          abandoned = true;
-          sock.destroy();
-          openGuacd(null);
+          // published and this join. There is nothing left to watch, and the one
+          // way to a picture from here would be a second logon on the target.
+          log.info({ sessionId: session.sessionId, err: args[0] }, 'guacd refused the join');
+          failFast(CLOSE_NO_LIVE_CONNECTION, REASON_NO_LIVE_CONNECTION);
           return;
         }
         if (opcode === 'args') {
@@ -450,14 +491,12 @@ export async function handleGuacamole(
     });
 
     sock.on('error', (e) => {
-      if (abandoned) return;
       clearTimers();
       log.warn({ err: e.message, sessionId: session.sessionId }, 'guacd error');
       if (ws.readyState === ws.OPEN) ws.close(1011, `guacd error: ${e.message}`);
     });
 
     sock.on('close', () => {
-      if (abandoned) return;
       clearTimers();
       if (ws.readyState === ws.OPEN) ws.close(1000);
     });
@@ -481,7 +520,27 @@ export async function handleGuacamole(
     if (!buf) return;
 
     if (fromBrowser) {
-      const allowed = filterViewInstructions(fromBrowser.push(buf.toString('utf8')));
+      // An observer's frames are a `sync`, a `nop` or a `size` — tens of bytes.
+      // ws hands over anything up to its maxPayload, so a frame this far out of
+      // scale is refused before it is even decoded, let alone buffered.
+      if (buf.length > MAX_PENDING) {
+        failFast(CLOSE_BAD_FRAME, 'Oversized frame — closing the observer stream.');
+        return;
+      }
+      let allowed: string;
+      try {
+        allowed = filterViewInstructions(fromBrowser.push(buf.toString('utf8')));
+      } catch (e) {
+        // Neither guacd nor guacamole-common-js produces one of these, so the
+        // sender is not a viewer. Keeping the bytes would be the damage: nothing
+        // parses behind them again and the buffer grows with every frame.
+        log.warn(
+          { sessionId: session.sessionId, err: (e as Error).message },
+          'observer sent a frame that is not the Guacamole protocol',
+        );
+        failFast(CLOSE_BAD_FRAME, 'Malformed frame — closing the observer stream.');
+        return;
+      }
       if (allowed) guacd.write(allowed);
       return;
     }

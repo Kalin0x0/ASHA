@@ -10,6 +10,7 @@ import {
   SESSION_COOKIE,
   cookiePath,
   decideSessionAuth,
+  isObservePath,
   kasmIdFromPath,
 } from './session-auth.logic';
 
@@ -37,15 +38,20 @@ export class SessionAuthController {
   ) {}
 
   /** Verify a JWT and return the session it is for, or null. */
-  private sessionOf(token: string, requireCookieType: boolean): string | null {
+  private sessionOf(token: string, requireCookieType: boolean, observe = false): string | null {
     try {
-      const payload = this.jwt.verify<{ kasmId?: string; typ?: string }>(token, {
+      const payload = this.jwt.verify<{ kasmId?: string; typ?: string; obs?: boolean }>(token, {
         secret: this.env.SESSION_TOKEN_SECRET,
       });
       // The cookie carries `typ` so a long-lived cookie value cannot be replayed
       // as a URL token, nor a URL token pasted in as a cookie to skip the
       // exchange — each proof is only good for the hop it was minted for.
       if (requireCookieType !== (payload.typ === 'sess-cookie')) return null;
+      // And `obs` so it is only good for the ROUTE it was minted for. The Path
+      // attribute already keeps a browser from sending an observer's cookie to
+      // the write route; this makes a hand-crafted request fail there too,
+      // which matters because that route is served with the account that types.
+      if (requireCookieType && Boolean(payload.obs) !== observe) return null;
       return payload.kasmId ?? null;
     } catch {
       return null;
@@ -61,11 +67,13 @@ export class SessionAuthController {
     @Headers('cookie') cookieHeader: string | undefined,
     @Res() res: Response,
   ): void {
+    const path = (forwardedUri ?? '').split('?')[0] ?? '';
+    const observing = isObservePath(path);
     const verdict = decideSessionAuth({
       forwardedUri,
       forwardedHost,
       cookieHeader,
-      readCookieToken: (t) => this.sessionOf(t, true),
+      readCookieToken: (t) => this.sessionOf(t, true, observing),
       readUrlToken: (t) => this.sessionOf(t, false),
     });
 
@@ -85,15 +93,15 @@ export class SessionAuthController {
     // the token. This MUST be a non-2xx response — Traefik copies a 2xx auth
     // response's headers onto the upstream request, and only returns a non-2xx
     // one to the browser, so a `Set-Cookie` on a 200 would never arrive.
-    const mode = kasmIdFromPath((forwardedUri ?? '').split('?')[0] ?? '') ? 'path' : 'subdomain';
+    const mode = kasmIdFromPath(path) ? 'path' : 'subdomain';
     const ttl = this.env.SESSION_COOKIE_TTL;
     const cookie = this.jwt.sign(
-      { kasmId: verdict.kasmId, typ: 'sess-cookie' },
+      { kasmId: verdict.kasmId, typ: 'sess-cookie', ...(observing ? { obs: true } : {}) },
       { secret: this.env.SESSION_TOKEN_SECRET, expiresIn: ttl },
     );
     const attrs = [
       `${SESSION_COOKIE}=${cookie}`,
-      `Path=${cookiePath(verdict.kasmId, mode)}`,
+      `Path=${cookiePath(verdict.kasmId, mode, observing)}`,
       `Max-Age=${ttl}`,
       'HttpOnly',
       'Secure',

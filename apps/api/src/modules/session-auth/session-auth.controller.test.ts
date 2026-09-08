@@ -50,6 +50,8 @@ describe('SessionAuthController', () => {
   const urlToken = (kasmId: string) => jwt.sign({ kasmId }, { secret: SECRET, expiresIn: 120 });
   const cookieToken = (kasmId: string) =>
     jwt.sign({ kasmId, typ: 'sess-cookie' }, { secret: SECRET, expiresIn: 3600 });
+  const observeCookieToken = (kasmId: string) =>
+    jwt.sign({ kasmId, typ: 'sess-cookie', obs: true }, { secret: SECRET, expiresIn: 3600 });
 
   beforeEach(() => {
     jwt = new JwtService({});
@@ -158,6 +160,53 @@ describe('SessionAuthController', () => {
     expect(res.statusCode).toBe(302);
     expect(res.headers['set-cookie']).toContain('Path=/');
     expect(res.headers.location).toBe('https://kid1.sessions.asha.example/');
+  });
+
+  it('scopes an observation cookie to the read-only route it was minted on', () => {
+    const res = fakeRes();
+    ctrl.gate(`/session/kid1/observe/?token=${urlToken('kid1')}`, undefined, undefined, undefined, res as never);
+    // One segment narrower than a session cookie: the route above this one is
+    // served with the KasmVNC account that may type.
+    expect(res.headers['set-cookie']).toContain('Path=/session/kid1/observe');
+    expect(res.headers.location).toBe('/session/kid1/observe/');
+  });
+
+  it('refuses an observer cookie replayed against the write route', () => {
+    // The Path attribute stops a browser from sending it there at all; this is
+    // the same request made by hand.
+    const res = fakeRes();
+    ctrl.gate(
+      '/session/kid1/websockify',
+      undefined,
+      undefined,
+      `${SESSION_COOKIE}=${observeCookieToken('kid1')}`,
+      res as never,
+    );
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('refuses a session cookie on the read-only route, so each stays on its own', () => {
+    const res = fakeRes();
+    ctrl.gate(
+      '/session/kid1/observe/websockify',
+      undefined,
+      undefined,
+      `${SESSION_COOKIE}=${cookieToken('kid1')}`,
+      res as never,
+    );
+    expect(res.statusCode).toBe(401);
+  });
+
+  it('forwards the observe route once its own cookie is presented', () => {
+    const res = fakeRes();
+    ctrl.gate(
+      '/session/kid1/observe/websockify',
+      undefined,
+      undefined,
+      `${SESSION_COOKIE}=${observeCookieToken('kid1')}`,
+      res as never,
+    );
+    expect(res.statusCode).toBe(204);
   });
 
   it('honours a SameSite override for split-host deployments', () => {

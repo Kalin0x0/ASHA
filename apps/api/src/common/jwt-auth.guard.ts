@@ -59,12 +59,24 @@ export class JwtAuthGuard implements CanActivate {
     const token = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
     if (!token) throw new UnauthorizedException('Missing bearer token');
 
+    let payload: { typ?: string };
     try {
-      req.user = await this.jwt.verifyAsync(token, { secret: this.env.JWT_ACCESS_SECRET });
-      return true;
+      payload = await this.jwt.verifyAsync(token, { secret: this.env.JWT_ACCESS_SECRET });
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
+    // Not everything signed with this secret is an identity. The observation
+    // watch token is signed with it because the connection-proxy verifies with
+    // nothing else, and it travels in a URL — address bar, history, reverse-proxy
+    // access log. Accepting it here would turn every one of those into a
+    // 120-second bearer credential for the observing admin's whole API, minting
+    // further watch tokens for other desktops included. A token that names its
+    // purpose belongs to whoever that purpose is, not to this guard.
+    if (payload.typ !== undefined) {
+      throw new UnauthorizedException('Not an API access token');
+    }
+    req.user = payload;
+    return true;
   }
 
   /**

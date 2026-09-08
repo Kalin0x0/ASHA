@@ -245,6 +245,13 @@
     "emptyDescription": "Sitzungen erscheinen hier, sobald jemand einen Workspace startet.",
     "emptyFilteredTitle": "Keine Sitzung entspricht Ihren Filtern",
     "emptyFilteredDescription": "Versuchen Sie, die Suche oder den Statusfilter zurückzusetzen.",
-    "watchFailed": "Live-Ansicht konnte nicht geöffnet werden"
+    "deniedTitle": "Sie dürfen die laufenden Sitzungen nicht sehen",
+    "deniedDescription": "Einen Desktop zu beobachten und die Desktops aufzulisten sind zwei getrennte Berechtigungen. Bitten Sie einen Administrator um die zweite.",
+    "watchFailed": "Live-Ansicht konnte nicht geöffnet werden",
+    "watchUnavailable": {
+      "no_shared_terminal": "Diese Sitzung lässt sich nicht live ansehen: eine Terminal-Sitzung hat kein gemeinsames Bild.",
+      "no_viewer_account": "Diese Sitzung lässt sich nicht live ansehen: das Abbild kennt kein Nur-Lese-Konto.",
+      "unknown": "Diese Sitzung lässt sich nicht live ansehen."
+    }
   }
 }

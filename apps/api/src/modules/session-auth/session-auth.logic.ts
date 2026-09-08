@@ -54,6 +54,16 @@ export function kasmIdFromPath(path: string): string | null {
   return /^\/session\/([A-Za-z0-9_-]+)(?:\/|$)/.exec(path)?.[1] ?? null;
 }
 
+/**
+ * True for the read-only aux route an observer is sent to. The route is the
+ * same 6901 stream as the session itself, but Traefik authenticates it as
+ * KasmVNC's view-only account — so proof minted here must not travel to the
+ * routes that carry the account which may type.
+ */
+export function isObservePath(path: string): boolean {
+  return /^\/session\/[A-Za-z0-9_-]+\/observe(?:\/|$)/.test(path);
+}
+
 /** `<kasmId>.sessions.<domain>` → the id, for subdomain routing mode. */
 export function kasmIdFromHost(host: string): string | null {
   return /^([A-Za-z0-9_-]+)\.sessions\./.exec(host.split(':')[0] ?? '')?.[1] ?? null;
@@ -71,9 +81,14 @@ export function readCookie(header: string | undefined, name: string): string | n
   return null;
 }
 
-/** The Path a session's cookie is scoped to — never wider than the session. */
-export function cookiePath(kasmId: string, mode: 'path' | 'subdomain'): string {
-  return mode === 'subdomain' ? '/' : `/session/${kasmId}`;
+/**
+ * The Path a session's cookie is scoped to — never wider than what was proved.
+ * An observer proved the read-only route, so their cookie must not be sent to
+ * the write route sitting one segment above it.
+ */
+export function cookiePath(kasmId: string, mode: 'path' | 'subdomain', observe = false): string {
+  if (mode === 'subdomain') return '/';
+  return observe ? `/session/${kasmId}/observe` : `/session/${kasmId}`;
 }
 
 export function decideSessionAuth(req: SessionAuthRequest): SessionAuthVerdict {

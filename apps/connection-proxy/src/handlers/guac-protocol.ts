@@ -18,13 +18,41 @@ export function encodeInstruction(opcode: string, ...args: string[]): string {
 }
 
 /**
+ * Raised for input that is not a Guacamole stream at all — as opposed to an
+ * instruction that is simply not here in full yet. The two look the same to a
+ * parser that only ever waits for more, which is why they are told apart here.
+ */
+export class GuacamoleProtocolError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GuacamoleProtocolError';
+  }
+}
+
+/**
+ * Ceiling on data held for an instruction that has not completed yet. guacd caps
+ * a single instruction at 8 KB, so many times that with nothing parseable in it
+ * is not a slow sender — it is a client with no intention of finishing one.
+ */
+export const MAX_PENDING = 64 * 1024;
+
+/**
  * Incremental parser. Feed it chunks; it emits fully-parsed instructions
  * (arrays where [0] is the opcode). Leftover partial data is buffered.
+ *
+ * It is strict on purpose: in view mode the browser feeds it, and treating a
+ * malformed frame like an incomplete one leaves those bytes at the front of the
+ * buffer for good — nothing parses behind them again, and every frame that
+ * follows makes the buffer bigger.
  */
 export class GuacamoleParser {
   private buffer = '';
 
-  /** Append a chunk and return any instructions that are now complete. */
+  /**
+   * Append a chunk and return any instructions that are now complete. Throws
+   * GuacamoleProtocolError when the stream cannot go on; the caller closes the
+   * connection, because nothing that follows can be interpreted either.
+   */
   push(chunk: string): string[][] {
     this.buffer += chunk;
     const instructions: string[][] = [];
@@ -35,10 +63,18 @@ export class GuacamoleParser {
       instructions.push(parsed.elements);
       this.buffer = this.buffer.slice(parsed.consumed);
     }
+    // Every complete instruction was just consumed, so what is left is a single
+    // instruction in flight — it cannot reach this size on legitimate traffic.
+    if (this.buffer.length > MAX_PENDING) {
+      this.fail(`no complete instruction in ${this.buffer.length} buffered characters`);
+    }
     return instructions;
   }
 
-  /** Try to parse a single complete instruction from the front of the buffer. */
+  /**
+   * Try to parse a single complete instruction from the front of the buffer.
+   * null means "not all here yet"; input that can never complete throws.
+   */
   private parseOne(): { elements: string[]; consumed: number } | null {
     const elements: string[] = [];
     let i = 0;
@@ -47,8 +83,13 @@ export class GuacamoleParser {
       // Read LENGTH up to the '.'
       const dot = this.buffer.indexOf('.', i);
       if (dot === -1) return null; // incomplete
-      const len = Number(this.buffer.slice(i, dot));
-      if (!Number.isFinite(len)) return null;
+      const raw = this.buffer.slice(i, dot);
+      // Digits, nothing else: Number() also takes ' 12', '0x0a', '1e9' and '-4',
+      // and a negative length moves the cursor BACKWARDS — the loop then reads
+      // the same offset for ever, and the proxy stops serving anyone at all.
+      if (!/^\d+$/.test(raw)) this.fail(`length prefix is not a number: ${JSON.stringify(raw.slice(0, 32))}`);
+      const len = Number(raw);
+      if (len > MAX_PENDING) this.fail(`element of ${len} characters is past the ceiling`);
 
       const valueStart = dot + 1;
       const valueEnd = valueStart + len;
@@ -59,7 +100,13 @@ export class GuacamoleParser {
       i = valueEnd + 1;
 
       if (sep === ';') return { elements, consumed: i };
-      if (sep !== ',') return null; // malformed — wait for more / give up on this frame
+      if (sep !== ',') this.fail(`expected ',' or ';' after an element, got ${JSON.stringify(sep)}`);
     }
+  }
+
+  /** Give up and drop what is buffered: a broken stream cannot resynchronize. */
+  private fail(reason: string): never {
+    this.buffer = '';
+    throw new GuacamoleProtocolError(reason);
   }
 }

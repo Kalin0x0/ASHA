@@ -312,6 +312,10 @@ export const sessionStatusSchema = z.object({
   host: z.string().optional(),
   port: z.number().optional(),
   traefikRouterName: z.string().optional(),
+  // KASMVNC only: whether the container's read-only KasmVNC account actually
+  // answers. Images that merely resemble Kasm have no kasmvncpasswd, so their
+  // observe route would 401 and the manager must not offer a live view.
+  viewerAuth: z.boolean().optional(),
   error: z.string().optional(),
   // Protocol credentials the agent injects into the container at launch, passed
   // through to the connection-proxy session record (RDP/VNC/SSH bridging).

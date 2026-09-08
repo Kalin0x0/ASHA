@@ -116,9 +116,15 @@ export function useObservations(): ObservationSample[] {
 
 export function useStartObservation() {
   return useCallback(
-    async (id: string, _body: import('@/lib/api/endpoints').StartObservationInput) => ({
+    async (
+      id: string,
+      _body: import('@/lib/api/endpoints').StartObservationInput,
+    ): Promise<import('@/lib/api/endpoints').ApiObservationWindow> => ({
       watchToken: `mock-watch-${id}`,
       watchUrl: `/connect/${id}?monitor=1`,
+      // No Traefik in mock mode, so there is no read-only container route to
+      // point at — the demo wall always opens the guacamole viewer.
+      watchKind: 'guac',
       expiresAt: new Date(Date.now() + 120_000).toISOString(),
       thumbnails: true,
     }),

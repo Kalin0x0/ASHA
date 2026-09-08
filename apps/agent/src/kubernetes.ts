@@ -50,6 +50,14 @@ export interface ProvisionResult {
   internalHost: string; // ClusterIP service name (DNS-resolvable in the cluster)
   port: number;
   routerName: string;
+  /**
+   * Always false here. Writing the read-only KasmVNC password needs an in-Pod
+   * exec, which this driver does not have (the Helm RBAC grants no pods/exec),
+   * and the Ingress has no observe path either — so the manager withholds the
+   * live view for a Kubernetes session exactly as it does for an image without
+   * the account. Capture is degraded the same way, see captureObservation.
+   */
+  viewerAuth: boolean;
 }
 
 export async function provisionContainer(cmd: ProvisionCommand): Promise<ProvisionResult> {
@@ -204,7 +212,7 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
   await waitForPodRunning(name, 60_000);
 
   const internalHost = `${name}.${SESSION_NS}.svc.cluster.local`;
-  return { containerId: name, internalHost, port, routerName: router };
+  return { containerId: name, internalHost, port, routerName: router, viewerAuth: false };
   } catch (e) {
     await destroyContainer(name).catch(() => undefined);
     throw e;

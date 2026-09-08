@@ -3,7 +3,7 @@ import type { IncomingMessage } from 'node:http';
 import net, { type AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { GuacUuidStore, SessionRecord } from '../session-store.js';
-import { encodeInstruction, GuacamoleParser } from './guac-protocol.js';
+import { encodeInstruction, GuacamoleParser, MAX_PENDING } from './guac-protocol.js';
 
 /**
  * These cases drive the real handler against a stand-in guacd on a loopback
@@ -144,23 +144,26 @@ describe('handleGuacamole — join an existing connection or open a fresh one', 
     expect(await select(conn)).toEqual(['select', 'rdp']);
   });
 
-  it('opens a fresh connection when nothing is stored to join', async () => {
+  it('tells an observer there is nothing to watch rather than logging in again', async () => {
+    // Nothing stored means nobody is streaming this desktop. A fresh connection
+    // would log in with the session's own credentials, which on a single-session
+    // Windows host takes the desktop away from the person at it.
     const { conns, port } = await startGuacd();
-    const { handleGuacamole } = await load(port);
+    const { handleGuacamole, CLOSE_NO_LIVE_CONNECTION } = await load(port);
     const ws = new FakeSocket();
     teardown.push(() => ws.close());
 
     await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore(null));
 
-    const conn = await until(() => conns[0], 'a guacd connection');
-    expect(await select(conn)).toEqual(['select', 'rdp']);
+    expect(ws.closeCode).toBe(CLOSE_NO_LIVE_CONNECTION);
+    expect(conns).toHaveLength(0);
   });
 
-  it('falls back to a fresh connection when guacd refuses the join', async () => {
+  it('closes rather than logging in again when guacd refuses the join', async () => {
     // The owner disconnected between publishing the uuid and this join, so the
-    // connection it names is gone.
+    // connection it names is gone — and so is anything worth watching.
     const { conns, port } = await startGuacd();
-    const { handleGuacamole } = await load(port);
+    const { handleGuacamole, CLOSE_NO_LIVE_CONNECTION } = await load(port);
     const ws = new FakeSocket();
     teardown.push(() => ws.close());
 
@@ -170,9 +173,23 @@ describe('handleGuacamole — join an existing connection or open a fresh one', 
     expect(await select(first)).toEqual(['select', '$stale-uuid']);
     first.sock.write(encodeInstruction('error', 'No such connection', '519'));
 
-    const second = await until(() => conns[1], 'the fresh connection');
-    expect(await select(second)).toEqual(['select', 'rdp']);
-    // The abandoned attempt must not take the browser down with it.
+    await until(() => ws.closeCode, 'the observer being told');
+    expect(ws.closeCode).toBe(CLOSE_NO_LIVE_CONNECTION);
+    expect(conns).toHaveLength(1);
+  });
+
+  it('still opens a connection for the session own viewer with nothing stored', async () => {
+    // The refusal is the observer's alone: the user's own viewer is what creates
+    // the connection an observer later joins.
+    const { conns, port } = await startGuacd();
+    const { handleGuacamole } = await load(port);
+    const ws = new FakeSocket();
+    teardown.push(() => ws.close());
+
+    await handleGuacamole(ws as never, REQ, SESSION, 'control', fakeStore(null));
+
+    const conn = await until(() => conns[0], 'a guacd connection');
+    expect(await select(conn)).toEqual(['select', 'rdp']);
     expect(ws.closeCode).toBeNull();
   });
 
@@ -220,7 +237,7 @@ describe('handleGuacamole — join an existing connection or open a fresh one', 
     const { handleGuacamole } = await load(port);
     const ws = new FakeSocket();
     teardown.push(() => ws.close());
-    const store = fakeStore(null);
+    const store = fakeStore('conn-uuid');
 
     await handleGuacamole(ws as never, REQ, SESSION, 'view', store);
     const conn = await until(() => conns[0], 'a guacd connection');
@@ -247,6 +264,41 @@ describe('handleGuacamole — what reaches guacd from the browser', () => {
     const sync = await until(() => conn.instructions.find((i) => i[0] === 'sync'), 'the sync');
     expect(sync).toEqual(['sync', '1234']);
     expect(conn.instructions.some((i) => i[0] === 'key' || i[0] === 'mouse')).toBe(false);
+  });
+
+  it('closes the observer stream on a frame that is not the protocol', async () => {
+    const { conns, port } = await startGuacd();
+    const { handleGuacamole } = await load(port);
+    const ws = new FakeSocket();
+    teardown.push(() => ws.close());
+
+    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'));
+    const conn = await until(() => conns[0], 'a guacd connection');
+    await completeHandshake(conn, 'conn-uuid');
+
+    // guacd never sends this and neither does the viewer. Kept in the buffer it
+    // would wedge the parser and grow with every frame after it, until the proxy
+    // — shared by every session on this instance — runs out of memory.
+    ws.emit('message', '4.sync,4.1234X');
+
+    await until(() => ws.closeCode, 'the stream being closed');
+    expect(ws.closeCode).toBe(1008);
+  });
+
+  it('refuses an observer frame far larger than any instruction', async () => {
+    const { conns, port } = await startGuacd();
+    const { handleGuacamole } = await load(port);
+    const ws = new FakeSocket();
+    teardown.push(() => ws.close());
+
+    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'));
+    const conn = await until(() => conns[0], 'a guacd connection');
+    await completeHandshake(conn, 'conn-uuid');
+
+    ws.emit('message', 'A'.repeat(MAX_PENDING + 1));
+
+    await until(() => ws.closeCode, 'the stream being closed');
+    expect(ws.closeCode).toBe(1008);
   });
 
   it('passes the session own viewer through untouched', async () => {

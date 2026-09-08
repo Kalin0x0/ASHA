@@ -58,6 +58,8 @@ export const manager = {
       host?: string;
       port?: number;
       traefikRouterName?: string;
+      /** KASMVNC only: whether the container's read-only account really answers. */
+      viewerAuth?: boolean;
       error?: string;
     },
   ) {

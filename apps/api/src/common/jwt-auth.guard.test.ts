@@ -100,4 +100,24 @@ describe('JwtAuthGuard — agent-only routes', () => {
     await expect(guard.canActivate(ctx)).resolves.toBe(true);
     expect(req.user).toMatchObject({ sub: 'u1', orgId: 'org1' });
   });
+
+  it('refuses an observation watch token, which verifies under the same secret', async () => {
+    // The watch token is signed with JWT_ACCESS_SECRET because the
+    // connection-proxy holds no other secret, and it travels in a URL — address
+    // bar, browser history, every reverse-proxy access log. Accepting it here
+    // would make each of those a 120-second bearer credential for the observing
+    // admin, good for minting watch tokens against any other desktop in the org.
+    jwt.verifyAsync.mockResolvedValue({ sub: 'admin1', orgId: 'org1', kasmId: 'kid1', mode: 'view', typ: 'watch' });
+    const guard = new JwtAuthGuard(reflectorFor({}), jwt as never, env);
+    const { ctx, req } = contextWith({ authorization: 'Bearer watch-jwt' });
+    await expect(guard.canActivate(ctx)).rejects.toThrow('Not an API access token');
+    expect(req.user).toBeUndefined();
+  });
+
+  it('refuses any token that names a purpose, not only the watch token', async () => {
+    jwt.verifyAsync.mockResolvedValue({ sub: 'u1', orgId: 'org1', typ: 'something-later' });
+    const guard = new JwtAuthGuard(reflectorFor({}), jwt as never, env);
+    const { ctx } = contextWith({ authorization: 'Bearer typed-jwt' });
+    await expect(guard.canActivate(ctx)).rejects.toThrow('Not an API access token');
+  });
 });

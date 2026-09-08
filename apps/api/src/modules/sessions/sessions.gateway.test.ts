@@ -68,6 +68,56 @@ describe('SessionsGateway handshake', () => {
     expect(client.join).not.toHaveBeenCalled();
   });
 
+  it('drops a socket presenting an observation watch token', async () => {
+    // A watch token verifies under this secret — the connection-proxy holds no
+    // other — but it is a capability for one desktop. Accepting it here would
+    // let anyone who read it out of a URL join the observing admin's rooms.
+    jwt.verifyAsync.mockResolvedValue({ ...PAYLOAD, kasmId: 'kid1', mode: 'view', typ: 'watch' });
+    const client = socket({ auth: { token: 'watch-token' } });
+    await gateway.handleConnection(client as never);
+    expect(client.disconnect).toHaveBeenCalledWith(true);
+    expect(client.join).not.toHaveBeenCalled();
+  });
+
+  it('keeps a plain user out of the room desktop frames travel through', async () => {
+    // The org room is joined on org membership alone, so anything sensitive in
+    // it is readable by every colleague. Observation samples carry a WebP of the
+    // desktop and the title of the focused window.
+    const client = socket({ auth: { token: 'good' } });
+    await gateway.handleConnection(client as never);
+    expect(client.join).toHaveBeenCalledWith('org:org1');
+    expect(client.join).not.toHaveBeenCalledWith('observe:org1');
+  });
+
+  it('joins the observation room for a real SESSION_OBSERVE holder', async () => {
+    rbac.effectivePermissions.mockResolvedValue(new Set(['SESSION_OBSERVE']));
+    const client = socket({ auth: { token: 'good' } });
+    await gateway.handleConnection(client as never);
+    expect(client.join).toHaveBeenCalledWith('observe:org1');
+  });
+
+  it('joins the observation room for a system admin without a lookup', async () => {
+    jwt.verifyAsync.mockResolvedValue({ ...PAYLOAD, isSystemAdmin: true });
+    const client = socket({ auth: { token: 'good' } });
+    await gateway.handleConnection(client as never);
+    expect(client.join).toHaveBeenCalledWith('observe:org1');
+    expect(rbac.effectivePermissions).not.toHaveBeenCalled();
+  });
+
+  it('joins the observation room on the wildcard permission', async () => {
+    rbac.effectivePermissions.mockResolvedValue(new Set(['*']));
+    const client = socket({ auth: { token: 'good' } });
+    await gateway.handleConnection(client as never);
+    expect(client.join).toHaveBeenCalledWith('observe:org1');
+  });
+
+  it('scopes the observation room to the verified org, never the query string', async () => {
+    rbac.effectivePermissions.mockResolvedValue(new Set(['SESSION_OBSERVE']));
+    const client = socket({ auth: { token: 'good' }, query: { orgId: 'victim-org' } });
+    await gateway.handleConnection(client as never);
+    expect(client.join).not.toHaveBeenCalledWith('observe:victim-org');
+  });
+
   it('joins the session room for its owner', async () => {
     prismaMock.session.findFirst.mockResolvedValue({ userId: 'user1' });
     const client = socket({ auth: { token: 'good' }, query: { sessionId: 'sess1' } });

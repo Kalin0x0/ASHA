@@ -41,6 +41,18 @@ const SESSION_STATUSES = new Set([
   'REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED', 'TERMINATING', 'DESTROYED', 'ERROR',
 ]);
 
+/**
+ * One entry of `asha:obs:watch:<kasmId>`, as ObservationService writes it. Read
+ * here rather than imported: ObservationService already depends on this service,
+ * and a shared type would only be worth a module cycle if it were bigger.
+ */
+interface ObservationHold {
+  observerUserId: string;
+  observerName: string;
+  since: string;
+  expiresAt: number;
+}
+
 @Injectable()
 export class SessionsService {
   constructor(
@@ -1063,12 +1075,28 @@ export class SessionsService {
       });
     }
     // Redis no-ops to null while it is down: no banner is the degraded mode.
-    const watch = session.kasmId
-      ? await this.redis.get<{ observerName: string; since: string }>(`asha:obs:watch:${session.kasmId}`)
+    // Written by ObservationService as a list of holds — several observers, and
+    // several holds per observer — so a lapsed one is dropped here too rather
+    // than counted just because the key it shares has not expired yet.
+    const record = session.kasmId
+      ? await this.redis.get<{ holds?: ObservationHold[] }>(`asha:obs:watch:${session.kasmId}`)
       : null;
+    const now = Date.now();
+    const holds = (Array.isArray(record?.holds) ? record.holds : [])
+      .filter((h) => h && h.expiresAt > now)
+      .sort((a, b) => Date.parse(a.since) - Date.parse(b.since));
+    const longest = holds[0];
     return {
       watermark,
-      observedBy: watch ? { observerName: watch.observerName, since: watch.since } : null,
+      // The banner names whoever has been watching longest and says how many
+      // there are, so a second observer joining cannot pass unmentioned.
+      observedBy: longest
+        ? {
+            observerName: longest.observerName,
+            since: longest.since,
+            observerCount: new Set(holds.map((h) => h.observerUserId)).size,
+          }
+        : null,
     };
   }
 

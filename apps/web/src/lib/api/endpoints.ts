@@ -313,11 +313,22 @@ export const getSessionConnection = (id: string) =>
 // and `reason` says which, so the tile can explain itself instead of staying
 // mysteriously blank.
 export interface ApiObservationWindow {
-  watchToken: string;
-  watchUrl: string;
-  expiresAt: string;
+  /** Absent when there is no way in: watchKind is then 'none'. */
+  watchToken?: string;
+  watchUrl?: string;
+  /**
+   * What `watchUrl` points at. `guac` is a proxy route the guacamole viewer
+   * opens; `iframe` is a container's own read-only stream, which the proxy
+   * never carries — so the caller must not guess from the connection type.
+   * `none` means the API refused to hand out a way in at all.
+   */
+  watchKind: 'guac' | 'iframe' | 'none';
+  /** Why there is no way in, when watchKind is 'none'. Translated by the caller. */
+  watchReason?: 'no_shared_terminal' | 'no_viewer_account';
+  expiresAt?: string;
   thumbnails: boolean;
   reason?: string;
+  windowId?: string;
 }
 
 export interface StartObservationInput {

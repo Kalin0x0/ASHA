@@ -109,6 +109,26 @@ export function degradedReason(degraded: string): { key: string; tool?: string }
   return { key: 'unknown' };
 }
 
+/**
+ * Is this the read-only stream URL the API just handed out?
+ *
+ * The observe view takes the URL to embed from its own query string, so it is
+ * as forgeable as any other query param — and an <iframe src> is one of the few
+ * places where an unvalidated one turns into script execution. Only an http(s)
+ * URL whose path is a session's `/observe` route is embedded; everything else
+ * renders the "nothing to watch" state.
+ */
+export function isObserveStreamUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+  return /^\/session\/[A-Za-z0-9_-]+\/observe\/?$/.test(parsed.pathname);
+}
+
 /** Why a tile has no picture — each maps to its own line of copy. */
 export type TilePreview =
   | { kind: 'frame'; src: string }

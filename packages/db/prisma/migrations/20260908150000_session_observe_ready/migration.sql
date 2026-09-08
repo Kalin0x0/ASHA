@@ -1,0 +1,12 @@
+-- Whether this session's container really carries the read-only KasmVNC account.
+--
+-- The observe route authenticates as `kasm_viewer`, an account kasmweb images
+-- ship but never give a password. The agent writes one at launch — but only a
+-- real KasmVNC image has `kasmvncpasswd` at all. The linuxserver images serve
+-- their desktop through nginx and have none, so the route would exist and
+-- answer 401, sending an admin who clicks "watch" into a dead viewer.
+--
+-- The agent reports what it actually managed; false is the honest default for
+-- every session that predates this column, and the manager then withholds the
+-- live view rather than offering one that cannot work.
+ALTER TABLE "Session" ADD COLUMN     "observeReady" BOOLEAN NOT NULL DEFAULT false;

@@ -3,6 +3,7 @@ import {
   type ObservationSample,
   formatAppClass,
   isObservationFresh,
+  isObserveStreamUrl,
   mergeObservation,
   observableSessions,
   observationImageSrc,
@@ -164,5 +165,24 @@ describe('resolveTilePreview', () => {
         now: NOW,
       }),
     ).toEqual({ kind: 'blank', reason: 'waiting' });
+  });
+});
+
+describe('isObserveStreamUrl', () => {
+  it('accepts the read-only route the API hands out', () => {
+    expect(isObserveStreamUrl('https://asha.example.com/session/kid1/observe/?token=t')).toBe(true);
+    expect(isObserveStreamUrl('https://asha.example.com/session/kid1/observe')).toBe(true);
+  });
+
+  it('refuses anything that is not that route, because it ends up in an iframe src', () => {
+    expect(isObserveStreamUrl('javascript:alert(1)')).toBe(false);
+    expect(isObserveStreamUrl('data:text/html,<script>alert(1)</script>')).toBe(false);
+    expect(isObserveStreamUrl('/session/kid1/observe/')).toBe(false);
+    expect(isObserveStreamUrl('')).toBe(false);
+  });
+
+  it('refuses the session route itself — that one carries the write credential', () => {
+    expect(isObserveStreamUrl('https://asha.example.com/session/kid1/?token=t')).toBe(false);
+    expect(isObserveStreamUrl('https://asha.example.com/session/kid1/observe/../?token=t')).toBe(false);
   });
 });

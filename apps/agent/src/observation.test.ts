@@ -137,6 +137,52 @@ describe('observation runner — what it captures', () => {
     expect(onError).toHaveBeenCalled();
   });
 
+  it('drops a frame whose window closed while it was being taken', async () => {
+    // OBSERVE_STOP (or a destroy) can land mid-exec. By the time the frame
+    // arrives the API has emitted session.observed active:false and taken the
+    // banner down, so publishing it would put a picture of that desktop on the
+    // wall after the person was told nobody is looking.
+    let release: (capture: unknown) => void = () => undefined;
+    const capture = vi.fn().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    const { publish, run } = runner(capture);
+    run.start(OBSERVE(), 'c1');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(capture).toHaveBeenCalledTimes(1);
+
+    run.stop('s1');
+    release({ title: 'Terminal' });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('publishes a frame the wall renewed the window for mid-capture', async () => {
+    // The wall re-requests every 20 s, which lands in the middle of captures all
+    // day long. A renewal is not a close, and dropping those frames would empty
+    // the wall it is keeping alive.
+    let release: (capture: unknown) => void = () => undefined;
+    const capture = vi.fn().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    const { publish, run } = runner(capture);
+    run.start(OBSERVE(), 'c1');
+    await vi.advanceTimersByTimeAsync(0);
+
+    run.start(OBSERVE(), 'c1');
+    release({ title: 'Terminal' });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ kasmId: 'k1', title: 'Terminal' }));
+  });
+
   it('keeps the window open when one capture fails', async () => {
     const capture = vi
       .fn()

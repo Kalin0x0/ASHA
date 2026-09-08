@@ -186,6 +186,7 @@ async function handleProvision(
       internalHost: result.internalHost,
       port: result.port,
       traefikRouterName: result.routerName,
+      viewerAuth: result.viewerAuth,
     })
     .catch((e) =>
       log.warn(`failed to report RUNNING for ${cmd.sessionId}: ${(e as Error).message} — container is up; will reconcile on heartbeat`),

@@ -41,6 +41,12 @@ const REDIS_KEY = (kasmId: string) => `asha:proxy:session:${kasmId}`;
 const GUAC_KEY = (kasmId: string) => `asha:proxy:guac:${kasmId}`;
 /** A guacd connection stays joinable for as long as the session record lives. */
 const GUAC_TTL_SEC = 3600;
+/**
+ * The API's record of an open observation window, written before it mints a
+ * watch token and deleted when the observation stops. The proxy only reads it:
+ * it is the one channel through which a stop reaches a stream already running.
+ */
+const WATCH_KEY = (kasmId: string) => `asha:obs:watch:${kasmId}`;
 
 /**
  * The part of the store the guacd bridge needs: the connection uuid guacd hands
@@ -53,7 +59,12 @@ export interface GuacUuidStore {
   clearGuacUuid(kasmId: string, uuid: string): Promise<void>;
 }
 
-export class SessionStore implements GuacUuidStore {
+/** The part of the store an observation stream needs to know it may continue. */
+export interface WatchRecordStore {
+  isWatchActive(kasmId: string): Promise<boolean | null>;
+}
+
+export class SessionStore implements GuacUuidStore, WatchRecordStore {
   private redis: Redis;
   /** In-process short-lived cache to reduce Redis round-trips under high concurrency. */
   private cache = new Map<string, { record: SessionRecord; expiresAt: number }>();
@@ -151,6 +162,23 @@ export class SessionStore implements GuacUuidStore {
   async clearGuacUuid(kasmId: string, uuid: string): Promise<void> {
     if ((await this.getGuacUuid(kasmId)) !== uuid) return;
     await this.redis.del(GUAC_KEY(kasmId)).catch(() => undefined);
+  }
+
+  /**
+   * Whether an observation window is still open on this session: `true` while
+   * the API's watch record exists, `false` once a stop deleted it or its TTL ran
+   * out, and `null` when the answer is unknown — which is what an unreachable
+   * Redis reads as. The three cases stay separate on purpose, because only
+   * `false` says the observation ended; treating an outage as a stop would drop
+   * every observer on a hiccup. Never rejects.
+   */
+  async isWatchActive(kasmId: string): Promise<boolean | null> {
+    if (!this.healthy) return null;
+    try {
+      return (await this.redis.exists(WATCH_KEY(kasmId))) > 0;
+    } catch {
+      return null;
+    }
   }
 
   quit(): void {
