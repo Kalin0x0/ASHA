@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.1',
+    date: '2026-09-08',
+    title: { en: 'A keyboard layout belongs to the machine you are typing on', de: 'Eine Tastaturbelegung gehört zu der Maschine, auf der getippt wird' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'A remote desktop could type something other than what was pressed, and no setting reached it. The layout the RDP bridge announced was one value for the whole installation, so it fitted at most the hosts that happened to share it — wrong in both directions, and the two earlier attempts at this only moved which hosts were wrong. Each server now carries the layout it is actually set up with, under Infrastructure → Servers.',
+          de: 'Ein entfernter Desktop konnte etwas anderes schreiben als gedrückt wurde, und keine Einstellung kam dort an. Die Belegung, die die RDP-Brücke ankündigte, war ein Wert für die ganze Installation und passte höchstens zu den Hosts, die ihn zufällig teilten — falsch in beide Richtungen, und die zwei früheren Anläufe verschoben nur, welche Hosts falsch lagen. Jeder Server trägt jetzt die Belegung, mit der er wirklich eingerichtet ist, unter Infrastruktur → Server.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'The viewer’s control panel can overrule that layout for the session in front of you. It describes the REMOTE desktop, not the keyboard you are typing on — the browser already sends the character a key produced, so your own keyboard is accounted for before anything leaves it. Use it when a desktop mistypes: the correction takes one click and reconnects, instead of waiting for an administrator.',
+          de: 'Im Bedienfeld des Viewers lässt sich diese Belegung für die Sitzung vor Ihnen überstimmen. Sie beschreibt den ENTFERNTEN Desktop, nicht die Tastatur, auf der Sie tippen — der Browser schickt bereits das Zeichen, das eine Taste erzeugt hat, Ihre eigene Tastatur ist also schon berücksichtigt. Zu benutzen, wenn ein Desktop falsch schreibt: die Korrektur kostet einen Klick und verbindet neu, statt auf einen Administrator zu warten.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.0',
     date: '2026-09-08',
     title: { en: 'Seeing what is happening, and being seen doing it', de: 'Sehen, was läuft — und dabei gesehen werden' },
