@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
+  NO_OBSERVATION_NOTICE,
   type ObservationSample,
+  applyObservedPush,
+  applyObservedRead,
   formatAppClass,
+  isObservableSession,
   isObservationFresh,
   isObserveStreamUrl,
+  isRemintable,
   mergeObservation,
   observableSessions,
   observationImageSrc,
   resolveTilePreview,
-  supportsCapture,
+  streamCloseReason,
+  watchRoute,
 } from './observation';
 import type { SessionRow } from './types';
 
@@ -51,15 +57,15 @@ describe('observableSessions', () => {
   });
 });
 
-describe('supportsCapture', () => {
-  it('is false for the guacd protocols', () => {
-    // Fixed servers run no agent; the only route to a frame would be a second
-    // RDP logon, which is exactly what observation must never cause.
-    for (const p of ['RDP', 'VNC', 'SSH']) expect(supportsCapture(p)).toBe(false);
+describe('isObservableSession', () => {
+  it('accepts a live session somebody is at', () => {
+    expect(isObservableSession(session())).toBe(true);
+    expect(isObservableSession(session({ status: 'DEGRADED' }))).toBe(true);
   });
 
-  it('is true for containers', () => {
-    expect(supportsCapture('KASMVNC')).toBe(true);
+  it('refuses one nobody is at', () => {
+    expect(isObservableSession(session({ status: 'PROVISIONING' }))).toBe(false);
+    expect(isObservableSession(session({ staged: true }))).toBe(false);
   });
 });
 
@@ -125,23 +131,51 @@ describe('formatAppClass', () => {
 });
 
 describe('resolveTilePreview', () => {
+  const captures = { thumbnails: true };
+
   it('shows the frame while it is live', () => {
     expect(
-      resolveTilePreview({ sample: sample({ image: 'UklGRg==' }), capturing: true, connectionType: 'KASMVNC', now: NOW }),
+      resolveTilePreview({ sample: sample({ image: 'UklGRg==' }), capturing: true, capability: captures, now: NOW }),
     ).toEqual({ kind: 'frame', src: 'data:image/webp;base64,UklGRg==' });
   });
 
   it('says a fixed server cannot be captured at all', () => {
     expect(
-      resolveTilePreview({ sample: sample({ image: 'UklGRg==' }), capturing: true, connectionType: 'RDP', now: NOW }),
+      resolveTilePreview({
+        sample: sample({ image: 'UklGRg==' }),
+        capturing: true,
+        capability: { thumbnails: false, reason: 'no_agent' },
+        now: NOW,
+      }),
     ).toEqual({ kind: 'blank', reason: 'unsupported' });
+  });
+
+  it('shows the frame of a guacd session the API does capture', () => {
+    // A container workspace reached over guacd carries the RDP label, and the
+    // agent captures it like any other container. Deciding from that label told
+    // such a tile "no capture on a fixed server" while its frames were arriving.
+    expect(
+      resolveTilePreview({
+        sample: sample({ image: 'UklGRg==' }),
+        capturing: true,
+        capability: captures,
+        now: NOW,
+      }),
+    ).toEqual({ kind: 'frame', src: 'data:image/webp;base64,UklGRg==' });
+  });
+
+  it('waits rather than guessing until the API has answered', () => {
+    expect(resolveTilePreview({ sample: undefined, capturing: true, capability: undefined, now: NOW })).toEqual({
+      kind: 'blank',
+      reason: 'waiting',
+    });
   });
 
   it('hides a frame still in hand once capture is switched off', () => {
     // The header states that nothing is being captured. Leaving the last frame
     // on screen under that statement would make the statement a lie.
     expect(
-      resolveTilePreview({ sample: sample({ image: 'UklGRg==' }), capturing: false, connectionType: 'KASMVNC', now: NOW }),
+      resolveTilePreview({ sample: sample({ image: 'UklGRg==' }), capturing: false, capability: captures, now: NOW }),
     ).toEqual({ kind: 'blank', reason: 'off' });
   });
 
@@ -150,7 +184,7 @@ describe('resolveTilePreview', () => {
       resolveTilePreview({
         sample: sample({ degraded: 'ffmpeg not present in image' }),
         capturing: true,
-        connectionType: 'KASMVNC',
+        capability: captures,
         now: NOW,
       }),
     ).toEqual({ kind: 'blank', reason: 'degraded', detail: 'ffmpeg not present in image' });
@@ -161,10 +195,102 @@ describe('resolveTilePreview', () => {
       resolveTilePreview({
         sample: sample({ image: 'UklGRg==', capturedAt: new Date(NOW - 45_000).toISOString() }),
         capturing: true,
-        connectionType: 'KASMVNC',
+        capability: captures,
         now: NOW,
       }),
     ).toEqual({ kind: 'blank', reason: 'waiting' });
+  });
+});
+
+describe('streamCloseReason', () => {
+  it('names the codes the proxy closes a view socket with', () => {
+    // The proxy mints these so the viewer can tell an ended grant from a
+    // refusal and re-mint instead of retrying a token that cannot work.
+    // Nothing read them, so every fixed-server observation died at 120s on a
+    // generic "the remote connection failed".
+    expect(streamCloseReason(4005)).toBe('watchExpired');
+    expect(streamCloseReason(4006)).toBe('watchRevoked');
+    expect(streamCloseReason(4010)).toBe('noLiveConnection');
+    expect(streamCloseReason(4011)).toBe('viewUnsupported');
+  });
+
+  it('leaves every other close to the viewer own state machine', () => {
+    expect(streamCloseReason(4003)).toBeUndefined();
+    expect(streamCloseReason(1006)).toBeUndefined();
+    // guacamole-common-js parses the close reason with parseInt, so an empty
+    // reason arrives as NaN.
+    expect(streamCloseReason(Number.NaN)).toBeUndefined();
+    expect(streamCloseReason(undefined)).toBeUndefined();
+  });
+
+  it('re-mints an ended grant and gives up on the other two', () => {
+    expect(isRemintable('watchExpired')).toBe(true);
+    expect(isRemintable('watchRevoked')).toBe(true);
+    expect(isRemintable('noLiveConnection')).toBe(false);
+    expect(isRemintable('viewUnsupported')).toBe(false);
+  });
+});
+
+describe('watchRoute', () => {
+  it('sends a container desktop to the read-only view, carrying the hold', () => {
+    expect(
+      watchRoute({ watchKind: 'iframe', watchUrl: 'https://host/session/kid1/observe/?token=t' }, 'sess-1', 'view-9'),
+    ).toBe('/observe/sess-1?src=https%3A%2F%2Fhost%2Fsession%2Fkid1%2Fobserve%2F%3Ftoken%3Dt&win=view-9');
+  });
+
+  it('appends the hold to the proxy route the API handed out', () => {
+    // Without it the viewer renews and releases the caller's single default
+    // hold — the one the wall is also on — so whichever surface unmounts first
+    // takes the other's notice down with it.
+    expect(watchRoute({ watchKind: 'guac', watchUrl: '/connect/kid1?monitor=1&watch=t' }, 'sess-1', 'view-9')).toBe(
+      '/connect/kid1?monitor=1&watch=t&win=view-9',
+    );
+  });
+
+  it('has nowhere to send an observer the API refused', () => {
+    expect(watchRoute({ watchKind: 'none' }, 'sess-1', 'view-9')).toBeNull();
+    expect(watchRoute({ watchKind: 'guac' }, 'sess-1', 'view-9')).toBeNull();
+  });
+});
+
+describe('the observation notice a viewer shows', () => {
+  const observedBy = { observerName: 'Anna Lindqvist', since: '2026-09-08T11:58:00.000Z', observerCount: 1 };
+  const ended = {
+    sessionId: 'sess-1',
+    observerName: 'Anna Lindqvist',
+    since: observedBy.since,
+    active: false,
+  };
+
+  it('shows the watcher the API reports on mount', () => {
+    // The push happens on the transition only, so a viewer that reloaded
+    // mid-observation has no event to replay: it used to show no banner for the
+    // rest of it, watched with nothing on screen saying so.
+    const state = applyObservedRead(NO_OBSERVATION_NOTICE, 'sess-1', observedBy, 0);
+    expect(state.observed).toEqual({
+      sessionId: 'sess-1',
+      observerName: 'Anna Lindqvist',
+      since: observedBy.since,
+      active: true,
+    });
+  });
+
+  it('clears the banner when the API reports nobody', () => {
+    const seeded = applyObservedRead(NO_OBSERVATION_NOTICE, 'sess-1', observedBy, 0);
+    expect(applyObservedRead(seeded, 'sess-1', null, seeded.pushes).observed).toBeNull();
+  });
+
+  it('takes the last observer off the screen on the push that says so', () => {
+    const seeded = applyObservedRead(NO_OBSERVATION_NOTICE, 'sess-1', observedBy, 0);
+    expect(applyObservedPush(seeded, ended).observed).toBeNull();
+  });
+
+  it('does not let a read in flight resurrect an observation that ended', () => {
+    // The read was issued before the push landed, so it describes a moment that
+    // has passed — applying it would put the banner back up over a desktop
+    // nobody is watching any more.
+    const stopped = applyObservedPush(NO_OBSERVATION_NOTICE, ended);
+    expect(applyObservedRead(stopped, 'sess-1', observedBy, 0)).toBe(stopped);
   });
 });
 

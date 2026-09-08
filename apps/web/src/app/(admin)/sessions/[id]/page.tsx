@@ -11,11 +11,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useConfirm } from '@/components/ui/confirm';
 import { Progress } from '@/components/ui/progress';
 import { SessionStatusPill } from '@/components/ui/status-pill';
-import { useSession, useTerminateSession, useWorkspaces } from '@/lib/hooks';
+import { useAuth } from '@/lib/api/auth-context';
+import { isLive } from '@/lib/api/mode';
+import { useSession, useStartObservation, useTerminateSession, useWorkspaces } from '@/lib/hooks';
+import { canAccessRoute } from '@/lib/nav';
+import { OBSERVE_THUMB_WIDTH, isObservableSession, watchRoute } from '@/lib/observation';
+import { createWindowId } from '@/lib/observation-windows';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import { formatDuration } from '@/lib/utils';
 
-const REMOTE_DESKTOP = new Set(['RDP', 'VNC', 'SSH']);
+/**
+ * A terminal has no second seat — guacd cannot join a running SSH connection —
+ * so it is the one kind the API will never hand out a way into. Every other
+ * kind is offered and the API decides: only it knows whether a container image
+ * carries the read-only account, and the protocol label does not say.
+ */
+const NO_SHARED_VIEW = new Set(['SSH']);
 
 export default function SessionDetailPage() {
   const t = useTranslations('sessions');
@@ -23,14 +34,50 @@ export default function SessionDetailPage() {
   const confirm = useConfirm();
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const session = useSession(params.id);
   const terminate = useTerminateSession();
+  const startObservation = useStartObservation();
   const workspaces = useWorkspaces();
   // The thumbnail cache is keyed by workspace id; resolve it from the name.
   const workspaceId = workspaces.find((w) => w.friendlyName === session?.workspaceName)?.id;
   const thumb = useThumbnails((s) => (workspaceId ? s.thumbs[workspaceId] : undefined));
-  const canWatch = session ? REMOTE_DESKTOP.has(session.connectionType) : false;
-  const watchLive = () => session && router.push(`/connect/${session.kasmId}?monitor=1`);
+  // Watching is its own permission. Offering the control to someone who does
+  // not hold it buys them a 403 and no explanation.
+  const mayObserve =
+    !isLive || !user || canAccessRoute('/sessions/monitor', user.permissions, user.isSystemAdmin);
+  const canWatch = session
+    ? mayObserve && isObservableSession(session) && !NO_SHARED_VIEW.has(session.connectionType)
+    : false;
+
+  /**
+   * The same path the live wall takes. The proxy grants a view-only stream on a
+   * watch token and nothing else, so the old `/connect/<kasmId>?monitor=1` —
+   * which streamed on the admin's own access token — is answered with 4003
+   * every time. Minting the token here is also what writes the audit entry and
+   * puts the notice on the watched person's screen.
+   */
+  const watchLive = async () => {
+    if (!session) return;
+    try {
+      const viewerWindow = createWindowId('view');
+      const win = await startObservation(
+        session.id,
+        // Metadata only: this opens the live picture, and asking the agent for
+        // thumbnails on top would read the same desktop twice.
+        { intervalMs: 0, thumbWidth: OBSERVE_THUMB_WIDTH },
+        viewerWindow,
+      );
+      const route = watchRoute(win, session.id, viewerWindow);
+      if (!route) {
+        toast.error(t(`monitor.watchUnavailable.${win.watchReason ?? 'unknown'}`));
+        return;
+      }
+      router.push(route);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('monitor.watchFailed'));
+    }
+  };
 
   if (!session) {
     return (
@@ -88,7 +135,7 @@ export default function SessionDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {canWatch && (
-            <Button variant="secondary" size="sm" onClick={watchLive} title={t('detail.watchHint')}>
+            <Button variant="secondary" size="sm" onClick={() => void watchLive()} title={t('detail.watchHint')}>
               <Eye className="size-4" /> {t('detail.watchLive')}
             </Button>
           )}
@@ -113,7 +160,7 @@ export default function SessionDetailPage() {
         <Card elevation={1} className="group relative overflow-hidden xl:col-span-2">
           <button
             type="button"
-            onClick={canWatch ? watchLive : () => router.push(`/session/${session.id}`)}
+            onClick={canWatch ? () => void watchLive() : () => router.push(`/session/${session.id}`)}
             className="block w-full text-start ring-gold-focus"
             aria-label={canWatch ? t('detail.watchLive') : t('detail.openViewer')}
           >

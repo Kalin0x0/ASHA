@@ -113,27 +113,34 @@ export function useObservations(): ObservationSample[] {
 }
 
 /**
- * Open or renew an observation window on one session. Resolves with the watch
- * token, so the caller can tell a refusal (org policy, missing permission) from
- * a session that simply has no frame yet.
+ * Open or renew one hold on a session's observation window. Resolves with the
+ * watch token — freshly minted on every call, so a viewer that keeps renewing
+ * always has one it can still open a stream with — and with whether this
+ * session can be captured at all, so the caller can tell a refusal (org policy,
+ * missing permission) from a session that simply has no frame yet.
+ *
+ * `windowId` names which of the caller's holds this is; each surface passes its
+ * own so one closing does not release another's.
  */
 export function useStartObservation() {
   const { mutateAsync } = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: api.StartObservationInput }) =>
-      api.startObservation(id, body),
+    mutationFn: ({ id, body, windowId }: { id: string; body: api.StartObservationInput; windowId?: string }) =>
+      api.startObservation(id, body, windowId),
   });
   return useCallback(
-    (id: string, body: api.StartObservationInput): Promise<api.ApiObservationWindow> =>
-      mutateAsync({ id, body }),
+    (id: string, body: api.StartObservationInput, windowId?: string): Promise<api.ApiObservationWindow> =>
+      mutateAsync({ id, body, windowId }),
     [mutateAsync],
   );
 }
 
 export function useStopObservation() {
-  const { mutateAsync } = useMutation({ mutationFn: api.stopObservation });
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, windowId }: { id: string; windowId?: string }) => api.stopObservation(id, windowId),
+  });
   return useCallback(
-    async (id: string) => {
-      await mutateAsync(id);
+    async (id: string, windowId?: string) => {
+      await mutateAsync({ id, windowId });
     },
     [mutateAsync],
   );

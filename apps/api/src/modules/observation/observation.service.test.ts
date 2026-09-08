@@ -272,12 +272,33 @@ describe('ObservationService', () => {
       expect(claims.typ).toBe('watch');
     });
 
-    it('does not mark the stream token the container route wants', async () => {
-      // That one is verified by the Traefik forward-auth gate, under its own
-      // secret, and carries no user identity to protect.
+    it('does not give the stream token the watch marker', async () => {
+      // The two are verified by different things under different secrets: this
+      // one only ever reaches the Traefik forward-auth gate.
       await svc.start(ADMIN, 'sess1', DTO);
       const [claims] = jwt.signAsync.mock.calls[1] as [Record<string, unknown>];
       expect(claims).not.toHaveProperty('typ');
+    });
+
+    it('marks the stream token for the read-only route, so it cannot open the writing one', async () => {
+      // The escalation this closes: the URL carrying this token is shown in the
+      // observer's own address bar. Unmarked it is byte-identical to the token a
+      // session's owner carries, and the gate does not know which router called
+      // it — so moving it to `/session/<kasmId>/`, one segment up, traded it for
+      // a cookie on the route Traefik serves with the KasmVNC account that may
+      // type. SESSION_OBSERVE became keyboard and mouse control of a colleague's
+      // desktop.
+      await svc.start(ADMIN, 'sess1', DTO);
+      const [claims] = jwt.signAsync.mock.calls[1] as [Record<string, unknown>];
+      expect(claims.obs).toBe(true);
+    });
+
+    it('names the observer in the stream token, so the cookie can be tied to their hold', async () => {
+      // Per hold rather than per session: one of two observers stopping has to
+      // end their own access while the other keeps watching.
+      await svc.start(ADMIN, 'sess1', DTO);
+      const [claims] = jwt.signAsync.mock.calls[1] as [Record<string, unknown>];
+      expect(claims.sub).toBe('admin1');
     });
 
     it('publishes who is watching so a viewer that reloads still shows the banner', async () => {
@@ -285,8 +306,21 @@ describe('ObservationService', () => {
       expect(redis.set).toHaveBeenCalledWith(
         'asha:obs:watch:kid1',
         { holds: [expect.objectContaining({ observerUserId: 'admin1', observerName: 'Ada Lovelace' })] },
-        90,
+        // The hold's 90 s plus the grace the sweep needs to still find it there
+        // once it has lapsed.
+        120,
       );
+    });
+
+    it('caps the holds one observer can pile up on a session', async () => {
+      // The window id is the caller's to choose. A caller that invents a new one
+      // per request would otherwise grow the record without bound, and every
+      // reader of it — the watched user's own connection fetch included — pays
+      // for that on each read.
+      memoryRedis();
+      for (let i = 0; i < 12; i += 1) await svc.start(ADMIN, 'sess1', DTO, `w${i}`);
+      expect(storedHolds()).toHaveLength(8);
+      expect(storedHolds().map((h) => h.windowId)).toContain('w11');
     });
 
     it('refuses a window id that is not one', async () => {
@@ -335,7 +369,7 @@ describe('ObservationService', () => {
     it('signs the stream token the Traefik gate wants, not the watch token again', async () => {
       await svc.start(ADMIN, 'sess1', DTO);
       expect(jwt.signAsync).toHaveBeenCalledWith(
-        { sid: 'sess1', kasmId: 'kid1' },
+        { sid: 'sess1', kasmId: 'kid1', sub: 'admin1', obs: true },
         { secret: 'stream-secret', expiresIn: 120 },
       );
     });
@@ -470,6 +504,18 @@ describe('ObservationService', () => {
       expect(sessions.sendControl).not.toHaveBeenCalled();
     });
 
+    it('leaves no hold behind for the observer who stopped, while the other keeps theirs', async () => {
+      // This record is what the connection-proxy reads to decide whether a
+      // stream may continue. Keyed per session it cannot tell "this observer's
+      // grant ended" from "all observation ended", so the observer who pressed
+      // stop kept streaming on their colleague's hold until the token expired.
+      const store = memoryRedis();
+      store.set('asha:obs:watch:kid1', held(ADA, BOB));
+      await svc.stop(ADMIN2, 'sess1');
+      expect(storedHolds().map((h) => h.observerUserId)).toEqual(['admin1']);
+      expect(store.has('asha:obs:watch:kid1')).toBe(true);
+    });
+
     it('records that watching continued past this observer leaving', async () => {
       const store = memoryRedis();
       store.set('asha:obs:watch:kid1', held(ADA, BOB));
@@ -581,6 +627,98 @@ describe('ObservationService', () => {
       // The banner is cleared regardless: nobody is watching, and a stale one
       // left standing is the same lie in the other direction.
       expect(notices()).toEqual([expect.objectContaining({ active: false })]);
+    });
+  });
+
+  describe('a hold that lapses instead of being released', () => {
+    /** What the sweep reads: the live sessions a hold could be sitting under. */
+    const WATCHED_ROW = {
+      id: 'sess1',
+      orgId: 'org1',
+      kasmId: 'kid1',
+      userId: 'worker1',
+      zoneId: 'zone1',
+      agentId: 'agent1',
+      containerId: 'cont1',
+    };
+    const ADA = { observerUserId: 'admin1', observerName: 'Ada Lovelace', since: '2026-09-08T10:00:00.000Z' };
+    const BOB = { observerUserId: 'admin2', observerName: 'Bob Kahn', since: '2026-09-08T10:05:00.000Z' };
+    const lapsed = { expiresAt: Date.now() - 1 };
+
+    beforeEach(() => {
+      prismaMock.session.findMany.mockResolvedValue([WATCHED_ROW]);
+    });
+
+    it('takes the notice down and stops the capture when the last hold ran out', async () => {
+      // The observer's browser died. Nothing releases their hold, and until the
+      // sweep ran, the banner stayed up on the watched person's screen for the
+      // rest of their session — saying they were being watched while nobody was.
+      const store = memoryRedis();
+      store.set('asha:obs:watch:kid1', held({ ...ADA, ...lapsed }));
+      await expect(svc.sweepLapsedHolds()).resolves.toBe(1);
+      expect(store.has('asha:obs:watch:kid1')).toBe(false);
+      expect(sessions.sendControl).toHaveBeenCalledWith(WATCHED_ROW, { action: 'OBSERVE_STOP', kasmId: 'kid1' });
+      expect(notices()).toEqual([
+        { sessionId: 'sess1', observerName: 'Ada Lovelace', since: ADA.since, active: false },
+      ]);
+    });
+
+    it('writes the stop the audit trail was missing, against the observer who left', async () => {
+      const store = memoryRedis();
+      store.set('asha:obs:watch:kid1', held({ ...ADA, ...lapsed }));
+      await svc.sweepLapsedHolds();
+      expect(security.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'observation.stop',
+          actorUserId: 'admin1',
+          targetId: 'sess1',
+          metadata: expect.objectContaining({ reason: 'lapsed', stillObserved: false }),
+        }),
+      );
+    });
+
+    it('leaves a window nobody has walked away from alone', async () => {
+      const store = memoryRedis();
+      store.set('asha:obs:watch:kid1', held(ADA));
+      await expect(svc.sweepLapsedHolds()).resolves.toBe(0);
+      expect(redis.set).not.toHaveBeenCalled();
+      expect(redis.del).not.toHaveBeenCalled();
+      expect(gateway.emitToSession).not.toHaveBeenCalled();
+      expect(security.emit).not.toHaveBeenCalled();
+    });
+
+    it('keeps the notice up for the observer still there, under their name', async () => {
+      const store = memoryRedis();
+      store.set('asha:obs:watch:kid1', held({ ...ADA, ...lapsed }, BOB));
+      await svc.sweepLapsedHolds();
+      expect(store.has('asha:obs:watch:kid1')).toBe(true);
+      expect(sessions.sendControl).not.toHaveBeenCalled();
+      expect(notices()).toEqual([
+        { sessionId: 'sess1', observerName: 'Bob Kahn', since: BOB.since, active: true },
+      ]);
+      expect(security.emit).toHaveBeenCalledWith(
+        expect.objectContaining({ actorUserId: 'admin1', metadata: expect.objectContaining({ stillObserved: true }) }),
+      );
+    });
+
+    it('says nothing when one of an observer’s several surfaces goes quiet', async () => {
+      // Their wall tile lapsed while the viewer they opened from it renews. The
+      // window is one window; it has not ended.
+      const store = memoryRedis();
+      store.set('asha:obs:watch:kid1', held({ ...ADA, ...lapsed }, { ...ADA, windowId: 'viewer1' }));
+      await expect(svc.sweepLapsedHolds()).resolves.toBe(0);
+      expect(security.emit).not.toHaveBeenCalled();
+      expect(gateway.emitToSession).not.toHaveBeenCalled();
+      expect(storedHolds().map((h) => h.windowId)).toEqual(['viewer1']);
+    });
+
+    it('tears nothing down on an answer Redis could not give', async () => {
+      // A disconnected Redis reads as null, which is not the same as nobody
+      // watching — ending every observation on a hiccup would be its own defect.
+      redis.get.mockResolvedValue(null);
+      await expect(svc.sweepLapsedHolds()).resolves.toBe(0);
+      expect(redis.del).not.toHaveBeenCalled();
+      expect(security.emit).not.toHaveBeenCalled();
     });
   });
 

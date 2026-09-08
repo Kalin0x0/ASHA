@@ -72,34 +72,37 @@ beforeEach(() => {
 });
 
 describe('the read-only observation route', () => {
-  it('authenticates as kasm_viewer, never as the account that may type', async () => {
+  it('carries no credential of its own, because a label cannot be rotated', async () => {
     await provisionContainer(CMD);
 
-    const write = basic('sess-kid1-auth');
-    const view = basic('sess-kid1-observe-auth');
-    expect(write.startsWith('kasm_user:')).toBe(true);
-    expect(view.startsWith('kasm_viewer:')).toBe(true);
-    // The whole point of the second route: an observer holding this header
-    // cannot replay it as the writing account.
-    expect(view.split(':')[1]).not.toBe(write.split(':')[1]);
-    expect(view.split(':')[1]).toMatch(/^[A-Za-z0-9_-]+$/);
-  });
-
-  it('keeps the viewer password out of the container env', async () => {
-    await provisionContainer(CMD);
-
-    const view = basic('sess-kid1-observe-auth').split(':')[1];
+    // The write-capable route keeps its baked-in header — it is the session's
+    // own credential and lives exactly as long as the session does.
+    expect(basic('sess-kid1-auth').startsWith('kasm_user:')).toBe(true);
+    // The observe route must NOT: a container label cannot change while the
+    // container runs, so a kasm_viewer password baked in here would be one
+    // password for the whole session — good long after the two-minute grant it
+    // was handed out for expired. The password is minted per observation and the
+    // forward-auth gate puts it on the request instead.
+    const observeLabels = Object.keys(labels()).filter((k) => k.includes('sess-kid1-observe'));
+    expect(observeLabels.length).toBeGreaterThan(0);
+    expect(observeLabels.some((k) => k.includes('customrequestheaders'))).toBe(false);
+    expect(Object.values(labels()).some((v) => v.includes('kasm_viewer'))).toBe(false);
+    expect(Object.values(labels()).some((v) => Buffer.from(v, 'base64').toString().includes('kasm_viewer'))).toBe(
+      false,
+    );
+    // Nor in the env, where the desktop's own user could read it back out.
     expect(env()).toContainEqual(expect.stringMatching(/^VNC_PW=/));
-    expect(env().some((e) => e.includes(view))).toBe(false);
+    expect(env().some((e) => e.includes('kasm_viewer'))).toBe(false);
   });
 
-  it('gates the session id out of the path before the strip removes it', async () => {
+  it('keeps the observe route gated, so losing the header does not open it', async () => {
     await provisionContainer(CMD);
 
     // sess-auth reads the session id out of the request path, so it has to run
-    // ahead of the prefix strip; the credential goes on last.
+    // ahead of the prefix strip — and here it is load-bearing twice over,
+    // because it is also what authenticates the route now.
     expect(labels()['traefik.http.routers.sess-kid1-observe.middlewares']).toBe(
-      'sess-auth@file,sess-kid1-observe-strip,sess-kid1-observe-auth',
+      'sess-auth@file,sess-kid1-observe-strip',
     );
     expect(labels()['traefik.http.middlewares.sess-kid1-observe-strip.stripprefix.prefixes']).toBe(
       '/session/kid1/observe',
@@ -129,7 +132,7 @@ describe('the read-only observation route', () => {
   });
 });
 
-describe('setting the kasm_viewer password', () => {
+describe('probing for the read-only account', () => {
   it('runs as the session user, because kasm-user owns .kasmpasswd', async () => {
     await provisionContainer(CMD);
 
@@ -139,20 +142,32 @@ describe('setting the kasm_viewer password', () => {
     expect((call![0] as { Cmd: string[] }).Cmd[0]).toBe('/bin/sh');
   });
 
+  it('writes no password at launch, because one written then never expires', async () => {
+    await provisionContainer(CMD);
+
+    // Provisioning only asks whether the image COULD mint the account. Creating
+    // it here is what made the observer's credential outlive their grant by the
+    // rest of the session.
+    const script = scripts().find((s) => s.includes('kasmvncpasswd')) ?? '';
+    expect(script).toContain('command -v kasmvncpasswd');
+    expect(script).not.toContain('kasm_viewer');
+    expect(scripts().some((s) => s.includes('.kasmpasswd'))).toBe(false);
+  });
+
   it('reports no viewer account when the image has no kasmvncpasswd', async () => {
     const result = await provisionContainer(CMD);
 
     const script = scripts().find((s) => s.includes('kasmvncpasswd')) ?? '';
     // The guard keeps a third-party image from failing its session; the exit
     // code is what tells the manager the read-only route would answer nobody.
-    expect(script).toContain('command -v kasmvncpasswd >/dev/null 2>&1 || exit 1');
+    expect(script).toContain('command -v kasmvncpasswd >/dev/null 2>&1');
     expect(result.containerId).toBe('container1');
     expect(result.viewerAuth).toBe(false);
   });
 
   it('reports the viewer account once kasmvncpasswd confirms it', async () => {
     // One Docker multiplex frame (stream 1, 2 bytes) carrying the marker the
-    // script prints only after the password was written.
+    // script prints only when the tool is present.
     const payload = Buffer.from('ok', 'utf8');
     const frame = Buffer.concat([Buffer.from([1, 0, 0, 0, 0, 0, 0, payload.length]), payload]);
     execMock.mockImplementation(() => {

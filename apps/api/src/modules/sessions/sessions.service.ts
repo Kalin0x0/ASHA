@@ -19,6 +19,7 @@ import {
   RedisChannels,
   type RunConfig,
   type SessionControlCommand,
+  type SessionObservedEvent,
   type SessionSidecar,
   type StreamProfile,
 } from '@asha/events';
@@ -1074,30 +1075,78 @@ export class SessionsService {
         workspaceId: session.workspaceId ?? '',
       });
     }
+    return { watermark, observedBy: await this.observedBy(session) };
+  }
+
+  /**
+   * The observation notice as it stands right now, in the event shape the viewer
+   * already handles.
+   *
+   * `session.observed` is emitted on the transitions — the first observer
+   * arriving, the last one leaving — so a viewer that was not connected for one
+   * never hears about it: it reloaded, its socket dropped for a moment, the API
+   * restarted and took its process-local rooms with it. The gateway replays this
+   * into every socket that joins a session room, which puts the banner right a
+   * moment after the socket is back instead of leaving it wrong — in either
+   * direction — for the rest of the observation. A retraction carries no
+   * observer because there is none; the viewer reads neither field when
+   * `active` is false.
+   */
+  async observedState(session: { id: string; orgId: string; kasmId: string | null }): Promise<SessionObservedEvent> {
+    const observedBy = await this.observedBy(session);
+    return {
+      sessionId: session.id,
+      observerName: observedBy?.observerName ?? '',
+      since: observedBy?.since ?? new Date().toISOString(),
+      active: Boolean(observedBy),
+    };
+  }
+
+  /**
+   * Who is watching, for the banner: the observer who has been there longest and
+   * how many there are, so a second one joining cannot pass unmentioned.
+   *
+   * Null when nobody is watching, and null as well when the org switched the
+   * notice off — the observation is then audited as unannounced, and a payload
+   * that told the user anyway would put the banner back through a door the
+   * policy cannot see.
+   */
+  private async observedBy(session: { orgId: string; kasmId: string | null }) {
+    const holds = await this.observationHolds(session.kasmId);
+    const longest = holds[0];
+    if (!longest || !(await this.observationNotifyEnabled(session.orgId))) return null;
+    return {
+      observerName: longest.observerName,
+      since: longest.since,
+      observerCount: new Set(holds.map((h) => h.observerUserId)).size,
+    };
+  }
+
+  /**
+   * The holds still standing on a session, the oldest first. Written by
+   * ObservationService as a list — several observers, and several holds per
+   * observer — and read here on each hold's own deadline: the key outlives its
+   * longest hold on purpose, so a record that still exists is not the same as an
+   * observation that still runs.
+   */
+  private async observationHolds(kasmId: string | null): Promise<ObservationHold[]> {
     // Redis no-ops to null while it is down: no banner is the degraded mode.
-    // Written by ObservationService as a list of holds — several observers, and
-    // several holds per observer — so a lapsed one is dropped here too rather
-    // than counted just because the key it shares has not expired yet.
-    const record = session.kasmId
-      ? await this.redis.get<{ holds?: ObservationHold[] }>(`asha:obs:watch:${session.kasmId}`)
+    const record = kasmId
+      ? await this.redis.get<{ holds?: ObservationHold[] }>(`asha:obs:watch:${kasmId}`)
       : null;
     const now = Date.now();
-    const holds = (Array.isArray(record?.holds) ? record.holds : [])
+    return (Array.isArray(record?.holds) ? record.holds : [])
       .filter((h) => h && h.expiresAt > now)
       .sort((a, b) => Date.parse(a.since) - Date.parse(b.since));
-    const longest = holds[0];
-    return {
-      watermark,
-      // The banner names whoever has been watching longest and says how many
-      // there are, so a second observer joining cannot pass unmentioned.
-      observedBy: longest
-        ? {
-            observerName: longest.observerName,
-            since: longest.since,
-            observerCount: new Set(holds.map((h) => h.observerUserId)).size,
-          }
-        : null,
-    };
+  }
+
+  /** Absent means ON, the same reading ObservationService gives this switch. */
+  private async observationNotifyEnabled(orgId: string): Promise<boolean> {
+    const row = await prisma.setting.findUnique({
+      where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId, zoneId: '', key: 'observation.notifyUser' } },
+      select: { valueJson: true },
+    });
+    return row?.valueJson !== false;
   }
 
   /** Freeze a running session's container (no compute, state retained). */

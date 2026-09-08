@@ -137,3 +137,75 @@ export function createObservationRunner(deps: ObservationRunnerDeps): Observatio
     stop,
   };
 }
+
+export interface ViewerCredentialDeps {
+  open(containerIdOrName: string, password: string): Promise<boolean>;
+  revoke(containerIdOrName: string): Promise<boolean>;
+  onError?(message: string): void;
+}
+
+export interface ViewerCredential {
+  /** OBSERVE_START: write the password this observation was granted. */
+  grant(cmd: SessionControlCommand, containerIdOrName: string): Promise<boolean>;
+  /** OBSERVE_STOP: take the account away again. */
+  revoke(sessionId: string, containerIdOrName: string): Promise<boolean>;
+  /** The container is going away, so drop the bookkeeping without an exec. */
+  forget(sessionId: string): void;
+}
+
+/**
+ * The read-only KasmVNC account, held for exactly as long as an observation is.
+ *
+ * Before this, the account was written once at launch and lived as long as the
+ * container: a credential handed out for a two-minute look at a desktop was
+ * good for the rest of the working day, whatever the audit trail said. Here it
+ * is opened when the API grants an observation and deleted when the API says
+ * the last observer let go, with a password the API minted for that window
+ * alone — so the same window never comes back with the same key.
+ *
+ * Best-effort throughout, like everything else the agent does against images it
+ * did not build: a missing kasmvncpasswd costs the session its live view, never
+ * the session.
+ */
+export function createViewerCredential(deps: ViewerCredentialDeps): ViewerCredential {
+  /** sessionId → the password currently written into that container. */
+  const granted = new Map<string, string>();
+
+  return {
+    async grant(cmd, containerIdOrName) {
+      const password = cmd.viewerPassword;
+      // No password means no live view was granted for this session — a
+      // fixed-server session, or an API that only asked for thumbnails. Leaving
+      // the account alone is the safe reading: it does not exist yet.
+      if (!password) return false;
+      // Renewals arrive every few seconds for as long as the wall is open and
+      // carry the same password. Rewriting .kasmpasswd on each one would exec
+      // into someone's desktop three times a minute to change nothing.
+      if (granted.get(cmd.sessionId) === password) return false;
+      const opened = await deps.open(containerIdOrName, password);
+      if (opened) {
+        granted.set(cmd.sessionId, password);
+      } else {
+        // Record no password rather than a failed one, so the next renewal
+        // retries instead of leaving the observer at a 401 for the whole window.
+        granted.delete(cmd.sessionId);
+        deps.onError?.(`viewer account for ${cmd.sessionId} could not be opened — no live view`);
+      }
+      return opened;
+    },
+
+    async revoke(sessionId, containerIdOrName) {
+      const held = granted.delete(sessionId);
+      // Runs whether or not this agent remembers granting anything: an agent
+      // that restarted mid-observation has no record of the account, and the
+      // one thing that must not happen is a credential surviving its window.
+      const revoked = await deps.revoke(containerIdOrName);
+      if (!revoked && held) deps.onError?.(`viewer account for ${sessionId} could not be revoked`);
+      return revoked;
+    },
+
+    forget(sessionId) {
+      granted.delete(sessionId);
+    },
+  };
+}

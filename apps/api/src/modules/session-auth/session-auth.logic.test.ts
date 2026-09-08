@@ -15,14 +15,23 @@ import {
  * with Traefik injecting the container's Basic credentials on the way in.
  */
 
-/** Tokens are stand-ins for verified JWTs: `t:<kasmId>` and `c:<kasmId>`. */
+/**
+ * Tokens are stand-ins for verified JWTs: `t:<kasmId>` and `c:<kasmId>`, with an
+ * optional `@<observer>` for the proof the read-only route carries.
+ */
+const proof = (prefix: string) => (t: string) => {
+  if (!t.startsWith(prefix)) return null;
+  const [kasmId, observerUserId] = t.slice(prefix.length).split('@');
+  return { kasmId: kasmId ?? '', ...(observerUserId ? { observerUserId } : {}) };
+};
+
 const ask = (over: Partial<Parameters<typeof decideSessionAuth>[0]> = {}) =>
   decideSessionAuth({
     forwardedUri: '/session/kid1/',
     forwardedHost: undefined,
     cookieHeader: undefined,
-    readUrlToken: (t) => (t.startsWith('t:') ? t.slice(2) : null),
-    readCookieToken: (t) => (t.startsWith('c:') ? t.slice(2) : null),
+    readUrlToken: proof('t:'),
+    readCookieToken: proof('c:'),
     ...over,
   });
 
@@ -92,6 +101,25 @@ describe('decideSessionAuth', () => {
     expect(ask({ forwardedUri: '/?token=t:kid1', forwardedHost: 'app.example' })).toMatchObject({
       action: 'deny',
     });
+  });
+
+  it('carries the observer named by a proof into the verdict', () => {
+    // The gate has to know WHOSE observation this is: the window it checks is
+    // one administrator's hold, and one of two observers stopping must end
+    // their own access while the other keeps watching.
+    expect(ask({ forwardedUri: '/session/kid1/observe/?token=t:kid1@admin1' })).toMatchObject({
+      action: 'exchange',
+      observerUserId: 'admin1',
+    });
+    expect(ask({ cookieHeader: `${SESSION_COOKIE}=c:kid1@admin1` })).toMatchObject({
+      action: 'allow',
+      observerUserId: 'admin1',
+    });
+  });
+
+  it('names nobody for a session of one’s own', () => {
+    // A desktop's owner is not an observer, and must never be mistaken for one.
+    expect(ask({ cookieHeader: `${SESSION_COOKIE}=c:kid1` })).not.toHaveProperty('observerUserId');
   });
 
   it('refuses when Traefik sent no forwarded URI', () => {

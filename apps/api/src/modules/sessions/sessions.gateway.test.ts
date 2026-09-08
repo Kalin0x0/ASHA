@@ -12,14 +12,17 @@ import { SessionsGateway } from './sessions.gateway';
 interface FakeSocket {
   handshake: { auth?: Record<string, unknown>; query: Record<string, unknown> };
   join: ReturnType<typeof vi.fn>;
+  emit: ReturnType<typeof vi.fn>;
   disconnect: ReturnType<typeof vi.fn>;
 }
 
 function socket(handshake: Partial<FakeSocket['handshake']>): FakeSocket {
-  return { handshake: { query: {}, ...handshake }, join: vi.fn(), disconnect: vi.fn() };
+  return { handshake: { query: {}, ...handshake }, join: vi.fn(), emit: vi.fn(), disconnect: vi.fn() };
 }
 
 const PAYLOAD = { sub: 'user1', orgId: 'org1', email: 'u@x.io', isSystemAdmin: false };
+const NOBODY_WATCHING = { sessionId: 'sess1', observerName: '', since: '2026-09-08T10:00:00.000Z', active: false };
+const WATCHED = { sessionId: 'sess1', observerName: 'Ada Lovelace', since: '2026-09-08T10:00:00.000Z', active: true };
 
 /**
  * The handshake used to take `orgId` straight from `handshake.query`, so any
@@ -31,12 +34,19 @@ describe('SessionsGateway handshake', () => {
   let gateway: SessionsGateway;
   let jwt: { verifyAsync: ReturnType<typeof vi.fn> };
   let rbac: { effectivePermissions: ReturnType<typeof vi.fn> };
+  let sessions: { observedState: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     vi.clearAllMocks();
     jwt = { verifyAsync: vi.fn().mockResolvedValue(PAYLOAD) };
     rbac = { effectivePermissions: vi.fn().mockResolvedValue(new Set<string>()) };
-    gateway = new SessionsGateway(jwt as never, rbac as never, { JWT_ACCESS_SECRET: 'access-secret' } as never);
+    sessions = { observedState: vi.fn().mockResolvedValue(NOBODY_WATCHING) };
+    gateway = new SessionsGateway(
+      jwt as never,
+      rbac as never,
+      sessions as never,
+      { JWT_ACCESS_SECRET: 'access-secret' } as never,
+    );
   });
 
   it('joins the org from the verified payload, not from the query string', async () => {
@@ -119,25 +129,25 @@ describe('SessionsGateway handshake', () => {
   });
 
   it('joins the session room for its owner', async () => {
-    prismaMock.session.findFirst.mockResolvedValue({ userId: 'user1' });
+    prismaMock.session.findFirst.mockResolvedValue({ userId: 'user1', kasmId: 'kid1' });
     const client = socket({ auth: { token: 'good' }, query: { sessionId: 'sess1' } });
     await gateway.handleConnection(client as never);
     expect(prismaMock.session.findFirst).toHaveBeenCalledWith({
       where: { id: 'sess1', orgId: 'org1' },
-      select: { userId: true },
+      select: { userId: true, kasmId: true },
     });
     expect(client.join).toHaveBeenCalledWith('session:sess1');
   });
 
   it('takes the session room from the auth payload as well as the query', async () => {
-    prismaMock.session.findFirst.mockResolvedValue({ userId: 'user1' });
+    prismaMock.session.findFirst.mockResolvedValue({ userId: 'user1', kasmId: 'kid1' });
     const client = socket({ auth: { token: 'good', sessionId: 'sess1' } });
     await gateway.handleConnection(client as never);
     expect(client.join).toHaveBeenCalledWith('session:sess1');
   });
 
   it('joins the session room for a SESSION_VIEW_ANY holder', async () => {
-    prismaMock.session.findFirst.mockResolvedValue({ userId: 'someone-else' });
+    prismaMock.session.findFirst.mockResolvedValue({ userId: 'someone-else', kasmId: 'kid1' });
     rbac.effectivePermissions.mockResolvedValue(new Set(['SESSION_VIEW_ANY']));
     const client = socket({ auth: { token: 'good' }, query: { sessionId: 'sess1' } });
     await gateway.handleConnection(client as never);
@@ -145,7 +155,7 @@ describe('SessionsGateway handshake', () => {
   });
 
   it('keeps a plain user out of someone else’s session room', async () => {
-    prismaMock.session.findFirst.mockResolvedValue({ userId: 'someone-else' });
+    prismaMock.session.findFirst.mockResolvedValue({ userId: 'someone-else', kasmId: 'kid1' });
     const client = socket({ auth: { token: 'good' }, query: { sessionId: 'sess1' } });
     await gateway.handleConnection(client as never);
     expect(client.join).toHaveBeenCalledWith('org:org1');
@@ -169,5 +179,64 @@ describe('SessionsGateway handshake', () => {
     await gateway.handleConnection(client as never);
     expect(prismaMock.session.findFirst).not.toHaveBeenCalled();
     expect(client.join).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * `session.observed` is emitted on the transitions only — one notice per
+ * observer per window, never on the 20 s renewals. A viewer that was not
+ * connected for the transition therefore never heard it: it reloaded, its socket
+ * dropped for a moment, or the API restarted and took these process-local rooms
+ * with it. Until the state was replayed on the join, the banner stayed wrong for
+ * the rest of the observation — in both directions.
+ */
+describe('SessionsGateway — the notice a joining socket is owed', () => {
+  let gateway: SessionsGateway;
+  let jwt: { verifyAsync: ReturnType<typeof vi.fn> };
+  let rbac: { effectivePermissions: ReturnType<typeof vi.fn> };
+  let sessions: { observedState: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    jwt = { verifyAsync: vi.fn().mockResolvedValue(PAYLOAD) };
+    rbac = { effectivePermissions: vi.fn().mockResolvedValue(new Set<string>()) };
+    sessions = { observedState: vi.fn().mockResolvedValue(WATCHED) };
+    gateway = new SessionsGateway(
+      jwt as never,
+      rbac as never,
+      sessions as never,
+      { JWT_ACCESS_SECRET: 'access-secret' } as never,
+    );
+    prismaMock.session.findFirst.mockResolvedValue({ userId: 'user1', kasmId: 'kid1' });
+  });
+
+  it('tells a reconnecting viewer that it is being watched right now', async () => {
+    const client = socket({ auth: { token: 'good' }, query: { sessionId: 'sess1' } });
+    await gateway.handleConnection(client as never);
+    expect(sessions.observedState).toHaveBeenCalledWith({ id: 'sess1', orgId: 'org1', kasmId: 'kid1' });
+    expect(client.emit).toHaveBeenCalledWith('event', { type: 'session.observed', payload: WATCHED });
+  });
+
+  it('takes down a banner left standing for an observation that ended', async () => {
+    // The stop landed while this socket was away, so the retraction it carried
+    // reached nobody.
+    sessions.observedState.mockResolvedValue(NOBODY_WATCHING);
+    const client = socket({ auth: { token: 'good' }, query: { sessionId: 'sess1' } });
+    await gateway.handleConnection(client as never);
+    expect(client.emit).toHaveBeenCalledWith('event', { type: 'session.observed', payload: NOBODY_WATCHING });
+  });
+
+  it('replays nothing to a socket kept out of the session room', async () => {
+    prismaMock.session.findFirst.mockResolvedValue({ userId: 'someone-else', kasmId: 'kid1' });
+    const client = socket({ auth: { token: 'good' }, query: { sessionId: 'sess1' } });
+    await gateway.handleConnection(client as never);
+    expect(sessions.observedState).not.toHaveBeenCalled();
+    expect(client.emit).not.toHaveBeenCalled();
+  });
+
+  it('replays nothing to a socket that asked for no session', async () => {
+    const client = socket({ auth: { token: 'good' } });
+    await gateway.handleConnection(client as never);
+    expect(client.emit).not.toHaveBeenCalled();
   });
 });

@@ -6,9 +6,19 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ObservationNotice } from '@/components/composite/observation-notice';
 import { Button } from '@/components/ui/button';
+import { getSessionConnection } from '@/lib/api/endpoints';
+import { isLive } from '@/lib/api/mode';
 import { useSessions, useStartObservation, useStopObservation } from '@/lib/hooks';
-import { OBSERVE_RENEW_MS, OBSERVE_THUMB_WIDTH, isObserveStreamUrl } from '@/lib/observation';
-import { useSessionObserved } from '@/lib/realtime';
+import {
+  NO_OBSERVATION_NOTICE,
+  OBSERVE_RENEW_MS,
+  OBSERVE_THUMB_WIDTH,
+  applyObservedPush,
+  applyObservedRead,
+  isObserveStreamUrl,
+} from '@/lib/observation';
+import { createWindowId } from '@/lib/observation-windows';
+import { useRealtimeEvents } from '@/lib/realtime';
 
 /** A refused renewal — the session ended, or policy changed under us — must not
  *  tear the picture down; the stream itself says when it is gone. */
@@ -39,11 +49,49 @@ export default function ObserveSessionPage() {
   const sessions = useSessions();
   const startObservation = useStartObservation();
   const stopObservation = useStopObservation();
-  const observed = useSessionObserved(sessionId);
   const [ready, setReady] = useState(false);
 
   const src = searchParams?.get('src') ?? '';
   const stream = useMemo(() => (isObserveStreamUrl(src) ? src : null), [src]);
+  // Which of this observer's holds this page carries. Whoever opened it minted
+  // the hold before navigating, so a reload continues that one instead of
+  // opening a second window on the same desktop.
+  const [windowId] = useState(() => searchParams?.get('win') || createWindowId('view'));
+
+  // The strip is shown here too, and it is built from the same two sources the
+  // watched person's viewer uses: the push, and — because the push only fires
+  // on the transition — the current watcher read back from the API on mount and
+  // whenever the socket comes back.
+  const [notice, setNotice] = useState(NO_OBSERVATION_NOTICE);
+  const noticeRef = useRef(notice);
+  noticeRef.current = notice;
+  const observed = notice.observed;
+  const realtime = useRealtimeEvents(
+    (event) => {
+      if (event.type !== 'session.observed' || event.payload.sessionId !== sessionId) return;
+      setNotice((current) => applyObservedPush(current, event.payload));
+    },
+    { sessionId, enabled: Boolean(sessionId) },
+  );
+  const socketOpen = realtime === 'open';
+  useEffect(() => {
+    if (!isLive || !sessionId) return;
+    let cancelled = false;
+    const pushes = noticeRef.current.pushes;
+    getSessionConnection(sessionId)
+      .then((c) => {
+        if (cancelled) return;
+        setNotice((current) => applyObservedRead(current, sessionId, c.notice?.observedBy, pushes));
+      })
+      .catch(() => {
+        // Refused for an observer who is not a system admin — the connection
+        // route is owner-scoped — and their banner comes from the room replay
+        // instead. No banner is the degraded mode either way.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, socketOpen]);
 
   const session = sessions.find((s) => s.id === sessionId);
   const title = session?.workspaceName ?? t('observe.streamTitle');
@@ -56,16 +104,16 @@ export default function ObserveSessionPage() {
   useEffect(() => {
     if (!sessionId || !stream) return;
     const open = () =>
-      void startObservation(sessionId, { intervalMs: 0, thumbWidth: OBSERVE_THUMB_WIDTH }).catch(
+      void startObservation(sessionId, { intervalMs: 0, thumbWidth: OBSERVE_THUMB_WIDTH }, windowId).catch(
         ignoreWindowError,
       );
     open();
     const timer = window.setInterval(open, OBSERVE_RENEW_MS);
     return () => {
       window.clearInterval(timer);
-      void stopRef.current(sessionId).catch(ignoreWindowError);
+      void stopRef.current(sessionId, windowId).catch(ignoreWindowError);
     };
-  }, [sessionId, stream, startObservation]);
+  }, [sessionId, stream, windowId, startObservation]);
 
   const back = () => router.push('/sessions/monitor');
 

@@ -6,6 +6,7 @@ const { prismaMock } = vi.hoisted(() => ({
     session: { findFirst: vi.fn() },
     workspace: { findUnique: vi.fn() },
     userGroup: { findMany: vi.fn() },
+    setting: { findUnique: vi.fn() },
   },
 }));
 
@@ -69,6 +70,7 @@ describe('SessionsService.connection — viewer notice', () => {
     prismaMock.session.findFirst.mockResolvedValue(SESSION);
     prismaMock.workspace.findUnique.mockResolvedValue({ id: 'ws1', dlp: {} });
     prismaMock.userGroup.findMany.mockResolvedValue([{ groupId: 'g1' }]);
+    prismaMock.setting.findUnique.mockResolvedValue(null);
   });
 
   it('resolves the banner/watermark for the user at the desktop, not the caller', async () => {
@@ -141,9 +143,72 @@ describe('SessionsService.connection — viewer notice', () => {
     expect(out.notice.observedBy).toBeNull();
   });
 
+  it('says nobody is watching when the org switched the notice off', async () => {
+    // The observation is audited as unannounced then, so the payload the viewer
+    // paints its banner from must not announce it either.
+    redis.get.mockResolvedValue(watching({}));
+    prismaMock.setting.findUnique.mockResolvedValue({ valueJson: false });
+    const out = await svc.connection('sess1', OWNER);
+    expect(prismaMock.setting.findUnique).toHaveBeenCalledWith({
+      where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId: 'org1', zoneId: '', key: 'observation.notifyUser' } },
+      select: { valueJson: true },
+    });
+    expect(out.notice.observedBy).toBeNull();
+  });
+
+  it('does not go looking for the policy while nobody is watching', async () => {
+    await svc.connection('sess1', OWNER);
+    expect(prismaMock.setting.findUnique).not.toHaveBeenCalled();
+  });
+
   it('falls back to GROUP/USER scope for a fixed-server session with no workspace', async () => {
     prismaMock.session.findFirst.mockResolvedValue({ ...SESSION, workspaceId: null });
     await svc.connection('sess1', OWNER);
     expect(watermarks.resolveForSession).toHaveBeenCalledWith('org1', expect.objectContaining({ workspaceId: '' }));
+  });
+
+  /**
+   * What the gateway replays into a socket joining the session room. The push
+   * only ever fires on a transition, so a viewer that was disconnected for one
+   * has no way back to the truth without this.
+   */
+  describe('observedState', () => {
+    const SEED = { id: 'sess1', orgId: 'org1', kasmId: 'kid1' };
+
+    it('reports the observation a reconnecting viewer missed the start of', async () => {
+      redis.get.mockResolvedValue(watching({}));
+      await expect(svc.observedState(SEED)).resolves.toEqual({
+        sessionId: 'sess1',
+        observerName: 'Ada Lovelace',
+        since: '2026-09-08T10:00:00.000Z',
+        active: true,
+      });
+    });
+
+    it('retracts a banner whose stop the viewer was away for', async () => {
+      const state = await svc.observedState(SEED);
+      expect(state.active).toBe(false);
+    });
+
+    it('reports nobody watching once every hold has lapsed', async () => {
+      // The record outlives its last hold on purpose, so the sweep has something
+      // to read; a record that still exists is not an observation still running.
+      redis.get.mockResolvedValue(watching({ expiresAt: Date.now() - 1 }));
+      const state = await svc.observedState(SEED);
+      expect(state.active).toBe(false);
+    });
+
+    it('stays quiet about an observation the org switched the notice off for', async () => {
+      redis.get.mockResolvedValue(watching({}));
+      prismaMock.setting.findUnique.mockResolvedValue({ valueJson: false });
+      const state = await svc.observedState(SEED);
+      expect(state).toMatchObject({ active: false, observerName: '' });
+    });
+
+    it('answers for a fixed-server session that has no kasmId at all', async () => {
+      const state = await svc.observedState({ ...SEED, kasmId: null });
+      expect(state.active).toBe(false);
+      expect(redis.get).not.toHaveBeenCalled();
+    });
   });
 });

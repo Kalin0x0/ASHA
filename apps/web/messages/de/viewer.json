@@ -155,7 +155,11 @@
       "endedDescription": "Der entfernte Host hat die Verbindung geschlossen.",
       "errorTitle": "Verbindung fehlgeschlagen",
       "errorDescription": "Die entfernte Verbindung ist fehlgeschlagen.",
-      "tryAgain": "Erneut versuchen"
+      "tryAgain": "Erneut versuchen",
+      "watchExpired": "Die Beobachtungsfreigabe ist abgelaufen und ließ sich nicht erneuern. Öffnen Sie die Sitzung erneut über die Live-Überwachung.",
+      "watchRevoked": "Die Beobachtung wurde beendet. Öffnen Sie die Sitzung erneut über die Live-Überwachung.",
+      "noLiveConnection": "An diesem Desktop ist gerade niemand verbunden – es gibt nichts zu sehen.",
+      "viewUnsupported": "Eine Terminal-Sitzung lässt sich nicht beobachten – sie hat keinen geteilten Bildschirm."
     },
     "toasts": {
       "clipboardBlockedBrowser": "Der Browser hat den Zugriff auf die Zwischenablage blockiert.",

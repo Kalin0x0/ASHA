@@ -149,9 +149,9 @@ export interface ProvisionResult {
   port: number;
   routerName: string;
   /**
-   * Whether the read-only KasmVNC account really exists in this image. False for
-   * anything that only resembles Kasm, and the manager then withholds the live
-   * view instead of sending an admin to a 401.
+   * Whether this image can mint the read-only KasmVNC account when an
+   * observation starts. False for anything that only resembles Kasm, and the
+   * manager then withholds the live view instead of sending an admin to a 401.
    */
   viewerAuth: boolean;
 }
@@ -206,36 +206,41 @@ async function bootstrapCups(container: Docker.Container): Promise<void> {
   await exec.start({ Detach: true });
 }
 
+/** Where the KasmVNC accounts live in a kasmweb image, from inside it. */
+const KASMPASSWD = '"${HOME:-/home/kasm-user}/.kasmpasswd"';
+
 /**
- * Give the image's read-only KasmVNC account a password of our own.
- *
- * kasmweb images ship `kasm_viewer` (read, no write) next to `kasm_user`, but
- * nothing sets its password, so it answers 401 — and `VNC_VIEW_ONLY_PW` in the
- * container env does NOT set it either (measured). Writing the entry directly
- * is what works. Runs as the image's default user: kasm-user owns
- * `~/.kasmpasswd`, and the root that bootstrapCups needs would write a file the
- * VNC server cannot read.
- *
- * `printf` rather than `echo -e`: /bin/sh is dash in these images and would
- * pass `-e` through as text, making it the first line of the password.
+ * Charset the observation password has to keep to: base64url, what the API
+ * mints. It arrives over the control channel and ends up in a shell here and in
+ * a Basic header there, so anything outside this is refused rather than quoted
+ * around — a password carrying a single quote would close the script's string
+ * and run the rest as commands.
  */
-async function bootstrapViewerPassword(
+const VIEWER_PW_RE = /^[A-Za-z0-9_-]{8,128}$/;
+
+/**
+ * Run a short script inside the session container and answer whether it printed
+ * `ok`. `args` land as `$1`, `$2`, … so a value the agent did not author never
+ * becomes part of the script text.
+ *
+ * Attached, not detached like the other bootstraps, because the ANSWER matters:
+ * images that only look like Kasm (the linuxserver ones serve their desktop
+ * through nginx and ship no kasmvncpasswd) would otherwise get an observe route
+ * that authenticates nobody, and an admin would click "watch" into a 401.
+ *
+ * Runs as the image's default user: kasm-user owns `~/.kasmpasswd`, and the root
+ * that bootstrapCups needs would write a file the VNC server cannot read.
+ * Answers false rather than throwing — a third-party image may refuse the exec
+ * outright, and losing the read-only route must never cost anyone their desktop.
+ */
+async function execConfirmed(
   container: Docker.Container,
-  password: string,
+  script: string,
+  args: string[] = [],
 ): Promise<boolean> {
-  // Attached, not detached like the other bootstraps, because the ANSWER
-  // matters: images that only look like Kasm (the linuxserver ones serve their
-  // desktop through nginx and ship no kasmvncpasswd) would otherwise get an
-  // observe route that authenticates nobody, and an admin would click "watch"
-  // into a 401. Reporting the failure lets the manager withhold the offer.
-  const script =
-    'command -v kasmvncpasswd >/dev/null 2>&1 || exit 1; ' +
-    `printf '%s\n%s\n' '${password}' '${password}' | ` +
-    'kasmvncpasswd -u kasm_viewer -r "${HOME:-/home/kasm-user}/.kasmpasswd" >/dev/null 2>&1 ' +
-    "&& printf 'ok'";
   try {
     const exec = await container.exec({
-      Cmd: ['/bin/sh', '-c', script],
+      Cmd: ['/bin/sh', '-c', script, 'sh', ...args],
       AttachStdout: true,
       AttachStderr: false,
     });
@@ -247,18 +252,66 @@ async function bootstrapViewerPassword(
   }
 }
 
+/**
+ * Can this image mint the read-only account at all?
+ *
+ * kasmweb images ship `kasm_viewer` (read, no write) next to `kasm_user`, but
+ * nothing sets its password, so it answers 401 — and `VNC_VIEW_ONLY_PW` in the
+ * container env does NOT set it either (measured). The password is written per
+ * observation instead, so all provisioning has to settle is whether the tool
+ * that writes it exists: the manager withholds the live view for an image where
+ * it does not, rather than sending an admin to a viewer that cannot log in.
+ */
+async function probeViewerTooling(container: Docker.Container): Promise<boolean> {
+  return execConfirmed(container, "command -v kasmvncpasswd >/dev/null 2>&1 && printf 'ok'");
+}
+
+/**
+ * Open the read-only KasmVNC account for one observation.
+ *
+ * The account IS the grant. It does not exist between observations, and the
+ * password is new for each one, so the credential an administrator was handed
+ * to look at a desktop for two minutes stops working when that window closes —
+ * a password written once at launch was good for the life of the container.
+ *
+ * `printf` rather than `echo -e`: /bin/sh is dash in these images and would pass
+ * `-e` through as text, making it the first line of the password.
+ */
+export async function openViewerAccount(idOrName: string, password: string): Promise<boolean> {
+  if (!VIEWER_PW_RE.test(password)) return false;
+  const script =
+    'command -v kasmvncpasswd >/dev/null 2>&1 || exit 1; ' +
+    'printf \'%s\\n%s\\n\' "$1" "$1" | ' +
+    `kasmvncpasswd -u kasm_viewer -r ${KASMPASSWD} >/dev/null 2>&1 ` +
+    "&& printf 'ok'";
+  return execConfirmed(docker.getContainer(idOrName), script, [password]);
+}
+
+/**
+ * Withdraw the read-only account again, once the last observer let go.
+ *
+ * Measured on the live deployment: `-d` removes the entry outright — the account
+ * answers 401 afterwards and `/api/get_users` no longer lists it. Overwriting
+ * the password would not do: a credential that comes back is paused, not
+ * revoked, and the whole point is that the audit entry saying observation ended
+ * is true.
+ */
+export async function revokeViewerAccount(idOrName: string): Promise<boolean> {
+  const script =
+    'command -v kasmvncpasswd >/dev/null 2>&1 || exit 1; ' +
+    `kasmvncpasswd -d -u kasm_viewer ${KASMPASSWD} >/dev/null 2>&1 ` +
+    "&& printf 'ok'";
+  return execConfirmed(docker.getContainer(idOrName), script);
+}
+
 export async function provisionContainer(cmd: ProvisionCommand): Promise<ProvisionResult> {
   await ensureImage(cmd.runConfig.dockerImage);
 
   const port = cmd.runConfig.ports[0] ?? 6901;
   const router = routerName(cmd.kasmId);
   const vncPw = randomBytes(9).toString('base64url');
-  // Second, weaker credential for the same desktop: it may look, never touch.
-  // Same charset as vncPw, so neither ends up needing quoting in a shell or a
-  // Basic header.
-  const viewPw = randomBytes(9).toString('base64url');
-  // Set once the read-only account answers; the manager only offers a live view
-  // for a session where it does.
+  // Set once the image proves it can mint the read-only account; the manager
+  // only offers a live view for a session where it can.
   let viewerAuth = false;
 
   // Custom labels must NOT register their own Traefik routers (cross-tenant
@@ -324,11 +377,17 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     // (kasm_viewer has write:false) rather than by whichever client is loaded,
     // and joining does not evict the person working
     // (`new_session_disconnects_existing_exclusive_session: false`).
+    //
+    // Unlike the two routers above, this one carries NO credential of its own.
+    // A container label cannot be changed while the container runs, so a Basic
+    // header baked in here would be one password for the life of the session —
+    // which is exactly the credential that outlived its grant. The kasm_viewer
+    // password is minted per observation instead (openViewerAccount below), and
+    // the only component that can put a value that changes into the request is
+    // the forward-auth gate the route already passes through: sess-auth returns
+    // the Authorization header for observe paths and Traefik copies it upstream.
     const observeRouter = `${router}-observe`;
     const observePath = `${sessionPath(cmd.kasmId)}/observe`;
-    const observeBasic = Buffer.from(`kasm_viewer:${viewPw}`).toString('base64');
-    labels[`traefik.http.middlewares.${observeRouter}-auth.headers.customrequestheaders.Authorization`] =
-      `Basic ${observeBasic}`;
     labels[`traefik.http.routers.${observeRouter}.rule`] = `PathPrefix(\`${observePath}\`)`;
     labels[`traefik.http.routers.${observeRouter}.entrypoints`] = 'websecure';
     labels[`traefik.http.routers.${observeRouter}.tls`] = 'true';
@@ -336,9 +395,10 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     // Explicit router→service link (required with >1 service on the container).
     labels[`traefik.http.routers.${observeRouter}.service`] = observeRouter;
     labels[`traefik.http.middlewares.${observeRouter}-strip.stripprefix.prefixes`] = observePath;
-    // sess-auth first, for the same reason as the audio router.
+    // sess-auth first, for the same reason as the audio router — and here it is
+    // load-bearing twice over, because it is also what authenticates the route.
     labels[`traefik.http.routers.${observeRouter}.middlewares`] =
-      `sess-auth@file,${observeRouter}-strip,${observeRouter}-auth`;
+      `sess-auth@file,${observeRouter}-strip`;
     labels[`traefik.http.services.${observeRouter}.loadbalancer.server.port`] = String(port);
     labels[`traefik.http.services.${observeRouter}.loadbalancer.server.scheme`] = 'https';
     labels[`traefik.http.services.${observeRouter}.loadbalancer.serverstransport`] = 'asha-insecure@file';
@@ -451,12 +511,13 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
       await bootstrapCups(container).catch(() => undefined); // best-effort, never fail a session
     }
 
-    // The observe router above already carries kasm_viewer; the account only
-    // starts answering once it has this password. A third-party image without
-    // kasmvncpasswd loses the read-only route, which must not cost the user
-    // their desktop — best-effort, exactly like the CUPS bootstrap.
+    // No account is created here on purpose: one written at launch is a
+    // credential for the whole session. All the manager needs now is whether
+    // this image could mint one when an observation actually starts — a
+    // third-party image without kasmvncpasswd loses the read-only route, which
+    // must not cost the user their desktop.
     if (cmd.protocol === 'KASMVNC') {
-      viewerAuth = await bootstrapViewerPassword(container, viewPw).catch(() => false);
+      viewerAuth = await probeViewerTooling(container);
     }
 
     return { containerId: container.id, internalHost: ip, port, routerName: router, viewerAuth };

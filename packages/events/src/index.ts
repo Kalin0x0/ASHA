@@ -219,6 +219,9 @@ export interface SessionControlCommand {
     | 'STREAM'
     | 'RECORD_START'
     | 'RECORD_STOP'
+    // OBSERVE_STOP is sent when the LAST observer let go, never when one of
+    // several did: the agent reads it as "nobody is watching any more" and
+    // withdraws the read-only credential along with the capture loop.
     | 'OBSERVE_START'
     | 'OBSERVE_STOP';
   /** For RESIZE. */
@@ -238,6 +241,21 @@ export interface SessionControlCommand {
   intervalMs?: number;
   ttlMs?: number;
   thumbWidth?: number;
+  /**
+   * OBSERVE_START only, KasmVNC only: the password the read-only `kasm_viewer`
+   * account gets for THIS observation. The account does not exist between
+   * observations — the agent writes it here and deletes it again on
+   * OBSERVE_STOP — so a credential handed out for a two-minute look cannot be
+   * replayed for the rest of the session.
+   *
+   * Minted by the API, because only the API can put it into the observe route's
+   * Authorization header in the same request that hands out the URL. It must be
+   * new per observation (a password that comes back identical is paused, not
+   * revoked) and it must stay inside `[A-Za-z0-9_-]{8,128}` — base64url, the
+   * charset that needs no quoting in a shell or a Basic header. Anything else is
+   * refused by the agent rather than written.
+   */
+  viewerPassword?: string;
 }
 
 /**

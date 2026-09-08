@@ -6,8 +6,10 @@ import type { Env } from '@asha/config';
 import { ENV } from '../../common/env.module';
 import type { Response } from 'express';
 import { Public } from '../../common/decorators';
+import { ObserveGrantService } from './observe-grant.service';
 import {
   SESSION_COOKIE,
+  type SessionProof,
   cookiePath,
   decideSessionAuth,
   isObservePath,
@@ -35,24 +37,32 @@ export class SessionAuthController {
   constructor(
     private readonly jwt: JwtService,
     @Inject(ENV) private readonly env: Env,
+    private readonly grants: ObserveGrantService,
   ) {}
 
-  /** Verify a JWT and return the session it is for, or null. */
-  private sessionOf(token: string, requireCookieType: boolean, observe = false): string | null {
+  /** Verify a JWT and return what it proves about a session, or null. */
+  private sessionOf(token: string, requireCookieType: boolean, observe: boolean): SessionProof | null {
     try {
-      const payload = this.jwt.verify<{ kasmId?: string; typ?: string; obs?: boolean }>(token, {
+      const payload = this.jwt.verify<{ kasmId?: string; sub?: string; typ?: string; obs?: boolean }>(token, {
         secret: this.env.SESSION_TOKEN_SECRET,
       });
       // The cookie carries `typ` so a long-lived cookie value cannot be replayed
       // as a URL token, nor a URL token pasted in as a cookie to skip the
       // exchange — each proof is only good for the hop it was minted for.
       if (requireCookieType !== (payload.typ === 'sess-cookie')) return null;
-      // And `obs` so it is only good for the ROUTE it was minted for. The Path
-      // attribute already keeps a browser from sending an observer's cookie to
-      // the write route; this makes a hand-crafted request fail there too,
-      // which matters because that route is served with the account that types.
-      if (requireCookieType && Boolean(payload.obs) !== observe) return null;
-      return payload.kasmId ?? null;
+      // And `obs` so it is only good for the ROUTE it was minted for — the URL
+      // token every bit as much as the cookie. The Path attribute already keeps
+      // a browser from sending an observer's cookie to the write route, but the
+      // token is handed to the observer's own address bar: unmarked, it is
+      // byte-identical to the owner's and buys a write cookie on
+      // `/session/<kasmId>/`, which Traefik serves with the KasmVNC account that
+      // may type. Marked, it is refused there — and an owner's token is refused
+      // on the observe route in the same stroke.
+      if (Boolean(payload.obs) !== observe) return null;
+      if (!payload.kasmId) return null;
+      // Only an observer's proof names anybody: `sub` on a marked token is the
+      // administrator the observation was granted to.
+      return { kasmId: payload.kasmId, ...(payload.obs && payload.sub ? { observerUserId: payload.sub } : {}) };
     } catch {
       return null;
     }
@@ -60,13 +70,13 @@ export class SessionAuthController {
 
   @Public()
   @Get('session-auth')
-  gate(
+  async gate(
     @Headers('x-forwarded-uri') forwardedUri: string | undefined,
     @Headers('x-forwarded-host') forwardedHost: string | undefined,
     @Headers('x-forwarded-proto') forwardedProto: string | undefined,
     @Headers('cookie') cookieHeader: string | undefined,
     @Res() res: Response,
-  ): void {
+  ): Promise<void> {
     const path = (forwardedUri ?? '').split('?')[0] ?? '';
     const observing = isObservePath(path);
     const verdict = decideSessionAuth({
@@ -74,12 +84,28 @@ export class SessionAuthController {
       forwardedHost,
       cookieHeader,
       readCookieToken: (t) => this.sessionOf(t, true, observing),
-      readUrlToken: (t) => this.sessionOf(t, false),
+      readUrlToken: (t) => this.sessionOf(t, false, observing),
     });
 
     if (verdict.action === 'deny') {
       // Deliberately bare: the body is returned to the browser verbatim, and a
       // reason would tell a prober whether the session exists.
+      res.status(401).send('Unauthorized');
+      return;
+    }
+
+    // An observation is authorized by a window that is open NOW, so the gate
+    // asks on every request rather than trusting a credential it minted once.
+    // Pressing stop ends the window; so does a hold left to lapse by a closed
+    // laptop, and so does withdrawing SESSION_OBSERVE, whose next renewal is
+    // then refused. None of the three can reach a cookie already sitting in a
+    // browser — without this read the observer just re-opens the URL out of
+    // their history and watches on, unannounced and unaudited.
+    //
+    // Only the observe route pays for this. A user reaching their own desktop
+    // never gets here, so no Redis hiccup can put them in front of a 401.
+    const grantEndsAt = observing ? await this.grants.holdExpiry(verdict.kasmId, verdict.observerUserId) : 0;
+    if (observing && grantEndsAt <= Date.now()) {
       res.status(401).send('Unauthorized');
       return;
     }
@@ -94,9 +120,25 @@ export class SessionAuthController {
     // response's headers onto the upstream request, and only returns a non-2xx
     // one to the browser, so a `Set-Cookie` on a 200 would never arrive.
     const mode = kasmIdFromPath(path) ? 'path' : 'subdomain';
-    const ttl = this.env.SESSION_COOKIE_TTL;
+    // A session cookie lives as long as the desktop it opens. An observer's may
+    // not: it is minted against a grant that is renewed every 20 s and lapses 90 s
+    // after the last renewal, so it expires with that grant instead of twelve
+    // hours later. The per-request check above is what actually ends an
+    // observation; this is what keeps the credential itself from being worth
+    // stealing, and what an observer runs into if that check is ever lost. An
+    // observer whose cookie ran out re-opens the desktop from the wall, which
+    // mints a new one — the watched user's side is untouched either way.
+    const ttl = observing
+      ? Math.max(1, Math.min(this.env.SESSION_COOKIE_TTL, Math.ceil((grantEndsAt - Date.now()) / 1000)))
+      : this.env.SESSION_COOKIE_TTL;
     const cookie = this.jwt.sign(
-      { kasmId: verdict.kasmId, typ: 'sess-cookie', ...(observing ? { obs: true } : {}) },
+      {
+        kasmId: verdict.kasmId,
+        typ: 'sess-cookie',
+        // `sub` carries the observer into the cookie so every later request can
+        // be matched against THEIR hold, not against "somebody is watching".
+        ...(observing ? { obs: true, sub: verdict.observerUserId } : {}),
+      },
       { secret: this.env.SESSION_TOKEN_SECRET, expiresIn: ttl },
     );
     const attrs = [

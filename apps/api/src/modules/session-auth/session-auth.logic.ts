@@ -21,16 +21,30 @@
  * `Referer` for the rest of the session.
  */
 
+/**
+ * What one verified proof says.
+ *
+ * `observerUserId` is present only on a proof minted for the read-only route:
+ * an observation is a grant to ONE administrator, so the identity has to travel
+ * with the proof for the gate to be able to ask whether that grant still
+ * stands. A session's own proof names no one — it is the desktop's owner by
+ * construction, and their access ends with the container.
+ */
+export interface SessionProof {
+  kasmId: string;
+  observerUserId?: string;
+}
+
 /** What the gate wants done with one request. */
 export type SessionAuthVerdict =
   /** Already carries a valid cookie — let Traefik forward it upstream. */
-  | { action: 'allow'; kasmId: string }
+  | { action: 'allow'; kasmId: string; observerUserId?: string }
   /**
    * Carries a valid one-shot token. Set the cookie and bounce the browser to the
    * same URL without it. `location` is deliberately relative: an absolute URL
    * built from a request header is an open redirect waiting to happen.
    */
-  | { action: 'exchange'; kasmId: string; location: string }
+  | { action: 'exchange'; kasmId: string; location: string; observerUserId?: string }
   /** No proof of any kind. */
   | { action: 'deny'; reason: string };
 
@@ -41,9 +55,9 @@ export interface SessionAuthRequest {
   forwardedHost: string | undefined;
   /** Raw `Cookie` header, forwarded with the original request. */
   cookieHeader: string | undefined;
-  /** Verifies a token and returns its kasmId, or null. Injected so this stays pure. */
-  readCookieToken: (jwt: string) => string | null;
-  readUrlToken: (jwt: string) => string | null;
+  /** Verifies a token and returns what it proves, or null. Injected so this stays pure. */
+  readCookieToken: (jwt: string) => SessionProof | null;
+  readUrlToken: (jwt: string) => SessionProof | null;
 }
 
 /** Cookie name. Scoped by Path to one session, so two sessions never collide. */
@@ -108,19 +122,26 @@ export function decideSessionAuth(req: SessionAuthRequest): SessionAuthVerdict {
   // the first has one and no token.
   const cookie = readCookie(req.cookieHeader, SESSION_COOKIE);
   if (cookie) {
-    const forSession = req.readCookieToken(cookie);
+    const proof = req.readCookieToken(cookie);
     // A cookie is Path-scoped, but a scope is not a claim. Compare anyway, so a
     // cookie minted for another session can never open this one.
-    if (forSession === kasmId) return { action: 'allow', kasmId };
+    if (proof?.kasmId === kasmId) {
+      return { action: 'allow', kasmId, ...(proof.observerUserId ? { observerUserId: proof.observerUserId } : {}) };
+    }
   }
 
   const token = query.get('token');
   if (token) {
-    const forSession = req.readUrlToken(token);
-    if (forSession === kasmId) {
+    const proof = req.readUrlToken(token);
+    if (proof?.kasmId === kasmId) {
       query.delete('token');
       const rest = query.toString();
-      return { action: 'exchange', kasmId, location: rest ? `${path}?${rest}` : path };
+      return {
+        action: 'exchange',
+        kasmId,
+        location: rest ? `${path}?${rest}` : path,
+        ...(proof.observerUserId ? { observerUserId: proof.observerUserId } : {}),
+      };
     }
     return { action: 'deny', reason: 'token does not match this session' };
   }

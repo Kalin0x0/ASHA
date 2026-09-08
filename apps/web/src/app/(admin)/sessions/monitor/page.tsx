@@ -19,8 +19,8 @@ import { useAuth } from '@/lib/api/auth-context';
 import { isLive } from '@/lib/api/mode';
 import { useObservations, useSessions, useStartObservation, useStopObservation } from '@/lib/hooks';
 import { canAccessRoute } from '@/lib/nav';
-import { DEFAULT_OBSERVE_INTERVAL, OBSERVE_INTERVALS, OBSERVE_RENEW_MS, OBSERVE_THUMB_WIDTH, degradedReason, formatAppClass, mergeObservation, observableSessions, resolveTilePreview, type ObservationSample, type ObserveInterval } from '@/lib/observation';
-import { createObservationWindows } from '@/lib/observation-windows';
+import { DEFAULT_OBSERVE_INTERVAL, OBSERVE_INTERVALS, OBSERVE_RENEW_MS, OBSERVE_THUMB_WIDTH, degradedReason, formatAppClass, mergeObservation, observableSessions, resolveTilePreview, watchRoute, type ObservationCapability, type ObservationSample, type ObserveInterval } from '@/lib/observation';
+import { createObservationWindows, createWindowId } from '@/lib/observation-windows';
 import { useRealtimeEvents } from '@/lib/realtime';
 import type { SessionRow, SessionStatus } from '@/lib/types';
 import { cn, formatDuration } from '@/lib/utils';
@@ -55,6 +55,10 @@ export default function SessionMonitorPage() {
   const [intervalMs, setIntervalMs] = useState<ObserveInterval>(DEFAULT_OBSERVE_INTERVAL);
   const [backgrounded, setBackgrounded] = useState(false);
   const [streamed, setStreamed] = useState<Record<string, ObservationSample>>({});
+  // What the API answered per session about capturing it. The tile used to work
+  // this out from the protocol label, which is wrong for a container reached
+  // over guacd: it carries the RDP label and the agent captures it anyway.
+  const [capability, setCapability] = useState<Record<string, ObservationCapability>>({});
 
   // Nothing is captured while the tab is hidden: an admin who switched away is
   // not watching, and capture that outlives attention is the thing this feature
@@ -99,6 +103,16 @@ export default function SessionMonitorPage() {
   const stopRef = useRef(stopObservation);
   stopRef.current = stopObservation;
 
+  // Every answer carries whether this session can be captured; keeping it is
+  // what lets the tile say so instead of deciding for itself.
+  const recordCapability = useCallback((sessionId: string, win: { thumbnails: boolean; reason?: string }) => {
+    setCapability((current) => {
+      const prev = current[sessionId];
+      if (prev && prev.thumbnails === win.thumbnails && prev.reason === win.reason) return current;
+      return { ...current, [sessionId]: { thumbnails: win.thumbnails, ...(win.reason ? { reason: win.reason } : {}) } };
+    });
+  }, []);
+
   /**
    * Mint the watch token at the moment of the click, not when the tile opened:
    * it lives 120 s, and an admin who scrolls the wall for a while would
@@ -108,29 +122,29 @@ export default function SessionMonitorPage() {
   const watchLive = useCallback(
     async (sessionId: string) => {
       try {
-        const win = await startObservation(sessionId, { intervalMs, thumbWidth: OBSERVE_THUMB_WIDTH });
-        // The viewer takes this window over and renews it while it watches, so
-        // the wall lets go of it BEFORE navigating: the push unmounts this page,
-        // and the cleanup below would otherwise close the window it just opened
-        // — the watched person's notice would go dark at the moment full-screen
-        // watching begins, and the audit trail would record a second of it.
+        // Opened under the VIEWER's hold, not the wall's: this page unmounts on
+        // the push, and the window the viewer renews has to be one the wall's
+        // own cleanup cannot release.
+        const viewerWindow = createWindowId('view');
+        const win = await startObservation(
+          sessionId,
+          { intervalMs, thumbWidth: OBSERVE_THUMB_WIDTH },
+          viewerWindow,
+        );
         // The API refuses a way in for a session nothing can watch — a terminal
         // with no shared view, or a container image whose read-only account does
         // not exist. Say which, rather than navigating to nowhere.
-        if (win.watchKind === 'none' || !win.watchUrl) {
+        const route = watchRoute(win, sessionId, viewerWindow);
+        if (!route) {
           toast.error(t(`watchUnavailable.${win.watchReason ?? 'unknown'}`));
           return;
         }
+        // The tile's own hold lapses on its own once this page is gone, but a
+        // stop racing the viewer's first renewal would delete a record the
+        // viewer is about to re-create — a blink of the watched person's notice
+        // at the moment full-screen watching begins.
         openWindows.current.handOff(sessionId);
-        // A container desktop is streamed straight from Traefik and answers the
-        // proxy's guacamole route with nothing at all, so the two kinds cannot
-        // share a viewer. The API says which one it handed out rather than
-        // leaving the wall to re-read the connection type.
-        router.push(
-          win.watchKind === 'iframe'
-            ? `/observe/${encodeURIComponent(sessionId)}?src=${encodeURIComponent(win.watchUrl)}`
-            : win.watchUrl,
-        );
+        router.push(route);
       } catch (err) {
         toast.error(err instanceof Error ? err.message : t('watchFailed'));
       }
@@ -147,12 +161,15 @@ export default function SessionMonitorPage() {
   );
 
   useEffect(() => {
-    const { open, close } = openWindows.current.sync(watched);
-    for (const id of close) void stopRef.current(id).catch(ignoreWindowError);
+    const held = openWindows.current;
+    const { open, close } = held.sync(watched);
+    for (const id of close) void stopRef.current(id, held.id).catch(ignoreWindowError);
     for (const id of open) {
-      void startObservation(id, { intervalMs, thumbWidth: OBSERVE_THUMB_WIDTH }).catch(ignoreWindowError);
+      void startObservation(id, { intervalMs, thumbWidth: OBSERVE_THUMB_WIDTH }, held.id)
+        .then((win) => recordCapability(id, win))
+        .catch(ignoreWindowError);
     }
-  }, [watched, intervalMs, startObservation]);
+  }, [watched, intervalMs, startObservation, recordCapability]);
 
   useEffect(() => {
     if (!capturing) return;
@@ -160,19 +177,22 @@ export default function SessionMonitorPage() {
     // renewed well inside that rather than once per captured frame — at the 3s
     // cadence that would be one POST per tile per frame for no added safety.
     const timer = window.setInterval(() => {
-      for (const id of openWindows.current.renew()) {
-        void startObservation(id, { intervalMs, thumbWidth: OBSERVE_THUMB_WIDTH }).catch(ignoreWindowError);
+      const held = openWindows.current;
+      for (const id of held.renew()) {
+        void startObservation(id, { intervalMs, thumbWidth: OBSERVE_THUMB_WIDTH }, held.id)
+          .then((win) => recordCapability(id, win))
+          .catch(ignoreWindowError);
       }
     }, OBSERVE_RENEW_MS);
     return () => window.clearInterval(timer);
-  }, [capturing, intervalMs, startObservation]);
+  }, [capturing, intervalMs, startObservation, recordCapability]);
 
   // Leaving the page must never leave capture running. A hard close the browser
   // gives us no chance to react to is covered by the agent's dead-man switch.
   useEffect(() => {
     const held = openWindows.current;
     return () => {
-      for (const id of held.release()) void stopRef.current(id).catch(ignoreWindowError);
+      for (const id of held.release()) void stopRef.current(id, held.id).catch(ignoreWindowError);
     };
   }, []);
 
@@ -292,6 +312,7 @@ export default function SessionMonitorPage() {
               key={session.id}
               session={session}
               sample={samples[session.id]}
+              capability={capability[session.id]}
               capturing={capturing}
               onWatch={() => void watchLive(session.id)}
               onDetails={() => router.push(`/sessions/${session.id}`)}
@@ -306,22 +327,20 @@ export default function SessionMonitorPage() {
 function MonitorTile({
   session,
   sample,
+  capability,
   capturing,
   onWatch,
   onDetails,
 }: {
   session: SessionRow;
   sample: ObservationSample | undefined;
+  capability: ObservationCapability | undefined;
   capturing: boolean;
   onWatch: () => void;
   onDetails: () => void;
 }) {
   const t = useTranslations('sessions.monitor');
-  const preview = resolveTilePreview({
-    sample,
-    capturing,
-    connectionType: session.connectionType,
-  });
+  const preview = resolveTilePreview({ sample, capturing, capability });
   const blankReason =
     preview.kind === 'blank'
       ? preview.reason === 'degraded'

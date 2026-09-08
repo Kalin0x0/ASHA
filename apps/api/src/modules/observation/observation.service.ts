@@ -3,9 +3,11 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Interval } from '@nestjs/schedule';
 import type { Env } from '@asha/config';
 import type { SessionObservationDto, StartObservationDto } from '@asha/contracts';
 import { prisma, runUnscoped } from '@asha/db';
@@ -22,8 +24,20 @@ import { SessionsService } from '../sessions/sessions.service';
 
 /** Newest sample for one session. */
 const sampleKey = (kasmId: string) => `asha:obs:${kasmId}`;
-/** Who is watching one session right now — drives the notice the user sees. */
-const watchKey = (kasmId: string) => `asha:obs:watch:${kasmId}`;
+/**
+ * Who is watching one session right now — drives the notice the user sees, and
+ * the forward-auth gate's answer on the container `/observe` route. Exported
+ * because that gate has to read the same record rather than keep its own idea
+ * of who is watching.
+ *
+ * The value is `{ holds: WatchHold[] }`, and everything that revokes a running
+ * stream reads it: this service, `SessionsService`, the gate, and the
+ * connection-proxy's `isWatchActive`. Whether one observer may still stream is
+ * answered from `observerUserId` and `expiresAt`, never from the key existing —
+ * the key outlives its longest hold, and one of several observers stopping does
+ * not delete it.
+ */
+export const watchKey = (kasmId: string) => `asha:obs:watch:${kasmId}`;
 
 // A frame of someone's desktop is the most sensitive artefact this product
 // holds. Samples live in Redis for half a minute and reach neither Postgres nor
@@ -51,8 +65,27 @@ const WATCH_TOKEN_TYPE = 'watch';
 // one hold per tile and the read-only viewer it opens keeps its own, so the wall
 // unmounting on that navigation releases only the tile's — the window, and with
 // it the notice, survives the observer walking from the thumbnail to the desktop.
+// A caller that sends none has exactly one hold per session, which is what a
+// surface that only ever opens one wants; two surfaces that both send none share
+// it, and either one's release ends the other's window.
 const DEFAULT_WINDOW_ID = 'default';
 const WINDOW_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+// The id is the caller's to choose, so a caller inventing a fresh one per
+// request would grow this record without bound — and every reader of it, the
+// watched user's own connection fetch included, pays for that on each read. Past
+// the cap the holds nearest their deadline give way; a surface that is really
+// still there renews within 20 s and takes its place back.
+const MAX_HOLDS_PER_OBSERVER = 8;
+
+// How often lapsed holds are collected. A hold that was never released — the
+// observer's browser died mid-observation — shows up only as an expiry, so
+// something has to come and look.
+const SWEEP_INTERVAL_MS = 15_000;
+// The record outlives its last hold by more than one sweep, because a lapse the
+// sweep cannot read is a lapse it cannot end: the key would take the evidence
+// with it. Nothing else sees the extra seconds — every reader filters on each
+// hold's own deadline.
+const RECORD_GRACE_SEC = 30;
 
 /**
  * One hold on a session's observation window.
@@ -62,7 +95,7 @@ const WINDOW_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
  * or stop the other's capture — `SessionObservedEvent.active` has always been
  * documented as "false once the LAST observer leaves".
  */
-interface WatchHold {
+export interface WatchHold {
   observerUserId: string;
   observerName: string;
   /** Distinguishes several holds by the same observer. */
@@ -73,8 +106,19 @@ interface WatchHold {
   expiresAt: number;
 }
 
-interface WatchRecord {
+export interface WatchRecord {
   holds: WatchHold[];
+}
+
+/** What ending a window needs to know about the session it ran on. */
+interface WatchedSession {
+  id: string;
+  orgId: string;
+  kasmId: string;
+  userId: string | null;
+  zoneId: string | null;
+  agentId: string | null;
+  containerId: string | null;
 }
 
 /**
@@ -107,10 +151,19 @@ interface ObservationWindow {
  * renewals. Anything that is not a hold list — a record written by an older
  * build, a half-written value — reads as nobody watching.
  */
-function liveHolds(record: WatchRecord | null, now: number): WatchHold[] {
+export function liveHolds(record: WatchRecord | null, now: number): WatchHold[] {
+  return allHolds(record).filter((h) => h.expiresAt > now);
+}
+
+/**
+ * Every hold in a record, lapsed ones included, oldest first. Only the sweep
+ * wants these: it is the difference between this list and `liveHolds` that says
+ * whose observation ended without anyone releasing it.
+ */
+function allHolds(record: WatchRecord | null): WatchHold[] {
   if (!record || !Array.isArray(record.holds)) return [];
   return record.holds
-    .filter((h) => h && typeof h.expiresAt === 'number' && h.expiresAt > now)
+    .filter((h) => h && typeof h.expiresAt === 'number' && typeof h.observerUserId === 'string')
     .sort((a, b) => Date.parse(a.since) - Date.parse(b.since));
 }
 
@@ -129,6 +182,8 @@ function observerCount(holds: WatchHold[]): number {
  */
 @Injectable()
 export class ObservationService {
+  private readonly logger = new Logger(ObservationService.name);
+
   constructor(
     private readonly sessions: SessionsService,
     private readonly gateway: SessionsGateway,
@@ -206,17 +261,21 @@ export class ObservationService {
     // worth making.
     const before = liveHolds(await this.redis.get<WatchRecord>(watchKey(session.kasmId)), now);
     const mine = before.filter((h) => h.observerUserId === user.sub);
+    const taken: WatchHold = {
+      observerUserId: user.sub,
+      observerName,
+      windowId,
+      // A second hold by the same person continues their window rather than
+      // restarting it, so the banner keeps counting from when they arrived.
+      since: mine[0]?.since ?? new Date(now).toISOString(),
+      expiresAt: now + WATCH_TTL_SEC * 1000,
+    };
     const holds: WatchHold[] = [
-      ...before.filter((h) => !(h.observerUserId === user.sub && h.windowId === windowId)),
-      {
-        observerUserId: user.sub,
-        observerName,
-        windowId,
-        // A second hold by the same person continues their window rather than
-        // restarting it, so the banner keeps counting from when they arrived.
-        since: mine[0]?.since ?? new Date(now).toISOString(),
-        expiresAt: now + WATCH_TTL_SEC * 1000,
-      },
+      ...before.filter((h) => h.observerUserId !== user.sub),
+      ...this.capped(
+        mine.filter((h) => h.windowId !== windowId),
+        taken,
+      ),
     ];
     await this.redis.set(watchKey(session.kasmId), { holds } satisfies WatchRecord, this.recordTtlSec(holds, now));
 
@@ -225,7 +284,7 @@ export class ObservationService {
     // three times a minute per tile is what made both unreadable.
     const opened = mine.length === 0;
     if (!opened) {
-      return this.windowFor(session, windowId, watchToken, capture, reason);
+      return this.windowFor(session, windowId, user.sub, watchToken, capture, reason);
     }
 
     // The notice goes out in the same call that hands over the token. As a
@@ -257,7 +316,7 @@ export class ObservationService {
       },
     });
 
-    return this.windowFor(session, windowId, watchToken, capture, reason);
+    return this.windowFor(session, windowId, user.sub, watchToken, capture, reason);
   }
 
   /** What the caller gets back: the hold it now holds, and the way in, if any. */
@@ -270,6 +329,7 @@ export class ObservationService {
       observeReady: boolean;
     },
     windowId: string,
+    observerUserId: string,
     watchToken: string | null,
     thumbnails: boolean,
     reason: string | undefined,
@@ -287,7 +347,7 @@ export class ObservationService {
     if (session.connectionType === 'KASMVNC' && !session.observeReady) {
       return { ...common, watchKind: 'none', watchReason: 'no_viewer_account' };
     }
-    const view = await this.watchTarget(session, watchToken);
+    const view = await this.watchTarget(session, watchToken, observerUserId);
     return {
       ...common,
       watchToken,
@@ -299,11 +359,25 @@ export class ObservationService {
 
   /**
    * The key outlives its longest hold, never less: an admin renewing at 20 s
-   * intervals must not have the record expire under a colleague who left.
+   * intervals must not have the record expire under a colleague who left. The
+   * grace on top is what leaves the sweep something to read once the last hold
+   * has lapsed — see RECORD_GRACE_SEC.
    */
   private recordTtlSec(holds: WatchHold[], now: number): number {
     const last = Math.max(...holds.map((h) => h.expiresAt));
-    return Math.max(1, Math.ceil((last - now) / 1000));
+    return Math.max(1, Math.ceil((last - now) / 1000)) + RECORD_GRACE_SEC;
+  }
+
+  /**
+   * The observer's other holds plus the one this request just took, trimmed to
+   * the cap. The holds nearest their deadline give way first — those are the
+   * likeliest to be surfaces that went away without releasing anything — and the
+   * hold just taken is never one of them.
+   */
+  private capped(others: WatchHold[], taken: WatchHold): WatchHold[] {
+    if (others.length < MAX_HOLDS_PER_OBSERVER) return [...others, taken];
+    const kept = [...others].sort((a, b) => b.expiresAt - a.expiresAt).slice(0, MAX_HOLDS_PER_OBSERVER - 1);
+    return [...kept, taken];
   }
 
   /**
@@ -336,14 +410,23 @@ export class ObservationService {
   private async watchTarget(
     session: { id: string; kasmId: string; connectionType: string; connectionUrl: string | null },
     watchToken: string,
+    observerUserId: string,
   ): Promise<{ kind: 'guac' | 'iframe'; url: string }> {
     const guac = {
       kind: 'guac' as const,
       url: `/connect/${encodeURIComponent(session.kasmId)}?monitor=1&watch=${encodeURIComponent(watchToken)}`,
     };
     if (session.connectionType !== 'KASMVNC' || !session.connectionUrl) return guac;
+    // `obs` marks the token for the route it was minted on. Without it this is
+    // byte-identical to the token the owner's own session carries, and the
+    // forward-auth gate — which cannot see which router a request came through
+    // beyond the path it is handed — would trade an observer's token for a
+    // cookie on `/session/<kasmId>/`, the route Traefik serves with the KasmVNC
+    // account that may type. `sub` names the observer, so the cookie the gate
+    // mints can be tied back to THIS observer's hold rather than to the session
+    // as a whole: one of two observers stopping ends their own access.
     const streamToken = await this.jwt.signAsync(
-      { sid: session.id, kasmId: session.kasmId },
+      { sid: session.id, kasmId: session.kasmId, sub: observerUserId, obs: true },
       { secret: this.env.SESSION_TOKEN_SECRET, expiresIn: this.env.SESSION_TOKEN_TTL },
     );
     const url = sessionObserveUrl({
@@ -420,6 +503,116 @@ export class ObservationService {
       });
     }
     return { ok: true };
+  }
+
+  /**
+   * Collect the holds nobody released.
+   *
+   * A hold is released by the observer's browser, and a browser that died
+   * releases nothing — the tab was closed, the laptop slept, the process was
+   * killed. `stop()` is the only writer of `observation.stop` and the only
+   * emitter of `active: false`, so without this the notice would stay up on the
+   * watched person's screen for the rest of their session, telling them they are
+   * being watched while nobody is, and the trail would keep a start with no end.
+   *
+   * Holds carry their own deadline, so collecting them is a read: what lapsed
+   * since the last pass is torn down exactly the way releasing it would have
+   * torn it down. Runs on the tick, like the reapers beside it, and in one
+   * process for the same reason they do.
+   */
+  @Interval('observation-sweeper', SWEEP_INTERVAL_MS)
+  async sweepLapsedHolds(): Promise<number> {
+    // Only the statuses a hold can be sitting under. A session that was
+    // destroyed took its viewer with it, and its record expires on its own.
+    const sessions = await prisma.session.findMany({
+      where: { status: { in: ['RUNNING', 'DEGRADED', 'PAUSED', 'TERMINATING'] } },
+      select: {
+        id: true,
+        orgId: true,
+        kasmId: true,
+        userId: true,
+        zoneId: true,
+        agentId: true,
+        containerId: true,
+      },
+      take: 500,
+    });
+    let ended = 0;
+    for (const session of sessions) ended += await this.expireHolds(session);
+    if (ended > 0) this.logger.log(`Ended ${ended} observation window(s) whose observer stopped renewing`);
+    return ended;
+  }
+
+  /**
+   * End whatever has lapsed on one session; answers whether an observer's window
+   * ended here. One of several surfaces going quiet is not the end of anyone's
+   * window — only an observer left holding nothing has stopped watching.
+   */
+  private async expireHolds(session: WatchedSession): Promise<number> {
+    const now = Date.now();
+    const record = await this.redis.get<WatchRecord>(watchKey(session.kasmId));
+    const before = allHolds(record);
+    // Nothing held, or nothing lapsed. Redis being down reads as the former: no
+    // teardown is written on an answer nobody could give.
+    if (before.length === 0) return 0;
+    const holds = before.filter((h) => h.expiresAt > now);
+    if (holds.length === before.length) return 0;
+
+    const lapsed = before.filter((h) => h.expiresAt <= now);
+    const gone = [...new Set(lapsed.map((h) => h.observerUserId))].filter(
+      (id) => !holds.some((h) => h.observerUserId === id),
+    );
+
+    if (holds.length === 0) {
+      await this.redis.del(watchKey(session.kasmId));
+      if (session.agentId && session.containerId) {
+        await this.sessions.sendControl(session, { action: 'OBSERVE_STOP', kasmId: session.kasmId });
+      }
+      this.gateway.emitToSession(session.id, {
+        type: 'session.observed',
+        payload: {
+          sessionId: session.id,
+          observerName: lapsed[0].observerName,
+          since: lapsed[0].since,
+          active: false,
+        },
+      });
+    } else {
+      await this.redis.set(watchKey(session.kasmId), { holds } satisfies WatchRecord, this.recordTtlSec(holds, now));
+      // Still watched, but possibly by someone else now: the banner must stop
+      // naming an observer who is no longer there.
+      if (before[0].observerUserId !== holds[0].observerUserId) {
+        this.gateway.emitToSession(session.id, {
+          type: 'session.observed',
+          payload: {
+            sessionId: session.id,
+            observerName: holds[0].observerName,
+            since: holds[0].since,
+            active: true,
+          },
+        });
+      }
+    }
+
+    for (const observerUserId of gone) {
+      await this.security.emit({
+        action: 'observation.stop',
+        severity: 'warn',
+        orgId: session.orgId,
+        actorUserId: observerUserId,
+        targetType: 'Session',
+        targetId: session.id,
+        metadata: {
+          observedUserId: session.userId,
+          kasmId: session.kasmId,
+          stillObserved: holds.length > 0,
+          // Nobody closed this window; it ran out. The observation ended when
+          // the hold lapsed, up to one sweep before this row was written.
+          reason: 'lapsed',
+        },
+      });
+    }
+    return gone.length > 0 ? 1 : 0;
   }
 
   /**

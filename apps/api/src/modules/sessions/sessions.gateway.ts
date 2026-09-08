@@ -12,6 +12,7 @@ import type { Server, Socket } from 'socket.io';
 import type { AuthUser } from '../../common/decorators';
 import { ENV } from '../../common/env.module';
 import { RbacService } from '../../common/rbac.service';
+import { SessionsService } from './sessions.service';
 
 /**
  * Realtime fan-out to dashboards and viewers.
@@ -28,6 +29,7 @@ export class SessionsGateway implements OnGatewayConnection {
   constructor(
     private readonly jwt: JwtService,
     private readonly rbac: RbacService,
+    private readonly sessions: SessionsService,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -57,11 +59,22 @@ export class SessionsGateway implements OnGatewayConnection {
 
     const auth = client.handshake.auth as { sessionId?: unknown } | undefined;
     const sessionId = handshakeString(auth?.sessionId) ?? handshakeString(client.handshake.query.sessionId);
+    if (!sessionId) return;
     // A socket that asked for a session it may not see keeps its org room rather
     // than being dropped: the request is wrong, not hostile by itself.
-    if (sessionId && (await this.mayJoinSession(sessionId, user))) {
-      client.join(`session:${sessionId}`);
-    }
+    const session = await this.sessionToJoin(sessionId, user);
+    if (!session) return;
+    client.join(`session:${sessionId}`);
+    // `session.observed` is emitted on the transitions, so a viewer that was not
+    // connected for one never learns of it — after a reload, a dropped socket,
+    // or an API restart that took these rooms with it. Replaying the current
+    // state into the socket that just joined is what brings the notice back on
+    // the watched person's screen, and what takes down a banner left standing
+    // for an observation that has since ended.
+    client.emit('event', {
+      type: 'session.observed',
+      payload: await this.sessions.observedState({ id: sessionId, orgId: user.orgId, kasmId: session.kasmId }),
+    } satisfies WsServerEvent);
   }
 
   emitToOrg(orgId: string, event: WsServerEvent): void {
@@ -106,18 +119,22 @@ export class SessionsGateway implements OnGatewayConnection {
     return granted.has('SESSION_OBSERVE') || granted.has('*');
   }
 
-  /** Owner, system admin, or a real SESSION_VIEW_ANY holder — nobody else. */
-  private async mayJoinSession(sessionId: string, user: AuthUser): Promise<boolean> {
+  /**
+   * The session this socket may join, or null: owner, system admin, or a real
+   * SESSION_VIEW_ANY holder, and nobody else. The row comes back rather than a
+   * boolean because the notice replayed on the join is keyed by `kasmId`.
+   */
+  private async sessionToJoin(sessionId: string, user: AuthUser): Promise<{ kasmId: string | null } | null> {
     // A handshake never passes through the tenant interceptor, so the Prisma
     // extension adds no orgId here and the filter has to be written out.
     const session = await prisma.session.findFirst({
       where: { id: sessionId, orgId: user.orgId },
-      select: { userId: true },
+      select: { userId: true, kasmId: true },
     });
-    if (!session) return false;
-    if (user.isSystemAdmin || session.userId === user.sub) return true;
+    if (!session) return null;
+    if (user.isSystemAdmin || session.userId === user.sub) return session;
     const granted = await this.rbac.effectivePermissions(user.sub);
-    return granted.has('SESSION_VIEW_ANY') || granted.has('*');
+    return granted.has('SESSION_VIEW_ANY') || granted.has('*') ? session : null;
   }
 }
 

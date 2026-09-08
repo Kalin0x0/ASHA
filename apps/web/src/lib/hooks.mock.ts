@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import type { ApiGroup, RdpFileOptions } from '@/lib/api/endpoints';
 import { store } from '@/lib/mock/store';
 import { MOCK_THUMBNAILS } from '@/lib/mock/thumbnails';
-import { type ObservationSample, observableSessions, supportsCapture } from '@/lib/observation';
+import { type ObservationSample, observableSessions } from '@/lib/observation';
 import { buildMockRdpFile, downloadRdpFile } from '@/lib/rdp';
 import type {
   BugReportInput,
@@ -83,6 +83,16 @@ function mockWindowCount(kasmId: string): number {
   return 1 + (Math.abs(h) % 6);
 }
 
+/**
+ * Which demo sessions the imaginary agent can capture. There is no API here to
+ * ask, so mock mode stands in for one: a fixed server runs no agent, which is
+ * what the API answers `no_agent` for. The guess lives here rather than in the
+ * wall — the wall must take the answer from whoever knows, and in production
+ * the protocol label does not say (a container reached over guacd carries the
+ * same one).
+ */
+const MOCK_FIXED_SERVERS = new Set(['RDP', 'VNC', 'SSH']);
+
 export function useObservations(): ObservationSample[] {
   const sessions = useSnapshot(() => store.getData().sessions);
   const workspaces = useSnapshot(() => store.getData().workspaces);
@@ -97,7 +107,7 @@ export function useObservations(): ObservationSample[] {
   return useMemo(() => {
     const byName = new Map(workspaces.map((w) => [w.friendlyName, w.id]));
     return observableSessions(sessions)
-      .filter((s) => supportsCapture(s.connectionType))
+      .filter((s) => !MOCK_FIXED_SERVERS.has(s.connectionType))
       .map((s) => {
         const workspaceId = byName.get(s.workspaceName);
         const win = workspaceId ? MOCK_ACTIVE_WINDOWS[workspaceId] : undefined;
@@ -118,22 +128,31 @@ export function useStartObservation() {
   return useCallback(
     async (
       id: string,
-      _body: import('@/lib/api/endpoints').StartObservationInput,
-    ): Promise<import('@/lib/api/endpoints').ApiObservationWindow> => ({
-      watchToken: `mock-watch-${id}`,
-      watchUrl: `/connect/${id}?monitor=1`,
-      // No Traefik in mock mode, so there is no read-only container route to
-      // point at — the demo wall always opens the guacamole viewer.
-      watchKind: 'guac',
-      expiresAt: new Date(Date.now() + 120_000).toISOString(),
-      thumbnails: true,
-    }),
+      body: import('@/lib/api/endpoints').StartObservationInput,
+      windowId?: string,
+    ): Promise<import('@/lib/api/endpoints').ApiObservationWindow> => {
+      const session = store.getData().sessions.find((s) => s.id === id);
+      // Answered the way the API answers it, so the wall renders the same
+      // "no capture on a fixed server" tile here as it does in production.
+      const capture = body.intervalMs > 0 && !MOCK_FIXED_SERVERS.has(session?.connectionType ?? '');
+      return {
+        windowId: windowId ?? 'default',
+        watchToken: `mock-watch-${id}`,
+        watchUrl: `/connect/${session?.kasmId ?? id}?monitor=1`,
+        // No Traefik in mock mode, so there is no read-only container route to
+        // point at — the demo wall always opens the guacamole viewer.
+        watchKind: 'guac',
+        expiresAt: new Date(Date.now() + 120_000).toISOString(),
+        thumbnails: capture,
+        ...(capture ? {} : { reason: body.intervalMs > 0 ? 'no_agent' : 'capture_disabled' }),
+      };
+    },
     [],
   );
 }
 
 export function useStopObservation() {
-  return useCallback(async (_id: string) => undefined, []);
+  return useCallback(async (_id: string, _windowId?: string) => undefined, []);
 }
 
 export function useAgents() {

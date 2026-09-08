@@ -12,7 +12,12 @@ import { createLogger } from '@asha/logger';
 import Redis from 'ioredis';
 import { agentEnv } from './env.js';
 import { manager } from './manager.js';
-import { createObservationRunner, type ObservationRunner } from './observation.js';
+import {
+  createObservationRunner,
+  createViewerCredential,
+  type ObservationRunner,
+  type ViewerCredential,
+} from './observation.js';
 
 const log = createLogger('agent');
 
@@ -32,6 +37,8 @@ const {
   resizeContainer,
   applyStreamProfile,
   captureObservation,
+  openViewerAccount,
+  revokeViewerAccount,
   startRecorder,
   stopRecorder,
   removeImage,
@@ -65,6 +72,11 @@ async function main(): Promise<void> {
   const observations = createObservationRunner({
     capture: captureObservation,
     publish: (sample) => manager.reportObservation(agentId, sample),
+    onError: (message) => log.warn(message),
+  });
+  const viewer = createViewerCredential({
+    open: openViewerAccount,
+    revoke: revokeViewerAccount,
     onError: (message) => log.warn(message),
   });
 
@@ -109,9 +121,22 @@ async function main(): Promise<void> {
         if (channel === provisionChannel) {
           await handleProvision(agentId, JSON.parse(message) as ProvisionCommand, containerBySession, sessionByContainer);
         } else if (channel === destroyChannel) {
-          await handleDestroy(agentId, JSON.parse(message) as DestroyCommand, containerBySession, sessionByContainer, observations);
+          await handleDestroy(
+            agentId,
+            JSON.parse(message) as DestroyCommand,
+            containerBySession,
+            sessionByContainer,
+            observations,
+            viewer,
+          );
         } else if (channel === controlChannel) {
-          await handleControl(agentId, JSON.parse(message) as SessionControlCommand, containerBySession, observations);
+          await handleControl(
+            agentId,
+            JSON.parse(message) as SessionControlCommand,
+            containerBySession,
+            observations,
+            viewer,
+          );
         } else if (channel === imageChannel) {
           await handleImage(JSON.parse(message) as ImageCommand);
         } else if (channel === commandChannel) {
@@ -198,6 +223,7 @@ async function handleControl(
   cmd: SessionControlCommand,
   bySession: Map<string, string>,
   observations: ObservationRunner,
+  viewer: ViewerCredential,
 ): Promise<void> {
   const containerId = cmd.containerId ?? bySession.get(cmd.sessionId);
   if (!containerId) {
@@ -226,13 +252,22 @@ async function handleControl(
       await stopRecorder(cmd.sessionId);
       log.info({ sessionId: cmd.sessionId, recordingId: cmd.recordingId }, 'recording stopped');
     } else if (cmd.action === 'OBSERVE_START') {
+      const opened = observations.start(cmd, containerId);
+      // The read-only account is opened here and closed on OBSERVE_STOP, so the
+      // credential the observer is about to be handed lasts as long as the grant
+      // the API just wrote down and no longer.
+      const credential = await viewer.grant(cmd, containerId);
       // Renewals arrive every few seconds while the wall is open; only the
       // opening of a window is worth an info line.
-      const opened = observations.start(cmd, containerId);
-      if (opened) log.info({ sessionId: cmd.sessionId, intervalMs: cmd.intervalMs }, 'observation started');
-      else log.debug({ sessionId: cmd.sessionId }, 'observation renewed');
+      if (opened || credential) {
+        log.info({ sessionId: cmd.sessionId, intervalMs: cmd.intervalMs }, 'observation started');
+      } else {
+        log.debug({ sessionId: cmd.sessionId }, 'observation renewed');
+      }
     } else if (cmd.action === 'OBSERVE_STOP') {
       observations.stop(cmd.sessionId);
+      // Sent once the LAST observer let go, so the account goes with it.
+      await viewer.revoke(cmd.sessionId, containerId);
       log.info({ sessionId: cmd.sessionId }, 'observation stopped');
     }
 
@@ -304,10 +339,14 @@ async function handleDestroy(
   bySession: Map<string, string>,
   byContainer: Map<string, string>,
   observations: ObservationRunner,
+  viewer: ViewerCredential,
 ): Promise<void> {
   // Close the observation window first — capturing against a container that is
   // being torn down only produces failures until the dead-man switch expires.
   observations.stop(cmd.sessionId);
+  // The account dies with the container, so this only drops the bookkeeping;
+  // exec'ing into a container that is about to be removed would just fail.
+  viewer.forget(cmd.sessionId);
   const containerId = cmd.containerId ?? bySession.get(cmd.sessionId);
   if (containerId) {
     await destroyContainer(containerId);

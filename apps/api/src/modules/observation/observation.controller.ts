@@ -29,12 +29,15 @@ export class ObservationController {
   // The guard answers "may this caller observe at all"; the service adds the
   // row-level "may they observe THIS session" the guard has no context for.
   //
-  // `window` names which of the caller's holds this opens or renews, and comes
-  // back in the response so the caller can renew and release the same one. One
-  // observer may hold several: the wall's tile and the read-only viewer opened
-  // from it are two, and the tile going away must not end the observation the
-  // viewer is still carrying out. Omitted, it is the caller's single default
-  // hold, which is what a page that only ever opens one wants.
+  // `?window=` names which of the caller's holds this opens or renews, matches
+  // `[A-Za-z0-9_-]{1,64}`, and comes back as `windowId` in the response. A
+  // surface picks one id when it mounts and sends the same one on every renewal
+  // and on its release; two surfaces of one observer must not share it. The wall
+  // tile and the read-only viewer opened from it are two such surfaces, and the
+  // tile going away must not end the observation the viewer is still carrying
+  // out. Omitted, all of a caller's surfaces share one default hold and either
+  // one's release ends the other's window — which is right for a page that only
+  // ever opens one, and wrong for anything that opens a second.
   @ApiBearerAuth()
   @RequirePermissions('SESSION_OBSERVE')
   @Post('sessions/:id/observe')
@@ -47,6 +50,9 @@ export class ObservationController {
     return this.observation.start(user, id, dto, window);
   }
 
+  // Releases the one hold `?window=` names — the same id the matching start was
+  // given. A release is not the only way a window ends: a hold whose surface
+  // never comes back lapses, and the sweep ends it exactly as this would.
   @ApiBearerAuth()
   @RequirePermissions('SESSION_OBSERVE')
   @Delete('sessions/:id/observe')

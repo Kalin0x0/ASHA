@@ -1,4 +1,4 @@
-import type { SessionObservationSample } from '@asha/events';
+import type { SessionObservationSample, SessionObservedEvent } from '@asha/events';
 import type { SessionRow } from '@/lib/types';
 
 /**
@@ -34,14 +34,18 @@ export const OBSERVE_RENEW_MS = 20_000;
 export const OBSERVATION_MAX_AGE_MS = 30_000;
 
 /**
- * Sessions reached over guacd run on fixed servers, where no agent runs and the
- * only route to a frame would be a second RDP logon — which is exactly what must
- * not happen. Their tiles stay metadata-only.
+ * Whether a frame can be taken of this session at all, exactly as the API
+ * answered it when the window was opened.
+ *
+ * The browser must not work this out for itself. A capture needs the agent
+ * inside the container, and `connectionType` does not say whether there is one:
+ * a container workspace reached over guacd carries the same `RDP`/`VNC` label
+ * as a fixed server, and the API captures the first and not the second.
  */
-const CAPTURE_UNSUPPORTED_PROTOCOLS = new Set(['RDP', 'VNC', 'SSH']);
-
-export function supportsCapture(connectionType: string): boolean {
-  return !CAPTURE_UNSUPPORTED_PROTOCOLS.has(connectionType);
+export interface ObservationCapability {
+  thumbnails: boolean;
+  /** `no_agent`, `capture_disabled` — the machine tokens the API answers with. */
+  reason?: string;
 }
 
 export function isObservationFresh(sample: ObservationSample, now = Date.now()): boolean {
@@ -50,9 +54,14 @@ export function isObservationFresh(sample: ObservationSample, now = Date.now()):
   return now - at < OBSERVATION_MAX_AGE_MS;
 }
 
+/** Live, and with somebody at it — the state the API accepts an observation for. */
+export function isObservableSession(session: Pick<SessionRow, 'staged' | 'status'>): boolean {
+  return !session.staged && (session.status === 'RUNNING' || session.status === 'DEGRADED');
+}
+
 /** The sessions a tile may observe: live, and belonging to somebody. */
 export function observableSessions(sessions: SessionRow[]): SessionRow[] {
-  return sessions.filter((s) => !s.staged && (s.status === 'RUNNING' || s.status === 'DEGRADED'));
+  return sessions.filter(isObservableSession);
 }
 
 /**
@@ -138,20 +147,132 @@ export type TilePreview =
  * What the tile shows. Capture being off wins over a frame that is still in
  * hand: the header promises that nothing is being captured, and a leftover
  * desktop under that promise would make the header a lie.
+ *
+ * `capability` is the API's answer for this session; while it is still absent
+ * the tile waits rather than guessing, because guessing from the protocol label
+ * is what told an agent-backed guacd desktop it could not be captured while the
+ * agent was capturing it.
  */
 export function resolveTilePreview(args: {
   sample: ObservationSample | undefined;
   capturing: boolean;
-  connectionType: string;
+  capability: ObservationCapability | undefined;
   now?: number;
 }): TilePreview {
-  const { sample, capturing, connectionType, now = Date.now() } = args;
-  if (!supportsCapture(connectionType)) return { kind: 'blank', reason: 'unsupported' };
+  const { sample, capturing, capability, now = Date.now() } = args;
   if (!capturing) return { kind: 'blank', reason: 'off' };
+  if (capability && !capability.thumbnails) {
+    return { kind: 'blank', reason: capability.reason === 'capture_disabled' ? 'off' : 'unsupported' };
+  }
   if (sample && isObservationFresh(sample, now)) {
     const src = observationImageSrc(sample.image);
     if (src) return { kind: 'frame', src };
     if (sample.degraded) return { kind: 'blank', reason: 'degraded', detail: sample.degraded };
   }
   return { kind: 'blank', reason: 'waiting' };
+}
+
+/**
+ * Why the connection-proxy closed a view socket, when it says so.
+ *
+ * An expired or revoked grant is not a refusal: the observer may go on
+ * watching, they just need a new watch token — and minting one is what re-runs
+ * the permission check, the org policy, the notice and the audit entry. The
+ * other two are final for this session. Mirrored from
+ * apps/connection-proxy/src/proxy.ts and its guacamole/ssh handlers.
+ */
+export type StreamCloseReason = 'watchExpired' | 'watchRevoked' | 'noLiveConnection' | 'viewUnsupported';
+
+const STREAM_CLOSE_REASONS: Record<number, StreamCloseReason> = {
+  4005: 'watchExpired',
+  4006: 'watchRevoked',
+  4010: 'noLiveConnection',
+  4011: 'viewUnsupported',
+};
+
+/**
+ * The code arrives through guacamole-common-js, which parses the close REASON
+ * with `parseInt` — which is why the proxy repeats the number in the text — and
+ * hands it on as the status code. Anything else is somebody else's close.
+ */
+export function streamCloseReason(code: number | undefined): StreamCloseReason | undefined {
+  if (typeof code !== 'number' || Number.isNaN(code)) return undefined;
+  return STREAM_CLOSE_REASONS[code];
+}
+
+/** Can this be answered with a fresh token, or is watching over for now? */
+export function isRemintable(reason: StreamCloseReason): boolean {
+  return reason === 'watchExpired' || reason === 'watchRevoked';
+}
+
+/** Who is watching right now, as `GET /sessions/:id/connection` answers it. */
+export interface ObservedByNotice {
+  observerName: string;
+  since: string;
+  observerCount: number;
+}
+
+/**
+ * The observation banner in a viewer, and how many pushes it has seen.
+ *
+ * `session.observed` is emitted on the transition only, so a viewer that
+ * reloaded — or whose socket dropped — while somebody was already watching has
+ * no event to replay and would show nothing for the rest of the observation.
+ * It reads the current watcher back from the API instead; the counter is what
+ * keeps that read from overwriting a push that landed while it was in flight.
+ */
+export interface ObservationNoticeState {
+  observed: SessionObservedEvent | null;
+  pushes: number;
+}
+
+export const NO_OBSERVATION_NOTICE: ObservationNoticeState = { observed: null, pushes: 0 };
+
+/** A push is the newest truth, whatever a read in flight is about to say. */
+export function applyObservedPush(
+  state: ObservationNoticeState,
+  event: SessionObservedEvent,
+): ObservationNoticeState {
+  return { observed: event.active ? event : null, pushes: state.pushes + 1 };
+}
+
+/**
+ * Apply a notice read back from the API — unless a push overtook it, in which
+ * case the read describes a moment that has already passed.
+ */
+export function applyObservedRead(
+  state: ObservationNoticeState,
+  sessionId: string,
+  observedBy: ObservedByNotice | null | undefined,
+  pushesWhenRequested: number,
+): ObservationNoticeState {
+  if (state.pushes !== pushesWhenRequested) return state;
+  const observed = observedBy
+    ? { sessionId, observerName: observedBy.observerName, since: observedBy.since, active: true }
+    : null;
+  return { ...state, observed };
+}
+
+/**
+ * Where "watch live" goes, and which hold the viewer will carry.
+ *
+ * A container desktop streams straight from Traefik and answers the proxy's
+ * guacamole route with nothing at all, so the two kinds cannot share a viewer —
+ * the API says which one it handed out rather than leaving the caller to
+ * re-read the connection type. The hold id travels with it because the surface
+ * that opened it is about to unmount: the viewer renews and releases the same
+ * hold, so the notice never blinks on the way from the tile to the desktop, and
+ * a reload of the viewer continues it instead of opening a second one.
+ */
+export function watchRoute(
+  win: { watchKind: 'guac' | 'iframe' | 'none'; watchUrl?: string },
+  sessionId: string,
+  windowId: string,
+): string | null {
+  if (win.watchKind === 'none' || !win.watchUrl) return null;
+  const hold = `win=${encodeURIComponent(windowId)}`;
+  if (win.watchKind === 'iframe') {
+    return `/observe/${encodeURIComponent(sessionId)}?src=${encodeURIComponent(win.watchUrl)}&${hold}`;
+  }
+  return `${win.watchUrl}${win.watchUrl.includes('?') ? '&' : '?'}${hold}`;
 }

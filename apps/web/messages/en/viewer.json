@@ -155,7 +155,11 @@
       "endedDescription": "The remote host closed the connection.",
       "errorTitle": "Couldn't connect",
       "errorDescription": "The remote connection failed.",
-      "tryAgain": "Try again"
+      "tryAgain": "Try again",
+      "watchExpired": "The watch grant expired and could not be renewed. Open this session again from live monitoring.",
+      "watchRevoked": "The observation was stopped. Open this session again from live monitoring.",
+      "noLiveConnection": "Nobody is connected to this desktop right now, so there is nothing to watch.",
+      "viewUnsupported": "A terminal session cannot be watched — it has no shared screen."
     },
     "toasts": {
       "clipboardBlockedBrowser": "Clipboard access was blocked by the browser.",

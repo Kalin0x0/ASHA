@@ -15,7 +15,7 @@ import type {
   MaintenanceTaskRow,
   SessionStatus,
 } from '@/lib/types';
-import type { ObservationSample } from '@/lib/observation';
+import type { ObservationSample, ObservedByNotice } from '@/lib/observation';
 import type { AuthTokens, AuthUser } from './auth-store';
 import { apiFetch } from './client';
 import { API_BASE_URL } from './mode';
@@ -291,6 +291,17 @@ export const sessionKeepalive = (id: string) =>
 export interface ApiSessionConnection {
   connectionUrl: string | null;
   status: SessionStatus;
+  /**
+   * What the viewer paints over the desktop: the resolved banner/watermark, and
+   * the observation running right now. `session.observed` is pushed on the
+   * transition only, so `observedBy` is the only thing a viewer that reloads —
+   * or whose socket dropped — mid-observation has to go on.
+   */
+  notice?: {
+    /** Resolved by the API's watermark policy; rendered by the portal viewer. */
+    watermark?: unknown;
+    observedBy: ObservedByNotice | null;
+  };
   dlp?: {
     clipboardUp?: boolean;
     clipboardDown?: boolean;
@@ -337,10 +348,20 @@ export interface StartObservationInput {
   thumbWidth: number;
 }
 
-export const startObservation = (id: string, body: StartObservationInput) =>
-  apiFetch<ApiObservationWindow>(`/sessions/${id}/observe`, { method: 'POST', body });
-export const stopObservation = (id: string) =>
-  apiFetch<{ ok: true }>(`/sessions/${id}/observe`, { method: 'DELETE' });
+/**
+ * Which of the caller's holds a request opens, renews or releases. One observer
+ * may hold several — the wall's tile and the viewer opened from it are two —
+ * and a request that names none takes the caller's single default hold, so the
+ * wall unmounting would release the window the viewer is still watching
+ * through.
+ */
+const windowQuery = (windowId: string | undefined) =>
+  windowId ? `?window=${encodeURIComponent(windowId)}` : '';
+
+export const startObservation = (id: string, body: StartObservationInput, windowId?: string) =>
+  apiFetch<ApiObservationWindow>(`/sessions/${id}/observe${windowQuery(windowId)}`, { method: 'POST', body });
+export const stopObservation = (id: string, windowId?: string) =>
+  apiFetch<{ ok: true }>(`/sessions/${id}/observe${windowQuery(windowId)}`, { method: 'DELETE' });
 /** Everything the API is currently holding (Redis, 30s TTL) across the org. */
 export const getObservations = () =>
   apiFetch<{ items: ObservationSample[] }>('/sessions/observations');

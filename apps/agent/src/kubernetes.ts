@@ -51,7 +51,7 @@ export interface ProvisionResult {
   port: number;
   routerName: string;
   /**
-   * Always false here. Writing the read-only KasmVNC password needs an in-Pod
+   * Always false here. Minting the read-only KasmVNC account needs an in-Pod
    * exec, which this driver does not have (the Helm RBAC grants no pods/exec),
    * and the Ingress has no observe path either — so the manager withholds the
    * live view for a Kubernetes session exactly as it does for an image without
@@ -358,6 +358,23 @@ export async function captureObservation(
   _opts: { thumbWidth?: number } = {},
 ): Promise<ObservationCapture> {
   return { degraded: 'unsupported:kubernetes' };
+}
+
+/**
+ * The read-only KasmVNC account is written with an in-Pod exec, for the same
+ * `pods/exec` reason captureObservation cannot grab a frame — so there is no
+ * account to open, and provisionContainer already reported `viewerAuth: false`
+ * to keep the manager from offering a live view at all. Answering false rather
+ * than throwing keeps a K8s session out of the error path when an observation
+ * is started on it anyway.
+ */
+export async function openViewerAccount(_podName: string, _password: string): Promise<boolean> {
+  return false;
+}
+
+/** Counterpart of openViewerAccount: nothing was written, so nothing is left. */
+export async function revokeViewerAccount(_podName: string): Promise<boolean> {
+  return false;
 }
 
 /**
