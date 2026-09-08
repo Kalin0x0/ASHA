@@ -96,21 +96,33 @@ describe('SessionsGateway handshake', () => {
     const client = socket({ auth: { token: 'good' } });
     await gateway.handleConnection(client as never);
     expect(client.join).toHaveBeenCalledWith('org:org1');
-    expect(client.join).not.toHaveBeenCalledWith('observe:org1');
+    expect(client.join).not.toHaveBeenCalledWith('observe:org1:user1');
   });
 
   it('joins the observation room for a real SESSION_OBSERVE holder', async () => {
     rbac.effectivePermissions.mockResolvedValue(new Set(['SESSION_OBSERVE']));
     const client = socket({ auth: { token: 'good' } });
     await gateway.handleConnection(client as never);
-    expect(client.join).toHaveBeenCalledWith('observe:org1');
+    expect(client.join).toHaveBeenCalledWith('observe:org1:user1');
+  });
+
+  it('gives each observer a room of their own, not one the org shares', async () => {
+    // A frame of a desktop belongs to whoever holds the window it was captured
+    // for. One room per org served it to every colleague holding the permission
+    // — outside the audit row naming the watcher and outside the notice on the
+    // watched person's screen, both of which belong to the hold.
+    rbac.effectivePermissions.mockResolvedValue(new Set(['SESSION_OBSERVE']));
+    const client = socket({ auth: { token: 'good' } });
+    await gateway.handleConnection(client as never);
+    const rooms = client.join.mock.calls.map((c) => c[0] as string);
+    expect(rooms.filter((r) => r.startsWith('observe:'))).toEqual(['observe:org1:user1']);
   });
 
   it('joins the observation room for a system admin without a lookup', async () => {
     jwt.verifyAsync.mockResolvedValue({ ...PAYLOAD, isSystemAdmin: true });
     const client = socket({ auth: { token: 'good' } });
     await gateway.handleConnection(client as never);
-    expect(client.join).toHaveBeenCalledWith('observe:org1');
+    expect(client.join).toHaveBeenCalledWith('observe:org1:user1');
     expect(rbac.effectivePermissions).not.toHaveBeenCalled();
   });
 
@@ -118,14 +130,14 @@ describe('SessionsGateway handshake', () => {
     rbac.effectivePermissions.mockResolvedValue(new Set(['*']));
     const client = socket({ auth: { token: 'good' } });
     await gateway.handleConnection(client as never);
-    expect(client.join).toHaveBeenCalledWith('observe:org1');
+    expect(client.join).toHaveBeenCalledWith('observe:org1:user1');
   });
 
   it('scopes the observation room to the verified org, never the query string', async () => {
     rbac.effectivePermissions.mockResolvedValue(new Set(['SESSION_OBSERVE']));
     const client = socket({ auth: { token: 'good' }, query: { orgId: 'victim-org' } });
     await gateway.handleConnection(client as never);
-    expect(client.join).not.toHaveBeenCalledWith('observe:victim-org');
+    expect(client.join).not.toHaveBeenCalledWith('observe:victim-org:user1');
   });
 
   it('joins the session room for its owner', async () => {

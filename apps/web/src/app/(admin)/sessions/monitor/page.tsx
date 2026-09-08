@@ -132,8 +132,8 @@ export default function SessionMonitorPage() {
           viewerWindow,
         );
         // The API refuses a way in for a session nothing can watch — a terminal
-        // with no shared view, or a container image whose read-only account does
-        // not exist. Say which, rather than navigating to nowhere.
+        // with no second seat, a WebRTC desktop with no shared view, a container
+        // no agent is reporting for. Say which, rather than navigating nowhere.
         const route = watchRoute(win, sessionId, viewerWindow);
         if (!route) {
           toast.error(t(`watchUnavailable.${win.watchReason ?? 'unknown'}`));
@@ -340,6 +340,10 @@ function MonitorTile({
   onDetails: () => void;
 }) {
   const t = useTranslations('sessions.monitor');
+  // Everything the capture produced is gated on capture being on, not only the
+  // picture. With the selector on "off" the header says no screen is being
+  // read, and a window title left standing under that promise makes it a lie.
+  const read = capturing ? sample : undefined;
   const preview = resolveTilePreview({ sample, capturing, capability });
   const blankReason =
     preview.kind === 'blank'
@@ -349,7 +353,7 @@ function MonitorTile({
           })
         : t(`tile.${preview.reason}`)
       : '';
-  const appClass = formatAppClass(sample?.appClass);
+  const appClass = formatAppClass(read?.appClass);
   const memPct = session.memLimitMb > 0 ? (session.memMb / session.memLimitMb) * 100 : 0;
 
   return (
@@ -380,9 +384,9 @@ function MonitorTile({
             {t('live')}
           </span>
         )}
-        {sample?.windowCount !== undefined && (
+        {read?.windowCount !== undefined && (
           <span className="absolute end-2 top-2 rounded-md glass px-2 py-1 font-mono text-[10px] text-muted-foreground">
-            {t('tile.windows', { count: sample.windowCount })}
+            {t('tile.windows', { count: read.windowCount })}
           </span>
         )}
       </div>
@@ -405,10 +409,10 @@ function MonitorTile({
             <p
               // Window titles run long ("Angebot-2026-114.odt — LibreOffice
               // Writer"); the tile truncates, the tooltip keeps the whole thing.
-              title={sample?.title}
-              className={cn('min-w-0 flex-1 truncate text-xs', !sample?.title && 'text-muted-foreground')}
+              title={read?.title}
+              className={cn('min-w-0 flex-1 truncate text-xs', !read?.title && 'text-muted-foreground')}
             >
-              {sample?.title ?? t('tile.noWindow')}
+              {read?.title ?? t('tile.noWindow')}
             </p>
             {appClass && (
               <Badge variant="outline" className="max-w-[45%] shrink-0 truncate font-mono text-[10px]">

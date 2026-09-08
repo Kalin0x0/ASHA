@@ -178,13 +178,25 @@
       "hint": "Tippen = Klick, Halten = Rechtsklick, zwei Finger zum Zoomen und Scrollen."
     }
   },
-  "observe": {
+"observe": {
     "back": "Zurück zur Live-Überwachung",
     "subtitle": "Nur ansehen — nichts davon erreicht diesen Desktop",
-    "streamTitle": "Nur-Ansicht-Stream",
-    "connecting": "Nur-Ansicht wird geöffnet…",
+    "streamTitle": "Live-Bild",
+    "connecting": "Warten auf das erste Bild…",
+    "noWindow": "Kein Fenster im Vordergrund",
+    "status": {
+      "live": "Live",
+      "stalled": "Es kommen keine neuen Bilder — dieses hier ist nicht aktuell",
+      "waiting": "Warten auf das erste Bild…",
+      "degraded": "Kein Bild aus diesem Container",
+      "unavailable": "Es wird nichts erfasst"
+    },
+    "realtime": {
+      "open": "Echtzeit",
+      "polling": "Abfrage"
+    },
     "unavailableTitle": "Hier gibt es nichts anzusehen",
-    "unavailableDescription": "Eine Nur-Ansicht wird aus der Live-Überwachung geöffnet und gilt nur kurz. Öffnen Sie sie dort erneut.",
+    "unavailableDescription": "Das Live-Bild eines Container-Desktops entsteht im Container selbst, über dessen Agenten. Für diese Sitzung meldet sich keiner — also gibt es auch kein Bild.",
     "backToMonitor": "Zur Live-Überwachung"
   },
   "observed": {

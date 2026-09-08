@@ -192,9 +192,6 @@ export class AgentsService {
       if (dto.host) data.host = dto.host;
       if (dto.port) data.port = dto.port;
       if (dto.traefikRouterName) data.traefikRouterName = dto.traefikRouterName;
-      // Recorded even when false: it is the difference between offering a live
-      // view and offering one that answers 401.
-      if (dto.viewerAuth !== undefined) data.observeReady = dto.viewerAuth;
       if (dto.error) data.errorMessage = dto.error;
 
       if (dto.status === 'RUNNING') {

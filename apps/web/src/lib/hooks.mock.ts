@@ -135,16 +135,21 @@ export function useStartObservation() {
       // Answered the way the API answers it, so the wall renders the same
       // "no capture on a fixed server" tile here as it does in production.
       const capture = body.intervalMs > 0 && !MOCK_FIXED_SERVERS.has(session?.connectionType ?? '');
+      // A container is watched through the capture stream and a fixed server
+      // through the proxy — the same split the API makes, so the demo lands on
+      // the same two viewers production does.
+      const container = !MOCK_FIXED_SERVERS.has(session?.connectionType ?? '');
       return {
         windowId: windowId ?? 'default',
-        watchToken: `mock-watch-${id}`,
-        watchUrl: `/connect/${session?.kasmId ?? id}?monitor=1`,
-        // No Traefik in mock mode, so there is no read-only container route to
-        // point at — the demo wall always opens the guacamole viewer.
-        watchKind: 'guac',
-        expiresAt: new Date(Date.now() + 120_000).toISOString(),
         thumbnails: capture,
         ...(capture ? {} : { reason: body.intervalMs > 0 ? 'no_agent' : 'capture_disabled' }),
+        ...(container
+          ? { watchKind: 'stream' as const }
+          : {
+              watchKind: 'guac' as const,
+              watchToken: `mock-watch-${id}`,
+              watchUrl: `/connect/${session?.kasmId ?? id}?monitor=1`,
+            }),
       };
     },
     [],

@@ -12,7 +12,6 @@ import type { Env } from '@asha/config';
 import type { SessionObservationDto, StartObservationDto } from '@asha/contracts';
 import { prisma, runUnscoped } from '@asha/db';
 import type { SessionObservationSample } from '@asha/events';
-import { sessionObserveUrl } from '@asha/proxy-labels';
 import type { AuthUser } from '../../common/decorators';
 import { ENV } from '../../common/env.module';
 import type { AgentTokenScope } from '../../common/jwt-auth.guard';
@@ -125,8 +124,8 @@ interface WatchedSession {
  * What opening or renewing a hold answers with.
  *
  * `watchKind` says what the caller may render: a proxy route for the guacamole
- * viewer, the container's own read-only stream, or nothing at all — in which
- * case `watchReason` names the obstacle in the same machine-readable style as
+ * viewer, this same capture at live cadence, or nothing at all — in which case
+ * `watchReason` names the obstacle in the same machine-readable style as
  * `reason` names a missing thumbnail, and no watch token exists to hand out.
  */
 interface ObservationWindow {
@@ -134,12 +133,29 @@ interface ObservationWindow {
   windowId: string;
   thumbnails: boolean;
   reason?: string;
-  watchKind: 'guac' | 'iframe' | 'none';
-  watchReason?: 'no_shared_terminal' | 'no_viewer_account';
+  watchKind: WatchKind;
+  watchReason?: WatchReason;
   watchToken?: string;
   watchUrl?: string;
-  expiresAt?: string;
 }
+
+/**
+ * `guac` is a connection-proxy route the guacamole viewer opens; `stream` is
+ * the capture the agent is already taking, asked for at a live cadence and a
+ * larger width. `none` means there is no way in at all.
+ */
+type WatchKind = 'guac' | 'stream' | 'none';
+type WatchReason = 'no_shared_terminal' | 'no_shared_view' | 'no_capture_agent';
+
+/** What watchTarget decided, before it is turned into an answer. */
+type WatchTarget = { kind: 'guac' } | { kind: 'stream' } | { kind: 'none'; reason: WatchReason };
+
+/**
+ * The same, with the credential the guacamole route needs — minted alongside it
+ * rather than beside it, so a route can never be handed out without the token
+ * that is the only thing making it read-only.
+ */
+type ResolvedTarget = { kind: 'guac'; token: string } | Exclude<WatchTarget, { kind: 'guac' }>;
 
 /**
  * The holds still standing, the observer who has been watching longest first —
@@ -230,19 +246,7 @@ export class ObservationService {
     const capture = dto.intervalMs > 0 && Boolean(session.agentId && session.containerId);
     const reason = capture ? undefined : dto.intervalMs > 0 ? 'no_agent' : 'capture_disabled';
 
-    // A terminal has no second seat. guacd cannot join a running SSH connection
-    // the way it joins RDP/VNC, so a view-mode stream would authenticate again
-    // as the session user and allocate a fresh PTY: a real login on the target,
-    // in its auth log and against its session limit, showing an empty shell
-    // rather than the one the user is working in. Those sessions are observed as
-    // metadata only, and say so rather than offering a control that cannot work.
-    const shareable = session.connectionType !== 'GUAC_SSH';
-    const watchToken = shareable
-      ? await this.jwt.signAsync(
-          { sub: user.sub, orgId: session.orgId, kasmId: session.kasmId, mode: 'view', typ: WATCH_TOKEN_TYPE },
-          { secret: this.env.JWT_ACCESS_SECRET, expiresIn: WATCH_TOKEN_TTL_SEC },
-        )
-      : null;
+    const target = await this.resolveTarget(user, session);
 
     if (capture) {
       await this.sessions.sendControl(session, {
@@ -284,7 +288,7 @@ export class ObservationService {
     // three times a minute per tile is what made both unreadable.
     const opened = mine.length === 0;
     if (!opened) {
-      return this.windowFor(session, windowId, user.sub, watchToken, capture, reason);
+      return this.windowFor(session, windowId, target, capture, reason);
     }
 
     // The notice goes out in the same call that hands over the token. As a
@@ -316,44 +320,49 @@ export class ObservationService {
       },
     });
 
-    return this.windowFor(session, windowId, user.sub, watchToken, capture, reason);
+    return this.windowFor(session, windowId, target, capture, reason);
+  }
+
+  /**
+   * Which way in this session has, and the token that buys it.
+   *
+   * Only the guacamole route is bought with one, and it mints a fresh one on
+   * every renewal: the token lives 120 s while an observation lives as long as
+   * the observer keeps watching, so a viewer that reconnects has one that still
+   * works.
+   */
+  private async resolveTarget(
+    user: AuthUser,
+    session: { orgId: string; kasmId: string; connectionType: string; agentId: string | null; containerId: string | null },
+  ): Promise<ResolvedTarget> {
+    const target = this.watchTarget(session);
+    if (target.kind !== 'guac') return target;
+    const token = await this.jwt.signAsync(
+      { sub: user.sub, orgId: session.orgId, kasmId: session.kasmId, mode: 'view', typ: WATCH_TOKEN_TYPE },
+      { secret: this.env.JWT_ACCESS_SECRET, expiresIn: WATCH_TOKEN_TTL_SEC },
+    );
+    return { kind: 'guac', token };
   }
 
   /** What the caller gets back: the hold it now holds, and the way in, if any. */
-  private async windowFor(
-    session: {
-      id: string;
-      kasmId: string;
-      connectionType: string;
-      connectionUrl: string | null;
-      observeReady: boolean;
-    },
+  private windowFor(
+    session: { kasmId: string },
     windowId: string,
-    observerUserId: string,
-    watchToken: string | null,
+    target: ResolvedTarget,
     thumbnails: boolean,
     reason: string | undefined,
-  ): Promise<ObservationWindow> {
+  ): ObservationWindow {
     const common = { windowId, thumbnails, ...(reason ? { reason } : {}) };
-    if (!watchToken) {
-      // No token is minted at all, so no route into the session exists to be
-      // offered, mis-clicked or copied out of a log.
-      return { ...common, watchKind: 'none', watchReason: 'no_shared_terminal' };
-    }
-    // A KasmVNC route exists for every container, but only a real Kasm image has
-    // the read-only account behind it: the linuxserver desktops serve through
-    // nginx and ship no kasmvncpasswd, so their observe route answers 401. Say
-    // there is no way in rather than sending an admin to a dead viewer.
-    if (session.connectionType === 'KASMVNC' && !session.observeReady) {
-      return { ...common, watchKind: 'none', watchReason: 'no_viewer_account' };
-    }
-    const view = await this.watchTarget(session, watchToken, observerUserId);
+    if (target.kind === 'none') return { ...common, watchKind: 'none', watchReason: target.reason };
+    // The container's live view is this same capture at a higher rate: the page
+    // is a route in the admin app, not an address on the session, so there is
+    // nothing here to hand out and nothing to expire.
+    if (target.kind === 'stream') return { ...common, watchKind: 'stream' };
     return {
       ...common,
-      watchToken,
-      watchUrl: view.url,
-      watchKind: view.kind,
-      expiresAt: new Date(Date.now() + WATCH_TOKEN_TTL_SEC * 1000).toISOString(),
+      watchKind: 'guac',
+      watchToken: target.token,
+      watchUrl: `/connect/${encodeURIComponent(session.kasmId)}?monitor=1&watch=${encodeURIComponent(target.token)}`,
     };
   }
 
@@ -394,47 +403,56 @@ export class ObservationService {
   /**
    * Where the observer is sent, and what will render there.
    *
-   * A fixed-server session streams through the connection-proxy, which joins
-   * the running guacd connection read-only — the watch token is what buys that,
-   * so it travels in the URL. A container session never reaches the proxy at
-   * all: the browser loads it straight from Traefik, and the proxy's KasmVNC
-   * handler closes the upgrade outright. So that observer gets the container's
-   * own read-only route instead, authenticated as kasm_viewer by a header the
-   * agent put on the route, with the same one-shot stream token the user's
-   * session carries — the forward-auth gate accepts nothing else.
+   * A fixed server (RDP/VNC through guacd) streams through the connection-proxy,
+   * which JOINS the running guacd connection read-only. No second logon on the
+   * target, no risk of reconnecting a single-session Windows host onto the
+   * observer, and read-only is enforced by guacd itself. The watch token is what
+   * buys that, so it travels in the URL.
    *
-   * Falls back to the proxy URL when the stored URL cannot be rewritten (a
-   * session that never reported one). That is no worse than before this branch
-   * existed, and refusing here would take the metadata window down with it.
+   * A container desktop gets the capture stream instead, at a live cadence and a
+   * larger frame. It never reaches the proxy — the browser loads a container
+   * from Traefik — and three attempts at giving it a route of its own each ended
+   * the same way, because a container label cannot be rotated while the
+   * container runs: first a viewer credential that outlived the grant it was
+   * handed out for, then one that escalated to the write route, then one that
+   * was never minted at all. The capture is read-only by construction (there is
+   * no input channel to guard), needs no credential, no cookie and no route, and
+   * is already inside the grant, the audit entry and the notice.
+   *
+   * A terminal has no second seat: guacd cannot join a running SSH connection,
+   * so a view-mode stream would authenticate again as the session user and
+   * allocate a fresh PTY — a real login on the target, in its auth log and
+   * against its session limit, showing an empty shell rather than the one the
+   * user is working in.
    */
-  private async watchTarget(
-    session: { id: string; kasmId: string; connectionType: string; connectionUrl: string | null },
-    watchToken: string,
-    observerUserId: string,
-  ): Promise<{ kind: 'guac' | 'iframe'; url: string }> {
-    const guac = {
-      kind: 'guac' as const,
-      url: `/connect/${encodeURIComponent(session.kasmId)}?monitor=1&watch=${encodeURIComponent(watchToken)}`,
-    };
-    if (session.connectionType !== 'KASMVNC' || !session.connectionUrl) return guac;
-    // `obs` marks the token for the route it was minted on. Without it this is
-    // byte-identical to the token the owner's own session carries, and the
-    // forward-auth gate — which cannot see which router a request came through
-    // beyond the path it is handed — would trade an observer's token for a
-    // cookie on `/session/<kasmId>/`, the route Traefik serves with the KasmVNC
-    // account that may type. `sub` names the observer, so the cookie the gate
-    // mints can be tied back to THIS observer's hold rather than to the session
-    // as a whole: one of two observers stopping ends their own access.
-    const streamToken = await this.jwt.signAsync(
-      { sid: session.id, kasmId: session.kasmId, sub: observerUserId, obs: true },
-      { secret: this.env.SESSION_TOKEN_SECRET, expiresIn: this.env.SESSION_TOKEN_TTL },
-    );
-    const url = sessionObserveUrl({
-      connectionUrl: session.connectionUrl,
-      kasmId: session.kasmId,
-      token: streamToken,
-    });
-    return url ? { kind: 'iframe', url } : guac;
+  private watchTarget(session: {
+    connectionType: string;
+    agentId: string | null;
+    containerId: string | null;
+  }): WatchTarget {
+    switch (session.connectionType) {
+      case 'GUAC_RDP':
+      case 'GUAC_VNC':
+        return { kind: 'guac' };
+      case 'KASMVNC':
+        // The frames come from the agent inside the container, so a container
+        // session the manager has lost track of has nothing to show.
+        return session.agentId && session.containerId
+          ? { kind: 'stream' }
+          : { kind: 'none', reason: 'no_capture_agent' };
+      case 'GUAC_SSH':
+        return { kind: 'none', reason: 'no_shared_terminal' };
+      case 'NEKO_WEBRTC':
+        // The desktop is a WebRTC peer connection negotiated between the user's
+        // browser and the container. There is no second seat on it and no
+        // capture path into it, and the proxy record carries the KasmVNC
+        // protocol, so a guacamole route would close with a bare 4000 and the
+        // observer would read "connection failed". Say what is actually true.
+        return { kind: 'none', reason: 'no_shared_view' };
+      default:
+        // A kind added later refuses rather than guessing at a viewer for it.
+        return { kind: 'none', reason: 'no_shared_view' };
+    }
   }
 
   /**
@@ -475,8 +493,10 @@ export class ObservationService {
       await this.redis.set(watchKey(session.kasmId), { holds } satisfies WatchRecord, this.recordTtlSec(holds, now));
       // Somebody is still watching, so the banner stays up — but it must stop
       // naming the person who left, and go on counting from whoever has been
-      // there longest.
-      if (closed) {
+      // there longest. Gated on the same policy start() honours: an org that
+      // switched the notice off must not have it appear the moment one of two
+      // observers walks away.
+      if (closed && (await this.policyEnabled(session.orgId, 'observation.notifyUser'))) {
         const named = holds[0];
         this.gateway.emitToSession(session.id, {
           type: 'session.observed',
@@ -580,8 +600,12 @@ export class ObservationService {
     } else {
       await this.redis.set(watchKey(session.kasmId), { holds } satisfies WatchRecord, this.recordTtlSec(holds, now));
       // Still watched, but possibly by someone else now: the banner must stop
-      // naming an observer who is no longer there.
-      if (before[0].observerUserId !== holds[0].observerUserId) {
+      // naming an observer who is no longer there. Under the notice policy, for
+      // the reason stop() gives — a lapse is not a licence to start announcing.
+      if (
+        before[0].observerUserId !== holds[0].observerUserId &&
+        (await this.policyEnabled(session.orgId, 'observation.notifyUser'))
+      ) {
         this.gateway.emitToSession(session.id, {
           type: 'session.observed',
           payload: {
@@ -616,9 +640,18 @@ export class ObservationService {
   }
 
   /**
-   * Snapshot of every sample currently held for the caller's org. Reading the
-   * org's sessions and then their keys — rather than scanning `asha:obs:*` —
-   * keeps the answer tenant-scoped by construction.
+   * Snapshot of the samples this caller may see: one per session they hold an
+   * open window on, and no others.
+   *
+   * SESSION_OBSERVE says the caller may observe, not that they are observing.
+   * Answering with every sample the org holds handed one administrator the
+   * frames and focused-window titles of every desktop a COLLEAGUE had opened a
+   * window on — outside the audit entry that names the watcher and outside the
+   * notice on the watched person's screen, both of which belong to the hold.
+   * The hold is therefore what is read, per session, before the sample is.
+   *
+   * Reading the org's sessions and then their keys — rather than scanning
+   * `asha:obs:*` — keeps the answer tenant-scoped by construction.
    */
   async list(user: AuthUser) {
     const sessions = await prisma.session.findMany({
@@ -626,8 +659,11 @@ export class ObservationService {
       select: { id: true, kasmId: true },
       take: 200,
     });
+    const now = Date.now();
     const items: Array<SessionObservationSample & { sessionId: string }> = [];
     for (const session of sessions) {
+      const holds = liveHolds(await this.redis.get<WatchRecord>(watchKey(session.kasmId)), now);
+      if (!holds.some((h) => h.observerUserId === user.sub)) continue;
       // Null when the sample aged out or Redis is down: an empty wall is the
       // degraded mode, never an error.
       const sample = await this.redis.get<SessionObservationSample>(sampleKey(session.kasmId));
@@ -650,14 +686,19 @@ export class ObservationService {
       // key it is stored under cannot disagree.
       const sample: SessionObservationSample = { ...dto, kasmId };
       await this.redis.set(sampleKey(kasmId), sample, SAMPLE_TTL_SEC);
-      // The observer room, never the org room: the sample carries a frame of the
-      // desktop and the title of the focused window, which is exactly what
-      // SESSION_OBSERVE exists to gate. Broadcasting it to every colleague would
-      // have been a wider hole than the one this feature closes.
-      this.gateway.emitToObservers(session.orgId, {
-        type: 'session.observation',
-        payload: { ...sample, sessionId: session.id },
-      });
+      // To the observers holding a window on THIS session, and nobody else. The
+      // sample carries a frame of the desktop and the title of the focused
+      // window; a room per org would have handed both to every colleague who
+      // merely holds the permission, which is the same hole list() closes.
+      // Redis unreadable means no holds, which means no fan-out — the poll picks
+      // the wall back up once it answers again.
+      const holds = liveHolds(await this.redis.get<WatchRecord>(watchKey(kasmId)), Date.now());
+      for (const observerUserId of new Set(holds.map((h) => h.observerUserId))) {
+        this.gateway.emitToObserver(session.orgId, observerUserId, {
+          type: 'session.observation',
+          payload: { ...sample, sessionId: session.id },
+        });
+      }
       return { ok: true };
     });
   }

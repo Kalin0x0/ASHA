@@ -50,11 +50,13 @@ export class SessionsGateway implements OnGatewayConnection {
     client.join(`org:${user.orgId}`);
     // Org membership buys the low-sensitivity stream — session status, stats,
     // health. A frame of a colleague's desktop and the title of the window they
-    // have open is a different thing entirely, so it gets its own room and the
-    // socket has to earn it with the permission GET sessions/observations
-    // demands. Without this, joining the org room WAS the whole authorization.
+    // have open is a different thing entirely, so it gets a room of this
+    // socket's own, which it has to earn with the permission GET
+    // sessions/observations demands — and which only carries the sessions this
+    // observer holds a window on. Without this, joining the org room WAS the
+    // whole authorization.
     if (await this.mayObserve(user)) {
-      client.join(`observe:${user.orgId}`);
+      client.join(observerRoom(user.orgId, user.sub));
     }
 
     const auth = client.handshake.auth as { sessionId?: unknown } | undefined;
@@ -81,9 +83,14 @@ export class SessionsGateway implements OnGatewayConnection {
     this.server?.to(`org:${orgId}`).emit('event', event);
   }
 
-  /** Observation samples, and nothing else — see the room join in handleConnection. */
-  emitToObservers(orgId: string, event: WsServerEvent): void {
-    this.server?.to(`observe:${orgId}`).emit('event', event);
+  /**
+   * One observer's samples. Per observer rather than per org: a frame of a
+   * desktop belongs to whoever holds the window it was captured for, and a room
+   * the whole org's permission holders sat in served it to colleagues the audit
+   * entry and the on-screen notice never named.
+   */
+  emitToObserver(orgId: string, observerUserId: string, event: WsServerEvent): void {
+    this.server?.to(observerRoom(orgId, observerUserId)).emit('event', event);
   }
 
   emitToSession(sessionId: string, event: WsServerEvent): void {
@@ -136,6 +143,15 @@ export class SessionsGateway implements OnGatewayConnection {
     const granted = await this.rbac.effectivePermissions(user.sub);
     return granted.has('SESSION_VIEW_ANY') || granted.has('*') ? session : null;
   }
+}
+
+/**
+ * The room one observer's samples are pushed into. Scoped by org as well as by
+ * user so the tenant boundary holds by construction, the way every other room
+ * here is built.
+ */
+function observerRoom(orgId: string, observerUserId: string): string {
+  return `observe:${orgId}:${observerUserId}`;
 }
 
 /** A repeated query parameter arrives as an array; only a plain string counts. */

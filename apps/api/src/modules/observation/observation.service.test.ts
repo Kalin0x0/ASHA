@@ -26,8 +26,6 @@ const CONTAINER_SESSION = {
   connectionType: 'KASMVNC',
   connectionUrl:
     'https://asha.example.com/session/kid1/?path=session/kid1/websockify&resize=remote&quality=8&enable_webp=true&token=stored',
-  // A real Kasm image: the agent confirmed the read-only account answers.
-  observeReady: true,
 };
 
 // A fixed server (Rakhsh, Ahriman, …) runs no agent, so nothing inside it can
@@ -45,6 +43,15 @@ const SERVER_SESSION = {
 // A terminal has no second seat: guacd cannot join a running SSH connection, so
 // the only "view" it could offer is a fresh login on the target.
 const SSH_SESSION = { ...SERVER_SESSION, id: 'sess3', kasmId: 'kid3', connectionType: 'GUAC_SSH' };
+
+// A WebRTC desktop is a peer connection between one browser and the container.
+// Nothing can join it and nothing can capture it.
+const WEBRTC_SESSION = {
+  ...CONTAINER_SESSION,
+  id: 'sess4',
+  kasmId: 'kid4',
+  connectionType: 'NEKO_WEBRTC',
+};
 
 const ADMIN = { sub: 'admin1', orgId: 'org1', email: 'admin@x.io', isSystemAdmin: true } as never;
 const ADMIN2 = { sub: 'admin2', orgId: 'org1', email: 'bob@x.io', isSystemAdmin: true } as never;
@@ -79,7 +86,7 @@ describe('ObservationService', () => {
   let sessions: { sendControl: ReturnType<typeof vi.fn> };
   let gateway: {
     emitToOrg: ReturnType<typeof vi.fn>;
-    emitToObservers: ReturnType<typeof vi.fn>;
+    emitToObserver: ReturnType<typeof vi.fn>;
     emitToSession: ReturnType<typeof vi.fn>;
   };
   let redis: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn>; del: ReturnType<typeof vi.fn> };
@@ -90,7 +97,7 @@ describe('ObservationService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessions = { sendControl: vi.fn().mockResolvedValue(undefined) };
-    gateway = { emitToOrg: vi.fn(), emitToObservers: vi.fn(), emitToSession: vi.fn() };
+    gateway = { emitToOrg: vi.fn(), emitToObserver: vi.fn(), emitToSession: vi.fn() };
     redis = {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue(undefined),
@@ -145,7 +152,7 @@ describe('ObservationService', () => {
 
   describe('who may observe a given session', () => {
     it('lets a system admin observe anyone', async () => {
-      await expect(svc.start(ADMIN, 'sess1', DTO)).resolves.toMatchObject({ watchToken: 'watch.token' });
+      await expect(svc.start(ADMIN, 'sess1', DTO)).resolves.toMatchObject({ watchKind: 'stream' });
       expect(rbac.effectivePermissions).not.toHaveBeenCalled();
     });
 
@@ -252,13 +259,13 @@ describe('ObservationService', () => {
   });
 
   describe('watch token and watch record', () => {
-    it('mints a view-only token pinned to the session, and a 120 s window', async () => {
-      const res = await svc.start(ADMIN, 'sess1', DTO);
+    it('mints a view-only token pinned to the session, for the route that needs one', async () => {
+      prismaMock.session.findFirst.mockResolvedValue(SERVER_SESSION);
+      await svc.start(ADMIN, 'sess2', DTO);
       expect(jwt.signAsync).toHaveBeenCalledWith(
-        { sub: 'admin1', orgId: 'org1', kasmId: 'kid1', mode: 'view', typ: 'watch' },
+        { sub: 'admin1', orgId: 'org1', kasmId: 'kid2', mode: 'view', typ: 'watch' },
         { secret: 'access-secret', expiresIn: 120 },
       );
-      expect(Date.parse(res.expiresAt ?? '')).toBeGreaterThan(Date.now());
     });
 
     it('marks the watch token as a watch token, so the API refuses it as a credential', async () => {
@@ -267,38 +274,20 @@ describe('ObservationService', () => {
       // authenticates the API. Without the marker, reading one out of a log buys
       // the observing admin's whole API for two minutes, minting further watch
       // tokens for other desktops included.
-      await svc.start(ADMIN, 'sess1', DTO);
+      prismaMock.session.findFirst.mockResolvedValue(SERVER_SESSION);
+      await svc.start(ADMIN, 'sess2', DTO);
       const [claims] = jwt.signAsync.mock.calls[0] as [Record<string, unknown>];
       expect(claims.typ).toBe('watch');
     });
 
-    it('does not give the stream token the watch marker', async () => {
-      // The two are verified by different things under different secrets: this
-      // one only ever reaches the Traefik forward-auth gate.
+    it('signs nothing at all for a container desktop', async () => {
+      // The live view of a container is the capture stream: it travels over the
+      // socket this administrator is already authenticated on, so there is no
+      // second credential to mint, hand out, scope or expire. Three rounds of
+      // review went the other way, and each one left a credential that outlived
+      // its grant, escalated to the write route, or was never written.
       await svc.start(ADMIN, 'sess1', DTO);
-      const [claims] = jwt.signAsync.mock.calls[1] as [Record<string, unknown>];
-      expect(claims).not.toHaveProperty('typ');
-    });
-
-    it('marks the stream token for the read-only route, so it cannot open the writing one', async () => {
-      // The escalation this closes: the URL carrying this token is shown in the
-      // observer's own address bar. Unmarked it is byte-identical to the token a
-      // session's owner carries, and the gate does not know which router called
-      // it — so moving it to `/session/<kasmId>/`, one segment up, traded it for
-      // a cookie on the route Traefik serves with the KasmVNC account that may
-      // type. SESSION_OBSERVE became keyboard and mouse control of a colleague's
-      // desktop.
-      await svc.start(ADMIN, 'sess1', DTO);
-      const [claims] = jwt.signAsync.mock.calls[1] as [Record<string, unknown>];
-      expect(claims.obs).toBe(true);
-    });
-
-    it('names the observer in the stream token, so the cookie can be tied to their hold', async () => {
-      // Per hold rather than per session: one of two observers stopping has to
-      // end their own access while the other keeps watching.
-      await svc.start(ADMIN, 'sess1', DTO);
-      const [claims] = jwt.signAsync.mock.calls[1] as [Record<string, unknown>];
-      expect(claims.sub).toBe('admin1');
+      expect(jwt.signAsync).not.toHaveBeenCalled();
     });
 
     it('publishes who is watching so a viewer that reloads still shows the banner', async () => {
@@ -332,19 +321,6 @@ describe('ObservationService', () => {
   });
 
   describe('where the observer is sent', () => {
-    it('offers no way in when the image has no read-only account', async () => {
-      // The linuxserver desktops answer through nginx and ship no kasmvncpasswd,
-      // so the observe route exists and 401s. Refusing here is what keeps an
-      // admin out of a dead viewer.
-      prismaMock.session.findFirst.mockResolvedValue({ ...CONTAINER_SESSION, observeReady: false });
-      const res = await svc.start(ADMIN, 'sess1', DTO);
-      expect(res.watchKind).toBe('none');
-      expect(res.watchReason).toBe('no_viewer_account');
-      expect(res.watchUrl).toBeUndefined();
-      // Capture is unaffected: a tile without a live view still shows a frame.
-      expect(res.thumbnails).toBe(true);
-    });
-
     it('sends a fixed-server observer through the proxy, which joins guacd read-only', async () => {
       prismaMock.session.findFirst.mockResolvedValue(SERVER_SESSION);
       const res = await svc.start(ADMIN, 'sess2', DTO);
@@ -354,60 +330,73 @@ describe('ObservationService', () => {
       });
     });
 
-    it('sends a container observer to the read-only route, because the proxy never sees it', async () => {
+    it('sends a container observer to the capture stream, which has no address at all', async () => {
       // /connect/<kasmId> would render a viewer whose upgrade the proxy's
-      // KasmVNC handler closes outright — the bug this branch exists to fix.
-      jwt.signAsync.mockResolvedValueOnce('watch.token').mockResolvedValueOnce('stream.token');
+      // KasmVNC handler closes outright, and a route on the container itself
+      // needs a credential a running container cannot be given. The frames the
+      // wall already draws are the live view; the page is in the admin app.
       const res = await svc.start(ADMIN, 'sess1', DTO);
-      expect(res.watchKind).toBe('iframe');
-      expect(res.watchUrl).toBe(
-        'https://asha.example.com/session/kid1/observe/?path=session/kid1/observe/websockify' +
-          '&resize=remote&quality=8&enable_webp=true&token=stream.token',
-      );
+      expect(res).toMatchObject({ watchKind: 'stream' });
+      expect(res.watchUrl).toBeUndefined();
+      expect(res.watchToken).toBeUndefined();
     });
 
-    it('signs the stream token the Traefik gate wants, not the watch token again', async () => {
-      await svc.start(ADMIN, 'sess1', DTO);
-      expect(jwt.signAsync).toHaveBeenCalledWith(
-        { sid: 'sess1', kasmId: 'kid1', sub: 'admin1', obs: true },
-        { secret: 'stream-secret', expiresIn: 120 },
-      );
+    it('offers no live view for a container the manager has lost track of', async () => {
+      // No agent means no capture, and the capture is the whole view.
+      prismaMock.session.findFirst.mockResolvedValue({ ...CONTAINER_SESSION, agentId: null, containerId: null });
+      const res = await svc.start(ADMIN, 'sess1', DTO);
+      expect(res).toMatchObject({ watchKind: 'none', watchReason: 'no_capture_agent' });
     });
 
     it('never hands out the token stored on the session', async () => {
       // It was minted at launch with a 120 s life, so by now it is refused.
-      const res = await svc.start(ADMIN, 'sess1', DTO);
+      prismaMock.session.findFirst.mockResolvedValue(SERVER_SESSION);
+      const res = await svc.start(ADMIN, 'sess2', DTO);
       expect(res.watchUrl).not.toContain('token=stored');
     });
 
-    it('falls back to the proxy URL for a container session with no stream URL', async () => {
-      prismaMock.session.findFirst.mockResolvedValue({ ...CONTAINER_SESSION, connectionUrl: null });
+    it('offers a container no route on itself, whatever its stored URL says', async () => {
+      // The regression guard for the mechanism this replaces: a per-session
+      // `/observe` router derived from the connection URL. Nothing may put a
+      // session address in front of an observer again.
       const res = await svc.start(ADMIN, 'sess1', DTO);
-      expect(res).toMatchObject({ watchKind: 'guac', watchUrl: '/connect/kid1?monitor=1&watch=watch.token' });
+      expect(res.watchUrl).toBeUndefined();
+      expect(JSON.stringify(res)).not.toContain('/observe');
     });
   });
 
   describe('sessions with nothing to watch', () => {
-    beforeEach(() => {
-      prismaMock.session.findFirst.mockResolvedValue(SSH_SESSION);
-    });
-
     it('offers no live view on an SSH session, and says why in a token the UI can translate', async () => {
+      prismaMock.session.findFirst.mockResolvedValue(SSH_SESSION);
       const res = await svc.start(ADMIN, 'sess3', DTO);
       expect(res).toMatchObject({ watchKind: 'none', watchReason: 'no_shared_terminal' });
       expect(res.watchUrl).toBeUndefined();
     });
 
-    it('mints no watch token for a connection guacd cannot join', async () => {
+    it('says why a WebRTC desktop cannot be watched, instead of failing into a connection error', async () => {
+      // It used to be handed the guacamole route by exclusion — anything not
+      // KASMVNC — and its proxy record carries the KasmVNC protocol, so the
+      // upgrade closed with a bare 4000 and the viewer showed "connection
+      // failed". The audit row and the banner on the user's screen were written
+      // all the same, for a view that could never render.
+      prismaMock.session.findFirst.mockResolvedValue(WEBRTC_SESSION);
+      const res = await svc.start(ADMIN, 'sess4', DTO);
+      expect(res).toMatchObject({ watchKind: 'none', watchReason: 'no_shared_view' });
+      expect(res.watchUrl).toBeUndefined();
+    });
+
+    it('mints no watch token for a connection nothing can join', async () => {
       // View mode on SSH is not a view at all: the proxy authenticates again as
       // the session user and allocates a second PTY — a real login in the host's
       // auth log, showing an empty shell rather than the one being worked in.
+      prismaMock.session.findFirst.mockResolvedValue(SSH_SESSION);
       const res = await svc.start(ADMIN, 'sess3', DTO);
       expect(res.watchToken).toBeUndefined();
       expect(jwt.signAsync).not.toHaveBeenCalled();
     });
 
     it('still opens the metadata window, announced and audited like any other', async () => {
+      prismaMock.session.findFirst.mockResolvedValue(SSH_SESSION);
       await svc.start(ADMIN, 'sess3', DTO);
       expect(notices()).toContainEqual(expect.objectContaining({ active: true }));
       expect(auditActions()).toEqual(['observation.start']);
@@ -487,6 +476,13 @@ describe('ObservationService', () => {
       expect(notices()).toEqual([{ sessionId: 'sess1', observerName: 'Ada Lovelace', since: ADA.since, active: true }]);
     });
 
+    /** The org switched the notice off; only an explicit false does that. */
+    const notifyOff = () =>
+      prismaMock.setting.findUnique.mockImplementation(
+        (args: { where: { scope_orgId_zoneId_key: { key: string } } }) =>
+          args.where.scope_orgId_zoneId_key.key === 'observation.notifyUser' ? { valueJson: false } : null,
+      );
+
     it('keeps the notice up when one of two observers stops', async () => {
       // The other one is still watching. Clearing the banner here is how an
       // observed person is told the watching ended while it goes on.
@@ -495,6 +491,33 @@ describe('ObservationService', () => {
       await svc.stop(ADMIN2, 'sess1');
       expect(store.has('asha:obs:watch:kid1')).toBe(true);
       expect(notices()).toEqual([{ sessionId: 'sess1', observerName: 'Ada Lovelace', since: ADA.since, active: true }]);
+    });
+
+    it('stays silent on that hand-over when the org switched the notice off', async () => {
+      // Only start() honoured the policy. An org running a sanctioned covert
+      // observation got a banner naming the remaining observer the moment one
+      // of two of them walked away — announcing exactly what was configured not
+      // to be announced, and only ever on churn.
+      notifyOff();
+      const store = memoryRedis();
+      store.set('asha:obs:watch:kid1', held(ADA, BOB));
+      await svc.stop(ADMIN2, 'sess1');
+      expect(store.has('asha:obs:watch:kid1')).toBe(true);
+      expect(notices()).toEqual([]);
+    });
+
+    it('still retracts the notice when the last observer leaves, policy or not', async () => {
+      // The retraction is not an announcement: it takes a banner down. A
+      // banner left standing would tell the user they are watched when nobody
+      // is — the one direction the policy must not be able to cause.
+      notifyOff();
+      const store = memoryRedis();
+      store.set('asha:obs:watch:kid1', held(ADA));
+      await svc.stop(ADMIN, 'sess1');
+      expect(store.has('asha:obs:watch:kid1')).toBe(false);
+      expect(notices()).toEqual([
+        { sessionId: 'sess1', observerName: 'Ada Lovelace', since: ADA.since, active: false },
+      ]);
     });
 
     it('leaves the other observer their frames when one of two stops', async () => {
@@ -701,6 +724,21 @@ describe('ObservationService', () => {
       );
     });
 
+    it('says nothing on that hand-over when the org switched the notice off', async () => {
+      // A hold lapsing is the other door into the same emit stop() had: the
+      // observer who was named simply stopped renewing.
+      prismaMock.setting.findUnique.mockImplementation(
+        (args: { where: { scope_orgId_zoneId_key: { key: string } } }) =>
+          args.where.scope_orgId_zoneId_key.key === 'observation.notifyUser' ? { valueJson: false } : null,
+      );
+      const store = memoryRedis();
+      store.set('asha:obs:watch:kid1', held({ ...ADA, ...lapsed }, BOB));
+      await svc.sweepLapsedHolds();
+      expect(notices()).toEqual([]);
+      // The window still ended for the observer who lapsed, and the trail says so.
+      expect(auditActions()).toEqual(['observation.stop']);
+    });
+
     it('says nothing when one of an observer’s several surfaces goes quiet', async () => {
       // Their wall tile lapsed while the viewer they opened from it renews. The
       // window is one window; it has not ended.
@@ -723,24 +761,60 @@ describe('ObservationService', () => {
   });
 
   describe('list', () => {
-    it('returns one entry per session that has a live sample', async () => {
+    const SAMPLE_1 = { kasmId: 'kid1', title: 'Excel', capturedAt: '2026-09-08T10:00:00.000Z' };
+    const SAMPLE_2 = { kasmId: 'kid2', title: 'Outlook', capturedAt: '2026-09-08T10:00:00.000Z' };
+
+    beforeEach(() => {
       prismaMock.session.findMany.mockResolvedValue([
         { id: 'sess1', kasmId: 'kid1' },
         { id: 'sess2', kasmId: 'kid2' },
       ]);
-      redis.get.mockImplementation((key: string) =>
-        key === 'asha:obs:kid1'
-          ? Promise.resolve({ kasmId: 'kid1', title: 'Excel', capturedAt: '2026-09-08T10:00:00.000Z' })
-          : Promise.resolve(null),
-      );
+    });
+
+    /** Whatever the store holds, plus the two samples that are always there. */
+    const withSamples = (store: Map<string, unknown>) => {
+      store.set('asha:obs:kid1', SAMPLE_1);
+      store.set('asha:obs:kid2', SAMPLE_2);
+      return store;
+    };
+
+    it('returns one entry per session the caller holds an open window on', async () => {
+      withSamples(memoryRedis()).set('asha:obs:watch:kid1', held({ observerUserId: 'admin1' }));
       const { items } = await svc.list(ADMIN);
-      expect(items).toEqual([
-        { kasmId: 'kid1', title: 'Excel', capturedAt: '2026-09-08T10:00:00.000Z', sessionId: 'sess1' },
-      ]);
+      expect(items).toEqual([{ ...SAMPLE_1, sessionId: 'sess1' }]);
+    });
+
+    it('serves nothing to a permission holder who is not watching anything', async () => {
+      // SESSION_OBSERVE says the caller MAY observe, not that they are. Serving
+      // every sample the org holds handed one administrator the frames and
+      // window titles of every desktop a colleague had opened a window on —
+      // outside the audit row that names the watcher, and outside the notice on
+      // the watched person's screen.
+      withSamples(memoryRedis());
+      await expect(svc.list(ADMIN)).resolves.toEqual({ items: [] });
+    });
+
+    it('will not lend one observer a colleague’s window', async () => {
+      withSamples(memoryRedis()).set('asha:obs:watch:kid1', held({ observerUserId: 'admin2' }));
+      await expect(svc.list(ADMIN)).resolves.toEqual({ items: [] });
+    });
+
+    it('drops a hold that lapsed rather than counting it', async () => {
+      withSamples(memoryRedis()).set('asha:obs:watch:kid1', {
+        holds: [
+          {
+            observerUserId: 'admin1',
+            observerName: 'Ada Lovelace',
+            windowId: 'default',
+            since: '2026-09-08T10:00:00.000Z',
+            expiresAt: Date.now() - 1,
+          },
+        ],
+      });
+      await expect(svc.list(ADMIN)).resolves.toEqual({ items: [] });
     });
 
     it('is empty rather than broken while Redis is down', async () => {
-      prismaMock.session.findMany.mockResolvedValue([{ id: 'sess1', kasmId: 'kid1' }]);
       // RedisService silently no-ops and returns null when disconnected.
       redis.get.mockResolvedValue(null);
       await expect(svc.list(ADMIN)).resolves.toEqual({ items: [] });
@@ -754,20 +828,44 @@ describe('ObservationService', () => {
       prismaMock.session.findUnique.mockResolvedValue({ id: 'sess1', orgId: 'org1' });
     });
 
-    it('keeps the sample in Redis for 30 seconds and pushes it to the observers', async () => {
+    it('keeps the sample in Redis for 30 seconds and pushes it to whoever holds a window', async () => {
+      memoryRedis().set('asha:obs:watch:kid1', held({ observerUserId: 'admin1' }));
       await svc.ingest('kid1', SAMPLE, { scope: 'global' });
       expect(redis.set).toHaveBeenCalledWith('asha:obs:kid1', SAMPLE, 30);
-      expect(gateway.emitToObservers).toHaveBeenCalledWith('org1', {
+      expect(gateway.emitToObserver).toHaveBeenCalledWith('org1', 'admin1', {
         type: 'session.observation',
         payload: { ...SAMPLE, sessionId: 'sess1' },
       });
+    });
+
+    it('pushes one frame per observer, however many holds each of them has', async () => {
+      memoryRedis().set(
+        'asha:obs:watch:kid1',
+        held(
+          { observerUserId: 'admin1', windowId: 'wall' },
+          { observerUserId: 'admin1', windowId: 'view' },
+          { observerUserId: 'admin2' },
+        ),
+      );
+      await svc.ingest('kid1', SAMPLE, { scope: 'global' });
+      expect(gateway.emitToObserver.mock.calls.map((c) => c[1])).toEqual(['admin1', 'admin2']);
+    });
+
+    it('pushes to nobody when nobody is watching this session', async () => {
+      // A sample can still arrive after the last hold went: the agent's
+      // dead-man switch runs a minute past the window it was opened for.
+      memoryRedis();
+      await svc.ingest('kid1', SAMPLE, { scope: 'global' });
+      expect(gateway.emitToObserver).not.toHaveBeenCalled();
     });
 
     it('never puts a desktop frame in the org room, which every colleague is in', async () => {
       // The org room is joined on org membership alone. Fanning the sample out
       // there made a WebP of the desktop and the title of the focused window
       // readable by every signed-in employee, while the REST twin of the same
-      // data demands SESSION_OBSERVE.
+      // data demands SESSION_OBSERVE — and even a room of permission holders is
+      // wider than the one observer the frame was captured for.
+      memoryRedis().set('asha:obs:watch:kid1', held({ observerUserId: 'admin1' }));
       await svc.ingest('kid1', { ...SAMPLE, image: 'UklGRg==' }, { scope: 'global' });
       expect(gateway.emitToOrg).not.toHaveBeenCalled();
     });
@@ -783,7 +881,7 @@ describe('ObservationService', () => {
         svc.ingest('kid1', SAMPLE, { scope: 'org', orgId: 'org2', zoneId: null }),
       ).rejects.toThrow(NotFoundException);
       expect(redis.set).not.toHaveBeenCalled();
-      expect(gateway.emitToObservers).not.toHaveBeenCalled();
+      expect(gateway.emitToObserver).not.toHaveBeenCalled();
     });
 
     it('stores under the routed kasmId, not the one in the body', async () => {

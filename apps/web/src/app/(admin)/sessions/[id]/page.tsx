@@ -22,9 +22,10 @@ import { formatDuration } from '@/lib/utils';
 
 /**
  * A terminal has no second seat — guacd cannot join a running SSH connection —
- * so it is the one kind the API will never hand out a way into. Every other
- * kind is offered and the API decides: only it knows whether a container image
- * carries the read-only account, and the protocol label does not say.
+ * so it is the one kind the button is hidden for outright. Every other kind is
+ * offered and the API decides, because only it knows whether an agent is
+ * reporting for the session: the protocol label does not say, and a container
+ * reached over guacd carries the same RDP label as a fixed server.
  */
 const NO_SHARED_VIEW = new Set(['SSH']);
 

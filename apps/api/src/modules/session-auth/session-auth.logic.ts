@@ -21,30 +21,21 @@
  * `Referer` for the rest of the session.
  */
 
-/**
- * What one verified proof says.
- *
- * `observerUserId` is present only on a proof minted for the read-only route:
- * an observation is a grant to ONE administrator, so the identity has to travel
- * with the proof for the gate to be able to ask whether that grant still
- * stands. A session's own proof names no one — it is the desktop's owner by
- * construction, and their access ends with the container.
- */
+/** What one verified proof says: which session it opens, and nothing else. */
 export interface SessionProof {
   kasmId: string;
-  observerUserId?: string;
 }
 
 /** What the gate wants done with one request. */
 export type SessionAuthVerdict =
   /** Already carries a valid cookie — let Traefik forward it upstream. */
-  | { action: 'allow'; kasmId: string; observerUserId?: string }
+  | { action: 'allow'; kasmId: string }
   /**
    * Carries a valid one-shot token. Set the cookie and bounce the browser to the
    * same URL without it. `location` is deliberately relative: an absolute URL
    * built from a request header is an open redirect waiting to happen.
    */
-  | { action: 'exchange'; kasmId: string; location: string; observerUserId?: string }
+  | { action: 'exchange'; kasmId: string; location: string }
   /** No proof of any kind. */
   | { action: 'deny'; reason: string };
 
@@ -68,16 +59,6 @@ export function kasmIdFromPath(path: string): string | null {
   return /^\/session\/([A-Za-z0-9_-]+)(?:\/|$)/.exec(path)?.[1] ?? null;
 }
 
-/**
- * True for the read-only aux route an observer is sent to. The route is the
- * same 6901 stream as the session itself, but Traefik authenticates it as
- * KasmVNC's view-only account — so proof minted here must not travel to the
- * routes that carry the account which may type.
- */
-export function isObservePath(path: string): boolean {
-  return /^\/session\/[A-Za-z0-9_-]+\/observe(?:\/|$)/.test(path);
-}
-
 /** `<kasmId>.sessions.<domain>` → the id, for subdomain routing mode. */
 export function kasmIdFromHost(host: string): string | null {
   return /^([A-Za-z0-9_-]+)\.sessions\./.exec(host.split(':')[0] ?? '')?.[1] ?? null;
@@ -95,14 +76,9 @@ export function readCookie(header: string | undefined, name: string): string | n
   return null;
 }
 
-/**
- * The Path a session's cookie is scoped to — never wider than what was proved.
- * An observer proved the read-only route, so their cookie must not be sent to
- * the write route sitting one segment above it.
- */
-export function cookiePath(kasmId: string, mode: 'path' | 'subdomain', observe = false): string {
-  if (mode === 'subdomain') return '/';
-  return observe ? `/session/${kasmId}/observe` : `/session/${kasmId}`;
+/** The Path a session's cookie is scoped to — never wider than what was proved. */
+export function cookiePath(kasmId: string, mode: 'path' | 'subdomain'): string {
+  return mode === 'subdomain' ? '/' : `/session/${kasmId}`;
 }
 
 export function decideSessionAuth(req: SessionAuthRequest): SessionAuthVerdict {
@@ -125,9 +101,7 @@ export function decideSessionAuth(req: SessionAuthRequest): SessionAuthVerdict {
     const proof = req.readCookieToken(cookie);
     // A cookie is Path-scoped, but a scope is not a claim. Compare anyway, so a
     // cookie minted for another session can never open this one.
-    if (proof?.kasmId === kasmId) {
-      return { action: 'allow', kasmId, ...(proof.observerUserId ? { observerUserId: proof.observerUserId } : {}) };
-    }
+    if (proof?.kasmId === kasmId) return { action: 'allow', kasmId };
   }
 
   const token = query.get('token');
@@ -136,12 +110,7 @@ export function decideSessionAuth(req: SessionAuthRequest): SessionAuthVerdict {
     if (proof?.kasmId === kasmId) {
       query.delete('token');
       const rest = query.toString();
-      return {
-        action: 'exchange',
-        kasmId,
-        location: rest ? `${path}?${rest}` : path,
-        ...(proof.observerUserId ? { observerUserId: proof.observerUserId } : {}),
-      };
+      return { action: 'exchange', kasmId, location: rest ? `${path}?${rest}` : path };
     }
     return { action: 'deny', reason: 'token does not match this session' };
   }

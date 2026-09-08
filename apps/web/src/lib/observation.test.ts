@@ -7,11 +7,11 @@ import {
   formatAppClass,
   isObservableSession,
   isObservationFresh,
-  isObserveStreamUrl,
   isRemintable,
   mergeObservation,
   observableSessions,
   observationImageSrc,
+  resolveLiveView,
   resolveTilePreview,
   streamCloseReason,
   watchRoute,
@@ -233,9 +233,21 @@ describe('streamCloseReason', () => {
 
 describe('watchRoute', () => {
   it('sends a container desktop to the read-only view, carrying the hold', () => {
-    expect(
-      watchRoute({ watchKind: 'iframe', watchUrl: 'https://host/session/kid1/observe/?token=t' }, 'sess-1', 'view-9'),
-    ).toBe('/observe/sess-1?src=https%3A%2F%2Fhost%2Fsession%2Fkid1%2Fobserve%2F%3Ftoken%3Dt&win=view-9');
+    expect(watchRoute({ watchKind: 'stream' }, 'sess-1', 'view-9')).toBe('/observe/sess-1?win=view-9');
+  });
+
+  it('puts no session address in front of a container observer', () => {
+    // The regression guard for the mechanism this replaces. Three rounds of
+    // review ended with a per-session `/observe` route carrying a KasmVNC
+    // credential — one that outlived its grant, then one that opened the route
+    // that may type, then none at all. The live view is a page in this app.
+    const route = watchRoute(
+      { watchKind: 'stream', watchUrl: 'https://host/session/kid1/observe/?token=t' },
+      'sess-1',
+      'view-9',
+    );
+    expect(route).toBe('/observe/sess-1?win=view-9');
+    expect(route).not.toContain('token');
   });
 
   it('appends the hold to the proxy route the API handed out', () => {
@@ -294,21 +306,54 @@ describe('the observation notice a viewer shows', () => {
   });
 });
 
-describe('isObserveStreamUrl', () => {
-  it('accepts the read-only route the API hands out', () => {
-    expect(isObserveStreamUrl('https://asha.example.com/session/kid1/observe/?token=t')).toBe(true);
-    expect(isObserveStreamUrl('https://asha.example.com/session/kid1/observe')).toBe(true);
+describe('resolveLiveView', () => {
+  const capture = { thumbnails: true };
+
+  it('is live while frames keep arriving', () => {
+    const view = resolveLiveView({ sample: sample({ image: 'UklGRg==' }), capability: capture, now: NOW });
+    expect(view.status).toBe('live');
+    expect(view.src).toBe('data:image/webp;base64,UklGRg==');
   });
 
-  it('refuses anything that is not that route, because it ends up in an iframe src', () => {
-    expect(isObserveStreamUrl('javascript:alert(1)')).toBe(false);
-    expect(isObserveStreamUrl('data:text/html,<script>alert(1)</script>')).toBe(false);
-    expect(isObserveStreamUrl('/session/kid1/observe/')).toBe(false);
-    expect(isObserveStreamUrl('')).toBe(false);
+  it('waits rather than guessing before the first frame', () => {
+    expect(resolveLiveView({ sample: undefined, capability: undefined, now: NOW }).status).toBe('waiting');
+    // A sample with neither a picture nor a stated reason is still just waiting.
+    expect(resolveLiveView({ sample: sample(), capability: capture, now: NOW }).status).toBe('waiting');
   });
 
-  it('refuses the session route itself — that one carries the write credential', () => {
-    expect(isObserveStreamUrl('https://asha.example.com/session/kid1/?token=t')).toBe(false);
-    expect(isObserveStreamUrl('https://asha.example.com/session/kid1/observe/../?token=t')).toBe(false);
+  it('names the missing helper instead of spinning forever', () => {
+    // A third-party workspace image without ffmpeg reports the sample anyway.
+    // Waiting on a frame that can never come tells the observer nothing.
+    const view = resolveLiveView({
+      sample: sample({ degraded: 'missing:ffmpeg' }),
+      capability: capture,
+      now: NOW,
+    });
+    expect(view).toEqual({ status: 'degraded', detail: 'missing:ffmpeg' });
+  });
+
+  it('keeps the last frame but says it has stopped', () => {
+    // Blanking would lose the only thing the observer has; leaving it unlabelled
+    // would present a frozen desktop as a quiet user.
+    const stale = sample({ image: 'UklGRg==', capturedAt: new Date(NOW - 30_000).toISOString() });
+    const view = resolveLiveView({ sample: stale, capability: capture, now: NOW });
+    expect(view.status).toBe('stalled');
+    expect(view.src).toBe('data:image/webp;base64,UklGRg==');
+  });
+
+  it('reads an unparseable capture time as stale', () => {
+    const broken = sample({ image: 'UklGRg==', capturedAt: 'not a date' });
+    expect(resolveLiveView({ sample: broken, capability: capture, now: NOW }).status).toBe('stalled');
+  });
+
+  it('says so when the API answered that nothing can be captured', () => {
+    // There is no second stream to fall back to: this capture is the view.
+    const view = resolveLiveView({
+      sample: sample({ image: 'UklGRg==' }),
+      capability: { thumbnails: false, reason: 'no_agent' },
+      now: NOW,
+    });
+    expect(view.status).toBe('unavailable');
+    expect(view.src).toBeUndefined();
   });
 });

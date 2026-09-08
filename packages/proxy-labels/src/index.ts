@@ -104,32 +104,3 @@ export function sessionConnectionUrl(input: {
   const tuning = 'resize=remote&quality=8&enable_webp=true';
   return `${base}${sessionPath(input.kasmId)}/?path=session/${input.kasmId}/websockify&${tuning}&token=${input.token}`;
 }
-
-/**
- * The read-only counterpart of a session's connection URL: the same 6901
- * stream, reached through the session's `/observe` router, which authenticates
- * as KasmVNC's `kasm_viewer` (write:false) instead of `kasm_user`.
- *
- * Derived from the stored URL rather than rebuilt, so the observer lands on the
- * host the user's own session resolved to, per-zone `proxyBaseUrl` included.
- * Returns null unless every part it has to move is present: a URL it could only
- * half rewrite would leave the observer's stream socket on the write route.
- */
-export function sessionObserveUrl(input: { connectionUrl: string; kasmId: string; token: string }): string | null {
-  const prefix = `${sessionPath(input.kasmId)}/?`;
-  const wsParam = `path=session/${input.kasmId}/websockify`;
-  const url = input.connectionUrl;
-  if (!url.includes(prefix) || !url.includes(wsParam) || !url.includes('token=')) return null;
-  return (
-    url
-      .replace(prefix, `${sessionPath(input.kasmId)}/observe/?`)
-      // The KasmVNC client resolves `path` against the ROOT host, so the stream
-      // socket has to move onto the observe router as well; left where it is it
-      // would carry the write credential the main router injects.
-      .replace(wsParam, `path=session/${input.kasmId}/observe/websockify`)
-      // Swapped in place rather than through URLSearchParams, for the reason
-      // SessionsService gives: a round-trip percent-escapes `path`, which the
-      // KasmVNC client reads back verbatim.
-      .replace(/([?&]token=)[^&]*/, `$1${encodeURIComponent(input.token)}`)
-  );
-}

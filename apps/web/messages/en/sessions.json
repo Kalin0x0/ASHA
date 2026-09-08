@@ -248,9 +248,10 @@
     "deniedTitle": "You may not see the running sessions",
     "deniedDescription": "Watching a desktop and listing the desktops are two separate permissions. Ask an administrator for the second one.",
     "watchFailed": "Could not open the live view",
-    "watchUnavailable": {
+"watchUnavailable": {
       "no_shared_terminal": "This session cannot be watched live: a terminal session has no shared screen.",
-      "no_viewer_account": "This session cannot be watched live: the image has no read-only account.",
+      "no_shared_view": "This session cannot be watched live: a WebRTC desktop is a direct connection to one browser — no second seat, and nothing to capture.",
+      "no_capture_agent": "This session cannot be watched live: no agent is reporting for this desktop, and the live picture comes from that agent.",
       "unknown": "This session cannot be watched live."
     }
   }

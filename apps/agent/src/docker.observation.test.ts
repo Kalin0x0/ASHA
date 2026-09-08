@@ -115,7 +115,7 @@ ${nonce}
     respond((nonce) => [frame(`${nonce}\n`)]);
 
     await captureObservation('asha-sess-k1', { thumbWidth: 4_000 });
-    expect(lastScript()).toContain('scale=640:-2');
+    expect(lastScript()).toContain('scale=1280:-2');
 
     execMock.mockClear();
     await captureObservation('asha-sess-k1', { thumbWidth: 10 });
@@ -199,7 +199,7 @@ describe('captureObservation — what it reads back', () => {
 
 describe('captureObservation — what it refuses to do', () => {
   it('aborts the read past the cap instead of buffering an endless stream', async () => {
-    respond((nonce) => [frame(`W 1\n${nonce}\n`), frame(Buffer.alloc(200_000, 1))]);
+    respond((nonce) => [frame(`W 1\n${nonce}\n`), frame(Buffer.alloc(500_000, 1))]);
 
     const sample = await captureObservation('asha-sess-k1');
     expect(sample.image).toBeUndefined();
@@ -209,9 +209,9 @@ describe('captureObservation — what it refuses to do', () => {
   });
 
   it('drops a frame whose base64 would not fit the wire contract', async () => {
-    // Between the read cap and the contract's 131_072-character image field:
+    // Between the read cap and the contract's 393_216-character image field:
     // sending it would get the whole sample rejected, metadata included.
-    respond((nonce) => [frame(`W 1\n${nonce}\n`), frame(webp(320, 180, 100_000))]);
+    respond((nonce) => [frame(`W 1\n${nonce}\n`), frame(webp(1280, 720, 300_000))]);
 
     const sample = await captureObservation('asha-sess-k1');
     expect(sample.image).toBeUndefined();

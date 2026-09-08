@@ -1,6 +1,6 @@
 import type { SessionControlCommand } from '@asha/events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createObservationRunner, createViewerCredential } from './observation.js';
+import { createObservationRunner } from './observation.js';
 
 const OBSERVE = (over: Partial<SessionControlCommand> = {}): SessionControlCommand => ({
   sessionId: 's1',
@@ -105,11 +105,23 @@ describe('observation runner — what it captures', () => {
     const { capture, run } = runner();
     run.start(OBSERVE({ intervalMs: 5, thumbWidth: 4_000 }), 'c1');
     await vi.advanceTimersByTimeAsync(0);
-    expect(capture).toHaveBeenCalledWith('c1', { thumbWidth: 640 });
+    // The ceiling is the width the read-only live view asks for, not the wall's.
+    expect(capture).toHaveBeenCalledWith('c1', { thumbWidth: 1_280 });
 
-    // 5 ms would be ~200 execs per second per session; the floor is 1 s.
-    await vi.advanceTimersByTimeAsync(900);
+    // 5 ms would be ~200 execs per second per session; the floor is half a second.
+    await vi.advanceTimersByTimeAsync(400);
     expect(capture).toHaveBeenCalledTimes(1);
+  });
+
+  it('carries the live view’s cadence and width through unclamped', async () => {
+    const { capture, run } = runner();
+    run.start(OBSERVE({ intervalMs: 500, thumbWidth: 1_280 }), 'c1');
+
+    await vi.advanceTimersByTimeAsync(1_100);
+    expect(capture).toHaveBeenCalledWith('c1', { thumbWidth: 1_280 });
+    // The opening pass plus one per interval — this is the live view, so a
+    // cadence the wall would never ask for must not be rounded away.
+    expect(capture.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 
   it('does not queue execs behind a capture that outlives its interval', async () => {
@@ -194,90 +206,5 @@ describe('observation runner — what it captures', () => {
     await vi.advanceTimersByTimeAsync(6_000);
     expect(onError).toHaveBeenCalledWith(expect.stringContaining('container busy'));
     expect(publish).toHaveBeenCalled();
-  });
-});
-
-function credential(open = vi.fn().mockResolvedValue(true), revoke = vi.fn().mockResolvedValue(true)) {
-  const onError = vi.fn();
-  return { open, revoke, onError, keeper: createViewerCredential({ open, revoke, onError }) };
-}
-
-describe('the read-only credential — held only while the observation is', () => {
-  it('deletes the account when the last observer lets go', async () => {
-    // The defect this replaces: the password was written once at launch, so a
-    // credential handed out for a two-minute look stayed valid for the rest of
-    // the session — long after the audit trail said observation had ended.
-    const { revoke, keeper } = credential();
-    await keeper.grant(OBSERVE({ viewerPassword: 'A-secret_pw01' }), 'c1');
-
-    await keeper.revoke('s1', 'c1');
-    expect(revoke).toHaveBeenCalledWith('c1');
-  });
-
-  it('writes a new password every time a window opens', async () => {
-    // A credential that comes back identical is paused, not revoked.
-    const { open, keeper } = credential();
-    await keeper.grant(OBSERVE({ viewerPassword: 'A-secret_pw01' }), 'c1');
-    await keeper.revoke('s1', 'c1');
-    await keeper.grant(OBSERVE({ viewerPassword: 'B-secret_pw02' }), 'c1');
-
-    expect(open.mock.calls.map((c) => c[1])).toEqual(['A-secret_pw01', 'B-secret_pw02']);
-  });
-
-  it('does not exec into the desktop on every renewal', async () => {
-    // The wall renews three times a minute per tile, carrying the password of
-    // the window it is keeping open.
-    const { open, keeper } = credential();
-    await keeper.grant(OBSERVE({ viewerPassword: 'A-secret_pw01' }), 'c1');
-    await keeper.grant(OBSERVE({ viewerPassword: 'A-secret_pw01' }), 'c1');
-
-    expect(open).toHaveBeenCalledTimes(1);
-  });
-
-  it('retries on the next renewal when the write failed', async () => {
-    const open = vi.fn().mockResolvedValueOnce(false).mockResolvedValue(true);
-    const { onError, keeper } = credential(open);
-
-    expect(await keeper.grant(OBSERVE({ viewerPassword: 'A-secret_pw01' }), 'c1')).toBe(false);
-    expect(onError).toHaveBeenCalledWith(expect.stringContaining('no live view'));
-    expect(await keeper.grant(OBSERVE({ viewerPassword: 'A-secret_pw01' }), 'c1')).toBe(true);
-  });
-
-  it('leaves the account alone when no live view was granted', async () => {
-    // Thumbnails without a watch, or a driver that cannot mint the account: the
-    // safe reading of a missing password is that none should exist.
-    const { open, keeper } = credential();
-
-    expect(await keeper.grant(OBSERVE(), 'c1')).toBe(false);
-    expect(open).not.toHaveBeenCalled();
-  });
-
-  it('revokes for a session it never granted, because an agent can restart', async () => {
-    const { revoke, onError, keeper } = credential();
-
-    await keeper.revoke('s1', 'c1');
-    expect(revoke).toHaveBeenCalledWith('c1');
-    // Nothing to report: this agent was never the one that wrote it.
-    expect(onError).not.toHaveBeenCalled();
-  });
-
-  it('reports a revoke that did not take, so a live credential is not silent', async () => {
-    const { onError, keeper } = credential(vi.fn().mockResolvedValue(true), vi.fn().mockResolvedValue(false));
-    await keeper.grant(OBSERVE({ viewerPassword: 'A-secret_pw01' }), 'c1');
-
-    await keeper.revoke('s1', 'c1');
-    expect(onError).toHaveBeenCalledWith(expect.stringContaining('could not be revoked'));
-  });
-
-  it('re-opens the account after a failed revoke rather than trusting its record', async () => {
-    // The container kept the old password. Skipping the write because the
-    // keeper "already granted" it would hand the next observer a credential the
-    // previous one still holds.
-    const { open, keeper } = credential(vi.fn().mockResolvedValue(true), vi.fn().mockResolvedValue(false));
-    await keeper.grant(OBSERVE({ viewerPassword: 'A-secret_pw01' }), 'c1');
-    await keeper.revoke('s1', 'c1');
-    await keeper.grant(OBSERVE({ viewerPassword: 'A-secret_pw01' }), 'c1');
-
-    expect(open).toHaveBeenCalledTimes(2);
   });
 });

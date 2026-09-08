@@ -312,10 +312,6 @@ export const sessionStatusSchema = z.object({
   host: z.string().optional(),
   port: z.number().optional(),
   traefikRouterName: z.string().optional(),
-  // KASMVNC only: whether the container's read-only KasmVNC account actually
-  // answers. Images that merely resemble Kasm have no kasmvncpasswd, so their
-  // observe route would 401 and the manager must not offer a live view.
-  viewerAuth: z.boolean().optional(),
   error: z.string().optional(),
   // Protocol credentials the agent injects into the container at launch, passed
   // through to the connection-proxy session record (RDP/VNC/SSH bridging).
@@ -345,15 +341,23 @@ export type SessionStatsDto = z.infer<typeof sessionStatsSchema>;
  * Agent → manager. One sample taken inside the session container. Everything
  * beyond kasmId/capturedAt is optional: workspace images are third-party, so a
  * missing helper (ffmpeg, xprop, wmctrl) degrades the sample instead of failing
- * it. `image` is a bare base64 WebP — capped well above the ~2.5 KB a 320 px
- * frame measures, and far below anything that could be a full screenshot dump.
+ * it.
+ *
+ * `image` is a bare base64 WebP, and the cap is a CHARACTER count while the
+ * agent's is a byte count — base64 grows 3 bytes into 4, so 393_216 characters
+ * is 294_912 bytes of WebP. That is sized for the live view, not for the wall:
+ * a 320 px frame measures ~2.4 KB, and the 1280 px one the live view asks for
+ * covers sixteen times the pixels, so even at a linear worst case it lands near
+ * 40 KB and the cap leaves it sevenfold headroom. It also stays inside the
+ * global 512 kB JSON body limit main.ts sets, with the rest of the sample (title,
+ * appClass, degraded — about a kilobyte together) counted in.
  */
 export const sessionObservationSchema = z.object({
   kasmId: z.string().min(1).max(64),
   title: z.string().max(512).optional(),
   appClass: z.string().max(256).optional(),
   windowCount: z.number().int().min(0).max(9999).optional(),
-  image: z.string().max(131_072).optional(),
+  image: z.string().max(393_216).optional(),
   imageWidth: z.number().int().min(1).max(4096).optional(),
   imageHeight: z.number().int().min(1).max(4096).optional(),
   capturedAt: z.string().datetime(),
@@ -365,12 +369,19 @@ export type SessionObservationDto = z.infer<typeof sessionObservationSchema>;
  * Admin → manager. Opens (or renews) an observation window on one session.
  * The window is deliberately short-lived: the agent stops capturing on its own
  * once it is not renewed, so a closed browser tab cannot leave capture running.
+ *
+ * The bounds span two very different callers. The wall asks for a 320 px frame
+ * every five seconds across every tile on screen; the read-only live view asks
+ * one session for 1280 px twice a second, because for a container desktop that
+ * stream IS the live view. The agent clamps to the same range and skips a tick
+ * whose predecessor is still running, so asking for more than a container can
+ * deliver costs frames, never execs.
  */
 export const startObservationSchema = z.object({
   /** Sampling cadence. 0 disables capture and leaves metadata only. */
   intervalMs: z.number().int().min(0).max(60_000).default(5_000),
-  /** Thumbnail width in pixels; height follows the aspect ratio. */
-  thumbWidth: z.number().int().min(160).max(640).default(320),
+  /** Frame width in pixels; height follows the aspect ratio. */
+  thumbWidth: z.number().int().min(160).max(1280).default(320),
 });
 export type StartObservationDto = z.infer<typeof startObservationSchema>;
 

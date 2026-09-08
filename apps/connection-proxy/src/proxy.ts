@@ -202,7 +202,7 @@ export async function handleUpgrade(
 
   switch (session.protocol) {
     case 'KASMVNC':
-      handleKasmVNC(ws, req, session, mode);
+      handleKasmVNC(ws, req, session);
       break;
     case 'RDP':
     case 'VNC':

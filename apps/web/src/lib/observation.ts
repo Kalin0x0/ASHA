@@ -19,6 +19,42 @@ export const DEFAULT_OBSERVE_INTERVAL: ObserveInterval = 5_000;
 export const OBSERVE_THUMB_WIDTH = 320;
 
 /**
+ * What the read-only live view asks for instead.
+ *
+ * A container desktop has no second stream to open — the capture IS the live
+ * view — so the same pipe is asked for a full-size frame as fast as the agent
+ * can take one. A pass costs roughly 135 ms of docker exec plus the grab, and
+ * the agent skips a tick whose predecessor is still running, so asking for two
+ * a second costs frames rather than execs when a container cannot keep up.
+ *
+ * Both numbers are measured on this deployment against a container with a real
+ * page on screen, not reasoned from the wall's 320 px frame:
+ *
+ *   width   time per frame   size
+ *   320     482 ms            8.4 KB
+ *   640     491 ms           26 KB
+ *   960     551 ms           37 KB
+ *   1280    640 ms           47 KB
+ *
+ * 960 px is where the curve turns: the last third of the width buys a quarter
+ * more bytes and 90 ms for detail nobody reads off a live view. And a capture
+ * takes ~540 ms end to end (ffmpeg plus the exec), so an interval under that
+ * only produces passes the agent skips — 700 ms is the honest cadence, near
+ * 1.4 frames a second, about 52 kB/s per watched desktop on a ~20 Mbit/s uplink.
+ */
+export const OBSERVE_LIVE_INTERVAL_MS = 700;
+export const OBSERVE_LIVE_THUMB_WIDTH = 960;
+
+/**
+ * How long the live view keeps calling a frame current. Generous next to the
+ * 700 ms cadence, because a busy container skipping a pass or two is normal and
+ * flickering between "live" and "stalled" would say nothing — but far short of
+ * the wall's half-minute, because a picture presented as live while the frames
+ * have stopped is the one thing this view must not do.
+ */
+export const LIVE_STALL_MS = 6_000;
+
+/**
  * How often an open window is renewed. The agent stops capturing 60s after the
  * last request it saw, so renewing well inside that keeps the wall alive without
  * re-posting once per frame at the 3s cadence.
@@ -116,26 +152,6 @@ export function degradedReason(degraded: string): { key: string; tool?: string }
   if (first === 'image-too-large') return { key: 'tooLarge' };
   if (first === 'no-image') return { key: 'noImage' };
   return { key: 'unknown' };
-}
-
-/**
- * Is this the read-only stream URL the API just handed out?
- *
- * The observe view takes the URL to embed from its own query string, so it is
- * as forgeable as any other query param — and an <iframe src> is one of the few
- * places where an unvalidated one turns into script execution. Only an http(s)
- * URL whose path is a session's `/observe` route is embedded; everything else
- * renders the "nothing to watch" state.
- */
-export function isObserveStreamUrl(url: string): boolean {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return false;
-  }
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
-  return /^\/session\/[A-Za-z0-9_-]+\/observe\/?$/.test(parsed.pathname);
 }
 
 /** Why a tile has no picture — each maps to its own line of copy. */
@@ -254,25 +270,60 @@ export function applyObservedRead(
 }
 
 /**
+ * What the read-only live view is showing at this moment.
+ *
+ * `stalled` keeps the last frame on screen and says so, rather than blanking:
+ * the observer needs to know the picture stopped, and a frozen desktop with no
+ * label is exactly the lie the wall's 30 s freshness rule exists to prevent.
+ * `degraded` is the sample arriving without a picture in it — a workspace image
+ * that ships no ffmpeg — which would otherwise spin forever.
+ */
+export type LiveViewStatus = 'live' | 'stalled' | 'waiting' | 'degraded' | 'unavailable';
+
+export function resolveLiveView(args: {
+  sample: ObservationSample | undefined;
+  capability: ObservationCapability | undefined;
+  now?: number;
+}): { status: LiveViewStatus; src?: string; detail?: string } {
+  const { sample, capability, now = Date.now() } = args;
+  // The API answered that nothing can be captured here — no agent, or capture
+  // switched off org-wide. There is no second stream to fall back to.
+  if (capability && !capability.thumbnails) return { status: 'unavailable' };
+  const src = observationImageSrc(sample?.image);
+  if (src) {
+    // An unparseable timestamp reads as stale, which is the honest direction.
+    const age = now - Date.parse(sample?.capturedAt ?? '');
+    return { status: age < LIVE_STALL_MS ? 'live' : 'stalled', src };
+  }
+  // The capture came back thin. Workspace images are third-party, so this is a
+  // missing helper far more often than it is a fault, and the agent names which.
+  if (sample?.degraded) return { status: 'degraded', detail: sample.degraded };
+  return { status: 'waiting' };
+}
+
+/**
  * Where "watch live" goes, and which hold the viewer will carry.
  *
- * A container desktop streams straight from Traefik and answers the proxy's
- * guacamole route with nothing at all, so the two kinds cannot share a viewer —
- * the API says which one it handed out rather than leaving the caller to
- * re-read the connection type. The hold id travels with it because the surface
- * that opened it is about to unmount: the viewer renews and releases the same
- * hold, so the notice never blinks on the way from the tile to the desktop, and
- * a reload of the viewer continues it instead of opening a second one.
+ * The two kinds cannot share a viewer, and the API says which one it handed out
+ * rather than leaving the caller to re-read the connection type: a fixed server
+ * streams through the connection-proxy, while a container desktop is watched
+ * through the capture the agent is already taking — a page in this app, with no
+ * address on the session and no credential of its own.
+ *
+ * The hold id travels with it because the surface that opened it is about to
+ * unmount: the viewer renews and releases the same hold, so the notice never
+ * blinks on the way from the tile to the desktop, and a reload of the viewer
+ * continues it instead of opening a second one.
  */
 export function watchRoute(
-  win: { watchKind: 'guac' | 'iframe' | 'none'; watchUrl?: string },
+  win: { watchKind: 'guac' | 'stream' | 'none'; watchUrl?: string },
   sessionId: string,
   windowId: string,
 ): string | null {
-  if (win.watchKind === 'none' || !win.watchUrl) return null;
   const hold = `win=${encodeURIComponent(windowId)}`;
-  if (win.watchKind === 'iframe') {
-    return `/observe/${encodeURIComponent(sessionId)}?src=${encodeURIComponent(win.watchUrl)}&${hold}`;
+  if (win.watchKind === 'stream') return `/observe/${encodeURIComponent(sessionId)}?${hold}`;
+  if (win.watchKind === 'guac' && win.watchUrl) {
+    return `${win.watchUrl}${win.watchUrl.includes('?') ? '&' : '?'}${hold}`;
   }
-  return `${win.watchUrl}${win.watchUrl.includes('?') ? '&' : '?'}${hold}`;
+  return null;
 }

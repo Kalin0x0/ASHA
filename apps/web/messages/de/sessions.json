@@ -248,9 +248,10 @@
     "deniedTitle": "Sie dürfen die laufenden Sitzungen nicht sehen",
     "deniedDescription": "Einen Desktop zu beobachten und die Desktops aufzulisten sind zwei getrennte Berechtigungen. Bitten Sie einen Administrator um die zweite.",
     "watchFailed": "Live-Ansicht konnte nicht geöffnet werden",
-    "watchUnavailable": {
+"watchUnavailable": {
       "no_shared_terminal": "Diese Sitzung lässt sich nicht live ansehen: eine Terminal-Sitzung hat kein gemeinsames Bild.",
-      "no_viewer_account": "Diese Sitzung lässt sich nicht live ansehen: das Abbild kennt kein Nur-Lese-Konto.",
+      "no_shared_view": "Diese Sitzung lässt sich nicht live ansehen: ein WebRTC-Desktop ist eine Direktverbindung zu genau einem Browser — kein zweiter Platz, und nichts zu erfassen.",
+      "no_capture_agent": "Diese Sitzung lässt sich nicht live ansehen: für diesen Desktop meldet sich kein Agent, und das Live-Bild kommt von ihm.",
       "unknown": "Diese Sitzung lässt sich nicht live ansehen."
     }
   }

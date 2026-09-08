@@ -324,19 +324,20 @@ export const getSessionConnection = (id: string) =>
 // and `reason` says which, so the tile can explain itself instead of staying
 // mysteriously blank.
 export interface ApiObservationWindow {
-  /** Absent when there is no way in: watchKind is then 'none'. */
+  /** Only the guacamole route is bought with one; absent everywhere else. */
   watchToken?: string;
   watchUrl?: string;
   /**
-   * What `watchUrl` points at. `guac` is a proxy route the guacamole viewer
-   * opens; `iframe` is a container's own read-only stream, which the proxy
-   * never carries — so the caller must not guess from the connection type.
-   * `none` means the API refused to hand out a way in at all.
+   * How this session may be watched. `guac` is a proxy route the guacamole
+   * viewer opens, and `watchUrl` points at it. `stream` is the agent's own
+   * capture at live cadence — no URL, because that view is a page in this app
+   * rather than an address on the session. `none` means there is no way in at
+   * all. The caller must not guess any of it from the connection type: a
+   * container reached over guacd carries the same RDP label as a fixed server.
    */
-  watchKind: 'guac' | 'iframe' | 'none';
+  watchKind: 'guac' | 'stream' | 'none';
   /** Why there is no way in, when watchKind is 'none'. Translated by the caller. */
-  watchReason?: 'no_shared_terminal' | 'no_viewer_account';
-  expiresAt?: string;
+  watchReason?: 'no_shared_terminal' | 'no_shared_view' | 'no_capture_agent';
   thumbnails: boolean;
   reason?: string;
   windowId?: string;

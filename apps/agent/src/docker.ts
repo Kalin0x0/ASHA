@@ -148,12 +148,6 @@ export interface ProvisionResult {
   internalHost: string;
   port: number;
   routerName: string;
-  /**
-   * Whether this image can mint the read-only KasmVNC account when an
-   * observation starts. False for anything that only resembles Kasm, and the
-   * manager then withholds the live view instead of sending an admin to a 401.
-   */
-  viewerAuth: boolean;
 }
 
 /** Host devices to pass through, including the VAAPI render node when selected. */
@@ -206,113 +200,12 @@ async function bootstrapCups(container: Docker.Container): Promise<void> {
   await exec.start({ Detach: true });
 }
 
-/** Where the KasmVNC accounts live in a kasmweb image, from inside it. */
-const KASMPASSWD = '"${HOME:-/home/kasm-user}/.kasmpasswd"';
-
-/**
- * Charset the observation password has to keep to: base64url, what the API
- * mints. It arrives over the control channel and ends up in a shell here and in
- * a Basic header there, so anything outside this is refused rather than quoted
- * around — a password carrying a single quote would close the script's string
- * and run the rest as commands.
- */
-const VIEWER_PW_RE = /^[A-Za-z0-9_-]{8,128}$/;
-
-/**
- * Run a short script inside the session container and answer whether it printed
- * `ok`. `args` land as `$1`, `$2`, … so a value the agent did not author never
- * becomes part of the script text.
- *
- * Attached, not detached like the other bootstraps, because the ANSWER matters:
- * images that only look like Kasm (the linuxserver ones serve their desktop
- * through nginx and ship no kasmvncpasswd) would otherwise get an observe route
- * that authenticates nobody, and an admin would click "watch" into a 401.
- *
- * Runs as the image's default user: kasm-user owns `~/.kasmpasswd`, and the root
- * that bootstrapCups needs would write a file the VNC server cannot read.
- * Answers false rather than throwing — a third-party image may refuse the exec
- * outright, and losing the read-only route must never cost anyone their desktop.
- */
-async function execConfirmed(
-  container: Docker.Container,
-  script: string,
-  args: string[] = [],
-): Promise<boolean> {
-  try {
-    const exec = await container.exec({
-      Cmd: ['/bin/sh', '-c', script, 'sh', ...args],
-      AttachStdout: true,
-      AttachStderr: false,
-    });
-    const stream = (await exec.start({ hijack: true, stdin: false })) as Duplex;
-    const { stdout } = await readExecStdout(stream, 1024, 5_000);
-    return stdout.toString('utf8').includes('ok');
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Can this image mint the read-only account at all?
- *
- * kasmweb images ship `kasm_viewer` (read, no write) next to `kasm_user`, but
- * nothing sets its password, so it answers 401 — and `VNC_VIEW_ONLY_PW` in the
- * container env does NOT set it either (measured). The password is written per
- * observation instead, so all provisioning has to settle is whether the tool
- * that writes it exists: the manager withholds the live view for an image where
- * it does not, rather than sending an admin to a viewer that cannot log in.
- */
-async function probeViewerTooling(container: Docker.Container): Promise<boolean> {
-  return execConfirmed(container, "command -v kasmvncpasswd >/dev/null 2>&1 && printf 'ok'");
-}
-
-/**
- * Open the read-only KasmVNC account for one observation.
- *
- * The account IS the grant. It does not exist between observations, and the
- * password is new for each one, so the credential an administrator was handed
- * to look at a desktop for two minutes stops working when that window closes —
- * a password written once at launch was good for the life of the container.
- *
- * `printf` rather than `echo -e`: /bin/sh is dash in these images and would pass
- * `-e` through as text, making it the first line of the password.
- */
-export async function openViewerAccount(idOrName: string, password: string): Promise<boolean> {
-  if (!VIEWER_PW_RE.test(password)) return false;
-  const script =
-    'command -v kasmvncpasswd >/dev/null 2>&1 || exit 1; ' +
-    'printf \'%s\\n%s\\n\' "$1" "$1" | ' +
-    `kasmvncpasswd -u kasm_viewer -r ${KASMPASSWD} >/dev/null 2>&1 ` +
-    "&& printf 'ok'";
-  return execConfirmed(docker.getContainer(idOrName), script, [password]);
-}
-
-/**
- * Withdraw the read-only account again, once the last observer let go.
- *
- * Measured on the live deployment: `-d` removes the entry outright — the account
- * answers 401 afterwards and `/api/get_users` no longer lists it. Overwriting
- * the password would not do: a credential that comes back is paused, not
- * revoked, and the whole point is that the audit entry saying observation ended
- * is true.
- */
-export async function revokeViewerAccount(idOrName: string): Promise<boolean> {
-  const script =
-    'command -v kasmvncpasswd >/dev/null 2>&1 || exit 1; ' +
-    `kasmvncpasswd -d -u kasm_viewer ${KASMPASSWD} >/dev/null 2>&1 ` +
-    "&& printf 'ok'";
-  return execConfirmed(docker.getContainer(idOrName), script);
-}
-
 export async function provisionContainer(cmd: ProvisionCommand): Promise<ProvisionResult> {
   await ensureImage(cmd.runConfig.dockerImage);
 
   const port = cmd.runConfig.ports[0] ?? 6901;
   const router = routerName(cmd.kasmId);
   const vncPw = randomBytes(9).toString('base64url');
-  // Set once the image proves it can mint the read-only account; the manager
-  // only offers a live view for a session where it can.
-  let viewerAuth = false;
 
   // Custom labels must NOT register their own Traefik routers (cross-tenant
   // route-hijack guard); strip any traefik.* keys before merging.
@@ -369,39 +262,6 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
     labels[`traefik.http.services.${audioRouter}.loadbalancer.server.port`] = '4901';
     labels[`traefik.http.services.${audioRouter}.loadbalancer.server.scheme`] = 'https';
     labels[`traefik.http.services.${audioRouter}.loadbalancer.serverstransport`] = 'asha-insecure@file';
-
-    // Observation: a THIRD router onto the same 6901 stream, differing only in
-    // which account it authenticates as. The route above carries kasm_user and
-    // is write-capable by construction, so an administrator watching a desktop
-    // needs a route of its own — read-only is then enforced by KasmVNC itself
-    // (kasm_viewer has write:false) rather than by whichever client is loaded,
-    // and joining does not evict the person working
-    // (`new_session_disconnects_existing_exclusive_session: false`).
-    //
-    // Unlike the two routers above, this one carries NO credential of its own.
-    // A container label cannot be changed while the container runs, so a Basic
-    // header baked in here would be one password for the life of the session —
-    // which is exactly the credential that outlived its grant. The kasm_viewer
-    // password is minted per observation instead (openViewerAccount below), and
-    // the only component that can put a value that changes into the request is
-    // the forward-auth gate the route already passes through: sess-auth returns
-    // the Authorization header for observe paths and Traefik copies it upstream.
-    const observeRouter = `${router}-observe`;
-    const observePath = `${sessionPath(cmd.kasmId)}/observe`;
-    labels[`traefik.http.routers.${observeRouter}.rule`] = `PathPrefix(\`${observePath}\`)`;
-    labels[`traefik.http.routers.${observeRouter}.entrypoints`] = 'websecure';
-    labels[`traefik.http.routers.${observeRouter}.tls`] = 'true';
-    labels[`traefik.http.routers.${observeRouter}.priority`] = '100';
-    // Explicit router→service link (required with >1 service on the container).
-    labels[`traefik.http.routers.${observeRouter}.service`] = observeRouter;
-    labels[`traefik.http.middlewares.${observeRouter}-strip.stripprefix.prefixes`] = observePath;
-    // sess-auth first, for the same reason as the audio router — and here it is
-    // load-bearing twice over, because it is also what authenticates the route.
-    labels[`traefik.http.routers.${observeRouter}.middlewares`] =
-      `sess-auth@file,${observeRouter}-strip`;
-    labels[`traefik.http.services.${observeRouter}.loadbalancer.server.port`] = String(port);
-    labels[`traefik.http.services.${observeRouter}.loadbalancer.server.scheme`] = 'https';
-    labels[`traefik.http.services.${observeRouter}.loadbalancer.serverstransport`] = 'asha-insecure@file';
   }
 
   // ── Container-security sanitization (shared multi-tenant hosts) ─────────────
@@ -511,16 +371,7 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
       await bootstrapCups(container).catch(() => undefined); // best-effort, never fail a session
     }
 
-    // No account is created here on purpose: one written at launch is a
-    // credential for the whole session. All the manager needs now is whether
-    // this image could mint one when an observation actually starts — a
-    // third-party image without kasmvncpasswd loses the read-only route, which
-    // must not cost the user their desktop.
-    if (cmd.protocol === 'KASMVNC') {
-      viewerAuth = await probeViewerTooling(container);
-    }
-
-    return { containerId: container.id, internalHost: ip, port, routerName: router, viewerAuth };
+    return { containerId: container.id, internalHost: ip, port, routerName: router };
   } catch (e) {
     // Provisioning failed after the container was created. The manager never
     // learns the container id (provisionContainer rejects), so it can't call
@@ -676,19 +527,26 @@ const CAPTURE_TIMEOUT_MS = 5_000;
  * agent's end of the exec — Docker keeps the processes inside the container
  * running, and there is no API to kill an exec — so a display that stopped
  * answering would otherwise leave an `sh` and an `ffmpeg` behind on every pass.
- * A property read takes milliseconds and the frame grab was measured at ~300 ms;
- * both limits are headroom chosen so a wedged pass is gone before the pass after
- * next starts.
+ * A property read takes milliseconds and the 320 px frame grab was measured at
+ * ~300 ms; a 1280 px one covers sixteen times the pixels and stays well inside
+ * the frame limit, which is chosen so a wedged pass is gone long before it could
+ * accumulate.
  */
 const CAPTURE_META_KILL_SEC = 1;
 const CAPTURE_FRAME_KILL_SEC = 4;
-/** Hard read cap, so a stream that never ends cannot grow the agent's heap. */
-const MAX_CAPTURE_BYTES = 131_072;
+/**
+ * Hard read cap, so a stream that never ends cannot grow the agent's heap. Equal
+ * to the contract's character cap, which is where a frame this size ends up once
+ * base64 has grown it by a third.
+ */
+const MAX_CAPTURE_BYTES = 393_216;
 /**
  * Largest frame that still fits the wire contract: the sample carries the image
- * base64-encoded in a 131_072-character field, and base64 grows 3 bytes into 4.
+ * base64-encoded in a 393_216-character field, and base64 grows 3 bytes into 4.
+ * Sized for the 1280 px frame the live view asks for — sixteen times the pixels
+ * of the 320 px wall thumbnail, which measures ~2.4 KB.
  */
-const MAX_IMAGE_BYTES = 98_304;
+const MAX_IMAGE_BYTES = 294_912;
 
 /**
  * One observation pass inside a running session: which window has focus, how
@@ -786,7 +644,7 @@ fi
 /** Even width within the contract's bounds; `-2` leaves the height to the aspect ratio. */
 function clampThumbWidth(width?: number): number {
   const requested = width !== undefined && Number.isFinite(width) ? Math.round(width) : 320;
-  const bounded = Math.min(640, Math.max(160, requested));
+  const bounded = Math.min(1280, Math.max(160, requested));
   return bounded - (bounded % 2);
 }
 

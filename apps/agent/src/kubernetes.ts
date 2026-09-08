@@ -50,14 +50,6 @@ export interface ProvisionResult {
   internalHost: string; // ClusterIP service name (DNS-resolvable in the cluster)
   port: number;
   routerName: string;
-  /**
-   * Always false here. Minting the read-only KasmVNC account needs an in-Pod
-   * exec, which this driver does not have (the Helm RBAC grants no pods/exec),
-   * and the Ingress has no observe path either — so the manager withholds the
-   * live view for a Kubernetes session exactly as it does for an image without
-   * the account. Capture is degraded the same way, see captureObservation.
-   */
-  viewerAuth: boolean;
 }
 
 export async function provisionContainer(cmd: ProvisionCommand): Promise<ProvisionResult> {
@@ -212,7 +204,7 @@ export async function provisionContainer(cmd: ProvisionCommand): Promise<Provisi
   await waitForPodRunning(name, 60_000);
 
   const internalHost = `${name}.${SESSION_NS}.svc.cluster.local`;
-  return { containerId: name, internalHost, port, routerName: router, viewerAuth: false };
+  return { containerId: name, internalHost, port, routerName: router };
   } catch (e) {
     await destroyContainer(name).catch(() => undefined);
     throw e;
@@ -350,8 +342,9 @@ export async function stopRecorder(_sessionId: string): Promise<void> {
  * Observation capture would need an exec inside the session Pod, and the agent's
  * ServiceAccount has no `pods/exec` verb (the Helm RBAC template grants pods,
  * services, ingresses and pods/log — see the header above). Rather than widen
- * that grant for a thumbnail, the K8s driver reports a bare sample and the wall
- * falls back to metadata, the same as it does for fixed-server sessions.
+ * that grant for a frame, the K8s driver reports a bare sample: the wall falls
+ * back to metadata, the same as it does for fixed-server sessions, and the live
+ * view — which is that same capture at a higher rate — is withheld with it.
  */
 export async function captureObservation(
   _podName: string,
@@ -360,22 +353,6 @@ export async function captureObservation(
   return { degraded: 'unsupported:kubernetes' };
 }
 
-/**
- * The read-only KasmVNC account is written with an in-Pod exec, for the same
- * `pods/exec` reason captureObservation cannot grab a frame — so there is no
- * account to open, and provisionContainer already reported `viewerAuth: false`
- * to keep the manager from offering a live view at all. Answering false rather
- * than throwing keeps a K8s session out of the error path when an observation
- * is started on it anyway.
- */
-export async function openViewerAccount(_podName: string, _password: string): Promise<boolean> {
-  return false;
-}
-
-/** Counterpart of openViewerAccount: nothing was written, so nothing is left. */
-export async function revokeViewerAccount(_podName: string): Promise<boolean> {
-  return false;
-}
 
 /**
  * Image caching is owned by each node's kubelet in the K8s driver, so the agent

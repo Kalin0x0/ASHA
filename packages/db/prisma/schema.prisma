@@ -262,8 +262,8 @@ enum AssignmentScope {
 // ── Bug reporting & the "fix memory" ─────────────────────────────────────────
 // How a report entered the system.
 enum BugSource {
-  USER // a human filed it from the portal / admin UI
-  AUTOMATIC // captured by the API exception filter or web error boundary on an unexpected crash
+  USER       // a human filed it from the portal / admin UI
+  AUTOMATIC  // captured by the API exception filter or web error boundary on an unexpected crash
 }
 
 enum BugSeverity {
@@ -304,19 +304,19 @@ model Org {
 }
 
 model DeploymentZone {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   orgId        String
   name         String
   region       String?
-  isDefault    Boolean  @default(false)
+  isDefault    Boolean   @default(false)
   proxyBaseUrl String?
-  settings     Json     @default("{}")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  settings     Json      @default("{}")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  agents     Agent[]
-  servers    Server[]
-  sessions   Session[]
+  agents   Agent[]
+  servers  Server[]
+  sessions Session[]
   workspaces Workspace[]
 
   @@unique([orgId, name])
@@ -334,9 +334,7 @@ model User {
   username      String
   displayName   String?
   avatarUrl     String?
-  /**
-   * SCIM externalId from the upstream IdP (e.g. Okta sub).
-   */
+  /** SCIM externalId from the upstream IdP (e.g. Okta sub). */
   externalId    String?
   /**
    * AuthConfig.id of the identity provider that owns this federated identity.
@@ -349,9 +347,7 @@ model User {
   isSystemAdmin Boolean    @default(false)
   locale        String     @default("en")
   lastLoginAt   DateTime?
-  /**
-   * When a 10-minute demo account expires (reaper disables + prunes it). Null for normal accounts.
-   */
+  /** When a 10-minute demo account expires (reaper disables + prunes it). Null for normal accounts. */
   demoExpiresAt DateTime?
   /**
    * License/access expiry (sellable, time-limited accounts). When set and passed,
@@ -364,15 +360,15 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  credentials        UserCredential[]
-  twoFactorMethods   TwoFactorMethod[]
-  refreshTokens      RefreshToken[]
-  apiKeys            ApiKey[]
-  settings           UserSetting[]
-  groups             UserGroup[]
+  credentials     UserCredential[]
+  twoFactorMethods TwoFactorMethod[]
+  refreshTokens   RefreshToken[]
+  apiKeys         ApiKey[]
+  settings        UserSetting[]
+  groups          UserGroup[]
   assignedWorkspaces WorkspaceUser[]
-  sessions           Session[]
-  fileMappings       FileMapping[]
+  sessions        Session[]
+  fileMappings    FileMapping[]
 
   @@unique([orgId, email])
   @@unique([orgId, username])
@@ -404,40 +400,43 @@ model DemoGrant {
 
 /**
  * A visitor's request for a demo / test account, awaiting admin approval.
+ *
  * Deliberately NOT a `User` row with a PENDING status: a request is not an
  * account. Keeping it in its own table means an unapproved request can never be
  * counted by a licence gate, listed in the admin user table, exported over SCIM
  * or resolved by any `prisma.user` lookup — the way a pending row in `User`
  * inevitably would be.
+ *
  * The requester chooses their password up front and it is bcrypt-hashed
  * immediately (`passwordHash`); the plaintext never touches the database. On
  * approval the hash is moved verbatim onto the created `UserCredential`, so the
  * account works on first sign-in without the deployment needing any SMTP.
+ *
  * One row per (orgId, email): a rejected request is revived in place if the same
  * address applies again, which keeps this table from growing under retries.
  */
 model AccountRequest {
-  id            String               @id @default(cuid())
-  orgId         String
-  email         String
-  username      String
-  displayName   String?
+  id           String               @id @default(cuid())
+  orgId        String
+  email        String
+  username     String
+  displayName  String?
   /// Free-text: who they are and what they want to evaluate. Shown to the admin.
-  reason        String?              @db.Text
+  reason       String?              @db.Text
   /// bcrypt hash of the password the requester chose. Never plaintext.
-  passwordHash  String
-  status        AccountRequestStatus @default(PENDING)
+  passwordHash String
+  status       AccountRequestStatus @default(PENDING)
   /// Best-effort abuse forensics for the public endpoint.
-  ip            String?
-  userAgent     String?
+  ip           String?
+  userAgent    String?
   /// Set once reviewed — the admin, when, and why it was turned down.
-  reviewedById  String?
-  reviewedAt    DateTime?
-  reviewNote    String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?
   /// The `User` minted on approval. Kept after that user is deleted, as history.
   createdUserId String?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
 
   @@unique([orgId, email])
   @@index([orgId, status])
@@ -540,23 +539,23 @@ model Group {
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
-  members     UserGroup[]
-  roles       GroupRole[]
-  ssoMappings SsoMapping[]
-  workspaces  Workspace[]  @relation("GroupWorkspaces")
+  members      UserGroup[]
+  roles        GroupRole[]
+  ssoMappings  SsoMapping[]
+  workspaces   Workspace[]  @relation("GroupWorkspaces")
 
   @@unique([orgId, name])
   @@index([orgId])
 }
 
 model Role {
-  id          String   @id @default(cuid())
-  orgId       String? // null = built-in system role
-  name        String
+  id        String   @id @default(cuid())
+  orgId     String? // null = built-in system role
+  name      String
   description String?
-  isSystem    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isSystem  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   permissions RolePermission[]
   groups      GroupRole[]
@@ -643,14 +642,14 @@ model GroupRole {
 }
 
 model SsoMapping {
-  id           String   @id @default(cuid())
-  orgId        String
-  groupId      String
+  id          String   @id @default(cuid())
+  orgId       String
+  groupId     String
   authConfigId String
   // e.g. match an IdP group/attribute → assign this Asha group
-  attribute    String
-  value        String
-  createdAt    DateTime @default(now())
+  attribute   String
+  value       String
+  createdAt   DateTime @default(now())
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
@@ -681,23 +680,23 @@ model AuthConfig {
 }
 
 model LoginConfig {
-  id               String   @id @default(cuid())
-  orgId            String   @unique
-  noticeTitle      String?
-  noticeBody       String?
-  noticeRequireAck Boolean  @default(false)
-  assistanceText   String?
-  updatedAt        DateTime @updatedAt
+  id           String   @id @default(cuid())
+  orgId        String   @unique
+  noticeTitle  String?
+  noticeBody   String?
+  noticeRequireAck Boolean @default(false)
+  assistanceText String?
+  updatedAt    DateTime @updatedAt
 }
 
 model CaptchaConfig {
-  id        String   @id @default(cuid())
-  orgId     String   @unique
-  enabled   Boolean  @default(false)
-  provider  String   @default("recaptcha")
-  siteKey   String?
-  secretRef String?
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  orgId       String   @unique
+  enabled     Boolean  @default(false)
+  provider    String   @default("recaptcha")
+  siteKey     String?
+  secretRef   String?
+  updatedAt   DateTime @updatedAt
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -705,25 +704,25 @@ model CaptchaConfig {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Workspace {
-  id                 String        @id @default(cuid())
-  orgId              String
-  name               String
-  friendlyName       String
-  description        String?
-  type               WorkspaceType @default(CONTAINER)
-  imageId            String?
+  id            String        @id @default(cuid())
+  orgId         String
+  name          String
+  friendlyName  String
+  description   String?
+  type          WorkspaceType @default(CONTAINER)
+  imageId       String?
   // Non-container placement: SERVER/VM/REMOTE_APP workspaces bind to a registered
   // Server; an optional preferred deployment Zone applies to every type.
-  serverId           String?
-  zoneId             String?
-  iconUrl            String?
-  categories         String[]      @default([])
-  enabled            Boolean       @default(true)
+  serverId      String?
+  zoneId        String?
+  iconUrl       String?
+  categories    String[]      @default([])
+  enabled       Boolean       @default(true)
   // Docker run config: env, cmd, ports, shmSize, capabilities, etc.
-  dockerConfig       Json          @default("{}")
-  coresLimit         Float?
-  memLimitMb         Int?
-  gpuCount           Int           @default(0)
+  dockerConfig  Json          @default("{}")
+  coresLimit    Float?
+  memLimitMb    Int?
+  gpuCount      Int           @default(0)
   // Lifecycle limits enforced by the session reaper (null = unlimited)
   maxDurationMinutes Int?
   idleTimeoutMinutes Int?
@@ -735,16 +734,16 @@ model Workspace {
   isDemo             Boolean       @default(false)
   // Data-loss-prevention + delivery policy:
   // { clipboardUp, clipboardDown, uploads, downloads, printing, audioIn, audioOut, pwa }
-  dlp                Json          @default("{}")
+  dlp           Json          @default("{}")
   // Hardware H.264 encoding policy: { count, encoder: none|nvenc|vaapi, renderDevice }
-  gpu                Json          @default("{}")
-  launchSchema       Json? // dynamic launch-form JSON schema
+  gpu           Json          @default("{}")
+  launchSchema  Json? // dynamic launch-form JSON schema
   // Optional sidecar policy attachments — resolved at session provision time.
   webFilterId        String?
   egressGatewayId    String?
   browserIsolationId String?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   image            Image?                  @relation(fields: [imageId], references: [id], onDelete: SetNull)
   server           Server?                 @relation(fields: [serverId], references: [id], onDelete: SetNull)
@@ -752,14 +751,14 @@ model Workspace {
   webFilter        WebFilterConfig?        @relation(fields: [webFilterId], references: [id], onDelete: SetNull)
   egressGateway    EgressGateway?          @relation(fields: [egressGatewayId], references: [id], onDelete: SetNull)
   browserIsolation BrowserIsolationConfig? @relation(fields: [browserIsolationId], references: [id], onDelete: SetNull)
-  sessions         Session[]
-  links            WorkspaceLink[]
-  remoteApps       RemoteApp[]
-  launchForms      LaunchForm[]
-  castings         CastingConfig[]
-  stagings         SessionStaging[]
-  groups           Group[]                 @relation("GroupWorkspaces")
-  assignedUsers    WorkspaceUser[]
+  sessions    Session[]
+  links       WorkspaceLink[]
+  remoteApps  RemoteApp[]
+  launchForms LaunchForm[]
+  castings    CastingConfig[]
+  stagings    SessionStaging[]
+  groups        Group[]         @relation("GroupWorkspaces")
+  assignedUsers WorkspaceUser[]
 
   @@unique([orgId, name])
   @@index([orgId])
@@ -775,22 +774,22 @@ enum ImagePullPolicy {
 }
 
 model Image {
-  id                    String          @id @default(cuid())
-  orgId                 String? // null = global registry image
-  name                  String
-  friendlyName          String
-  dockerImage           String // repo:tag
-  channel               ImageChannel    @default(CUSTOM)
-  protocol              StreamProtocol  @default(KASMVNC)
-  architecture          String          @default("amd64")
-  digest                String?
-  pullPolicy            ImagePullPolicy @default(ALWAYS)
-  available             Boolean         @default(true)
+  id                String         @id @default(cuid())
+  orgId             String? // null = global registry image
+  name              String
+  friendlyName      String
+  dockerImage       String // repo:tag
+  channel           ImageChannel   @default(CUSTOM)
+  protocol          StreamProtocol @default(KASMVNC)
+  architecture      String         @default("amd64")
+  digest            String?
+  pullPolicy        ImagePullPolicy @default(ALWAYS)
+  available         Boolean        @default(true)
   // Default run config merged under Workspace.dockerConfig.
-  runConfigDefaults     Json            @default("{}")
+  runConfigDefaults Json           @default("{}")
   sourceRegistryEntryId String?
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   workspaces Workspace[]
   sessions   Session[]
@@ -816,17 +815,17 @@ model Registry {
 }
 
 model RegistryEntry {
-  id           String   @id @default(cuid())
-  registryId   String
-  name         String
+  id          String   @id @default(cuid())
+  registryId  String
+  name        String
   friendlyName String
-  description  String?
-  dockerImage  String
-  iconUrl      String?
-  categories   String[] @default([])
-  raw          Json     @default("{}")
-  installed    Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  description String?
+  dockerImage String
+  iconUrl     String?
+  categories  String[] @default([])
+  raw         Json     @default("{}")
+  installed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
 
   registry Registry @relation(fields: [registryId], references: [id], onDelete: Cascade)
 
@@ -834,7 +833,7 @@ model RegistryEntry {
 }
 
 model WorkspaceLink {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   workspaceId String
   label       String
   url         String
@@ -873,67 +872,63 @@ model LaunchForm {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Session {
-  id                  String         @id @default(cuid())
-  orgId               String
-  kasmId              String         @unique @default(cuid()) // opaque token used in URLs
+  id                String         @id @default(cuid())
+  orgId             String
+  kasmId            String         @unique @default(cuid()) // opaque token used in URLs
   /// Null ONLY for an unclaimed pre-warmed (staged) session — no other writer
   /// leaves it unset. Claiming assigns the user atomically; from then on the
   /// session behaves like any user launch. Reapers/metering key exemptions on
   /// `userId: null` (see SessionReaperService / TariffsService).
-  userId              String?
+  userId            String?
   /// SessionStaging rule that pre-warmed this session (plain id, no FK — the
   /// rule may be deleted first; the reconciler then retires the orphans).
   /// Survives the claim as provenance.
-  stagingId           String?
+  stagingId         String?
   // Null for fixed-server (RDP/VNC/SSH) sessions, which connect directly to a
   // Server rather than launching a workspace container.
-  workspaceId         String?
-  imageId             String?
+  workspaceId       String?
+  imageId           String?
   // Set at launch and never changed. Nullable so deleting a zone is not blocked
   // by the session HISTORY pointing at it: a required FK defaults to RESTRICT,
   // which contradicted ZonesService.remove (it refuses LIVE sessions explicitly
   // and documents that past ones never block). Past rows keep their record and
   // just lose the link — same as `imageId`/`agentId` on this model.
-  zoneId              String?
-  agentId             String?
-  serverId            String?
-  status              SessionStatus  @default(REQUESTED)
-  connectionType      ConnectionType @default(KASMVNC)
+  zoneId            String?
+  agentId           String?
+  serverId          String?
+  status            SessionStatus  @default(REQUESTED)
+  connectionType    ConnectionType @default(KASMVNC)
   // Denormalized for fast list rendering
-  workspaceName       String?
-  imageName           String?
+  workspaceName     String?
+  imageName         String?
   // Runtime
-  containerId         String?
-  internalHost        String?
-  host                String?
-  port                Int?
-  traefikRouterName   String?
-  connectionUrl       String?
-  launchValues        Json           @default("{}")
-  resources           Json           @default("{}") // live { cpuPct, memMb, ... }
-  streamProfile       Json           @default("{}") // live stream-control (fps/quality/bitrate/clipboard)
-  // True once the agent confirmed the container's read-only KasmVNC account
-  // answers. Images that only resemble Kasm have no kasmvncpasswd, so their
-  // observe route would 401 — the manager withholds the live view instead.
-  observeReady        Boolean        @default(false)
-  recordingEnabled    Boolean        @default(false)
+  containerId       String?
+  internalHost      String?
+  host              String?
+  port              Int?
+  traefikRouterName String?
+  connectionUrl     String?
+  launchValues      Json           @default("{}")
+  resources         Json           @default("{}") // live { cpuPct, memMb, ... }
+  streamProfile     Json           @default("{}") // live stream-control (fps/quality/bitrate/clipboard)
+  recordingEnabled  Boolean        @default(false)
   persistentProfileId String?
-  shareEnabled        Boolean        @default(false)
-  errorMessage        String?
-  terminationReason   String?
-  startedAt           DateTime?
-  lastKeepaliveAt     DateTime?
-  idleSince           DateTime?
+  shareEnabled      Boolean        @default(false)
+  errorMessage      String?
+  terminationReason String?
+  startedAt         DateTime?
+  lastKeepaliveAt   DateTime?
+  idleSince         DateTime?
   /// Stamped when the session is PAUSED, cleared on RESUME. Drives the paused
   /// reaper independently of updatedAt (which background stats writes churn).
-  pausedAt            DateTime?
-  expiresAt           DateTime?
+  pausedAt          DateTime?
+  expiresAt         DateTime?
   /// Metered usage charged against the holder's tariff budget (seconds), bumped
   /// by the metering reaper (elapsed × workspace.minuteCostFactor).
-  consumedSeconds     Int            @default(0)
-  destroyedAt         DateTime?
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
+  consumedSeconds   Int             @default(0)
+  destroyedAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   // user is optional to match the nullable userId above (unclaimed staged
   // sessions); Cascade still applies once claimed — deleting a user removes
@@ -994,7 +989,7 @@ model Recording {
   startedAt        DateTime        @default(now())
   finalizedAt      DateTime?
 
-  session   Session             @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session   Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   artifacts RecordingArtifact[]
 
   @@index([orgId])
@@ -1015,15 +1010,15 @@ model RecordingArtifact {
 }
 
 model SessionShare {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   orgId        String
-  sessionId    String    @unique
-  shareKey     String    @unique @default(cuid())
-  allowControl Boolean   @default(false)
-  requireAuth  Boolean   @default(true)
-  enableChat   Boolean   @default(true)
-  enableAv     Boolean   @default(false)
-  createdAt    DateTime  @default(now())
+  sessionId    String   @unique
+  shareKey     String   @unique @default(cuid())
+  allowControl Boolean  @default(false)
+  requireAuth  Boolean  @default(true)
+  enableChat   Boolean  @default(true)
+  enableAv     Boolean  @default(false)
+  createdAt    DateTime @default(now())
   expiresAt    DateTime?
 
   session      Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -1034,13 +1029,13 @@ model SessionShare {
 }
 
 model ShareParticipant {
-  id         String    @id @default(cuid())
-  shareId    String
-  userId     String?
-  guestName  String?
-  canControl Boolean   @default(false)
-  joinedAt   DateTime  @default(now())
-  leftAt     DateTime?
+  id        String   @id @default(cuid())
+  shareId   String
+  userId    String?
+  guestName String?
+  canControl Boolean @default(false)
+  joinedAt  DateTime @default(now())
+  leftAt    DateTime?
 
   share SessionShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
 
@@ -1048,12 +1043,12 @@ model ShareParticipant {
 }
 
 model ShareChatMessage {
-  id         String   @id @default(cuid())
-  shareId    String
-  authorId   String?
+  id        String   @id @default(cuid())
+  shareId   String
+  authorId  String?
   authorName String?
-  body       String
-  createdAt  DateTime @default(now())
+  body      String
+  createdAt DateTime @default(now())
 
   share SessionShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
 
@@ -1061,19 +1056,19 @@ model ShareChatMessage {
 }
 
 model SessionStaging {
-  id               String    @id @default(cuid())
-  orgId            String
-  workspaceId      String
-  zoneId           String
-  desiredSessions  Int       @default(0)
-  enabled          Boolean   @default(true)
+  id              String   @id @default(cuid())
+  orgId           String
+  workspaceId     String
+  zoneId          String
+  desiredSessions Int      @default(0)
+  enabled         Boolean  @default(true)
   /// Why the pool isn't filling (e.g. no ONLINE agent in the zone). Written by
   /// the reconciler on a failed provision attempt, cleared on success — the
   /// admin UI surfaces it so a stuck pool is never silent.
   lastError        String?
   lastReconciledAt DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -1116,30 +1111,30 @@ model CastErrorPage {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Agent {
-  id                String      @id @default(cuid())
-  orgId             String
-  zoneId            String
-  hostname          String
-  address           String?
-  kind              AgentKind   @default(DOCKER)
-  status            AgentStatus @default(OFFLINE)
+  id               String      @id @default(cuid())
+  orgId            String
+  zoneId           String
+  hostname         String
+  address          String?
+  kind             AgentKind   @default(DOCKER)
+  status           AgentStatus @default(OFFLINE)
   /// Admin-requested drain — persists across heartbeats so a drained agent
   /// stays DRAINING (the scheduler only picks ONLINE agents) until un-drained.
-  drainRequested    Boolean     @default(false)
-  version           String?
-  apiKeyId          String?
-  cpuCores          Int         @default(0)
-  memTotalMb        Int         @default(0)
-  memFreeMb         Int         @default(0)
-  cpuOverrideFactor Float       @default(1)
-  memOverrideFactor Float       @default(1)
-  maxSessions       Int         @default(0)
-  currentSessions   Int         @default(0)
-  loadPercent       Float       @default(0)
-  labels            String[]    @default([])
-  lastHeartbeatAt   DateTime?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  drainRequested   Boolean     @default(false)
+  version          String?
+  apiKeyId         String?
+  cpuCores         Int         @default(0)
+  memTotalMb       Int         @default(0)
+  memFreeMb        Int         @default(0)
+  cpuOverrideFactor Float      @default(1)
+  memOverrideFactor Float      @default(1)
+  maxSessions      Int         @default(0)
+  currentSessions  Int         @default(0)
+  loadPercent      Float       @default(0)
+  labels           String[]    @default([])
+  lastHeartbeatAt  DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   zone       DeploymentZone @relation(fields: [zoneId], references: [id])
   sessions   Session[]
@@ -1164,30 +1159,30 @@ model GpuDevice {
 }
 
 model Server {
-  id              String               @id @default(cuid())
-  orgId           String
-  zoneId          String
-  hostname        String
-  address         String
-  connectionType  ServerConnectionType @default(RDP)
-  authMode        ServerAuthMode       @default(PASSWORD)
-  credentialRef   String?
-  continuity      ContinuityMode       @default(NONE)
-  vmTemplate      String?
-  vmProviderId    String?
-  status          ServerStatus         @default(OFFLINE)
-  maxSessions     Int                  @default(1)
+  id             String               @id @default(cuid())
+  orgId          String
+  zoneId         String
+  hostname       String
+  address        String
+  connectionType ServerConnectionType @default(RDP)
+  authMode       ServerAuthMode       @default(PASSWORD)
+  credentialRef  String?
+  continuity     ContinuityMode       @default(NONE)
+  vmTemplate     String?
+  vmProviderId   String?
+  status         ServerStatus         @default(OFFLINE)
+  maxSessions    Int                  @default(1)
   // Reported by the installed Windows/host agent (availability tracking).
-  lastSeenAt      DateTime?
-  agentVersion    String?
+  lastSeenAt     DateTime?
+  agentVersion   String?
   // Reverse-tunnel reachability (WireGuard): the host's assigned tunnel IP +
   // public key. When set, sessions reach the host over the tunnel IP.
-  tunnelIp        String?
+  tunnelIp       String?
   tunnelPublicKey String?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
-  zone       DeploymentZone @relation(fields: [zoneId], references: [id])
+  zone DeploymentZone @relation(fields: [zoneId], references: [id])
   workspaces Workspace[]
 
   @@unique([orgId, hostname])
@@ -1196,14 +1191,14 @@ model Server {
 }
 
 model ServerPool {
-  id            String   @id @default(cuid())
-  orgId         String
-  name          String
-  kind          PoolKind @default(AGENT)
-  startupScript String?
-  enabled       Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default(cuid())
+  orgId             String
+  name              String
+  kind              PoolKind @default(AGENT)
+  startupScript     String?
+  enabled           Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   members         ServerPoolMember[]
   autoscaleConfig AutoscaleConfig?
@@ -1224,34 +1219,34 @@ model ServerPoolMember {
 }
 
 model AutoscaleConfig {
-  id                    String        @id @default(cuid())
-  orgId                 String
-  serverPoolId          String        @unique
-  mode                  AutoscaleMode @default(SCHEDULE)
-  minStandby            Int           @default(0)
-  maxInstances          Int           @default(1)
-  perServerSessionLimit Int           @default(1)
-  checkinIntervalSec    Int           @default(60)
-  downscaleBackoffSec   Int           @default(300)
-  vmProviderId          String?
-  dnsProviderId         String?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  id                  String        @id @default(cuid())
+  orgId               String
+  serverPoolId        String        @unique
+  mode                AutoscaleMode @default(SCHEDULE)
+  minStandby          Int           @default(0)
+  maxInstances        Int           @default(1)
+  perServerSessionLimit Int         @default(1)
+  checkinIntervalSec  Int           @default(60)
+  downscaleBackoffSec Int           @default(300)
+  vmProviderId        String?
+  dnsProviderId       String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
-  serverPool ServerPool          @relation(fields: [serverPoolId], references: [id], onDelete: Cascade)
+  serverPool ServerPool         @relation(fields: [serverPoolId], references: [id], onDelete: Cascade)
   schedules  AutoscaleSchedule[]
 
   @@index([orgId])
 }
 
 model AutoscaleSchedule {
-  id                String @id @default(cuid())
+  id              String @id @default(cuid())
   autoscaleConfigId String
   // 0-6 (Sun-Sat), hour 0-23, desired standby for that slot
-  dayOfWeek         Int
-  hour              Int
-  minStandby        Int    @default(0)
-  maxInstances      Int    @default(1)
+  dayOfWeek       Int
+  hour            Int
+  minStandby      Int    @default(0)
+  maxInstances    Int    @default(1)
 
   config AutoscaleConfig @relation(fields: [autoscaleConfigId], references: [id], onDelete: Cascade)
 
@@ -1379,20 +1374,20 @@ model StorageMapping {
 }
 
 model FileMapping {
-  id            String            @id @default(cuid())
-  orgId         String
-  name          String
-  target        FileMappingTarget @default(CONTAINER)
-  sourcePath    String
-  destPath      String
-  owner         String?
-  group         String?
-  mode          String?
-  isHomeProfile Boolean           @default(false)
-  scope         AssignmentScope   @default(WORKSPACE)
-  userId        String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  id          String            @id @default(cuid())
+  orgId       String
+  name        String
+  target      FileMappingTarget @default(CONTAINER)
+  sourcePath  String
+  destPath    String
+  owner       String?
+  group       String?
+  mode        String?
+  isHomeProfile Boolean         @default(false)
+  scope       AssignmentScope   @default(WORKSPACE)
+  userId      String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -1416,16 +1411,16 @@ model PersistentProfile {
 }
 
 model VolumeMapping {
-  id        String   @id @default(cuid())
-  orgId     String
-  name      String
-  hostPath  String
-  destPath  String
-  readOnly  Boolean  @default(false)
+  id          String   @id @default(cuid())
+  orgId       String
+  name        String
+  hostPath    String
+  destPath    String
+  readOnly    Boolean  @default(false)
   // supports {user}/{image} tokens + var substitution
-  raw       Json     @default("{}")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  raw         Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([orgId, name])
   @@index([orgId])
@@ -1450,18 +1445,18 @@ model Setting {
 }
 
 model Branding {
-  id                 String        @id @default(cuid())
-  scope              BrandingScope @default(ORG)
-  orgId              String?
-  groupId            String?
-  productName        String        @default("Asha")
-  logoUrl            String?
-  faviconUrl         String?
+  id                String        @id @default(cuid())
+  scope             BrandingScope @default(ORG)
+  orgId             String?
+  groupId           String?
+  productName       String        @default("Asha")
+  logoUrl           String?
+  faviconUrl        String?
   loginBackgroundUrl String?
-  primaryColor       String        @default("#1a1a2e")
-  accentColor        String        @default("#d4af37")
-  customCss          String?
-  updatedAt          DateTime      @updatedAt
+  primaryColor      String        @default("#1a1a2e")
+  accentColor       String        @default("#d4af37")
+  customCss         String?
+  updatedAt         DateTime      @updatedAt
 
   @@unique([scope, orgId, groupId])
   @@index([orgId])
@@ -1509,32 +1504,32 @@ model ImageBuildJob {
 }
 
 model BannerWatermarkConfig {
-  id               String          @id @default(cuid())
-  orgId            String
-  scope            AssignmentScope @default(GROUP)
-  refId            String? // group or workspace id depending on scope
-  bannerText       String?
-  bannerColor      String?
-  watermarkText    String?
-  watermarkOpacity Float           @default(0.15)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id          String   @id @default(cuid())
+  orgId       String
+  scope       AssignmentScope @default(GROUP)
+  refId       String? // group or workspace id depending on scope
+  bannerText  String?
+  bannerColor String?
+  watermarkText String?
+  watermarkOpacity Float @default(0.15)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([orgId])
 }
 
 model License {
-  id                 String      @id @default(cuid())
-  orgId              String?
-  type               LicenseType @default(CONCURRENT)
-  seats              Int         @default(5)
-  concurrentSessions Int         @default(5)
-  issuedTo           String?
-  notBefore          DateTime?
-  notAfter           DateTime?
-  signature          String?
-  features           Json        @default("{}")
-  createdAt          DateTime    @default(now())
+  id                String      @id @default(cuid())
+  orgId             String?
+  type              LicenseType @default(CONCURRENT)
+  seats             Int         @default(5)
+  concurrentSessions Int        @default(5)
+  issuedTo          String?
+  notBefore         DateTime?
+  notAfter          DateTime?
+  signature         String?
+  features          Json        @default("{}")
+  createdAt         DateTime    @default(now())
 
   usageSamples LicenseUsageSample[]
 
@@ -1542,11 +1537,11 @@ model License {
 }
 
 model LicenseUsageSample {
-  id                 String   @id @default(cuid())
-  licenseId          String
+  id                String   @id @default(cuid())
+  licenseId         String
   concurrentSessions Int
-  namedUsers         Int
-  sampledAt          DateTime @default(now())
+  namedUsers        Int
+  sampledAt         DateTime @default(now())
 
   license License @relation(fields: [licenseId], references: [id], onDelete: Cascade)
 
@@ -1572,21 +1567,21 @@ enum TariffSubject {
 }
 
 model Tariff {
-  id                String       @id @default(cuid())
-  orgId             String
-  name              String
-  period            TariffPeriod @default(MONTH)
+  id               String       @id @default(cuid())
+  orgId            String
+  name             String
+  period           TariffPeriod @default(MONTH)
   // Usage allowance per period, in minutes. null = unlimited time.
-  budgetMinutes     Int?
+  budgetMinutes    Int?
   // Hard per-session cap (minutes). null = no per-session cap (workspace cap still applies).
   maxSessionMinutes Int?
   // Max simultaneous sessions for a holder of this tariff. null = unlimited.
-  maxConcurrent     Int?
+  maxConcurrent    Int?
   // Exactly one tariff per org may be the default (applied when a user/group has
   // no explicit assignment). Enforced in the service, not the DB.
-  isDefault         Boolean      @default(false)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  isDefault        Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   assignments TariffAssignment[]
 
@@ -1595,18 +1590,18 @@ model Tariff {
 }
 
 model TariffAssignment {
-  id               String        @id @default(cuid())
-  orgId            String
-  tariffId         String
-  subjectType      TariffSubject
+  id              String        @id @default(cuid())
+  orgId           String
+  tariffId        String
+  subjectType     TariffSubject
   // ORG → the orgId; GROUP → a Group id; USER → a User id.
-  subjectId        String
+  subjectId       String
   // Live balance for the current period, in seconds. Decremented by the metering
   // reaper; refilled to (budgetMinutes*60) at each period reset.
-  remainingSeconds Int           @default(0)
-  periodResetAt    DateTime?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  remainingSeconds Int          @default(0)
+  periodResetAt   DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   tariff Tariff @relation(fields: [tariffId], references: [id], onDelete: Cascade)
 
@@ -1648,17 +1643,17 @@ model WebhookDelivery {
 }
 
 model AuditLog {
-  id            String   @id @default(cuid())
-  orgId         String?
-  actorUserId   String?
+  id           String   @id @default(cuid())
+  orgId        String?
+  actorUserId  String?
   actorApiKeyId String?
-  action        String
-  targetType    String?
-  targetId      String?
-  ip            String?
-  userAgent     String?
-  metadata      Json     @default("{}")
-  createdAt     DateTime @default(now())
+  action       String
+  targetType   String?
+  targetId     String?
+  ip           String?
+  userAgent    String?
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now())
 
   @@index([orgId, createdAt])
   @@index([actorUserId])
@@ -1694,12 +1689,12 @@ model LogForwarderConfig {
 }
 
 model ConfigExportBundle {
-  id            String   @id @default(cuid())
-  orgId         String
-  name          String
-  payload       Json
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  payload   Json
   schemaVersion String
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([orgId])
 }
@@ -1744,7 +1739,6 @@ model Feedback {
   @@index([orgId])
   @@index([status])
 }
-
 // ╔══════════════════════════════════════════════════════════════════════════╗
 // ║  Bug reports + the central "fix memory"                                    ║
 // ║                                                                            ║

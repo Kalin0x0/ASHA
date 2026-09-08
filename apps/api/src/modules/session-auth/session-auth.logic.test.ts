@@ -15,15 +15,9 @@ import {
  * with Traefik injecting the container's Basic credentials on the way in.
  */
 
-/**
- * Tokens are stand-ins for verified JWTs: `t:<kasmId>` and `c:<kasmId>`, with an
- * optional `@<observer>` for the proof the read-only route carries.
- */
-const proof = (prefix: string) => (t: string) => {
-  if (!t.startsWith(prefix)) return null;
-  const [kasmId, observerUserId] = t.slice(prefix.length).split('@');
-  return { kasmId: kasmId ?? '', ...(observerUserId ? { observerUserId } : {}) };
-};
+/** Tokens are stand-ins for verified JWTs: `t:<kasmId>` and `c:<kasmId>`. */
+const proof = (prefix: string) => (t: string) =>
+  t.startsWith(prefix) ? { kasmId: t.slice(prefix.length) } : null;
 
 const ask = (over: Partial<Parameters<typeof decideSessionAuth>[0]> = {}) =>
   decideSessionAuth({
@@ -103,23 +97,15 @@ describe('decideSessionAuth', () => {
     });
   });
 
-  it('carries the observer named by a proof into the verdict', () => {
-    // The gate has to know WHOSE observation this is: the window it checks is
-    // one administrator's hold, and one of two observers stopping must end
-    // their own access while the other keeps watching.
-    expect(ask({ forwardedUri: '/session/kid1/observe/?token=t:kid1@admin1' })).toMatchObject({
+  it('reads a sub-path of a session as that session, whatever the segment says', () => {
+    // `/observe` was its own Traefik router once, with its own proof and its own
+    // cookie scope. Nothing under a session gets special treatment now — the
+    // prefix names the session and that is the whole rule.
+    expect(ask({ forwardedUri: '/session/kid1/observe/?token=t:kid1' })).toMatchObject({
       action: 'exchange',
-      observerUserId: 'admin1',
+      kasmId: 'kid1',
+      location: '/session/kid1/observe/',
     });
-    expect(ask({ cookieHeader: `${SESSION_COOKIE}=c:kid1@admin1` })).toMatchObject({
-      action: 'allow',
-      observerUserId: 'admin1',
-    });
-  });
-
-  it('names nobody for a session of one’s own', () => {
-    // A desktop's owner is not an observer, and must never be mistaken for one.
-    expect(ask({ cookieHeader: `${SESSION_COOKIE}=c:kid1` })).not.toHaveProperty('observerUserId');
   });
 
   it('refuses when Traefik sent no forwarded URI', () => {

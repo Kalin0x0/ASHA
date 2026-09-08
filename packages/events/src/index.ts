@@ -221,7 +221,7 @@ export interface SessionControlCommand {
     | 'RECORD_STOP'
     // OBSERVE_STOP is sent when the LAST observer let go, never when one of
     // several did: the agent reads it as "nobody is watching any more" and
-    // withdraws the read-only credential along with the capture loop.
+    // closes the capture loop.
     | 'OBSERVE_START'
     | 'OBSERVE_STOP';
   /** For RESIZE. */
@@ -241,21 +241,6 @@ export interface SessionControlCommand {
   intervalMs?: number;
   ttlMs?: number;
   thumbWidth?: number;
-  /**
-   * OBSERVE_START only, KasmVNC only: the password the read-only `kasm_viewer`
-   * account gets for THIS observation. The account does not exist between
-   * observations — the agent writes it here and deletes it again on
-   * OBSERVE_STOP — so a credential handed out for a two-minute look cannot be
-   * replayed for the rest of the session.
-   *
-   * Minted by the API, because only the API can put it into the observe route's
-   * Authorization header in the same request that hands out the URL. It must be
-   * new per observation (a password that comes back identical is paused, not
-   * revoked) and it must stay inside `[A-Za-z0-9_-]{8,128}` — base64url, the
-   * charset that needs no quoting in a shell or a Basic header. Anything else is
-   * refused by the agent rather than written.
-   */
-  viewerPassword?: string;
 }
 
 /**
@@ -324,6 +309,10 @@ export interface SessionStatSample {
  * One observation sample of a running session, taken inside the container by the
  * agent. Everything is optional but `kasmId`/`capturedAt`: session images are
  * third-party, so a missing helper degrades the sample rather than failing it.
+ *
+ * For a container desktop this sample IS the live view — there is no second
+ * stream and no viewer credential — so the wall and the read-only viewer differ
+ * only in the cadence and the frame width they ask for.
  */
 export interface SessionObservationSample {
   kasmId: string;
