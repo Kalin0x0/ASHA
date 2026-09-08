@@ -38,6 +38,48 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.0',
+    date: '2026-09-08',
+    title: { en: 'Seeing what is happening, and being seen doing it', de: 'Sehen, was läuft — und dabei gesehen werden' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'A live wall under Sessions → Live monitoring: one tile per running desktop with a current picture of the screen, the title of the window in front and the app it belongs to, next to the user, workspace, uptime and load. The picture is taken inside the container, only while an administrator is actually looking, and it is never stored — it expires on its own after thirty seconds.',
+          de: 'Eine Live-Wand unter Sitzungen → Live-Überwachung: eine Kachel je laufendem Desktop mit einem aktuellen Bild des Schirms, dem Titel des Fensters im Vordergrund und der zugehörigen Anwendung, dazu Nutzer, Arbeitsplatz, Laufzeit und Auslastung. Das Bild entsteht im Container, nur solange ein Administrator wirklich hinsieht, und wird nirgends gespeichert — es verfällt nach dreißig Sekunden von selbst.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'Watching a desktop live no longer disturbs the person at it. Until now a second viewer opened a second login: on a Windows server that moves the running session onto the observer and throws the user out. An observer now joins the connection that is already there, read-only, and container desktops are watched through a built-in account that may look and never type. Read-only is enforced by the remote side, not by the browser.',
+          de: 'Einem Desktop live zuzusehen stört den Menschen davor nicht mehr. Bisher öffnete ein zweiter Zuschauer eine zweite Anmeldung — auf einem Windows-Server hängt das die laufende Sitzung auf den Beobachter um und wirft den Nutzer raus. Ein Beobachter tritt jetzt der bestehenden Verbindung bei, nur lesend, und Container-Desktops werden über ein eingebautes Konto angesehen, das sehen, aber nie tippen darf. Das Nur-Lesen erzwingt die Gegenseite, nicht der Browser.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'Nobody is watched in silence. Whoever is at the desktop sees a strip naming the administrator watching and since when, for as long as it lasts; it cannot be closed away. Every observation is written to the audit log with who watched whom, and observing needs its own permission — reading a session list and watching somebody work are no longer the same right.',
+          de: 'Niemand wird heimlich beobachtet. Wer am Desktop sitzt, sieht einen Streifen mit dem Namen des zusehenden Administrators und seit wann — so lange es dauert, und er lässt sich nicht wegklicken. Jede Beobachtung steht mit Beobachter und Beobachtetem im Prüfprotokoll, und Zusehen braucht ein eigenes Recht: eine Sitzungsliste lesen und jemandem bei der Arbeit zusehen sind nicht länger dasselbe.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'A desktop stream was granted on organisation membership alone. Anyone signed in who knew a session id could open the desktop of a colleague — and send keystrokes to it, because view-only was a switch in the browser that the server never checked. Both are now decided on the server, per session.',
+          de: 'Ein Desktop-Stream wurde allein an der Zugehörigkeit zur Organisation freigegeben. Wer angemeldet war und eine Sitzungskennung kannte, konnte den Desktop einer Kollegin öffnen — und hineintippen, denn „nur ansehen" war ein Schalter im Browser, den der Server nie geprüft hat. Beides entscheidet jetzt der Server, je Sitzung.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'The realtime connection accepted the organisation it was told to join without checking it. It now takes that from the signed token instead, so nobody can listen in on another organisation.',
+          de: 'Die Echtzeitverbindung übernahm die Organisation, die man ihr nannte, ungeprüft. Sie liest sie jetzt aus dem signierten Token, damit niemand in einer fremden Organisation mithören kann.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.1.37',
     date: '2026-09-08',
     title: { en: 'Keys that arrive, desktops that keep up', de: 'Tasten kommen an, Desktops halten mit' },
