@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { ApiGroup, RdpFileOptions } from '@/lib/api/endpoints';
 import { store } from '@/lib/mock/store';
+import { MOCK_THUMBNAILS } from '@/lib/mock/thumbnails';
+import { type ObservationSample, observableSessions, supportsCapture } from '@/lib/observation';
 import { buildMockRdpFile, downloadRdpFile } from '@/lib/rdp';
 import type {
   BugReportInput,
@@ -56,6 +58,76 @@ export function useOwnSessions() {
 
 export function useSession(id: string) {
   return useSnapshot(() => store.getData().sessions.find((s) => s.id === id || s.kasmId === id), [id]);
+}
+
+// ── Live observation ──────────────────────────────────────────────────────────
+// The wall is only worth demoing if the tiles say something, so mock mode makes
+// up a plausible focused window per workspace and reuses the seeded workspace
+// thumbnail as the captured frame. Workspaces with neither fall through to the
+// degraded path on purpose — that is what a third-party image without ffmpeg
+// looks like in production.
+const MOCK_ACTIVE_WINDOWS: Record<string, { title: string; appClass: string }> = {
+  'ws-firefox': { title: 'Quarterly report — Nextcloud — Mozilla Firefox', appClass: '"navigator", "Firefox"' },
+  'ws-chrome': { title: 'Asha — Live Sessions — Google Chrome', appClass: '"google-chrome", "Google-chrome"' },
+  'ws-vscode': { title: 'sessions.service.ts — asha — Visual Studio Code', appClass: '"code", "Code"' },
+  'ws-terminal': { title: 'kasm-user@desktop: ~/src/asha', appClass: '"xfce4-terminal", "Xfce4-terminal"' },
+  'ws-kali': { title: 'nmap -sV 10.10.70.0/24 — Terminal', appClass: '"qterminal", "QTerminal"' },
+  'ws-gimp': { title: 'brand-mark.xcf-1.0 (RGB, 3 layers) — GIMP', appClass: '"gimp", "Gimp"' },
+  'ws-libreoffice': { title: 'Angebot-2026-114.odt — LibreOffice Writer', appClass: '"soffice", "libreoffice-writer"' },
+  'ws-postman': { title: 'POST /sessions/observe — Postman', appClass: '"postman", "Postman"' },
+};
+
+function mockWindowCount(kasmId: string): number {
+  let h = 0;
+  for (let i = 0; i < kasmId.length; i++) h = (Math.imul(31, h) + kasmId.charCodeAt(i)) | 0;
+  return 1 + (Math.abs(h) % 6);
+}
+
+export function useObservations(): ObservationSample[] {
+  const sessions = useSnapshot(() => store.getData().sessions);
+  const workspaces = useSnapshot(() => store.getData().workspaces);
+  // The wall drops any frame older than 30s, so the capture time has to keep
+  // moving or every tile would go blank a moment after the page loads.
+  const [capturedAt, setCapturedAt] = useState(() => new Date().toISOString());
+  useEffect(() => {
+    const id = setInterval(() => setCapturedAt(new Date().toISOString()), 5_000);
+    return () => clearInterval(id);
+  }, []);
+
+  return useMemo(() => {
+    const byName = new Map(workspaces.map((w) => [w.friendlyName, w.id]));
+    return observableSessions(sessions)
+      .filter((s) => supportsCapture(s.connectionType))
+      .map((s) => {
+        const workspaceId = byName.get(s.workspaceName);
+        const win = workspaceId ? MOCK_ACTIVE_WINDOWS[workspaceId] : undefined;
+        const thumb = workspaceId ? MOCK_THUMBNAILS[workspaceId] : undefined;
+        return {
+          sessionId: s.id,
+          kasmId: s.kasmId,
+          capturedAt,
+          windowCount: mockWindowCount(s.kasmId),
+          ...(win ? { title: win.title, appClass: win.appClass } : {}),
+          ...(thumb ? { image: thumb.dataUrl, imageWidth: 320, imageHeight: 160 } : { degraded: 'missing:ffmpeg' }),
+        } satisfies ObservationSample;
+      });
+  }, [sessions, workspaces, capturedAt]);
+}
+
+export function useStartObservation() {
+  return useCallback(
+    async (id: string, _body: import('@/lib/api/endpoints').StartObservationInput) => ({
+      watchToken: `mock-watch-${id}`,
+      watchUrl: `/connect/${id}?monitor=1`,
+      expiresAt: new Date(Date.now() + 120_000).toISOString(),
+      thumbnails: true,
+    }),
+    [],
+  );
+}
+
+export function useStopObservation() {
+  return useCallback(async (_id: string) => undefined, []);
 }
 
 export function useAgents() {

@@ -33,6 +33,7 @@ import { LicensingService } from '../licensing/licensing.service';
 import { TariffsService } from '../tariffs/tariffs.service';
 import { ServersService } from '../servers/servers.service';
 import { StorageService } from '../storage/storage.service';
+import { WatermarksService } from '../watermarks/watermarks.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { SchedulerService } from './scheduler.service';
 
@@ -68,6 +69,9 @@ export class SessionsService {
     // unaffected: mints the short-lived stream token handed to the browser.
     @Optional() private readonly jwt?: JwtService,
     @Optional() @Inject(ENV) private readonly env?: Env,
+    // Optional, and last for the same reason: resolves the banner/watermark the
+    // viewer paints over the desktop (see `notice`).
+    @Optional() private readonly watermarks?: WatermarksService,
   ) {}
 
   /**
@@ -1029,6 +1033,42 @@ export class SessionsService {
       dlp: (workspace?.dlp ?? {}) as DlpPolicy,
       // The viewer applies the stream profile client-side (KasmVNC quality/fps/clipboard).
       streamProfile: (session.streamProfile ?? {}) as unknown as StreamProfile,
+      // Overlay policy: the configured banner/watermark and whether someone is
+      // watching right now. It rides on the call the viewer already makes before
+      // the first frame — a route of its own would put the notice a round trip
+      // behind the picture it is meant to accompany.
+      notice: await this.notice(session),
+    };
+  }
+
+  /**
+   * What the viewer must render on top of the desktop: the resolved
+   * banner/watermark config, plus the live observation notice. Observation is
+   * never silent, and a viewer that reloads mid-observation has no event to
+   * replay — so the current watcher is read back here rather than left to the
+   * `session.observed` push alone.
+   */
+  private async notice(session: { orgId: string; userId: string | null; workspaceId: string | null; kasmId: string | null }) {
+    let watermark: Awaited<ReturnType<WatermarksService['resolveForSession']>> = null;
+    if (this.watermarks && session.userId) {
+      const memberships = await prisma.userGroup.findMany({
+        where: { userId: session.userId },
+        select: { groupId: true },
+      });
+      watermark = await this.watermarks.resolveForSession(session.orgId, {
+        userId: session.userId,
+        groupIds: memberships.map((m) => m.groupId),
+        // Fixed-server sessions have no workspace; only GROUP/USER scope applies.
+        workspaceId: session.workspaceId ?? '',
+      });
+    }
+    // Redis no-ops to null while it is down: no banner is the degraded mode.
+    const watch = session.kasmId
+      ? await this.redis.get<{ observerName: string; since: string }>(`asha:obs:watch:${session.kasmId}`)
+      : null;
+    return {
+      watermark,
+      observedBy: watch ? { observerName: watch.observerName, since: watch.since } : null,
     };
   }
 
@@ -1226,7 +1266,12 @@ export class SessionsService {
     return session;
   }
 
-  private async sendControl(
+  /**
+   * Publish a control frame to the agent that owns the session. Public because
+   * ObservationService drives OBSERVE_START/OBSERVE_STOP through it, and the
+   * zone name a control channel is keyed by is resolved here and nowhere else.
+   */
+  async sendControl(
     session: { id: string; zoneId: string | null; containerId: string | null },
     partial: Omit<SessionControlCommand, 'sessionId' | 'containerId'>,
   ) {

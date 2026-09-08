@@ -31,6 +31,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { AshaMark } from '@/components/brand/logo';
+import { ObservationNotice } from '@/components/composite/observation-notice';
 import { getAccessToken } from '@/lib/api/auth-store';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -46,6 +47,7 @@ import {
 import { ApiError } from '@/lib/api/client';
 import { isLive } from '@/lib/api/mode';
 import { useLaunchableWorkspaces, useSession } from '@/lib/hooks';
+import { useSessionObserved } from '@/lib/realtime';
 import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { isLikelyUnreachableUrl } from '@/lib/stream';
@@ -162,6 +164,8 @@ export default function StreamingViewerPage() {
   // Keep the session alive while it's live so the idle reaper doesn't terminate
   // a desktop the user is actively watching/using.
   useKeepalive(session?.id, isRunning);
+  // Told to whoever is at this desktop while an administrator watches it.
+  const observed = useSessionObserved(session?.id);
   // Fetched once per live session from /connection (see below). Live mode waits
   // for it rather than mounting the polled row's URL, whose token was minted at
   // launch and is refused by the edge gate once it expires — the frame would
@@ -759,6 +763,11 @@ export default function StreamingViewerPage() {
           </button>
         </div>
       </div>
+
+      {/* Observation notice — sits directly under the control bar and above the
+          stream, because the person at this desktop has to see it without
+          looking for it. Not dismissible: it goes when the watching stops. */}
+      {observed && <ObservationNotice observed={observed} className="absolute inset-x-0 top-14 z-40" />}
 
       {/* Stage */}
       <div

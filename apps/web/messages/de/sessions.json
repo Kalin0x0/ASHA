@@ -200,5 +200,51 @@
     "toastRevoked": "Freigabe widerrufen",
     "toastRevokedDescription": "Gäste von {name} wurden getrennt.",
     "toastRevokeFailed": "Freigabe konnte nicht widerrufen werden"
+  },
+  "monitor": {
+    "title": "Live-Überwachung",
+    "description": "Alle Desktops, die gerade laufen — wer daran arbeitet und was er vor sich hat.",
+    "sessionCount": "{count, plural, one {# Desktop} other {# Desktops}}",
+    "searchPlaceholder": "Nach Benutzer, Workspace, Zone oder Agent suchen…",
+    "live": "Live",
+    "interval": {
+      "label": "Aktualisierung",
+      "off": "Aus",
+      "seconds": "{seconds} s"
+    },
+    "notice": {
+      "observing": "{count, plural, one {# Desktop wird} other {# Desktops werden}} alle {seconds} s erfasst. Wer beobachtet wird, sieht das auf dem eigenen Bildschirm — so lange diese Seite offen ist.",
+      "off": "Erfassung ist aus — diese Seite zeigt nur Sitzungsdaten. Es wird kein Bildschirm gelesen.",
+      "hidden": "Pausiert, solange dieser Tab im Hintergrund liegt. Die Erfassung läuft weiter, sobald Sie zurückkommen."
+    },
+    "realtime": {
+      "open": "Echtzeit",
+      "polling": "Abfrage"
+    },
+    "tile": {
+      "activeWindow": "Aktives Fenster",
+      "noWindow": "Kein Fenster im Vordergrund",
+      "windows": "{count, plural, one {# Fenster} other {# Fenster}}",
+      "unsupported": "Keine Erfassung auf einem festen Server — dafür wäre eine zweite Anmeldung nötig.",
+      "off": "Erfassung ist aus",
+      "waiting": "Warten auf das erste Bild…",
+      "watch": "Live ansehen",
+      "details": "Details",
+      "memory": "Arbeitsspeicher",
+      "uptime": "Laufzeit",
+      "degradedReason": {
+        "missingTool": "Kein Bild: dem Abbild fehlt {tool}",
+        "timeout": "Kein Bild: die Aufnahme lief in die Zeitgrenze",
+        "tooLarge": "Kein Bild: die Aufnahme war zu groß",
+        "noImage": "Kein Bild: der Container hat keines geliefert",
+        "unsupportedDriver": "Kein Bild: dieser Treiber kann nicht aufnehmen",
+        "unknown": "Kein Bild verfügbar"
+      }
+    },
+    "emptyTitle": "Es läuft kein Desktop",
+    "emptyDescription": "Sitzungen erscheinen hier, sobald jemand einen Workspace startet.",
+    "emptyFilteredTitle": "Keine Sitzung entspricht Ihren Filtern",
+    "emptyFilteredDescription": "Versuchen Sie, die Suche oder den Statusfilter zurückzusetzen.",
+    "watchFailed": "Live-Ansicht konnte nicht geöffnet werden"
   }
 }

@@ -173,5 +173,10 @@
       "hintTitle": "Touch-Steuerung",
       "hint": "Tippen = Klick, Halten = Rechtsklick, zwei Finger zum Zoomen und Scrollen."
     }
+  },
+  "observed": {
+    "title": "Ein Administrator sieht diese Sitzung gerade mit",
+    "by": "{name} · seit {time}",
+    "hint": "Ihr Bildschirm wird angesehen. Niemand übernimmt die Steuerung — die Eingabe bleibt bei Ihnen."
   }
 }

@@ -154,6 +154,7 @@
       "SESSION_TERMINATE_OWN": "Eigene Sitzungen beenden",
       "SESSION_TERMINATE_ANY": "Beliebige Sitzungen beenden",
       "SESSION_CONTROL_ANY": "Kontrolle über beliebige Sitzungen übernehmen",
+      "SESSION_OBSERVE": "Laufende Sitzungen beobachten",
       "SESSION_SHARE": "Sitzungen teilen",
       "RECORDING_VIEW": "Sitzungsaufzeichnungen anzeigen",
       "WORKSPACE_VIEW": "Workspaces anzeigen",

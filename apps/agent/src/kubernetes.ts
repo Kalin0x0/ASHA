@@ -16,6 +16,7 @@ import type { V1ConfigMap, V1Container, V1Pod, V1Service, V1Ingress, V1Volume } 
 import type { ProvisionCommand, SessionSidecar, SessionStatSample, StreamProfile } from '@asha/events';
 import { routerName } from '@asha/proxy-labels';
 import { agentEnv } from './env.js';
+import type { ObservationCapture } from './observation.js';
 
 // ── Kubernetes client setup ──────────────────────────────────────────────────
 
@@ -335,6 +336,20 @@ export async function startRecorder(_containerId: string, _sessionId: string, _r
 /** Counterpart of startRecorder. */
 export async function stopRecorder(_sessionId: string): Promise<void> {
   // No-op.
+}
+
+/**
+ * Observation capture would need an exec inside the session Pod, and the agent's
+ * ServiceAccount has no `pods/exec` verb (the Helm RBAC template grants pods,
+ * services, ingresses and pods/log — see the header above). Rather than widen
+ * that grant for a thumbnail, the K8s driver reports a bare sample and the wall
+ * falls back to metadata, the same as it does for fixed-server sessions.
+ */
+export async function captureObservation(
+  _podName: string,
+  _opts: { thumbWidth?: number } = {},
+): Promise<ObservationCapture> {
+  return { degraded: 'unsupported:kubernetes' };
 }
 
 /**

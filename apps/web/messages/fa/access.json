@@ -154,6 +154,7 @@
       "SESSION_TERMINATE_OWN": "خاتمه نشست‌های خود",
       "SESSION_TERMINATE_ANY": "خاتمه هر نشست",
       "SESSION_CONTROL_ANY": "در دست گرفتن کنترل هر نشست",
+      "SESSION_OBSERVE": "مشاهده زنده نشست‌ها",
       "SESSION_SHARE": "اشتراک‌گذاری نشست‌ها",
       "RECORDING_VIEW": "مشاهده ضبط‌های نشست",
       "WORKSPACE_VIEW": "مشاهده فضاهای کاری",

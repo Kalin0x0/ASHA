@@ -1,11 +1,21 @@
 import jwt from 'jsonwebtoken';
 import { proxyEnv } from './env.js';
 
+/** Input rights a verified token grants over a session's stream. */
+export type StreamMode = 'control' | 'view';
+
 export interface TokenPayload {
   sub: string;
   orgId: string;
   iat: number;
   exp: number;
+  /**
+   * Watch-token claims. The API mints these for one session and one observer
+   * after the RBAC/audit path, so they are bound to a single kasmId and never
+   * carry input rights.
+   */
+  kasmId?: string;
+  mode?: StreamMode;
   [key: string]: unknown;
 }
 

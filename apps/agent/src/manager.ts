@@ -1,4 +1,4 @@
-import type { SessionStatSample } from '@asha/events';
+import type { SessionObservationSample, SessionStatSample } from '@asha/events';
 import { agentEnv } from './env.js';
 
 const base = `${agentEnv.managerUrl.replace(/\/$/, '')}/api/v1`;
@@ -66,5 +66,11 @@ export const manager = {
 
   reportStats(agentId: string, samples: SessionStatSample[]) {
     return post(`/internal/agents/${agentId}/stats`, { samples });
+  },
+
+  // Keyed by kasmId, not sessionId: the API holds the sample in Redis under the
+  // kasmId, the way everything else on the streaming path is addressed.
+  reportObservation(agentId: string, sample: SessionObservationSample) {
+    return post<{ ok: true }>(`/internal/agents/${agentId}/sessions/${sample.kasmId}/observation`, sample);
   },
 };

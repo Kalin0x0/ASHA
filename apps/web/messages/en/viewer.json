@@ -173,5 +173,10 @@
       "hintTitle": "Touch controls",
       "hint": "Tap to click, hold for a right click, two fingers to zoom and scroll."
     }
+  },
+  "observed": {
+    "title": "An administrator is watching this session",
+    "by": "{name} · since {time}",
+    "hint": "Your screen is being viewed. Nobody is taking control — input stays with you."
   }
 }

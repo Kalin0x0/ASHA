@@ -38,8 +38,22 @@ export interface SessionRecord {
 }
 
 const REDIS_KEY = (kasmId: string) => `asha:proxy:session:${kasmId}`;
+const GUAC_KEY = (kasmId: string) => `asha:proxy:guac:${kasmId}`;
+/** A guacd connection stays joinable for as long as the session record lives. */
+const GUAC_TTL_SEC = 3600;
 
-export class SessionStore {
+/**
+ * The part of the store the guacd bridge needs: the connection uuid guacd hands
+ * out in `ready`, which a second viewer selects to JOIN the live connection
+ * instead of opening a second logon on the target.
+ */
+export interface GuacUuidStore {
+  getGuacUuid(kasmId: string): Promise<string | null>;
+  setGuacUuid(kasmId: string, uuid: string): Promise<void>;
+  clearGuacUuid(kasmId: string, uuid: string): Promise<void>;
+}
+
+export class SessionStore implements GuacUuidStore {
   private redis: Redis;
   /** In-process short-lived cache to reduce Redis round-trips under high concurrency. */
   private cache = new Map<string, { record: SessionRecord; expiresAt: number }>();
@@ -110,6 +124,33 @@ export class SessionStore {
   async delete(kasmId: string): Promise<void> {
     await this.redis.del(REDIS_KEY(kasmId));
     this.cache.delete(kasmId);
+  }
+
+  async getGuacUuid(kasmId: string): Promise<string | null> {
+    const raw = await this.redis.get(GUAC_KEY(kasmId)).catch(() => null);
+    if (!raw) return null;
+    try {
+      return (JSON.parse(raw) as { uuid?: string }).uuid ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async setGuacUuid(kasmId: string, uuid: string): Promise<void> {
+    await this.redis
+      .set(GUAC_KEY(kasmId), JSON.stringify({ uuid }), 'EX', GUAC_TTL_SEC)
+      .catch(() => undefined);
+  }
+
+  /**
+   * Drop only the uuid this socket published. A viewer that reconnects opens a
+   * new guacd connection before the old socket's close lands, and an
+   * unconditional delete would take the new connection's uuid with it — leaving
+   * observers to open a second logon for the rest of the session.
+   */
+  async clearGuacUuid(kasmId: string, uuid: string): Promise<void> {
+    if ((await this.getGuacUuid(kasmId)) !== uuid) return;
+    await this.redis.del(GUAC_KEY(kasmId)).catch(() => undefined);
   }
 
   quit(): void {

@@ -20,6 +20,7 @@ import type { IncomingMessage } from 'node:http';
 import { createLogger } from '@asha/logger';
 import { Client, type ClientChannel } from 'ssh2';
 import type WebSocket from 'ws';
+import type { StreamMode } from '../auth.js';
 import type { SessionRecord } from '../session-store.js';
 
 const log = createLogger('proxy:ssh');
@@ -51,7 +52,12 @@ function parseControlFrame(data: WebSocket.RawData, isBinary: boolean): ResizeFr
   return null;
 }
 
-export function handleSSH(ws: WebSocket, _req: IncomingMessage, session: SessionRecord): void {
+export function handleSSH(
+  ws: WebSocket,
+  _req: IncomingMessage,
+  session: SessionRecord,
+  mode: StreamMode = 'control',
+): void {
   const host = session.internalHost;
   const port = session.internalPort ?? DEFAULT_SSH_PORT;
   const username = session.sshUser ?? 'kasm-user';
@@ -117,6 +123,9 @@ export function handleSSH(ws: WebSocket, _req: IncomingMessage, session: Session
 
   // Browser → PTY (+ control frames)
   ws.on('message', (data: WebSocket.RawData, isBinary: boolean) => {
+    // An observer watches the terminal and nothing more: even a resize would
+    // reach into the shell the user is working in.
+    if (mode === 'view') return;
     const control = parseControlFrame(data, isBinary);
     if (control) {
       cols = control.cols;

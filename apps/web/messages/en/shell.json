@@ -20,6 +20,7 @@
       "images": "Images",
       "registry": "Registry",
       "liveSessions": "Live Sessions",
+      "monitor": "Live Monitor",
       "history": "History",
       "recordings": "Recordings",
       "staging": "Staging",

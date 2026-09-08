@@ -10,9 +10,15 @@
 
 import type { IncomingMessage } from 'node:http';
 import type WebSocket from 'ws';
+import type { StreamMode } from '../auth.js';
 import type { SessionRecord } from '../session-store.js';
 
-export function handleKasmVNC(ws: WebSocket, _req: IncomingMessage, session: SessionRecord): void {
+export function handleKasmVNC(
+  ws: WebSocket,
+  _req: IncomingMessage,
+  session: SessionRecord,
+  _mode: StreamMode = 'control',
+): void {
   ws.close(
     4000,
     JSON.stringify({

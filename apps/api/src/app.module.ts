@@ -26,6 +26,7 @@ import { LicensingModule } from './modules/licensing/licensing.module';
 import { TariffsModule } from './modules/tariffs/tariffs.module';
 import { LogForwardingModule } from './modules/log-forwarding/log-forwarding.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { ObservationModule } from './modules/observation/observation.module';
 import { RegistryModule } from './modules/registry/registry.module';
 import { ScimModule } from './modules/scim/scim.module';
 import { SettingsModule } from './modules/settings/settings.module';
@@ -76,6 +77,11 @@ import { ZonesModule } from './modules/zones/zones.module';
     ScheduleModule.forRoot(),
     EnvModule,
     CommonModule,
+    // Ahead of every module that pulls SessionsModule (WorkspacesModule is the
+    // first): its controller owns the literal `sessions/observations`, and Nest
+    // matches routes in module-registration order, so registered later it would
+    // be swallowed by `sessions/:id`.
+    ObservationModule,
     AuthModule,
     WorkspacesModule,
     SessionsModule,

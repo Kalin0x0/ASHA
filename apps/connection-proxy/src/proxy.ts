@@ -1,11 +1,11 @@
 import type { IncomingMessage } from 'node:http';
 import { createLogger } from '@asha/logger';
 import type WebSocket from 'ws';
-import { AuthError, verifyToken } from './auth.js';
+import { AuthError, type StreamMode, type TokenPayload, verifyToken } from './auth.js';
 import { handleGuacamole } from './handlers/guacamole.js';
 import { handleKasmVNC } from './handlers/kasmvnc.js';
 import { handleSSH } from './handlers/ssh.js';
-import type { SessionStore } from './session-store.js';
+import type { SessionRecord, SessionStore } from './session-store.js';
 
 const log = createLogger('proxy:ws');
 
@@ -14,6 +14,28 @@ function extractKasmId(url: string | undefined): string | null {
   if (!url) return null;
   const m = /^\/session\/([a-z0-9]+)/i.exec(url.split('?')[0] ?? '');
   return m?.[1] ?? null;
+}
+
+/**
+ * Which input rights a token grants over a session's stream. The org check is
+ * the caller's, so it keeps its own rejection log line.
+ *
+ * A watch token is minted for exactly one session and carries no input rights,
+ * so it is answered first: it must never fall through to a branch that grants
+ * control.
+ */
+export function resolveStreamMode(
+  session: Pick<SessionRecord, 'userId'>,
+  token: TokenPayload,
+  kasmId: string,
+): StreamMode | null {
+  if (token.mode === 'view') return token.kasmId === kasmId ? 'view' : null;
+  if (session.userId === token.sub) return 'control';
+  // A staged pool session has no owner for the moment between the agent
+  // publishing it and the launcher claiming it. Refusing here would not close a
+  // hole — it would break launching.
+  if (session.userId === null) return 'control';
+  return null;
 }
 
 function extractToken(req: IncomingMessage): string | null {
@@ -63,18 +85,25 @@ export async function handleUpgrade(
     return;
   }
 
-  log.info({ kasmId, sessionId: session.sessionId, protocol: session.protocol, userId: tokenPayload.sub }, 'WebSocket connected');
+  const mode = resolveStreamMode(session, tokenPayload, kasmId);
+  if (!mode) {
+    log.warn({ kasmId, reqUserId: tokenPayload.sub, sessUserId: session.userId }, 'Not the session owner and no watch token — rejecting');
+    ws.close(4003, 'Unauthorized');
+    return;
+  }
+
+  log.info({ kasmId, sessionId: session.sessionId, protocol: session.protocol, userId: tokenPayload.sub, mode }, 'WebSocket connected');
 
   switch (session.protocol) {
     case 'KASMVNC':
-      handleKasmVNC(ws, req, session);
+      handleKasmVNC(ws, req, session, mode);
       break;
     case 'RDP':
     case 'VNC':
-      handleGuacamole(ws, req, session);
+      await handleGuacamole(ws, req, session, mode, store);
       break;
     case 'SSH':
-      handleSSH(ws, req, session);
+      handleSSH(ws, req, session, mode);
       break;
     default:
       ws.close(4000, `Unknown protocol: ${String(session.protocol)}`);

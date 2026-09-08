@@ -16,7 +16,6 @@ import {
   MonitorX,
   Power,
   RefreshCw,
-  Share2,
   Wifi,
   X,
   ZoomOut,
@@ -26,6 +25,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
+import { ObservationNotice } from '@/components/composite/observation-notice';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -40,6 +40,7 @@ import { useThumbnails } from '@/lib/thumbnail-store';
 import { attachTouchInput, isTouchDevice } from '@/lib/touch-input';
 import { forwardsToRemote } from '@/lib/remote-keys';
 import { attachTextEntry } from '@/lib/touch-keyboard';
+import { useSessionObserved } from '@/lib/realtime';
 import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { cn } from '@/lib/utils';
@@ -115,7 +116,13 @@ export default function ConnectPage() {
   // View-only "watch" mode (admin monitoring): the stream renders but no
   // keyboard/mouse/clipboard input is forwarded, so the user isn't disturbed.
   const searchParams = useSearchParams();
-  const monitor = searchParams?.get('monitor') === '1';
+  // A watch token is what actually buys view-only access: the proxy grants the
+  // stream on its `mode: 'view'` claim and drops every input instruction, so an
+  // observer cannot reach the desktop even by editing the URL. `monitor=1`
+  // stays only as the client-side hint that keeps this page's own input
+  // handlers detached; on its own it authorizes nothing.
+  const watchToken = searchParams?.get('watch') ?? null;
+  const monitor = searchParams?.get('monitor') === '1' || watchToken !== null;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
@@ -194,6 +201,9 @@ export default function ConnectPage() {
   // desktop the user is actively using (previously NOTHING refreshed keepalive).
   useKeepalive(session?.id, connected);
 
+  // Told to whoever is at this desktop while an administrator watches it.
+  const observed = useSessionObserved(session?.id);
+
   // Explain the gestures once per device: "hold for a right click" and "two
   // fingers to scroll" are otherwise invisible affordances.
   useEffect(() => {
@@ -231,7 +241,9 @@ export default function ConnectPage() {
   }, [kbOpen]);
 
   useEffect(() => {
-    const token = getAccessToken();
+    // An observer streams on the short-lived watch token the API minted for this
+    // one session; everyone else streams on their own access token.
+    const token = watchToken ?? getAccessToken();
     const screen = screenRef.current;
     if (!token) {
       setErrMsg('Not signed in.');
@@ -606,7 +618,7 @@ export default function ConnectPage() {
       }
       clientRef.current = null;
     };
-  }, [kasmId, attempt, perfMode, monitor, resOverride]);
+  }, [kasmId, attempt, perfMode, monitor, resOverride, watchToken]);
 
   const togglePerf = useCallback(() => {
     setPerfMode((p) => {
@@ -866,16 +878,6 @@ export default function ConnectPage() {
     toast.success(t('connect.toasts.screenshotSaved'));
   }, [workspaceName, t]);
 
-  // Copy a view-only (monitor) link others can watch without sending input.
-  const shareMonitorLink = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/connect/${kasmId}?monitor=1`);
-      toast.success(t('connect.toasts.viewLinkCopied'), { description: t('connect.toasts.viewLinkCopiedDescription') });
-    } catch {
-      toast.error(t('connect.toasts.clipboardBlocked'));
-    }
-  }, [kasmId, t]);
-
   // Switch the remote resolution (reconnects). `null` = fit the window.
   const setResolution = useCallback((res: { w: number; h: number } | null) => {
     setResMenuOpen(false);
@@ -979,12 +981,6 @@ export default function ConnectPage() {
             )}
           </div>
           <ToolBtn icon={Gauge} label={perfMode ? t('connect.toolbar.qualityPerformance') : t('connect.toolbar.qualityFull')} active={perfMode} onClick={togglePerf} />
-          <ToolBtn
-            icon={Share2}
-            label={t('connect.toolbar.copyViewLink')}
-            onClick={() => void shareMonitorLink()}
-            className={cn(touch && 'hidden sm:inline-flex')}
-          />
           <ToolBtn icon={Maximize2} label={t('connect.toolbar.fullscreen')} onClick={toggleFullscreen} />
           <ToolBtn icon={LayoutGrid} label={t('connect.toolbar.controlPanel')} active={panelOpen} onClick={() => setPanelOpen((o) => !o)} />
           {(state === 'disconnected' || state === 'error') && (
@@ -1007,6 +1003,8 @@ export default function ConnectPage() {
           </Button>
         </div>
       </header>
+
+      {observed && <ObservationNotice observed={observed} className="shrink-0" />}
 
       <main className="relative flex-1 overflow-hidden bg-anthracite-950">
         {/* The guacd display canvas mounts here. `isolate` (+ relative z-0) gives

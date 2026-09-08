@@ -26,3 +26,27 @@ describe('assignments navigation', () => {
     expect(hit?.group.key).toBe('access');
   });
 });
+
+describe('live monitor navigation', () => {
+  it('is reachable by anyone who may observe a session', () => {
+    // SESSION_OBSERVE is the permission the observe endpoints require. An
+    // Operator who holds it but cannot see the item has no way to the wall.
+    expect(itemsFor(['SESSION_OBSERVE'])).toContain('/sessions/monitor');
+  });
+
+  it('is hidden from someone who may only list sessions', () => {
+    expect(itemsFor(['SESSION_VIEW_ANY'])).not.toContain('/sessions/monitor');
+  });
+
+  it('is visible to a system admin', () => {
+    expect(itemsFor([], true)).toContain('/sessions/monitor');
+  });
+
+  it('resolves the route back to its nav entry, so the sidebar highlights it', () => {
+    // Unregistered, the longest-prefix match would land on /sessions and the
+    // sidebar would highlight "Live Sessions" while the wall is open.
+    const hit = findNavItem('/sessions/monitor');
+    expect(hit?.item.key).toBe('monitor');
+    expect(hit?.group.key).toBe('sessions');
+  });
+});

@@ -15,6 +15,7 @@ import type {
   MaintenanceTaskRow,
   SessionStatus,
 } from '@/lib/types';
+import type { ObservationSample } from '@/lib/observation';
 import type { AuthTokens, AuthUser } from './auth-store';
 import { apiFetch } from './client';
 import { API_BASE_URL } from './mode';
@@ -303,6 +304,35 @@ export interface ApiSessionConnection {
 }
 export const getSessionConnection = (id: string) =>
   apiFetch<ApiSessionConnection>(`/sessions/${id}/connection`);
+
+// ── Live observation ──────────────────────────────────────────────────────────
+// A window is opened per session while the monitor wall is on screen and renewed
+// until it closes; the API answers with the short-lived watch token the proxy
+// accepts for a view-only stream. `thumbnails: false` means this session cannot
+// be captured at all — a fixed server, or observation switched off org-wide —
+// and `reason` says which, so the tile can explain itself instead of staying
+// mysteriously blank.
+export interface ApiObservationWindow {
+  watchToken: string;
+  watchUrl: string;
+  expiresAt: string;
+  thumbnails: boolean;
+  reason?: string;
+}
+
+export interface StartObservationInput {
+  /** Sampling cadence in ms. 0 leaves metadata only and captures nothing. */
+  intervalMs: number;
+  thumbWidth: number;
+}
+
+export const startObservation = (id: string, body: StartObservationInput) =>
+  apiFetch<ApiObservationWindow>(`/sessions/${id}/observe`, { method: 'POST', body });
+export const stopObservation = (id: string) =>
+  apiFetch<{ ok: true }>(`/sessions/${id}/observe`, { method: 'DELETE' });
+/** Everything the API is currently holding (Redis, 30s TTL) across the org. */
+export const getObservations = () =>
+  apiFetch<{ items: ObservationSample[] }>('/sessions/observations');
 
 // ── Image registries & marketplace ────────────────────────────────────────────
 export interface ApiRegistry {

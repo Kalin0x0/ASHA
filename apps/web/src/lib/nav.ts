@@ -39,6 +39,7 @@ import {
   Palette,
   Rocket,
   Route,
+  ScanEye,
   ScrollText,
   Send,
   Server,
@@ -112,6 +113,7 @@ export const navGroups: NavGroup[] = [
     icon: MonitorPlay,
     items: [
       { key: 'liveSessions', href: '/sessions', icon: MonitorPlay, perm: 'SESSION_VIEW_ANY' },
+      { key: 'monitor', href: '/sessions/monitor', icon: ScanEye, perm: 'SESSION_OBSERVE' },
       { key: 'history', href: '/sessions/history', icon: History, perm: 'SESSION_VIEW_ANY' },
       { key: 'recordings', href: '/sessions/recordings', icon: Film, perm: 'RECORDING_VIEW' },
       { key: 'staging', href: '/sessions/staging', icon: Layers, perm: 'POOL_MANAGE' },

@@ -4,6 +4,7 @@ import { LicensingModule } from '../licensing/licensing.module';
 import { TariffsModule } from '../tariffs/tariffs.module';
 import { ServersModule } from '../servers/servers.module';
 import { StorageModule } from '../storage/storage.module';
+import { WatermarksModule } from '../watermarks/watermarks.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { SchedulerService } from './scheduler.service';
 import { SessionReaperService } from './session-reaper.service';
@@ -12,7 +13,15 @@ import { SessionsGateway } from './sessions.gateway';
 import { SessionsService } from './sessions.service';
 
 @Module({
-  imports: [ConnectivityModule, WebhooksModule, LicensingModule, TariffsModule, StorageModule, ServersModule],
+  imports: [
+    ConnectivityModule,
+    WebhooksModule,
+    LicensingModule,
+    TariffsModule,
+    StorageModule,
+    ServersModule,
+    WatermarksModule,
+  ],
   controllers: [SessionsController],
   providers: [SessionsService, SchedulerService, SessionsGateway, SessionReaperService],
   exports: [SessionsGateway, SessionsService, SessionReaperService],
