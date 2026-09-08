@@ -29,6 +29,13 @@ export interface SessionRecord {
   /** RDP security mode for guacd (any | nla | nla-ext | tls | rdp | vmconnect). */
   security?: string;
   /**
+   * Keyboard layout of the machine at the other end, in guacd's naming
+   * (`de-de-qwertz`), from the Server row the API opened this session against.
+   * Absent for a container desktop, and absent on records written before the
+   * column existed — both then fall back to GUAC_RDP_SERVER_LAYOUT.
+   */
+  keyboardLayout?: string;
+  /**
    * RemoteApp (RDS published application) to launch instead of a full desktop.
    * When set, guacd starts the app via the RDP `remote-app` parameters.
    */

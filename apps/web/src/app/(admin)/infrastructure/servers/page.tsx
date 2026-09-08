@@ -32,8 +32,11 @@ import {
   updateServer,
 } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
+import { REMOTE_LAYOUTS, type RemoteLayout } from '@/lib/keyboard-layout';
 
 const CONNECTION_TYPES = ['RDP', 'VNC', 'SSH'] as const;
+/** '' in a form = leave it unset, i.e. fall back to the installation default. */
+const LAYOUT_UNSET = '';
 const SELECT = 'h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm';
 
 export default function ServersPage() {
@@ -49,6 +52,7 @@ export default function ServersPage() {
     username: '',
     password: '',
     security: '',
+    keyboardLayout: LAYOUT_UNSET,
   });
   const [editBusy, setEditBusy] = useState(false);
   const [deleting, setDeleting] = useState<ApiServer | null>(null);
@@ -61,6 +65,7 @@ export default function ServersPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [security, setSecurity] = useState('nla');
+  const [keyboardLayout, setKeyboardLayout] = useState<string>(LAYOUT_UNSET);
   const [creating, setCreating] = useState(false);
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const router = useRouter();
@@ -98,6 +103,7 @@ export default function ServersPage() {
         ...(username ? { username } : {}),
         ...(password ? { password } : {}),
         ...(connectionType === 'RDP' ? { security: security as 'any' | 'nla' | 'tls' | 'rdp' } : {}),
+        ...(connectionType === 'RDP' && keyboardLayout ? { keyboardLayout: keyboardLayout as RemoteLayout } : {}),
       });
       toast.success(t('toasts.added'));
       setHostname('');
@@ -132,6 +138,7 @@ export default function ServersPage() {
       username: '',
       password: '',
       security: '',
+      keyboardLayout: s.keyboardLayout ?? LAYOUT_UNSET,
     });
     setEditing(s);
   };
@@ -147,6 +154,9 @@ export default function ServersPage() {
         ...(editForm.username.trim() ? { username: editForm.username.trim() } : {}),
         ...(editForm.password ? { password: editForm.password } : {}),
         ...(editForm.security ? { security: editForm.security as 'nla' } : {}),
+        // Sent on every save, null included: '' is the admin clearing it back to
+        // the installation default, which only an explicit null can do.
+        keyboardLayout: (editForm.keyboardLayout || null) as RemoteLayout | null,
       });
       toast.success(t('toasts.updated'));
       setEditing(null);
@@ -316,6 +326,13 @@ export default function ServersPage() {
               </select>
             </div>
           )}
+          {connectionType === 'RDP' && (
+            <div className="sm:col-span-2">
+              <Label>{t('form.keyboardLayout')}</Label>
+              <LayoutSelect value={keyboardLayout} onChange={setKeyboardLayout} />
+              <p className="mt-1.5 text-xs text-muted-foreground">{t('form.keyboardLayoutHelp')}</p>
+            </div>
+          )}
         </div>
         <Button size="sm" onClick={() => void onCreate()} disabled={!isLive || !zoneId || !hostname || !address || creating}>
           {creating ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
@@ -399,6 +416,16 @@ export default function ServersPage() {
                 </select>
               </div>
             )}
+            {editForm.connectionType === 'RDP' && (
+              <div className="sm:col-span-2">
+                <Label>{t('form.keyboardLayout')}</Label>
+                <LayoutSelect
+                  value={editForm.keyboardLayout}
+                  onChange={(v) => setEditForm((f) => ({ ...f, keyboardLayout: v }))}
+                />
+                <p className="mt-1.5 text-xs text-muted-foreground">{t('form.keyboardLayoutHelp')}</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>
@@ -436,5 +463,26 @@ export default function ServersPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * Which keyboard THIS host is configured with. The browser sends the character
+ * a key produced, so the person's own keyboard is already accounted for by the
+ * time anything reaches the RDP bridge; what is left to say is which scancodes
+ * reproduce that character on the machine at the other end.
+ */
+function LayoutSelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const t = useTranslations('infrastructure.servers');
+  const tc = useTranslations('common');
+  return (
+    <select className={SELECT} value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value={LAYOUT_UNSET}>{t('form.keyboardLayoutUnset')}</option>
+      {REMOTE_LAYOUTS.map((layout) => (
+        <option key={layout} value={layout}>
+          {tc(`keyboardLayouts.${layout}`)}
+        </option>
+      ))}
+    </select>
   );
 }

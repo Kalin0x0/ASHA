@@ -148,6 +148,12 @@
       "endTitle": "End session",
       "endSubtitle": "Disconnect"
     },
+    "layout": {
+      "title": "Remote keyboard layout",
+      "inherit": "As configured for this desktop",
+      "chosen": "{layout} · overridden for this session",
+      "hint": "The keyboard the remote desktop believes it has — not the one you are typing on. Change it only if the desktop types the wrong characters; the session reconnects when you do."
+    },
     "state": {
       "connectingTitle": "Establishing connection",
       "connectingDescription": "Negotiating the secure RDP tunnel via guacd…",

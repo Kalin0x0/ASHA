@@ -41,6 +41,7 @@ import type WebSocket from 'ws';
 import type { StreamMode } from '../auth.js';
 import type { GuacUuidStore, SessionRecord } from '../session-store.js';
 import { encodeInstruction, GuacamoleParser, MAX_PENDING } from './guac-protocol.js';
+import { isRdpServerLayout } from './server-layouts.js';
 
 const log = createLogger('proxy:guacamole');
 
@@ -62,9 +63,12 @@ const DEFAULT_WIDTH = Number(process.env.GUAC_DEFAULT_WIDTH ?? 1280);
 const DEFAULT_HEIGHT = Number(process.env.GUAC_DEFAULT_HEIGHT ?? 720);
 const DEFAULT_DPI = 96;
 /**
- * Keyboard layout of the REMOTE desktops, e.g. `de-de-qwertz`. Empty leaves
- * guacd on its own default (en-us-qwerty), which mistypes every key that
- * differs on a German keyboard: z/y swapped, the whole AltGr row, the umlauts.
+ * Last-resort keyboard layout for the REMOTE desktops, e.g. `de-de-qwertz`.
+ * Empty leaves guacd on its own default (en-us-qwerty), which mistypes every key
+ * that differs on a German keyboard: z/y swapped, the whole AltGr row, the
+ * umlauts. Read once at startup, so it can only ever describe every host at
+ * once — which is why a host that names its own keyboard is believed over it,
+ * and the viewer over both.
  */
 const SERVER_LAYOUT = process.env.GUAC_RDP_SERVER_LAYOUT ?? '';
 
@@ -98,8 +102,20 @@ export function resolveParam(name: string, session: SessionRecord, mode: StreamM
       return String(DEFAULT_HEIGHT);
     case 'dpi':
       return String(DEFAULT_DPI);
+    // Which keyboard the REMOTE machine is set up with. The browser sends the
+    // character a key produced, so the user's own keyboard is already accounted
+    // for; this tells guacd which scancodes reproduce that character over there.
+    //
+    // Precedence: `?layout=` from the viewer beats the Server row, which beats
+    // GUAC_RDP_SERVER_LAYOUT. The viewer override is highest so that someone
+    // typing rubbish can put it right in one click instead of waiting for an
+    // admin — three attempts at this bug went by without anyone having that
+    // escape hatch. The `?layout=` case is handled by the caller, which puts it
+    // in `overrides`; a Server row that names none leaves the value below.
     case 'server-layout':
-      return SERVER_LAYOUT;
+      return session.keyboardLayout && isRdpServerLayout(session.keyboardLayout)
+        ? session.keyboardLayout
+        : SERVER_LAYOUT;
     // How the desktop looks standing still: wallpaper, window theming, font
     // smoothing. guacd disables these by default as a bandwidth optimisation,
     // which renders a black background and no theme — so they are on, and the
@@ -230,14 +246,19 @@ export async function handleGuacamole(
         const v = Number(raw);
         return Number.isFinite(v) && v >= lo && v <= hi ? Math.round(v) : def;
       };
+      const layout = q.get('layout');
       return {
         width: pick(q.get('w'), 640, 3840, DEFAULT_WIDTH),
         height: pick(q.get('h'), 480, 2160, DEFAULT_HEIGHT),
         // perf=1 → bandwidth-saving mode (no wallpaper/theming); default = full.
         perf: q.get('perf') === '1',
+        // The remote desktop's keyboard layout, as corrected by the person
+        // looking at it. A name guacd does not know costs the whole connection,
+        // so anything off the list is dropped here and the Server row answers.
+        layout: layout && isRdpServerLayout(layout) ? layout : null,
       };
     } catch {
-      return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, perf: false };
+      return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, perf: false, layout: null };
     }
   })();
 
@@ -445,6 +466,11 @@ export async function handleGuacamole(
           const overrides: Record<string, string> = {
             width: String(reqDims.width),
             height: String(reqDims.height),
+            // Only there when the viewer sent a layout guacd accepts; without
+            // one resolveParam falls through to the Server row and then to the
+            // deployment default. A VNC connection never advertises
+            // `server-layout`, so nothing is asked for and nothing is sent.
+            ...(reqDims.layout ? { 'server-layout': reqDims.layout } : {}),
             'enable-wallpaper': exp,
             'enable-theming': exp,
             'enable-font-smoothing': exp,

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   agentRegisterSchema,
+  createServerSchema,
   createSessionSchema,
   createWorkspaceSchema,
   loginSchema,
   sessionStatusSchema,
+  updateServerSchema,
   updateWorkspaceSchema,
 } from './index';
 
@@ -103,5 +105,35 @@ describe('sessionStatusSchema', () => {
   });
   it('rejects an unknown status', () => {
     expect(sessionStatusSchema.safeParse({ status: 'SLEEPING' }).success).toBe(false);
+  });
+});
+
+describe('the keyboard layout on a server', () => {
+  // The value describes the machine and ends up in a guacd connect
+  // instruction, which guacd refuses outright for a name it does not know. The
+  // API is where that is caught, so a mistake costs a form error and not every
+  // session on that host.
+  const server = { zoneId: 'z1', hostname: 'win-rdp-01', address: '10.0.0.21' };
+
+  it('accepts a layout guacd knows', () => {
+    expect(createServerSchema.safeParse({ ...server, keyboardLayout: 'de-de-qwertz' }).success).toBe(true);
+    expect(updateServerSchema.safeParse({ keyboardLayout: 'en-us-qwerty' }).success).toBe(true);
+  });
+
+  it('rejects one it does not, however plausible it reads', () => {
+    // Austria types on a German keyboard; guacd still ships no de-at-qwertz.
+    expect(createServerSchema.safeParse({ ...server, keyboardLayout: 'de-at-qwertz' }).success).toBe(false);
+    expect(updateServerSchema.safeParse({ keyboardLayout: 'de-at-qwertz' }).success).toBe(false);
+    expect(updateServerSchema.safeParse({ keyboardLayout: 'DE-DE-QWERTZ' }).success).toBe(false);
+    expect(updateServerSchema.safeParse({ keyboardLayout: '' }).success).toBe(false);
+  });
+
+  it('leaves it alone when omitted and clears it when null', () => {
+    // Omitted has to keep meaning "change nothing" — every existing caller
+    // sends no layout — while an explicit null is the admin putting the host
+    // back on the installation default.
+    expect(createServerSchema.safeParse(server).success).toBe(true);
+    expect(updateServerSchema.safeParse({ address: '10.0.0.22' }).success).toBe(true);
+    expect(updateServerSchema.safeParse({ keyboardLayout: null }).success).toBe(true);
   });
 });

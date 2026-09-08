@@ -233,6 +233,19 @@ for the full annotated list):
 | `ASHA_AGENT_ENROLLMENT_TOKEN` | random | agent ↔ manager trust |
 | `ASHA_SEED_ADMIN_PASSWORD` | default (local) / random (public) | seeded admin login |
 
+The installer writes only those. One optional key matters for Windows
+desktops: `GUAC_RDP_SERVER_LAYOUT` is the keyboard layout the RDP bridge
+announces to a host — the layout of the HOST, not of the person connecting.
+The browser sends the character a key produced, so the user's own keyboard
+is already accounted for; what guacd still needs to know is which keys
+produce that character on the machine at the other end.
+
+Where hosts differ, set it per host: **Infrastructure → Servers → Edit →
+Keyboard layout of this host**. `GUAC_RDP_SERVER_LAYOUT` answers only for
+hosts that name none, and then for all of them. `.env.example` lists the
+layouts guacd accepts; after changing it, `docker compose up -d
+connection-proxy` is enough.
+
 ## 8. Troubleshooting
 
 | Symptom | Fix |
@@ -243,6 +256,7 @@ for the full annotated list):
 | **Stuck at "Allocating an agent"** | The agent and API must share `ASHA_AGENT_ENROLLMENT_TOKEN` (the installer keeps them in sync); check `docker compose logs agent`. |
 | **A "demo mode" panel instead of a desktop** | The web app is in `mock` mode — re-run with `--mode live` (the default) and rebuild. |
 | **Daemon not reachable** | Start Docker: `sudo systemctl enable --now docker`, then re-run. |
+| **Windows desktop types the wrong characters** | Its layout does not match what the bridge announces. Set **Keyboard layout of this host** on that server (Infrastructure → Servers); a user can correct their own session in the viewer's control panel meanwhile. |
 
 ## 9. Security notes
 

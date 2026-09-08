@@ -15,6 +15,7 @@ import type {
   MaintenanceTaskRow,
   SessionStatus,
 } from '@/lib/types';
+import type { RemoteLayout } from '@/lib/keyboard-layout';
 import type { ObservationSample, ObservedByNotice } from '@/lib/observation';
 import type { AuthTokens, AuthUser } from './auth-store';
 import { apiFetch } from './client';
@@ -834,6 +835,13 @@ export interface ApiServer {
   maxSessions: number;
   currentSessions?: number;
   status?: string;
+  /**
+   * Keyboard layout the host itself is set up with, in guacd's naming. Null =
+   * the installation default. Describes the machine, not whoever connects to
+   * it — the browser sends characters, so the user's own keyboard is already
+   * accounted for.
+   */
+  keyboardLayout?: string | null;
   /** Set by the installed host agent (availability tracking). */
   lastSeenAt?: string | null;
   agentVersion?: string | null;
@@ -864,6 +872,7 @@ export const createServer = (body: {
   username?: string;
   password?: string;
   security?: 'any' | 'nla' | 'nla-ext' | 'tls' | 'rdp' | 'vmconnect';
+  keyboardLayout?: RemoteLayout;
 }) => apiFetch<ApiServer>('/servers', { method: 'POST', body });
 export const updateServer = (
   id: string,
@@ -874,6 +883,8 @@ export const updateServer = (
     username: string;
     password: string;
     security: 'any' | 'nla' | 'nla-ext' | 'tls' | 'rdp' | 'vmconnect';
+    /** null clears it back to the installation default. */
+    keyboardLayout: RemoteLayout | null;
   }>,
 ) => apiFetch<ApiServer>(`/servers/${id}`, { method: 'PATCH', body });
 export const deleteServer = (id: string) =>

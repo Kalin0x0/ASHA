@@ -493,6 +493,44 @@ export const updateCastingSchema = z
 export type UpdateCastingDto = z.infer<typeof updateCastingSchema>;
 
 // ── Servers (persistent RDP/VNC/SSH hosts) ───────────────────────────────────
+/**
+ * The keyboard layouts guacd's RDP client accepts, read out of the running
+ * image (`strings /opt/guacamole/lib/libguac-client-rdp.a` on
+ * asha-guacd-h264:1.5.5) rather than off a documentation page: guacd refuses
+ * the whole connection for a name it does not know.
+ *
+ * This names the layout of the REMOTE machine, not of the person at the
+ * browser. The browser sends the character a key produced, so the user's own
+ * keyboard is already accounted for; this is how guacd works out which
+ * scancodes reproduce that character on the host at the other end.
+ *
+ * The connection-proxy keeps its own copy (handlers/server-layouts.ts) because
+ * it shares no package with the API, and the viewer a third one. Both are
+ * checked against this one in server-layouts.test.ts.
+ */
+export const RDP_SERVER_LAYOUTS = [
+  'da-dk-qwerty',
+  'de-ch-qwertz',
+  'de-de-qwertz',
+  'en-gb-qwerty',
+  'en-us-qwerty',
+  'es-es-qwerty',
+  'failsafe',
+  'fr-be-azerty',
+  'fr-ch-qwertz',
+  'fr-fr-azerty',
+  'hu-hu-qwertz',
+  'it-it-qwerty',
+  'ja-jp-qwerty',
+  'no-no-qwerty',
+  'pl-pl-qwerty',
+  'pt-br-qwerty',
+  'sv-se-qwerty',
+  'tr-tr-qwerty',
+] as const;
+export type RdpServerLayout = (typeof RDP_SERVER_LAYOUTS)[number];
+export const rdpServerLayoutSchema = z.enum(RDP_SERVER_LAYOUTS);
+
 export const createServerSchema = z.object({
   zoneId: z.string().min(1),
   hostname: z.string().min(1).max(253),
@@ -508,6 +546,8 @@ export const createServerSchema = z.object({
   password: z.string().max(1024).optional(),
   // RDP security mode passed to guacd (Windows NLA usually needs 'nla'; 'rdp' = no NLA → in-session login screen).
   security: z.enum(['any', 'nla', 'nla-ext', 'tls', 'rdp', 'vmconnect']).optional(),
+  // Keyboard layout of the host itself. Omitted = the installation default.
+  keyboardLayout: rdpServerLayoutSchema.optional(),
 });
 export type CreateServerDto = z.infer<typeof createServerSchema>;
 
@@ -523,6 +563,8 @@ export const updateServerSchema = z
     username: z.string().max(255).optional(),
     password: z.string().max(1024).optional(),
     security: z.enum(['any', 'nla', 'nla-ext', 'tls', 'rdp', 'vmconnect']).optional(),
+    // null clears it back to the installation default; omitted leaves it be.
+    keyboardLayout: rdpServerLayoutSchema.nullable().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
 export type UpdateServerDto = z.infer<typeof updateServerSchema>;

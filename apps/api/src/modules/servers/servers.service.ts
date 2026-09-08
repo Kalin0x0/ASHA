@@ -57,6 +57,7 @@ export class ServersService {
         vmTemplate: dto.vmTemplate,
         vmProviderId: dto.vmProviderId,
         maxSessions: dto.maxSessions,
+        keyboardLayout: dto.keyboardLayout,
         ...(dto.username || dto.password || dto.security
           ? {
               credentialRef: sealConfig(
@@ -102,6 +103,7 @@ export class ServersService {
         vmTemplate: dto.vmTemplate,
         vmProviderId: dto.vmProviderId,
         maxSessions: dto.maxSessions,
+        keyboardLayout: dto.keyboardLayout,
         ...(credentialRef ? { credentialRef } : {}),
       },
     });
@@ -227,6 +229,10 @@ export class ServersService {
         sshUser: creds.username,
         sshPassword: creds.password,
         security: creds.security,
+        // Which keyboard THIS host is set up with. The proxy has only the
+        // installation-wide default to fall back on, and one default cannot
+        // be right for hosts that are configured differently.
+        ...(server.keyboardLayout ? { keyboardLayout: server.keyboardLayout } : {}),
       },
       3600,
     );

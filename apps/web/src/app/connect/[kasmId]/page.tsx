@@ -4,6 +4,7 @@ import Guacamole, { type Client as GuacClient } from 'guacamole-common-js';
 import {
   ArrowLeft,
   Camera,
+  Check,
   ClipboardPaste,
   Command,
   Eye,
@@ -36,6 +37,13 @@ import { getAccessToken } from '@/lib/api/auth-store';
 import { isLive } from '@/lib/api/mode';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
 import { useLaunchableWorkspaces, useOwnSessions, useSessions, useStartObservation, useStopObservation } from '@/lib/hooks';
+import {
+  isRemoteLayout,
+  LAYOUT_CHOICES,
+  LAYOUT_INHERIT,
+  layoutParam,
+  type RemoteLayout,
+} from '@/lib/keyboard-layout';
 import {
   NO_OBSERVATION_NOTICE,
   OBSERVE_RENEW_MS,
@@ -177,6 +185,13 @@ export default function ConnectPage() {
   const [perfMode, setPerfMode] = useState(
     () => typeof window !== 'undefined' && window.localStorage.getItem('asha-rdp-perf') === '1',
   );
+  // Keyboard layout of the REMOTE desktop, overruling what its Server row says.
+  // Deliberately NOT persisted: the layout describes a machine, and the machine's
+  // record is where a lasting answer belongs — this is the one-click correction
+  // for the connection in front of the user, and it lasts as long as it does.
+  // Changing it reconnects: RDP settles the layout in the handshake and never
+  // revisits it.
+  const [layoutChoice, setLayoutChoice] = useState<string>(LAYOUT_INHERIT);
   // Forced resolution (null = fit the viewport). Changing it reconnects.
   const [resOverride, setResOverride] = useState<{ w: number; h: number } | null>(null);
   const [resMenuOpen, setResMenuOpen] = useState(false);
@@ -224,6 +239,17 @@ export default function ConnectPage() {
   const workspaceName = session?.workspaceName ?? 'Remote desktop';
   const workspaceDescription = ws?.description;
   const protocolLabel = session?.connectionType ?? 'RDP';
+  // The layout this connection carries. Null = say nothing, so the Server row
+  // and then the installation default answer — how every viewer behaved before.
+  // An observer joins a connection whose layout was settled by whoever opened it,
+  // so it has nothing to say either way.
+  const layout = useMemo(() => (monitor ? null : layoutParam(layoutChoice)), [monitor, layoutChoice]);
+  // Only RDP has a keyboard layout to announce — guacd's VNC client has no such
+  // parameter, and a container desktop brings its own. Offering the control
+  // there would be a knob that does nothing. The session list arrives after the
+  // stream is already open, so this hides the control rather than deciding what
+  // goes in the URL: making the URL wait would reconnect every desktop once.
+  const layoutApplies = (session?.connectionType ?? 'RDP').toUpperCase() === 'RDP';
   const connected = state === 'connected';
   // Only offer "fit to screen" while actually pinched in, so the control isn't
   // dead weight in every session.
@@ -400,9 +426,14 @@ export default function ConnectPage() {
       Math.max(lo, Math.min(hi, Math.round(v / 2) * 2));
     const reqW = clampEven(resOverride?.w ?? screen.clientWidth ?? 1280, 640, 3840);
     const reqH = clampEven(resOverride?.h ?? screen.clientHeight ?? 720, 480, 2160);
+    // `layout` is one of the names guacd itself advertises or nothing at all, so
+    // it needs no escaping — and the proxy validates it a second time before it
+    // reaches a connect parameter. Absent, the proxy answers from the Server row.
     const url = `${scheme}://${window.location.host}/proxy/session/${encodeURIComponent(
       kasmId,
-    )}?token=${encodeURIComponent(token)}&w=${reqW}&h=${reqH}&perf=${perfMode ? 1 : 0}`;
+    )}?token=${encodeURIComponent(token)}&w=${reqW}&h=${reqH}&perf=${perfMode ? 1 : 0}${
+      layout ? `&layout=${layout}` : ''
+    }`;
 
     const tunnel = new Guacamole.WebSocketTunnel(url);
     const client = new Guacamole.Client(tunnel);
@@ -782,7 +813,7 @@ export default function ConnectPage() {
       }
       clientRef.current = null;
     };
-  }, [kasmId, attempt, perfMode, monitor, resOverride, urlWatchToken]);
+  }, [kasmId, attempt, perfMode, monitor, resOverride, urlWatchToken, layout]);
 
   const togglePerf = useCallback(() => {
     setPerfMode((p) => {
@@ -795,6 +826,8 @@ export default function ConnectPage() {
       return next;
     });
   }, []);
+
+  const pickLayout = useCallback((choice: string) => setLayoutChoice(choice), []);
 
   const reconnect = useCallback(() => {
     setErrMsg('');
@@ -1232,6 +1265,8 @@ export default function ConnectPage() {
         onClose={() => setPanelOpen(false)}
         connected={state === 'connected'}
         perfMode={perfMode}
+        layout={layoutApplies && !monitor ? layoutChoice : null}
+        onPickLayout={pickLayout}
         onPaste={() => void pasteToRemote()}
         onCtrlAltDel={sendCtrlAltDel}
         onFullscreen={toggleFullscreen}
@@ -1248,7 +1283,8 @@ export default function ConnectPage() {
  * Kasm-style slide-out Control Panel for the remote-desktop viewer. A right-edge
  * tab opens a panel of controls that all act on the live guacamole client, so
  * every button works: clipboard paste, Ctrl+Alt+Del, fullscreen, streaming
- * quality (performance mode), reconnect, back to workspaces, and end session.
+ * quality (performance mode), keyboard layout, reconnect, back to workspaces,
+ * and end session.
  */
 function ControlPanel({
   open,
@@ -1256,6 +1292,8 @@ function ControlPanel({
   onClose,
   connected,
   perfMode,
+  layout,
+  onPickLayout,
   onPaste,
   onCtrlAltDel,
   onFullscreen,
@@ -1269,6 +1307,9 @@ function ControlPanel({
   onClose: () => void;
   connected: boolean;
   perfMode: boolean;
+  /** The chosen layout, or null where the connection has none to announce. */
+  layout: string | null;
+  onPickLayout: (choice: string) => void;
   onPaste: () => void;
   onCtrlAltDel: () => void;
   onFullscreen: () => void;
@@ -1330,6 +1371,7 @@ function ControlPanel({
               onClick={onTogglePerf}
               toggle={perfMode}
             />
+            {layout !== null && <LayoutPicker choice={layout} onPick={onPickLayout} />}
             <PanelRow icon={RefreshCw} title={t('connect.panel.reconnectTitle')} subtitle={t('connect.panel.reconnectSubtitle')} onClick={onReconnect} />
             <PanelRow icon={LayoutGrid} title={t('connect.panel.workspacesTitle')} subtitle={t('connect.panel.workspacesSubtitle')} onClick={onWorkspaces} />
             <PanelRow
@@ -1343,6 +1385,67 @@ function ControlPanel({
         </div>
       </aside>
     </>
+  );
+}
+
+/**
+ * The keyboard layout of the REMOTE DESKTOP — not of the keyboard in front of
+ * the user, which the browser has already accounted for by sending characters
+ * rather than key positions. Normally the machine's own record answers, and
+ * this is the escape hatch: a desktop typing rubbish is put right here in one
+ * click instead of waiting for an admin. Three rounds of this bug went by
+ * without anyone having that option.
+ */
+function LayoutPicker({ choice, onPick }: { choice: string; onPick: (choice: string) => void }) {
+  const t = useTranslations('viewer');
+  // The layout names live in `common`, next to the other shared value maps: the
+  // servers admin page names the same 18 layouts when setting them per host.
+  const tc = useTranslations('common');
+  const [open, setOpen] = useState(false);
+  const name = (layout: RemoteLayout) => tc(`keyboardLayouts.${layout}`);
+  const subtitle = isRemoteLayout(choice)
+    ? t('connect.layout.chosen', { layout: name(choice) })
+    : t('connect.layout.inherit');
+
+  return (
+    <div>
+      <PanelRow
+        icon={KeyboardIcon}
+        title={t('connect.layout.title')}
+        subtitle={subtitle}
+        onClick={() => setOpen((o) => !o)}
+      />
+      {open && (
+        <div className="mt-1.5 overflow-hidden rounded-lg border border-border-subtle bg-[var(--surface-2)]">
+          {/* Said before the choice, not after it: what this describes is the far
+              end, and the desktop rebuilding itself is otherwise a blink with no
+              explanation. */}
+          <p className="px-3 pb-1 pt-2 text-[10px] leading-snug text-muted-foreground">{t('connect.layout.hint')}</p>
+          <div className="max-h-56 overflow-y-auto pb-1">
+            {LAYOUT_CHOICES.map((option) => {
+              const active = option === choice;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    if (!active) onPick(option);
+                  }}
+                  className={cn(
+                    'flex w-full items-center gap-2 px-3 py-1.5 text-start text-xs transition-colors hover:bg-secondary',
+                    active ? 'text-gold-300' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <Check className={cn('size-3.5 shrink-0', !active && 'opacity-0')} />
+                  {option === LAYOUT_INHERIT ? t('connect.layout.inherit') : name(option)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

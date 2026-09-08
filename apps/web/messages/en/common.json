@@ -73,6 +73,26 @@
     "INVITED": "Invited",
     "LOCKED": "Locked"
   },
+  "keyboardLayouts": {
+    "da-dk-qwerty": "Danish",
+    "de-ch-qwertz": "Swiss German",
+    "de-de-qwertz": "German",
+    "en-gb-qwerty": "English (UK)",
+    "en-us-qwerty": "English (US)",
+    "es-es-qwerty": "Spanish",
+    "failsafe": "Failsafe (scancodes only)",
+    "fr-be-azerty": "French (Belgium)",
+    "fr-ch-qwertz": "Swiss French",
+    "fr-fr-azerty": "French",
+    "hu-hu-qwertz": "Hungarian",
+    "it-it-qwerty": "Italian",
+    "ja-jp-qwerty": "Japanese",
+    "no-no-qwerty": "Norwegian",
+    "pl-pl-qwerty": "Polish",
+    "pt-br-qwerty": "Portuguese (Brazil)",
+    "sv-se-qwerty": "Swedish",
+    "tr-tr-qwerty": "Turkish"
+  },
   "zoneStatus": {
     "healthy": "Healthy",
     "degraded": "Degraded",

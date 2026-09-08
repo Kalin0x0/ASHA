@@ -73,6 +73,26 @@
     "INVITED": "دعوت‌شده",
     "LOCKED": "قفل‌شده"
   },
+  "keyboardLayouts": {
+    "da-dk-qwerty": "دانمارکی",
+    "de-ch-qwertz": "آلمانی (سوئیس)",
+    "de-de-qwertz": "آلمانی",
+    "en-gb-qwerty": "انگلیسی (بریتانیا)",
+    "en-us-qwerty": "انگلیسی (آمریکا)",
+    "es-es-qwerty": "اسپانیایی",
+    "failsafe": "ایمن (فقط اسکن‌کد)",
+    "fr-be-azerty": "فرانسوی (بلژیک)",
+    "fr-ch-qwertz": "فرانسوی (سوئیس)",
+    "fr-fr-azerty": "فرانسوی",
+    "hu-hu-qwertz": "مجاری",
+    "it-it-qwerty": "ایتالیایی",
+    "ja-jp-qwerty": "ژاپنی",
+    "no-no-qwerty": "نروژی",
+    "pl-pl-qwerty": "لهستانی",
+    "pt-br-qwerty": "پرتغالی (برزیل)",
+    "sv-se-qwerty": "سوئدی",
+    "tr-tr-qwerty": "ترکی"
+  },
   "zoneStatus": {
     "healthy": "سالم",
     "degraded": "تنزل‌یافته",

@@ -1172,6 +1172,12 @@ model Server {
   vmProviderId   String?
   status         ServerStatus         @default(OFFLINE)
   maxSessions    Int                  @default(1)
+  // Keyboard layout THIS host is configured with, in guacd's naming
+  // (`de-de-qwertz`, `en-us-qwerty`, ...). The browser sends characters, so the
+  // RDP bridge has to know which scancodes produce them on this machine; a
+  // mismatch is what makes a desktop type something other than what was
+  // pressed. Null = fall back to the installation's GUAC_RDP_SERVER_LAYOUT.
+  keyboardLayout String?
   // Reported by the installed Windows/host agent (availability tracking).
   lastSeenAt     DateTime?
   agentVersion   String?

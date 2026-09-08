@@ -66,6 +66,9 @@
       "password": "Password",
       "usernameOptional": "Username (optional)",
       "passwordOptional": "Password (optional)",
+      "keyboardLayout": "Keyboard layout of this host",
+      "keyboardLayoutUnset": "Not set (installation default)",
+      "keyboardLayoutHelp": "The layout the host itself is configured with. The browser sends the character a key produced, so the layout of the person connecting is already accounted for; this is what tells the RDP bridge which keys produce that character over there. Wrong, and the desktop types something else.",
       "rdpSecurity": "RDP security",
       "keepCurrent": "Keep current",
       "rdpSecurityOptions": {

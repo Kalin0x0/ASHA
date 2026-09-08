@@ -148,6 +148,12 @@
       "endTitle": "Sitzung beenden",
       "endSubtitle": "Verbindung trennen"
     },
+    "layout": {
+      "title": "Tastaturbelegung der Gegenstelle",
+      "inherit": "Wie für diesen Desktop hinterlegt",
+      "chosen": "{layout} · für diese Sitzung geändert",
+      "hint": "Die Tastatur, die der entfernte Desktop bei sich annimmt — nicht die, auf der Sie tippen. Nur ändern, wenn der Desktop falsche Zeichen schreibt; die Sitzung verbindet sich dabei neu."
+    },
     "state": {
       "connectingTitle": "Verbindung wird aufgebaut",
       "connectingDescription": "Sicherer RDP-Tunnel über guacd wird ausgehandelt…",

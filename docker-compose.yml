@@ -206,6 +206,12 @@ services:
       # Set GUACD_HOST to the guacamole/guacd container once you enable RDP/VNC
       GUACD_HOST: ${GUACD_HOST:-guacd}
       GUACD_PORT: ${GUACD_PORT:-4822}
+      # Last-resort keyboard layout guacd announces to a Windows host: the
+      # layout of that HOST, not of the person connecting. A server that names
+      # its own (Infrastructure → Servers) is believed over this, and the
+      # viewer over both. Leave it empty (guacd's own en-us-qwerty) unless
+      # every host really shares one keyboard, e.g. de-de-qwertz.
+      GUAC_RDP_SERVER_LAYOUT: ${GUAC_RDP_SERVER_LAYOUT:-}
     labels:
       - traefik.enable=true
       - traefik.docker.network=asha-edge

@@ -66,6 +66,9 @@
       "password": "Passwort",
       "usernameOptional": "Benutzername (optional)",
       "passwordOptional": "Passwort (optional)",
+      "keyboardLayout": "Tastaturbelegung dieses Hosts",
+      "keyboardLayoutUnset": "Nicht gesetzt (Standard der Installation)",
+      "keyboardLayoutHelp": "Die Belegung, mit der der Host selbst eingerichtet ist. Der Browser schickt das Zeichen, das eine Taste erzeugt hat — die Tastatur der Person, die sich verbindet, ist also schon berücksichtigt. Hier steht, welche Tasten dieses Zeichen drüben erzeugen. Falsch gesetzt, schreibt der Desktop etwas anderes.",
       "rdpSecurity": "RDP-Sicherheit",
       "keepCurrent": "Unverändert lassen",
       "rdpSecurityOptions": {
