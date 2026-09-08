@@ -12,6 +12,7 @@ import { createLogger } from '@asha/logger';
 import Redis from 'ioredis';
 import { agentEnv } from './env.js';
 import { manager } from './manager.js';
+import { createObservationRunner, type ObservationRunner } from './observation.js';
 
 const log = createLogger('agent');
 
@@ -30,6 +31,7 @@ const {
   unpauseContainer,
   resizeContainer,
   applyStreamProfile,
+  captureObservation,
   startRecorder,
   stopRecorder,
   removeImage,
@@ -60,6 +62,11 @@ async function main(): Promise<void> {
 
   const containerBySession = new Map<string, string>();
   const sessionByContainer = new Map<string, string>();
+  const observations = createObservationRunner({
+    capture: captureObservation,
+    publish: (sample) => manager.reportObservation(agentId, sample),
+    onError: (message) => log.warn(message),
+  });
 
   const sub = new Redis(agentEnv.redisUrl, { maxRetriesPerRequest: null, lazyConnect: true });
   sub.on('error', (e) => log.warn(`redis: ${e.message}`));
@@ -102,9 +109,20 @@ async function main(): Promise<void> {
         if (channel === provisionChannel) {
           await handleProvision(agentId, JSON.parse(message) as ProvisionCommand, containerBySession, sessionByContainer);
         } else if (channel === destroyChannel) {
-          await handleDestroy(agentId, JSON.parse(message) as DestroyCommand, containerBySession, sessionByContainer);
+          await handleDestroy(
+            agentId,
+            JSON.parse(message) as DestroyCommand,
+            containerBySession,
+            sessionByContainer,
+            observations,
+          );
         } else if (channel === controlChannel) {
-          await handleControl(agentId, JSON.parse(message) as SessionControlCommand, containerBySession);
+          await handleControl(
+            agentId,
+            JSON.parse(message) as SessionControlCommand,
+            containerBySession,
+            observations,
+          );
         } else if (channel === imageChannel) {
           await handleImage(JSON.parse(message) as ImageCommand);
         } else if (channel === commandChannel) {
@@ -189,6 +207,7 @@ async function handleControl(
   agentId: string,
   cmd: SessionControlCommand,
   bySession: Map<string, string>,
+  observations: ObservationRunner,
 ): Promise<void> {
   const containerId = cmd.containerId ?? bySession.get(cmd.sessionId);
   if (!containerId) {
@@ -216,6 +235,17 @@ async function handleControl(
     } else if (cmd.action === 'RECORD_STOP') {
       await stopRecorder(cmd.sessionId);
       log.info({ sessionId: cmd.sessionId, recordingId: cmd.recordingId }, 'recording stopped');
+    } else if (cmd.action === 'OBSERVE_START') {
+      // Renewals arrive every few seconds while the wall is open; only the
+      // opening of a window is worth an info line.
+      if (observations.start(cmd, containerId)) {
+        log.info({ sessionId: cmd.sessionId, intervalMs: cmd.intervalMs }, 'observation started');
+      } else {
+        log.debug({ sessionId: cmd.sessionId }, 'observation renewed');
+      }
+    } else if (cmd.action === 'OBSERVE_STOP') {
+      observations.stop(cmd.sessionId);
+      log.info({ sessionId: cmd.sessionId }, 'observation stopped');
     }
 
   } catch (e) {
@@ -285,7 +315,11 @@ async function handleDestroy(
   cmd: DestroyCommand,
   bySession: Map<string, string>,
   byContainer: Map<string, string>,
+  observations: ObservationRunner,
 ): Promise<void> {
+  // Close the observation window first — capturing against a container that is
+  // being torn down only produces failures until the dead-man switch expires.
+  observations.stop(cmd.sessionId);
   const containerId = cmd.containerId ?? bySession.get(cmd.sessionId);
   if (containerId) {
     await destroyContainer(containerId);

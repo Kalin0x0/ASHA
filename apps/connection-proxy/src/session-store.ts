@@ -38,8 +38,33 @@ export interface SessionRecord {
 }
 
 const REDIS_KEY = (kasmId: string) => `asha:proxy:session:${kasmId}`;
+const GUAC_KEY = (kasmId: string) => `asha:proxy:guac:${kasmId}`;
+/** A guacd connection stays joinable for as long as the session record lives. */
+const GUAC_TTL_SEC = 3600;
+/**
+ * The API's record of an open observation window, written before it mints a
+ * watch token and deleted when the observation stops. The proxy only reads it:
+ * it is the one channel through which a stop reaches a stream already running.
+ */
+const WATCH_KEY = (kasmId: string) => `asha:obs:watch:${kasmId}`;
 
-export class SessionStore {
+/**
+ * The part of the store the guacd bridge needs: the connection uuid guacd hands
+ * out in `ready`, which a second viewer selects to JOIN the live connection
+ * instead of opening a second logon on the target.
+ */
+export interface GuacUuidStore {
+  getGuacUuid(kasmId: string): Promise<string | null>;
+  setGuacUuid(kasmId: string, uuid: string): Promise<void>;
+  clearGuacUuid(kasmId: string, uuid: string): Promise<void>;
+}
+
+/** The part of the store an observation stream needs to know it may continue. */
+export interface WatchRecordStore {
+  isWatchActive(kasmId: string): Promise<boolean | null>;
+}
+
+export class SessionStore implements GuacUuidStore, WatchRecordStore {
   private redis: Redis;
   /** In-process short-lived cache to reduce Redis round-trips under high concurrency. */
   private cache = new Map<string, { record: SessionRecord; expiresAt: number }>();
@@ -110,6 +135,50 @@ export class SessionStore {
   async delete(kasmId: string): Promise<void> {
     await this.redis.del(REDIS_KEY(kasmId));
     this.cache.delete(kasmId);
+  }
+
+  async getGuacUuid(kasmId: string): Promise<string | null> {
+    const raw = await this.redis.get(GUAC_KEY(kasmId)).catch(() => null);
+    if (!raw) return null;
+    try {
+      return (JSON.parse(raw) as { uuid?: string }).uuid ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async setGuacUuid(kasmId: string, uuid: string): Promise<void> {
+    await this.redis
+      .set(GUAC_KEY(kasmId), JSON.stringify({ uuid }), 'EX', GUAC_TTL_SEC)
+      .catch(() => undefined);
+  }
+
+  /**
+   * Drop only the uuid this socket published. A viewer that reconnects opens a
+   * new guacd connection before the old socket's close lands, and an
+   * unconditional delete would take the new connection's uuid with it — leaving
+   * observers to open a second logon for the rest of the session.
+   */
+  async clearGuacUuid(kasmId: string, uuid: string): Promise<void> {
+    if ((await this.getGuacUuid(kasmId)) !== uuid) return;
+    await this.redis.del(GUAC_KEY(kasmId)).catch(() => undefined);
+  }
+
+  /**
+   * Whether an observation window is still open on this session: `true` while
+   * the API's watch record exists, `false` once a stop deleted it or its TTL ran
+   * out, and `null` when the answer is unknown — which is what an unreachable
+   * Redis reads as. The three cases stay separate on purpose, because only
+   * `false` says the observation ended; treating an outage as a stop would drop
+   * every observer on a hiccup. Never rejects.
+   */
+  async isWatchActive(kasmId: string): Promise<boolean | null> {
+    if (!this.healthy) return null;
+    try {
+      return (await this.redis.exists(WATCH_KEY(kasmId))) > 0;
+    } catch {
+      return null;
+    }
   }
 
   quit(): void {

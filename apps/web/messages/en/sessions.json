@@ -200,5 +200,59 @@
     "toastRevoked": "Share revoked",
     "toastRevokedDescription": "Guests of {name} disconnected.",
     "toastRevokeFailed": "Could not revoke share"
+  },
+  "monitor": {
+    "title": "Live Monitor",
+    "description": "Every desktop running right now — who is at it, and what they have in front of them.",
+    "sessionCount": "{count, plural, one {# desktop} other {# desktops}}",
+    "searchPlaceholder": "Search by user, workspace, zone or agent…",
+    "live": "Live",
+    "interval": {
+      "label": "Refresh",
+      "off": "Off",
+      "seconds": "{seconds}s"
+    },
+    "notice": {
+      "observing": "Capturing {count, plural, one {# desktop} other {# desktops}} every {seconds}s. Everyone being watched is told on their own screen, for as long as this page is open.",
+      "off": "Capture is off — this page shows session details only. No screen is being read.",
+      "hidden": "Paused while this tab is in the background. Capture resumes when you come back."
+    },
+    "realtime": {
+      "open": "Realtime",
+      "polling": "Polling"
+    },
+    "tile": {
+      "activeWindow": "Active window",
+      "noWindow": "No focused window",
+      "windows": "{count, plural, one {# window} other {# windows}}",
+      "unsupported": "No capture on a fixed server — a frame would need a second logon.",
+      "off": "Capture is off",
+      "waiting": "Waiting for the first frame…",
+      "watch": "Watch live",
+      "details": "Details",
+      "memory": "Memory",
+      "uptime": "Uptime",
+      "degradedReason": {
+        "missingTool": "No frame: the image is missing {tool}",
+        "timeout": "No frame: the capture ran into its time limit",
+        "tooLarge": "No frame: the capture came back too large",
+        "noImage": "No frame: the container returned none",
+        "unsupportedDriver": "No frame: this driver cannot capture",
+        "unknown": "No frame available"
+      }
+    },
+    "emptyTitle": "No desktop is running",
+    "emptyDescription": "Sessions appear here as soon as somebody launches a workspace.",
+    "emptyFilteredTitle": "No session matches your filters",
+    "emptyFilteredDescription": "Try clearing the search or the status filter.",
+    "deniedTitle": "You may not see the running sessions",
+    "deniedDescription": "Watching a desktop and listing the desktops are two separate permissions. Ask an administrator for the second one.",
+    "watchFailed": "Could not open the live view",
+"watchUnavailable": {
+      "no_shared_terminal": "This session cannot be watched live: a terminal session has no shared screen.",
+      "no_shared_view": "This session cannot be watched live: a WebRTC desktop is a direct connection to one browser — no second seat, and nothing to capture.",
+      "no_capture_agent": "This session cannot be watched live: no agent is reporting for this desktop, and the live picture comes from that agent.",
+      "unknown": "This session cannot be watched live."
+    }
   }
 }

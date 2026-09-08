@@ -16,7 +16,6 @@ import {
   MonitorX,
   Power,
   RefreshCw,
-  Share2,
   Wifi,
   X,
   ZoomOut,
@@ -26,26 +25,43 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
+import { ObservationNotice } from '@/components/composite/observation-notice';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TouchKeyBar } from '@/components/viewer/touch-key-bar';
 import { ApiError } from '@/lib/api/client';
-import { terminateSession } from '@/lib/api/endpoints';
+import { getSessionConnection, terminateSession } from '@/lib/api/endpoints';
 import { getAccessToken } from '@/lib/api/auth-store';
 import { isLive } from '@/lib/api/mode';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
-import { useLaunchableWorkspaces, useOwnSessions, useSessions } from '@/lib/hooks';
+import { useLaunchableWorkspaces, useOwnSessions, useSessions, useStartObservation, useStopObservation } from '@/lib/hooks';
+import {
+  NO_OBSERVATION_NOTICE,
+  OBSERVE_RENEW_MS,
+  OBSERVE_THUMB_WIDTH,
+  applyObservedPush,
+  applyObservedRead,
+  isRemintable,
+  streamCloseReason,
+  type StreamCloseReason,
+} from '@/lib/observation';
+import { createWindowId } from '@/lib/observation-windows';
 import { useThumbnails } from '@/lib/thumbnail-store';
 import { attachTouchInput, isTouchDevice } from '@/lib/touch-input';
 import { forwardsToRemote } from '@/lib/remote-keys';
 import { attachTextEntry } from '@/lib/touch-keyboard';
+import { useRealtimeEvents } from '@/lib/realtime';
 import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { cn } from '@/lib/utils';
 
 // X11 keysyms for the control-menu shortcuts.
 const KEYSYM = { CTRL: 0xffe3, ALT: 0xffe9, DEL: 0xffff, V: 0x0076 } as const;
+
+/** A refused renewal — the session ended, or policy changed under us — must not
+ *  tear the picture down; the stream itself says when it is gone. */
+const ignoreWindowError = (): void => {};
 
 
 // Resolution presets for the toolbar (w:0 = fit the window).
@@ -96,6 +112,10 @@ function ToolBtn({
 // Cap on automatic reconnect attempts before the viewer falls back to a manual
 // "Reconnect" button.
 const MAX_AUTO_RECONNECTS = 8;
+// Cap on re-minted watch tokens per connected stream. A grant that ends the
+// moment it is opened — policy switched off, permission withdrawn — must not
+// turn into a mint loop, each round of which writes an audit entry.
+const MAX_WATCH_REMINTS = 3;
 // If the stream hasn't reached 'connected' within this window, surface a clear
 // error instead of an endless "Establishing connection" spinner. Covers a stuck
 // remote RDP/NLA handshake (e.g. missing/blocked credentials) that the proxy's
@@ -115,7 +135,26 @@ export default function ConnectPage() {
   // View-only "watch" mode (admin monitoring): the stream renders but no
   // keyboard/mouse/clipboard input is forwarded, so the user isn't disturbed.
   const searchParams = useSearchParams();
-  const monitor = searchParams?.get('monitor') === '1';
+  // A watch token is what actually buys view-only access: the proxy grants the
+  // stream on its `mode: 'view'` claim and drops every input instruction, so an
+  // observer cannot reach the desktop even by editing the URL. `monitor=1`
+  // stays only as the client-side hint that keeps this page's own input
+  // handlers detached; on its own it authorizes nothing.
+  const urlWatchToken = searchParams?.get('watch') ?? null;
+  const monitor = searchParams?.get('monitor') === '1' || urlWatchToken !== null;
+  // The token in the URL lives 120 s; the observation lives as long as the
+  // admin keeps watching. Every renewal below mints a fresh one, and the socket
+  // adopts it the next time it opens — held in a ref rather than state so a
+  // renewal does not rebuild a healthy tunnel every 20 s for a token it does
+  // not need yet.
+  const watchTokenRef = useRef(urlWatchToken);
+  useEffect(() => {
+    if (urlWatchToken) watchTokenRef.current = urlWatchToken;
+  }, [urlWatchToken]);
+  // Which of this observer's holds this viewer carries. It comes from whoever
+  // opened the viewer, so a reload continues the same hold instead of opening a
+  // second window on the same desktop.
+  const [watchWindowId] = useState(() => searchParams?.get('win') || createWindowId('view'));
 
   const containerRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
@@ -194,6 +233,80 @@ export default function ConnectPage() {
   // desktop the user is actively using (previously NOTHING refreshed keepalive).
   useKeepalive(session?.id, connected);
 
+  // Told to whoever is at this desktop while an administrator watches it.
+  const sessionId = session?.id;
+  const [notice, setNotice] = useState(NO_OBSERVATION_NOTICE);
+  const noticeRef = useRef(notice);
+  noticeRef.current = notice;
+  const observed = notice.observed;
+  const realtime = useRealtimeEvents(
+    (event) => {
+      if (event.type !== 'session.observed' || event.payload.sessionId !== sessionId) return;
+      setNotice((current) => applyObservedPush(current, event.payload));
+    },
+    { sessionId, enabled: Boolean(sessionId) },
+  );
+  // `session.observed` is pushed on the transition only. A viewer that reloaded
+  // — or whose socket dropped — while somebody was already watching has no
+  // event to replay, and used to spend the rest of the observation with no
+  // banner at all. So the current watcher is read back here on mount and again
+  // whenever the socket comes back, and any push that overtakes the read wins.
+  const socketOpen = realtime === 'open';
+  useEffect(() => {
+    if (!isLive || !sessionId) return;
+    let cancelled = false;
+    const pushes = noticeRef.current.pushes;
+    getSessionConnection(sessionId)
+      .then((c) => {
+        if (cancelled) return;
+        setNotice((current) => applyObservedRead(current, sessionId, c.notice?.observedBy, pushes));
+      })
+      .catch(() => {
+        // Refused for an observer who is not a system admin — the connection
+        // route is owner-scoped — and their banner comes from the room replay
+        // instead. No banner is the degraded mode either way.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, socketOpen]);
+
+  // An observer arrives here with a watch token, and the observation window it
+  // was minted from is what that notice is made of. The record behind it lapses
+  // after 90 s, so the viewer doing the watching holds the window open for as
+  // long as it is open itself and closes it on the way out: the notice then
+  // tracks the live desktop on this screen rather than a thumbnail on a wall
+  // nobody is in front of any more. Metadata only — the picture is already
+  // here, and asking the agent for thumbnails would read the same desktop twice.
+  const watchedSessionId = urlWatchToken ? sessionId : undefined;
+  const startObservation = useStartObservation();
+  const stopObservation = useStopObservation();
+  const stopObservationRef = useRef(stopObservation);
+  stopObservationRef.current = stopObservation;
+  useEffect(() => {
+    if (!watchedSessionId) return;
+    const hold = () =>
+      void startObservation(
+        watchedSessionId,
+        { intervalMs: 0, thumbWidth: OBSERVE_THUMB_WIDTH },
+        watchWindowId,
+      )
+        .then((win) => {
+          // Every renewal mints a fresh 120 s token. Keeping the one from the
+          // URL is what cut every fixed-server observation at two minutes: the
+          // proxy closed the socket at its `exp` and the reconnect presented
+          // the same dead token.
+          if (win.watchToken) watchTokenRef.current = win.watchToken;
+        })
+        .catch(ignoreWindowError);
+    hold();
+    const timer = window.setInterval(hold, OBSERVE_RENEW_MS);
+    return () => {
+      window.clearInterval(timer);
+      void stopObservationRef.current(watchedSessionId, watchWindowId).catch(ignoreWindowError);
+    };
+  }, [watchedSessionId, watchWindowId, startObservation]);
+
   // Explain the gestures once per device: "hold for a right click" and "two
   // fingers to scroll" are otherwise invisible affordances.
   useEffect(() => {
@@ -230,8 +343,48 @@ export default function ConnectPage() {
     };
   }, [kbOpen]);
 
+  /**
+   * The proxy closed a view socket and said why.
+   *
+   * An expired or revoked grant is not a refusal — the observer is still here
+   * and still allowed — so it is answered with a fresh token rather than with
+   * an error, and minting one re-runs the permission check, the org policy, the
+   * notice and the audit entry. The other two codes are final for this session
+   * and get their own line of copy; the generic "connection failed" told an
+   * observer nothing about a desktop nobody is at.
+   */
+  const remintsRef = useRef(0);
+  const onWatchClosed = useCallback(
+    (reason: StreamCloseReason) => {
+      if (!isRemintable(reason) || !watchedSessionId || remintsRef.current >= MAX_WATCH_REMINTS) {
+        setErrMsg(t(`connect.state.${reason}`));
+        setState('error');
+        return;
+      }
+      remintsRef.current += 1;
+      void startObservation(watchedSessionId, { intervalMs: 0, thumbWidth: OBSERVE_THUMB_WIDTH }, watchWindowId)
+        .then((win) => {
+          if (!win.watchToken) throw new Error('no watch token');
+          watchTokenRef.current = win.watchToken;
+          setErrMsg('');
+          setState('connecting');
+          setAttempt((a) => a + 1);
+        })
+        .catch(() => {
+          setErrMsg(t(`connect.state.${reason}`));
+          setState('error');
+        });
+    },
+    [watchedSessionId, watchWindowId, startObservation, t],
+  );
+  // Read inside the connection effect, which must not be rebuilt when it changes.
+  const onWatchClosedRef = useRef(onWatchClosed);
+  onWatchClosedRef.current = onWatchClosed;
+
   useEffect(() => {
-    const token = getAccessToken();
+    // An observer streams on the short-lived watch token the API minted for this
+    // one session; everyone else streams on their own access token.
+    const token = watchTokenRef.current ?? getAccessToken();
     const screen = screenRef.current;
     if (!token) {
       setErrMsg('Not signed in.');
@@ -254,6 +407,20 @@ export default function ConnectPage() {
     const tunnel = new Guacamole.WebSocketTunnel(url);
     const client = new Guacamole.Client(tunnel);
     clientRef.current = client;
+
+    // The close code reaches the TUNNEL, not the client: Guacamole.Client only
+    // ever reports the `error` INSTRUCTION, so a socket the proxy closes under
+    // a running stream never calls client.onerror at all. The tunnel parses the
+    // close reason with parseInt — which is why the proxy repeats the number in
+    // the text — and hands it on as the status code. `onerror` exists here at
+    // runtime (guacamole-common-js 1.5) but is not in the shipped type defs.
+    (tunnel as unknown as { onerror: ((status: { code: number; message: string }) => void) | null }).onerror = (
+      status,
+    ) => {
+      const reason = streamCloseReason(status?.code);
+      // Anything else is an ordinary close; the state machine below owns it.
+      if (reason) onWatchClosedRef.current(reason);
+    };
 
     const display = client.getDisplay();
     const el = display.getElement();
@@ -311,6 +478,14 @@ export default function ConnectPage() {
       }, 250);
     };
     window.addEventListener('resize', onWindowResize);
+    // A window resize is not the only thing that changes the size of this box —
+    // the observation notice mounting over it, the on-screen key bar sliding in
+    // — and nothing else recomputes the fit. Watching the box itself refits the
+    // desktop whatever moved it, instead of leaving the bottom rows scrolled
+    // out of reach behind a hidden scrollbar.
+    const boxObserver =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(onWindowResize);
+    boxObserver?.observe(screen);
     rescale();
 
     client.onstatechange = (s) => {
@@ -567,6 +742,7 @@ export default function ConnectPage() {
 
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer);
+      boxObserver?.disconnect();
       window.removeEventListener('resize', onWindowResize);
       window.removeEventListener('focus', syncFromLocal);
       document.removeEventListener('visibilitychange', syncFromLocal);
@@ -606,7 +782,7 @@ export default function ConnectPage() {
       }
       clientRef.current = null;
     };
-  }, [kasmId, attempt, perfMode, monitor, resOverride]);
+  }, [kasmId, attempt, perfMode, monitor, resOverride, urlWatchToken]);
 
   const togglePerf = useCallback(() => {
     setPerfMode((p) => {
@@ -626,9 +802,11 @@ export default function ConnectPage() {
     setAttempt((a) => a + 1);
   }, []);
 
-  // Reset the auto-reconnect counter once we're solidly connected.
+  // Reset the auto-reconnect and re-mint counters once we're solidly connected.
   useEffect(() => {
-    if (state === 'connected') setAutoAttempts(0);
+    if (state !== 'connected') return;
+    setAutoAttempts(0);
+    remintsRef.current = 0;
   }, [state]);
 
   // Auto-reconnect with capped exponential backoff — ONLY on a clean mid-session
@@ -866,16 +1044,6 @@ export default function ConnectPage() {
     toast.success(t('connect.toasts.screenshotSaved'));
   }, [workspaceName, t]);
 
-  // Copy a view-only (monitor) link others can watch without sending input.
-  const shareMonitorLink = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/connect/${kasmId}?monitor=1`);
-      toast.success(t('connect.toasts.viewLinkCopied'), { description: t('connect.toasts.viewLinkCopiedDescription') });
-    } catch {
-      toast.error(t('connect.toasts.clipboardBlocked'));
-    }
-  }, [kasmId, t]);
-
   // Switch the remote resolution (reconnects). `null` = fit the window.
   const setResolution = useCallback((res: { w: number; h: number } | null) => {
     setResMenuOpen(false);
@@ -979,12 +1147,6 @@ export default function ConnectPage() {
             )}
           </div>
           <ToolBtn icon={Gauge} label={perfMode ? t('connect.toolbar.qualityPerformance') : t('connect.toolbar.qualityFull')} active={perfMode} onClick={togglePerf} />
-          <ToolBtn
-            icon={Share2}
-            label={t('connect.toolbar.copyViewLink')}
-            onClick={() => void shareMonitorLink()}
-            className={cn(touch && 'hidden sm:inline-flex')}
-          />
           <ToolBtn icon={Maximize2} label={t('connect.toolbar.fullscreen')} onClick={toggleFullscreen} />
           <ToolBtn icon={LayoutGrid} label={t('connect.toolbar.controlPanel')} active={panelOpen} onClick={() => setPanelOpen((o) => !o)} />
           {(state === 'disconnected' || state === 'error') && (
@@ -1009,6 +1171,11 @@ export default function ConnectPage() {
       </header>
 
       <main className="relative flex-1 overflow-hidden bg-anthracite-950">
+        {/* Overlaid, not stacked above the canvas. As a flex sibling the strip
+            took its ~50 px out of the screen box below, and the remote is only
+            refitted on a resize event — so the watched user lost the bottom of
+            their desktop, taskbar included, for the whole observation. */}
+        {observed && <ObservationNotice observed={observed} className="absolute inset-x-0 top-0 z-40" />}
         {/* The guacd display canvas mounts here. `isolate` (+ relative z-0) gives
             this subtree its own stacking context: guacamole-common-js ships the
             default desktop layer canvas with z-index:-1, which would otherwise

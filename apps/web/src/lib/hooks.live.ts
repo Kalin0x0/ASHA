@@ -6,6 +6,7 @@ import * as api from '@/lib/api/endpoints';
 import type { ApiGroup, RdpFileOptions } from '@/lib/api/endpoints';
 import { getAuth, setUser } from '@/lib/api/auth-store';
 import { deriveDashboard, mapAgent, mapSession, mapUser, mapWorkspace, toMap } from '@/lib/api/map';
+import type { ObservationSample } from '@/lib/observation';
 import { downloadRdpFile } from '@/lib/rdp';
 import { formatRelativeTime } from '@/lib/utils';
 import type { ActivityItem, Agent, BugFixRow, BugReportInput, BugReportRow, BugResolveInput, BugStats, BugStatus, CreateFeedbackInput, CreateUserInput, CreateWorkspaceInput, FeedbackItem, MaintenanceRunRow, MaintenanceTaskInput, MaintenanceTaskRow, ManagedImage, RecordingRow, ServerOption, SessionRow, UpdateFeedbackInput, UpdateWorkspaceInput, UserRow, Workspace, Zone } from '@/lib/types';
@@ -93,6 +94,56 @@ export function useSession(id: string): SessionRow | undefined {
     };
     return mapSession(data, lk);
   }, [data, users, zones, agents, workspaces]);
+}
+
+const OBSERVATIONS_KEY = ['sessions', 'observations'] as const;
+
+/**
+ * Everything the API is currently holding for the wall. The socket delivers new
+ * frames as they land; this poll seeds the first paint and is what keeps the
+ * tiles filled if the socket never connects.
+ */
+export function useObservations(): ObservationSample[] {
+  const { data } = useQuery({
+    queryKey: OBSERVATIONS_KEY,
+    queryFn: api.getObservations,
+    refetchInterval: 8_000,
+  });
+  return useMemo(() => data?.items ?? [], [data]);
+}
+
+/**
+ * Open or renew one hold on a session's observation window. Resolves with the
+ * watch token — freshly minted on every call, so a viewer that keeps renewing
+ * always has one it can still open a stream with — and with whether this
+ * session can be captured at all, so the caller can tell a refusal (org policy,
+ * missing permission) from a session that simply has no frame yet.
+ *
+ * `windowId` names which of the caller's holds this is; each surface passes its
+ * own so one closing does not release another's.
+ */
+export function useStartObservation() {
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, body, windowId }: { id: string; body: api.StartObservationInput; windowId?: string }) =>
+      api.startObservation(id, body, windowId),
+  });
+  return useCallback(
+    (id: string, body: api.StartObservationInput, windowId?: string): Promise<api.ApiObservationWindow> =>
+      mutateAsync({ id, body, windowId }),
+    [mutateAsync],
+  );
+}
+
+export function useStopObservation() {
+  const { mutateAsync } = useMutation({
+    mutationFn: ({ id, windowId }: { id: string; windowId?: string }) => api.stopObservation(id, windowId),
+  });
+  return useCallback(
+    async (id: string, windowId?: string) => {
+      await mutateAsync({ id, windowId });
+    },
+    [mutateAsync],
+  );
 }
 
 export function useAgents(): Agent[] {

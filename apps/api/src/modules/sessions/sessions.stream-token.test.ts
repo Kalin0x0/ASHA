@@ -45,7 +45,8 @@ describe('SessionsService — stream token freshness', () => {
     const env = { SESSION_TOKEN_SECRET: 'secret', SESSION_TOKEN_TTL: 120 };
     svc = new SessionsService(
       {} as never, // scheduler
-      {} as never, // redis
+      // connection() reads the observation notice back from Redis
+      { get: vi.fn().mockResolvedValue(null) } as never, // redis
       { record: vi.fn() } as never, // audit
       undefined, undefined, undefined, undefined, undefined, undefined, undefined,
       jwt as never,

@@ -19,6 +19,7 @@ import {
   RedisChannels,
   type RunConfig,
   type SessionControlCommand,
+  type SessionObservedEvent,
   type SessionSidecar,
   type StreamProfile,
 } from '@asha/events';
@@ -33,12 +34,25 @@ import { LicensingService } from '../licensing/licensing.service';
 import { TariffsService } from '../tariffs/tariffs.service';
 import { ServersService } from '../servers/servers.service';
 import { StorageService } from '../storage/storage.service';
+import { WatermarksService } from '../watermarks/watermarks.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { SchedulerService } from './scheduler.service';
 
 const SESSION_STATUSES = new Set([
   'REQUESTED', 'SCHEDULED', 'PROVISIONING', 'RUNNING', 'DEGRADED', 'PAUSED', 'TERMINATING', 'DESTROYED', 'ERROR',
 ]);
+
+/**
+ * One entry of `asha:obs:watch:<kasmId>`, as ObservationService writes it. Read
+ * here rather than imported: ObservationService already depends on this service,
+ * and a shared type would only be worth a module cycle if it were bigger.
+ */
+interface ObservationHold {
+  observerUserId: string;
+  observerName: string;
+  since: string;
+  expiresAt: number;
+}
 
 @Injectable()
 export class SessionsService {
@@ -68,6 +82,9 @@ export class SessionsService {
     // unaffected: mints the short-lived stream token handed to the browser.
     @Optional() private readonly jwt?: JwtService,
     @Optional() @Inject(ENV) private readonly env?: Env,
+    // Optional, and last for the same reason: resolves the banner/watermark the
+    // viewer paints over the desktop (see `notice`).
+    @Optional() private readonly watermarks?: WatermarksService,
   ) {}
 
   /**
@@ -1029,7 +1046,107 @@ export class SessionsService {
       dlp: (workspace?.dlp ?? {}) as DlpPolicy,
       // The viewer applies the stream profile client-side (KasmVNC quality/fps/clipboard).
       streamProfile: (session.streamProfile ?? {}) as unknown as StreamProfile,
+      // Overlay policy: the configured banner/watermark and whether someone is
+      // watching right now. It rides on the call the viewer already makes before
+      // the first frame — a route of its own would put the notice a round trip
+      // behind the picture it is meant to accompany.
+      notice: await this.notice(session),
     };
+  }
+
+  /**
+   * What the viewer must render on top of the desktop: the resolved
+   * banner/watermark config, plus the live observation notice. Observation is
+   * never silent, and a viewer that reloads mid-observation has no event to
+   * replay — so the current watcher is read back here rather than left to the
+   * `session.observed` push alone.
+   */
+  private async notice(session: { orgId: string; userId: string | null; workspaceId: string | null; kasmId: string | null }) {
+    let watermark: Awaited<ReturnType<WatermarksService['resolveForSession']>> = null;
+    if (this.watermarks && session.userId) {
+      const memberships = await prisma.userGroup.findMany({
+        where: { userId: session.userId },
+        select: { groupId: true },
+      });
+      watermark = await this.watermarks.resolveForSession(session.orgId, {
+        userId: session.userId,
+        groupIds: memberships.map((m) => m.groupId),
+        // Fixed-server sessions have no workspace; only GROUP/USER scope applies.
+        workspaceId: session.workspaceId ?? '',
+      });
+    }
+    return { watermark, observedBy: await this.observedBy(session) };
+  }
+
+  /**
+   * The observation notice as it stands right now, in the event shape the viewer
+   * already handles.
+   *
+   * `session.observed` is emitted on the transitions — the first observer
+   * arriving, the last one leaving — so a viewer that was not connected for one
+   * never hears about it: it reloaded, its socket dropped for a moment, the API
+   * restarted and took its process-local rooms with it. The gateway replays this
+   * into every socket that joins a session room, which puts the banner right a
+   * moment after the socket is back instead of leaving it wrong — in either
+   * direction — for the rest of the observation. A retraction carries no
+   * observer because there is none; the viewer reads neither field when
+   * `active` is false.
+   */
+  async observedState(session: { id: string; orgId: string; kasmId: string | null }): Promise<SessionObservedEvent> {
+    const observedBy = await this.observedBy(session);
+    return {
+      sessionId: session.id,
+      observerName: observedBy?.observerName ?? '',
+      since: observedBy?.since ?? new Date().toISOString(),
+      active: Boolean(observedBy),
+    };
+  }
+
+  /**
+   * Who is watching, for the banner: the observer who has been there longest and
+   * how many there are, so a second one joining cannot pass unmentioned.
+   *
+   * Null when nobody is watching, and null as well when the org switched the
+   * notice off — the observation is then audited as unannounced, and a payload
+   * that told the user anyway would put the banner back through a door the
+   * policy cannot see.
+   */
+  private async observedBy(session: { orgId: string; kasmId: string | null }) {
+    const holds = await this.observationHolds(session.kasmId);
+    const longest = holds[0];
+    if (!longest || !(await this.observationNotifyEnabled(session.orgId))) return null;
+    return {
+      observerName: longest.observerName,
+      since: longest.since,
+      observerCount: new Set(holds.map((h) => h.observerUserId)).size,
+    };
+  }
+
+  /**
+   * The holds still standing on a session, the oldest first. Written by
+   * ObservationService as a list — several observers, and several holds per
+   * observer — and read here on each hold's own deadline: the key outlives its
+   * longest hold on purpose, so a record that still exists is not the same as an
+   * observation that still runs.
+   */
+  private async observationHolds(kasmId: string | null): Promise<ObservationHold[]> {
+    // Redis no-ops to null while it is down: no banner is the degraded mode.
+    const record = kasmId
+      ? await this.redis.get<{ holds?: ObservationHold[] }>(`asha:obs:watch:${kasmId}`)
+      : null;
+    const now = Date.now();
+    return (Array.isArray(record?.holds) ? record.holds : [])
+      .filter((h) => h && h.expiresAt > now)
+      .sort((a, b) => Date.parse(a.since) - Date.parse(b.since));
+  }
+
+  /** Absent means ON, the same reading ObservationService gives this switch. */
+  private async observationNotifyEnabled(orgId: string): Promise<boolean> {
+    const row = await prisma.setting.findUnique({
+      where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId, zoneId: '', key: 'observation.notifyUser' } },
+      select: { valueJson: true },
+    });
+    return row?.valueJson !== false;
   }
 
   /** Freeze a running session's container (no compute, state retained). */
@@ -1226,7 +1343,12 @@ export class SessionsService {
     return session;
   }
 
-  private async sendControl(
+  /**
+   * Publish a control frame to the agent that owns the session. Public because
+   * ObservationService drives OBSERVE_START/OBSERVE_STOP through it, and the
+   * zone name a control channel is keyed by is resolved here and nowhere else.
+   */
+  async sendControl(
     session: { id: string; zoneId: string | null; containerId: string | null },
     partial: Omit<SessionControlCommand, 'sessionId' | 'containerId'>,
   ) {

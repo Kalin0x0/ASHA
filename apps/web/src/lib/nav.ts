@@ -39,6 +39,7 @@ import {
   Palette,
   Rocket,
   Route,
+  ScanEye,
   ScrollText,
   Send,
   Server,
@@ -71,6 +72,12 @@ export interface NavItem {
    * perm is system-admin-only. Drives the "limited admin" (e.g. Operator) view.
    */
   perm?: string | string[];
+  /**
+   * Held IN ADDITION to `perm`, for a page that reads one endpoint and acts on
+   * another. Everything else wants the OR above; an item that needs both is
+   * better hidden than opened onto a list the API will refuse to fill.
+   */
+  alsoNeeds?: string[];
 }
 
 export interface NavGroup {
@@ -112,6 +119,15 @@ export const navGroups: NavGroup[] = [
     icon: MonitorPlay,
     items: [
       { key: 'liveSessions', href: '/sessions', icon: MonitorPlay, perm: 'SESSION_VIEW_ANY' },
+      // Observing opens the windows, but the wall is a list of sessions first:
+      // without SESSION_VIEW_ANY the tiles it would draw them on never arrive.
+      {
+        key: 'monitor',
+        href: '/sessions/monitor',
+        icon: ScanEye,
+        perm: 'SESSION_OBSERVE',
+        alsoNeeds: ['SESSION_VIEW_ANY'],
+      },
       { key: 'history', href: '/sessions/history', icon: History, perm: 'SESSION_VIEW_ANY' },
       { key: 'recordings', href: '/sessions/recordings', icon: Film, perm: 'RECORDING_VIEW' },
       { key: 'staging', href: '/sessions/staging', icon: Layers, perm: 'POOL_MANAGE' },
@@ -238,25 +254,25 @@ export function canAccessRoute(pathname: string, perms: string[] | undefined, is
   if (isSystemAdmin) return true;
   const match = findNavItem(pathname);
   if (!match) return true;
-  const { perm } = match.item;
-  if (!perm) return false; // untagged admin route → system-admin-only
-  const need = Array.isArray(perm) ? perm : [perm];
   const set = new Set(perms ?? []);
-  return need.some((p) => p === '*' || set.has(p));
+  return holdsItemPermissions(match.item, set);
 }
 
 /** Nav groups/items filtered to what this user may see (system admins see all). */
 export function visibleNavGroups(perms: string[] | undefined, isSystemAdmin: boolean): NavGroup[] {
   const set = new Set(perms ?? []);
-  const allow = (item: NavItem): boolean => {
-    if (isSystemAdmin) return true;
-    if (!item.perm) return false; // untagged → system-admin-only
-    const need = Array.isArray(item.perm) ? item.perm : [item.perm];
-    return need.some((p) => p === '*' || set.has(p));
-  };
+  const allow = (item: NavItem): boolean => isSystemAdmin || holdsItemPermissions(item, set);
   return navGroups
     .map((g) => ({ ...g, items: g.items.filter(allow) }))
     .filter((g) => g.items.length > 0);
+}
+
+/** `perm` as an OR, `alsoNeeds` as an AND on top. Untagged → system-admin-only. */
+function holdsItemPermissions(item: NavItem, held: Set<string>): boolean {
+  if (!item.perm) return false;
+  const need = Array.isArray(item.perm) ? item.perm : [item.perm];
+  if (!need.some((p) => p === '*' || held.has(p))) return false;
+  return (item.alsoNeeds ?? []).every((p) => held.has(p));
 }
 
 export const allNavItems: NavItem[] = navGroups.flatMap((g) => g.items);

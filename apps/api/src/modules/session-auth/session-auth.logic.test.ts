@@ -16,13 +16,16 @@ import {
  */
 
 /** Tokens are stand-ins for verified JWTs: `t:<kasmId>` and `c:<kasmId>`. */
+const proof = (prefix: string) => (t: string) =>
+  t.startsWith(prefix) ? { kasmId: t.slice(prefix.length) } : null;
+
 const ask = (over: Partial<Parameters<typeof decideSessionAuth>[0]> = {}) =>
   decideSessionAuth({
     forwardedUri: '/session/kid1/',
     forwardedHost: undefined,
     cookieHeader: undefined,
-    readUrlToken: (t) => (t.startsWith('t:') ? t.slice(2) : null),
-    readCookieToken: (t) => (t.startsWith('c:') ? t.slice(2) : null),
+    readUrlToken: proof('t:'),
+    readCookieToken: proof('c:'),
     ...over,
   });
 
@@ -91,6 +94,17 @@ describe('decideSessionAuth', () => {
   it('refuses when neither the path nor the host names a session', () => {
     expect(ask({ forwardedUri: '/?token=t:kid1', forwardedHost: 'app.example' })).toMatchObject({
       action: 'deny',
+    });
+  });
+
+  it('reads a sub-path of a session as that session, whatever the segment says', () => {
+    // `/observe` was its own Traefik router once, with its own proof and its own
+    // cookie scope. Nothing under a session gets special treatment now — the
+    // prefix names the session and that is the whole rule.
+    expect(ask({ forwardedUri: '/session/kid1/observe/?token=t:kid1' })).toMatchObject({
+      action: 'exchange',
+      kasmId: 'kid1',
+      location: '/session/kid1/observe/',
     });
   });
 

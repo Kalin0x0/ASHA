@@ -15,6 +15,7 @@ import type {
   MaintenanceTaskRow,
   SessionStatus,
 } from '@/lib/types';
+import type { ObservationSample, ObservedByNotice } from '@/lib/observation';
 import type { AuthTokens, AuthUser } from './auth-store';
 import { apiFetch } from './client';
 import { API_BASE_URL } from './mode';
@@ -290,6 +291,17 @@ export const sessionKeepalive = (id: string) =>
 export interface ApiSessionConnection {
   connectionUrl: string | null;
   status: SessionStatus;
+  /**
+   * What the viewer paints over the desktop: the resolved banner/watermark, and
+   * the observation running right now. `session.observed` is pushed on the
+   * transition only, so `observedBy` is the only thing a viewer that reloads —
+   * or whose socket dropped — mid-observation has to go on.
+   */
+  notice?: {
+    /** Resolved by the API's watermark policy; rendered by the portal viewer. */
+    watermark?: unknown;
+    observedBy: ObservedByNotice | null;
+  };
   dlp?: {
     clipboardUp?: boolean;
     clipboardDown?: boolean;
@@ -303,6 +315,57 @@ export interface ApiSessionConnection {
 }
 export const getSessionConnection = (id: string) =>
   apiFetch<ApiSessionConnection>(`/sessions/${id}/connection`);
+
+// ── Live observation ──────────────────────────────────────────────────────────
+// A window is opened per session while the monitor wall is on screen and renewed
+// until it closes; the API answers with the short-lived watch token the proxy
+// accepts for a view-only stream. `thumbnails: false` means this session cannot
+// be captured at all — a fixed server, or observation switched off org-wide —
+// and `reason` says which, so the tile can explain itself instead of staying
+// mysteriously blank.
+export interface ApiObservationWindow {
+  /** Only the guacamole route is bought with one; absent everywhere else. */
+  watchToken?: string;
+  watchUrl?: string;
+  /**
+   * How this session may be watched. `guac` is a proxy route the guacamole
+   * viewer opens, and `watchUrl` points at it. `stream` is the agent's own
+   * capture at live cadence — no URL, because that view is a page in this app
+   * rather than an address on the session. `none` means there is no way in at
+   * all. The caller must not guess any of it from the connection type: a
+   * container reached over guacd carries the same RDP label as a fixed server.
+   */
+  watchKind: 'guac' | 'stream' | 'none';
+  /** Why there is no way in, when watchKind is 'none'. Translated by the caller. */
+  watchReason?: 'no_shared_terminal' | 'no_shared_view' | 'no_capture_agent';
+  thumbnails: boolean;
+  reason?: string;
+  windowId?: string;
+}
+
+export interface StartObservationInput {
+  /** Sampling cadence in ms. 0 leaves metadata only and captures nothing. */
+  intervalMs: number;
+  thumbWidth: number;
+}
+
+/**
+ * Which of the caller's holds a request opens, renews or releases. One observer
+ * may hold several — the wall's tile and the viewer opened from it are two —
+ * and a request that names none takes the caller's single default hold, so the
+ * wall unmounting would release the window the viewer is still watching
+ * through.
+ */
+const windowQuery = (windowId: string | undefined) =>
+  windowId ? `?window=${encodeURIComponent(windowId)}` : '';
+
+export const startObservation = (id: string, body: StartObservationInput, windowId?: string) =>
+  apiFetch<ApiObservationWindow>(`/sessions/${id}/observe${windowQuery(windowId)}`, { method: 'POST', body });
+export const stopObservation = (id: string, windowId?: string) =>
+  apiFetch<{ ok: true }>(`/sessions/${id}/observe${windowQuery(windowId)}`, { method: 'DELETE' });
+/** Everything the API is currently holding (Redis, 30s TTL) across the org. */
+export const getObservations = () =>
+  apiFetch<{ items: ObservationSample[] }>('/sessions/observations');
 
 // ── Image registries & marketplace ────────────────────────────────────────────
 export interface ApiRegistry {

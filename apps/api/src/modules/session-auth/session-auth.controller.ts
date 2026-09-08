@@ -8,6 +8,7 @@ import type { Response } from 'express';
 import { Public } from '../../common/decorators';
 import {
   SESSION_COOKIE,
+  type SessionProof,
   cookiePath,
   decideSessionAuth,
   kasmIdFromPath,
@@ -36,8 +37,8 @@ export class SessionAuthController {
     @Inject(ENV) private readonly env: Env,
   ) {}
 
-  /** Verify a JWT and return the session it is for, or null. */
-  private sessionOf(token: string, requireCookieType: boolean): string | null {
+  /** Verify a JWT and return what it proves about a session, or null. */
+  private sessionOf(token: string, requireCookieType: boolean): SessionProof | null {
     try {
       const payload = this.jwt.verify<{ kasmId?: string; typ?: string }>(token, {
         secret: this.env.SESSION_TOKEN_SECRET,
@@ -46,7 +47,8 @@ export class SessionAuthController {
       // as a URL token, nor a URL token pasted in as a cookie to skip the
       // exchange — each proof is only good for the hop it was minted for.
       if (requireCookieType !== (payload.typ === 'sess-cookie')) return null;
-      return payload.kasmId ?? null;
+      if (!payload.kasmId) return null;
+      return { kasmId: payload.kasmId };
     } catch {
       return null;
     }
@@ -54,13 +56,14 @@ export class SessionAuthController {
 
   @Public()
   @Get('session-auth')
-  gate(
+  async gate(
     @Headers('x-forwarded-uri') forwardedUri: string | undefined,
     @Headers('x-forwarded-host') forwardedHost: string | undefined,
     @Headers('x-forwarded-proto') forwardedProto: string | undefined,
     @Headers('cookie') cookieHeader: string | undefined,
     @Res() res: Response,
-  ): void {
+  ): Promise<void> {
+    const path = (forwardedUri ?? '').split('?')[0] ?? '';
     const verdict = decideSessionAuth({
       forwardedUri,
       forwardedHost,
@@ -85,7 +88,8 @@ export class SessionAuthController {
     // the token. This MUST be a non-2xx response — Traefik copies a 2xx auth
     // response's headers onto the upstream request, and only returns a non-2xx
     // one to the browser, so a `Set-Cookie` on a 200 would never arrive.
-    const mode = kasmIdFromPath((forwardedUri ?? '').split('?')[0] ?? '') ? 'path' : 'subdomain';
+    const mode = kasmIdFromPath(path) ? 'path' : 'subdomain';
+    // A session cookie lives as long as the desktop it opens.
     const ttl = this.env.SESSION_COOKIE_TTL;
     const cookie = this.jwt.sign(
       { kasmId: verdict.kasmId, typ: 'sess-cookie' },

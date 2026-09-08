@@ -154,6 +154,7 @@
       "SESSION_TERMINATE_OWN": "Terminate own sessions",
       "SESSION_TERMINATE_ANY": "Terminate any session",
       "SESSION_CONTROL_ANY": "Take control of any session",
+      "SESSION_OBSERVE": "Observe live sessions",
       "SESSION_SHARE": "Share sessions",
       "RECORDING_VIEW": "View session recordings",
       "WORKSPACE_VIEW": "View workspaces",

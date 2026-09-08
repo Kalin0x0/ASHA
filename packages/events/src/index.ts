@@ -212,7 +212,18 @@ export interface StreamProfile {
 export interface SessionControlCommand {
   sessionId: string;
   containerId?: string;
-  action: 'PAUSE' | 'RESUME' | 'RESIZE' | 'STREAM' | 'RECORD_START' | 'RECORD_STOP';
+  action:
+    | 'PAUSE'
+    | 'RESUME'
+    | 'RESIZE'
+    | 'STREAM'
+    | 'RECORD_START'
+    | 'RECORD_STOP'
+    // OBSERVE_STOP is sent when the LAST observer let go, never when one of
+    // several did: the agent reads it as "nobody is watching any more" and
+    // closes the capture loop.
+    | 'OBSERVE_START'
+    | 'OBSERVE_STOP';
   /** For RESIZE. */
   width?: number;
   height?: number;
@@ -220,6 +231,16 @@ export interface SessionControlCommand {
   streamProfile?: StreamProfile;
   /** For RECORD_START / RECORD_STOP. */
   recordingId?: string;
+  /**
+   * OBSERVE_START only. `kasmId` addresses the container, `intervalMs` is how
+   * often to sample and `ttlMs` is the dead-man switch: the agent stops on its
+   * own once no OBSERVE_START has been renewed within it, so an admin closing
+   * the tab can never leave capture running.
+   */
+  kasmId?: string;
+  intervalMs?: number;
+  ttlMs?: number;
+  thumbWidth?: number;
 }
 
 /**
@@ -284,6 +305,32 @@ export interface SessionStatSample {
   netTxKb?: number;
 }
 
+/**
+ * One observation sample of a running session, taken inside the container by the
+ * agent. Everything is optional but `kasmId`/`capturedAt`: session images are
+ * third-party, so a missing helper degrades the sample rather than failing it.
+ *
+ * For a container desktop this sample IS the live view — there is no second
+ * stream and no viewer credential — so the wall and the read-only viewer differ
+ * only in the cadence and the frame width they ask for.
+ */
+export interface SessionObservationSample {
+  kasmId: string;
+  /** Title of the focused window, e.g. "New Tab - Google Chrome". */
+  title?: string;
+  /** WM_CLASS of the focused window, e.g. "google-chrome". */
+  appClass?: string;
+  /** How many top-level windows are open (wmctrl -l). */
+  windowCount?: number;
+  /** WebP thumbnail as a bare base64 payload (no data: prefix). */
+  image?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  capturedAt: string;
+  /** Set when a helper was missing, so the UI can say why a tile is bare. */
+  degraded?: string;
+}
+
 export interface AgentHeartbeat {
   agentId: string;
   cpuCores: number;
@@ -311,6 +358,20 @@ export interface ShareParticipantEvent {
   joined: boolean;
 }
 
+/**
+ * Sent into `session:<sessionId>` so the person at the desktop is told an
+ * administrator is watching. Silent observation is not a supported mode.
+ */
+export interface SessionObservedEvent {
+  sessionId: string;
+  /** Display name of the observer, for the banner. */
+  observerName: string;
+  /** ISO timestamp the observation started. */
+  since: string;
+  /** False once the last observer leaves. */
+  active: boolean;
+}
+
 /** Realtime events pushed to dashboards over the WebSocket gateway. */
 export type WsServerEvent =
   | { type: 'session.status'; payload: SessionStatusUpdate }
@@ -319,4 +380,6 @@ export type WsServerEvent =
   | { type: 'agent.health'; payload: AgentHeartbeat & { status: string } }
   | { type: 'alert.new'; payload: { level: 'info' | 'warn' | 'error'; message: string } }
   | { type: 'share.chat'; payload: ShareChatEvent }
-  | { type: 'share.participant'; payload: ShareParticipantEvent };
+  | { type: 'share.participant'; payload: ShareParticipantEvent }
+  | { type: 'session.observation'; payload: SessionObservationSample & { sessionId: string } }
+  | { type: 'session.observed'; payload: SessionObservedEvent };

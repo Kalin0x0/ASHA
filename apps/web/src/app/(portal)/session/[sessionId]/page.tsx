@@ -31,6 +31,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { AshaMark } from '@/components/brand/logo';
+import { ObservationNotice } from '@/components/composite/observation-notice';
 import { getAccessToken } from '@/lib/api/auth-store';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -46,6 +47,7 @@ import {
 import { ApiError } from '@/lib/api/client';
 import { isLive } from '@/lib/api/mode';
 import { useLaunchableWorkspaces, useSession } from '@/lib/hooks';
+import { useSessionObserved } from '@/lib/realtime';
 import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { isLikelyUnreachableUrl } from '@/lib/stream';
@@ -120,7 +122,12 @@ export default function StreamingViewerPage() {
   const params = useParams<{ sessionId: string }>();
   const router = useRouter();
   const session = useSession(params.sessionId);
-  const stageRef = useRef<HTMLDivElement>(null);
+  // The whole viewer, control bar and observation notice included. Fullscreen is
+  // taken on this and not on the stage below it: element fullscreen paints only
+  // the subtree it was given, so fullscreening the stage would leave the "an
+  // administrator is watching" strip off the screen while the watching goes on
+  // — and full screen is how a remote desktop is normally used.
+  const rootRef = useRef<HTMLDivElement>(null);
   // Handle to the embedded KasmVNC iframe so toolbar buttons can drive its
   // same-origin DOM controls (clipboard + settings panels). KasmVNC does NOT
   // expose its UI object on `window`, so we go through the control-bar DOM.
@@ -162,6 +169,8 @@ export default function StreamingViewerPage() {
   // Keep the session alive while it's live so the idle reaper doesn't terminate
   // a desktop the user is actively watching/using.
   useKeepalive(session?.id, isRunning);
+  // Told to whoever is at this desktop while an administrator watches it.
+  const observed = useSessionObserved(session?.id);
   // Fetched once per live session from /connection (see below). Live mode waits
   // for it rather than mounting the polled row's URL, whose token was minted at
   // launch and is refused by the edge gate once it expires — the frame would
@@ -562,8 +571,37 @@ export default function StreamingViewerPage() {
     }
   };
 
+  // Second lock on the same door as the iframe's withheld fullscreen grant
+  // (see the <iframe> further down). A SAME-ORIGIN frame still inherits
+  // `fullscreen` from this document's own default allowlist, so KasmVNC's
+  // in-frame control bar can still make the frame the fullscreen element — and
+  // the browser then paints only that subtree, which does not contain the "an
+  // administrator is watching" strip. Whenever the frame ends up holding
+  // fullscreen, hand it to the viewer root instead: same picture, same gesture,
+  // and the strip stays on screen. Swapping the element is allowed while a
+  // fullscreen session is already running, so no fresh user gesture is needed;
+  // if the swap is refused all the same, leaving fullscreen is the honest
+  // fallback, because a desktop full of screen with no notice on it is the one
+  // outcome this feature may not produce.
+  useEffect(() => {
+    const onChange = () => {
+      if (!document.fullscreenElement || document.fullscreenElement !== kasmFrameRef.current) return;
+      const root = rootRef.current;
+      const leave = () => void document.exitFullscreen?.().catch(() => {});
+      if (!root) return leave();
+      const swap = root.requestFullscreen?.();
+      if (swap) void swap.catch(leave);
+      else leave();
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
   const fullscreen = () => {
-    stageRef.current?.requestFullscreen?.().catch(() => {});
+    // The toolbar is inside the fullscreen element now, so the same button has
+    // to lead back out of it.
+    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+    else void rootRef.current?.requestFullscreen?.().catch(() => {});
   };
   const onShare = async () => {
     if (!session) return;
@@ -585,7 +623,7 @@ export default function StreamingViewerPage() {
 
   if (!mounted) return null;
   return createPortal(
-    <div className="on-dark fixed inset-0 z-viewer flex flex-col bg-anthracite-950">
+    <div ref={rootRef} className="on-dark fixed inset-0 z-viewer flex flex-col bg-anthracite-950">
       {/* Control bar */}
       <div className="glass-strong absolute inset-x-0 top-0 z-20 flex h-14 items-center gap-3 px-3 sm:px-4">
         {/* Back to Workspaces — non-destructive; keeps the session running so the
@@ -760,9 +798,13 @@ export default function StreamingViewerPage() {
         </div>
       </div>
 
+      {/* Observation notice — sits directly under the control bar and above the
+          stream, because the person at this desktop has to see it without
+          looking for it. Not dismissible: it goes when the watching stops. */}
+      {observed && <ObservationNotice observed={observed} className="absolute inset-x-0 top-14 z-40" />}
+
       {/* Stage */}
       <div
-        ref={stageRef}
         className="relative flex-1 overflow-hidden bg-anthracite-950 touch-manipulation"
         onDragOver={(e) => {
           if (isRunning) {
@@ -1008,9 +1050,12 @@ function LiveStream({
         title={`${workspaceName} — ${isWebRtc ? 'WebRTC/H.264' : t('status.liveStream')}`}
         onLoad={handleLoad}
         className="size-full border-0 bg-anthracite-950"
-        // Neko/KasmVNC both need scripts + clipboard/pointer/fullscreen + WebRTC media.
-        allow="fullscreen; clipboard-read; clipboard-write; autoplay; microphone; camera; display-capture"
-        allowFullScreen
+        // Neko/KasmVNC both need scripts + clipboard/pointer + WebRTC media.
+        // Fullscreen is deliberately not among them and allowFullScreen is gone
+        // with it: KasmVNC's own control bar would otherwise make this FRAME the
+        // fullscreen element, and the notice lives outside it — see the
+        // fullscreenchange handler in the page above.
+        allow="clipboard-read; clipboard-write; autoplay; microphone; camera; display-capture"
       />
       {!ready && (
         <div className="absolute inset-0 top-14 flex flex-col items-center justify-center gap-3 bg-aurora">

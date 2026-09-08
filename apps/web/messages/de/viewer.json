@@ -155,7 +155,11 @@
       "endedDescription": "Der entfernte Host hat die Verbindung geschlossen.",
       "errorTitle": "Verbindung fehlgeschlagen",
       "errorDescription": "Die entfernte Verbindung ist fehlgeschlagen.",
-      "tryAgain": "Erneut versuchen"
+      "tryAgain": "Erneut versuchen",
+      "watchExpired": "Die Beobachtungsfreigabe ist abgelaufen und ließ sich nicht erneuern. Öffnen Sie die Sitzung erneut über die Live-Überwachung.",
+      "watchRevoked": "Die Beobachtung wurde beendet. Öffnen Sie die Sitzung erneut über die Live-Überwachung.",
+      "noLiveConnection": "An diesem Desktop ist gerade niemand verbunden – es gibt nichts zu sehen.",
+      "viewUnsupported": "Eine Terminal-Sitzung lässt sich nicht beobachten – sie hat keinen geteilten Bildschirm."
     },
     "toasts": {
       "clipboardBlockedBrowser": "Der Browser hat den Zugriff auf die Zwischenablage blockiert.",
@@ -173,5 +177,32 @@
       "hintTitle": "Touch-Steuerung",
       "hint": "Tippen = Klick, Halten = Rechtsklick, zwei Finger zum Zoomen und Scrollen."
     }
+  },
+  "observe": {
+    "back": "Zurück zur Live-Überwachung",
+    "subtitle": "Nur ansehen — nichts davon erreicht diesen Desktop",
+    "streamTitle": "Live-Bild",
+    "connecting": "Warten auf das erste Bild…",
+    "noWindow": "Kein Fenster im Vordergrund",
+    "status": {
+      "live": "Live",
+      "stalled": "Es kommen keine neuen Bilder — dieses hier ist nicht aktuell",
+      "waiting": "Warten auf das erste Bild…",
+      "degraded": "Kein Bild aus diesem Container",
+      "unavailable": "Es wird nichts erfasst"
+    },
+    "realtime": {
+      "open": "Echtzeit",
+      "polling": "Abfrage"
+    },
+    "unavailableTitle": "Hier gibt es nichts anzusehen",
+    "unavailableDescription": "Das Live-Bild eines Container-Desktops entsteht im Container selbst, über dessen Agenten. Für diese Sitzung meldet sich keiner — also gibt es auch kein Bild.",
+    "refusedDescription": "Dieses Live-Bild ließ sich nicht öffnen. Entweder ist die Sitzung beendet, oder die Live-Beobachtung ist für diese Organisation ausgeschaltet.",
+    "backToMonitor": "Zur Live-Überwachung"
+  },
+  "observed": {
+    "title": "Ein Administrator sieht diese Sitzung gerade mit",
+    "by": "{name} · seit {time}",
+    "hint": "Ihr Bildschirm wird angesehen. Niemand übernimmt die Steuerung — die Eingabe bleibt bei Ihnen."
   }
 }

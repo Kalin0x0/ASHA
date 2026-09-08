@@ -2,10 +2,12 @@ import { randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import net from 'node:net';
+import type { Duplex } from 'node:stream';
 import Docker from 'dockerode';
 import type { ProvisionCommand, SessionSidecar, SessionStatSample, StreamProfile } from '@asha/events';
 import { routerName, sessionPath, sessionTraefikLabels } from '@asha/proxy-labels';
 import { agentEnv } from './env.js';
+import type { ObservationCapture } from './observation.js';
 
 // Host directory where sidecar config files are written.
 // When the agent runs inside Docker, this must be bind-mounted from the host
@@ -516,6 +518,232 @@ export async function applyStreamProfile(idOrName: string, profile: StreamProfil
   } catch {
     // Quality/fps are also negotiated client-side; ignore images without the helper.
   }
+}
+
+/** A wedged container must not pin the agent: abort the read past this. */
+const CAPTURE_TIMEOUT_MS = 5_000;
+/**
+ * Ceilings for the helpers themselves. Abandoning the read only drops the
+ * agent's end of the exec — Docker keeps the processes inside the container
+ * running, and there is no API to kill an exec — so a display that stopped
+ * answering would otherwise leave an `sh` and an `ffmpeg` behind on every pass.
+ * A property read takes milliseconds and the 320 px frame grab was measured at
+ * ~300 ms; the 960 px one the live view asks for covers nine times the pixels
+ * and stays well inside the frame limit, which is chosen so a wedged pass is
+ * gone long before it could accumulate.
+ */
+const CAPTURE_META_KILL_SEC = 1;
+const CAPTURE_FRAME_KILL_SEC = 4;
+/**
+ * Hard read cap, so a stream that never ends cannot grow the agent's heap. Equal
+ * to the contract's character cap, which is where a frame this size ends up once
+ * base64 has grown it by a third.
+ */
+const MAX_CAPTURE_BYTES = 393_216;
+/**
+ * Largest frame that still fits the wire contract: the sample carries the image
+ * base64-encoded in a 393_216-character field, and base64 grows 3 bytes into 4.
+ * Sized for the 960 px frame the live view asks for — nine times the pixels of
+ * the 320 px wall thumbnail, and measured at ~37 KB against ~8.4 KB, so a real
+ * frame lands eightfold inside this.
+ */
+const MAX_IMAGE_BYTES = 294_912;
+
+/**
+ * One observation pass inside a running session: which window has focus, how
+ * many are open, and a small WebP frame of the display.
+ *
+ * Runs as the image's default user — PID 1 in the kasmweb images is the
+ * unprivileged kasm-user and owns the X display, so the `User: 'root'` that
+ * bootstrapCups needs would leave this with no display to grab.
+ *
+ * Every helper is guarded with `command -v`: workspace images are third-party
+ * and unpinned to this repo, so a missing binary has to degrade the sample and
+ * never fail the session.
+ */
+export async function captureObservation(
+  idOrName: string,
+  opts: { thumbWidth?: number } = {},
+): Promise<ObservationCapture> {
+  const width = clampThumbWidth(opts.thumbWidth);
+  // Metadata and frame come out of ONE exec (~135 ms of overhead each), so they
+  // describe the same moment. A nonce generated per capture separates the two
+  // halves of stdout — no window title can collide with it, unlike a fixed
+  // marker, and unlike JSON assembled in the shell out of titles the guest owns.
+  const nonce = randomBytes(9).toString('hex');
+  const script = `
+export DISPLAY=:1
+if command -v timeout >/dev/null 2>&1; then tm="timeout ${CAPTURE_META_KILL_SEC}"; tf="timeout ${CAPTURE_FRAME_KILL_SEC}"; else tm=""; tf=""; fi
+if command -v xprop >/dev/null 2>&1; then
+  aw=$($tm xprop -root _NET_ACTIVE_WINDOW 2>/dev/null | sed 's/.*# //;s/,.*//' | tr -d ' ')
+  if [ -n "$aw" ] && [ "$aw" != "0x0" ]; then
+    $tm xprop -id "$aw" _NET_WM_NAME 2>/dev/null | sed 's/^/T /'
+    $tm xprop -id "$aw" WM_CLASS 2>/dev/null | sed 's/^/C /'
+  fi
+else
+  echo "D xprop"
+fi
+if command -v wmctrl >/dev/null 2>&1; then
+  echo "W $($tm wmctrl -l 2>/dev/null | wc -l | tr -d ' ')"
+else
+  echo "D wmctrl"
+fi
+command -v ffmpeg >/dev/null 2>&1 || echo "D ffmpeg"
+echo ${nonce}
+if command -v ffmpeg >/dev/null 2>&1; then
+  $tf ffmpeg -loglevel error -f x11grab -draw_mouse 1 -i :1 -frames:v 1 -vf scale=${width}:-2 -f image2 -vcodec libwebp -quality 55 -
+fi
+`;
+
+  const exec = await docker.getContainer(idOrName).exec({
+    Cmd: ['/bin/sh', '-c', script],
+    AttachStdout: true,
+    AttachStderr: true,
+  });
+  const stream = (await exec.start({ hijack: true, stdin: false })) as Duplex;
+  const { stdout, truncated, timedOut } = await readExecStdout(stream, MAX_CAPTURE_BYTES, CAPTURE_TIMEOUT_MS);
+
+  const marker = Buffer.from(`${nonce}\n`);
+  const split = stdout.indexOf(marker);
+  const header = (split < 0 ? stdout : stdout.subarray(0, split)).toString('utf8');
+  const image = split < 0 ? Buffer.alloc(0) : stdout.subarray(split + marker.length);
+
+  const sample: ObservationCapture = {};
+  const degraded: string[] = [];
+  for (const line of header.split('\n')) {
+    if (line.startsWith('T ')) {
+      const title = xpropValue(line.slice(2));
+      if (title) sample.title = title.slice(0, 512);
+    } else if (line.startsWith('C ')) {
+      const appClass = xpropValue(line.slice(2));
+      if (appClass) sample.appClass = appClass.slice(0, 256);
+    } else if (line.startsWith('W ')) {
+      const count = Number(line.slice(2).trim());
+      if (Number.isFinite(count)) sample.windowCount = Math.min(9999, Math.max(0, Math.round(count)));
+    } else if (line.startsWith('D ')) {
+      degraded.push(`missing:${line.slice(2).trim()}`);
+    }
+  }
+
+  if (timedOut) degraded.push('timeout');
+  if (truncated || image.length > MAX_IMAGE_BYTES) {
+    // Half a frame is a broken image, but the metadata is still worth sending.
+    degraded.push('image-too-large');
+  } else if (image.length) {
+    sample.image = image.toString('base64');
+    const size = webpDimensions(image);
+    sample.imageWidth = size?.width ?? width;
+    if (size) sample.imageHeight = size.height;
+  } else if (!timedOut && !degraded.includes('missing:ffmpeg')) {
+    degraded.push('no-image');
+  }
+  // Tokens, not prose: the wall maps them onto its own translated reasons.
+  if (degraded.length) sample.degraded = degraded.join(',').slice(0, 256);
+  return sample;
+}
+
+/** Even width within the contract's bounds; `-2` leaves the height to the aspect ratio. */
+function clampThumbWidth(width?: number): number {
+  const requested = width !== undefined && Number.isFinite(width) ? Math.round(width) : 320;
+  const bounded = Math.min(1280, Math.max(160, requested));
+  return bounded - (bounded % 2);
+}
+
+/**
+ * Value out of one xprop line — `_NET_WM_NAME(UTF8_STRING) = "New Tab - Google
+ * Chrome"`. WM_CLASS carries two and the instance name comes first. A property
+ * that is not set prints `_NET_WM_NAME:  not found.` and has no ` = ` at all,
+ * which is the normal case for a desktop with nothing focused.
+ */
+function xpropValue(line: string): string | undefined {
+  const at = line.indexOf(' = ');
+  if (at < 0) return undefined;
+  const raw = line.slice(at + 3).trim();
+  const quoted = /^"((?:[^"\\]|\\.)*)"/.exec(raw);
+  const value = quoted ? (quoted[1] ?? '').replace(/\\(.)/g, '$1') : raw;
+  return value.length ? value : undefined;
+}
+
+/**
+ * Pixel size out of the WebP header. `scale=<w>:-2` takes the height from the
+ * source aspect ratio, so this is the only place the agent can learn it — and
+ * the wall needs it to reserve the tile before the frame paints.
+ */
+function webpDimensions(buf: Buffer): { width: number; height: number } | undefined {
+  if (buf.length < 30) return undefined;
+  if (buf.toString('ascii', 0, 4) !== 'RIFF' || buf.toString('ascii', 8, 12) !== 'WEBP') return undefined;
+  const fourcc = buf.toString('ascii', 12, 16);
+  if (fourcc === 'VP8 ') {
+    // Lossy frame: 3-byte tag, the 0x9d012a start code, then two 14-bit values.
+    if (buf[23] !== 0x9d || buf[24] !== 0x01 || buf[25] !== 0x2a) return undefined;
+    return { width: buf.readUInt16LE(26) & 0x3fff, height: buf.readUInt16LE(28) & 0x3fff };
+  }
+  if (fourcc === 'VP8X') {
+    return { width: buf.readUIntLE(24, 3) + 1, height: buf.readUIntLE(27, 3) + 1 };
+  }
+  return undefined;
+}
+
+/**
+ * Read an ATTACHED exec to completion. Docker frames stdout and stderr into
+ * 8-byte-headed chunks whenever the exec has no TTY — and a TTY is no option
+ * here, its newline translation would corrupt the WebP — so the frames are
+ * reassembled by hand rather than through modem.demuxStream: the read has to
+ * abort mid-stream on the cap and on the deadline, and a single frame can
+ * arrive split across several chunks.
+ */
+function readExecStdout(
+  stream: Duplex,
+  capBytes: number,
+  timeoutMs: number,
+): Promise<{ stdout: Buffer; truncated: boolean; timedOut: boolean }> {
+  return new Promise((resolve) => {
+    const frames: Buffer[] = [];
+    let pending: Buffer = Buffer.alloc(0);
+    let collected = 0;
+    let truncated = false;
+    let timedOut = false;
+    let done = false;
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve({ stdout: Buffer.concat(frames), truncated, timedOut });
+    };
+    const abort = () => {
+      stream.destroy();
+      finish();
+    };
+    const timer = setTimeout(() => {
+      timedOut = true;
+      abort();
+    }, timeoutMs);
+
+    stream.on('data', (chunk: Buffer) => {
+      if (done) return;
+      pending = pending.length ? Buffer.concat([pending, chunk]) : chunk;
+      for (;;) {
+        if (pending.length < 8) return;
+        const length = pending.readUInt32BE(4);
+        if (pending.length < 8 + length) return;
+        const isStdout = pending[0] === 1;
+        const payload = pending.subarray(8, 8 + length);
+        pending = pending.subarray(8 + length);
+        if (!isStdout) continue;
+        frames.push(payload);
+        collected += payload.length;
+        if (collected > capBytes) {
+          truncated = true;
+          abort();
+          return;
+        }
+      }
+    });
+    stream.on('end', finish);
+    stream.on('close', finish);
+    stream.on('error', finish);
+  });
 }
 
 /**

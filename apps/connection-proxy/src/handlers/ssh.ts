@@ -20,9 +20,19 @@ import type { IncomingMessage } from 'node:http';
 import { createLogger } from '@asha/logger';
 import { Client, type ClientChannel } from 'ssh2';
 import type WebSocket from 'ws';
+import type { StreamMode } from '../auth.js';
 import type { SessionRecord } from '../session-store.js';
 
 const log = createLogger('proxy:ssh');
+
+/**
+ * "This session cannot be watched at all", as opposed to the desktop handler's
+ * "nothing to watch right now": there is no way to attach to a running shell, so
+ * no observer will ever see one. The reason repeats the code for the same reason
+ * the other close codes do — the viewer reads the reason, not `event.code`.
+ */
+export const CLOSE_VIEW_UNSUPPORTED = 4011;
+const REASON_VIEW_UNSUPPORTED = `${CLOSE_VIEW_UNSUPPORTED} A terminal session cannot be watched`;
 
 const DEFAULT_SSH_PORT = 22;
 const DEFAULT_COLS = 80;
@@ -51,10 +61,26 @@ function parseControlFrame(data: WebSocket.RawData, isBinary: boolean): ResizeFr
   return null;
 }
 
-export function handleSSH(ws: WebSocket, _req: IncomingMessage, session: SessionRecord): void {
+export function handleSSH(
+  ws: WebSocket,
+  _req: IncomingMessage,
+  session: SessionRecord,
+  mode: StreamMode = 'control',
+): void {
   const host = session.internalHost;
   const port = session.internalPort ?? DEFAULT_SSH_PORT;
   const username = session.sshUser ?? 'kasm-user';
+
+  // ssh2 cannot attach to the shell somebody is working in — `conn.shell()`
+  // allocates a new PTY. So a view-mode connection here would be a second login
+  // as the session user: a real entry in the target's auth log, another slot
+  // against MaxSessions, the user's login scripts run again, and an empty prompt
+  // rather than a view of anything. Refuse it; watching may not create sessions.
+  if (mode === 'view') {
+    log.warn({ sessionId: session.sessionId }, 'view mode on an ssh session — refusing to open a second login');
+    ws.close(CLOSE_VIEW_UNSUPPORTED, REASON_VIEW_UNSUPPORTED);
+    return;
+  }
 
   if (!host) {
     ws.send('\r\n\x1b[31m[Asha] SSH target not ready — no container host on record.\x1b[0m\r\n');
