@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.2',
+    date: '2026-09-10',
+    title: { en: 'Told once, not on every session', de: 'Einmal gesagt, nicht in jeder Sitzung' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'An organisation can choose how a user is told their session may be watched. The default is unchanged — a banner naming the observer, on every session. The new option is a one-time notice: the user accepts a disclosure once at sign-in, and after that the per-session banner is dropped for them. It is a real notice, not a hidden switch: a user who has not accepted still sees the banner, and every observation is recorded with the observer’s name and the time either way. Set it under Settings → General.',
+          de: 'Eine Organisation kann wählen, wie ein Nutzer erfährt, dass seine Sitzung eingesehen werden kann. Die Vorgabe bleibt unverändert — ein Banner mit dem Namen des Beobachters, in jeder Sitzung. Neu ist ein einmaliger Hinweis: Der Nutzer bestätigt bei der Anmeldung einmal einen Hinweis, danach entfällt für ihn das Banner je Sitzung. Es ist ein echter Hinweis, kein verborgener Schalter: Wer nicht bestätigt hat, sieht das Banner weiterhin, und jede Beobachtung wird in beiden Fällen mit Name und Uhrzeit protokolliert. Einzustellen unter Einstellungen → Allgemein.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.1',
     date: '2026-09-08',
     title: { en: 'A keyboard layout belongs to the machine you are typing on', de: 'Eine Tastaturbelegung gehört zu der Maschine, auf der getippt wird' },
