@@ -173,7 +173,7 @@ describe('SessionsService.connection — viewer notice', () => {
    * has no way back to the truth without this.
    */
   describe('observedState', () => {
-    const SEED = { id: 'sess1', orgId: 'org1', kasmId: 'kid1' };
+    const SEED = { id: 'sess1', orgId: 'org1', kasmId: 'kid1', userId: 'worker1' };
 
     it('reports the observation a reconnecting viewer missed the start of', async () => {
       redis.get.mockResolvedValue(watching({}));

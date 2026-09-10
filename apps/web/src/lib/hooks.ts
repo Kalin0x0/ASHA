@@ -21,6 +21,7 @@ export const useMyTariff = impl.useMyTariff;
 export const useAccount = impl.useAccount;
 export const useUpdateAccount = impl.useUpdateAccount;
 export const useChangePassword = impl.useChangePassword;
+export const useAcknowledgeObservation = impl.useAcknowledgeObservation;
 export const useSession = impl.useSession;
 export const useObservations = impl.useObservations;
 export const useStartObservation = impl.useStartObservation;

@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { type AcknowledgeObservationDto, acknowledgeObservationSchema } from '@asha/contracts';
 import { z } from 'zod';
 import { type AuthUser, CurrentUser } from '../../common/decorators';
 import { ZodPipe } from '../../common/zod.pipe';
@@ -42,5 +43,13 @@ export class AccountController {
   @Post('password')
   changePassword(@CurrentUser() user: AuthUser, @Body(new ZodPipe(changePasswordSchema)) dto: ChangePasswordDto) {
     return this.account.changePassword(user, dto);
+  }
+
+  @Post('observation-disclosure')
+  acknowledgeObservation(
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodPipe(acknowledgeObservationSchema)) dto: AcknowledgeObservationDto,
+  ) {
+    return this.account.acknowledgeObservation(user, dto.version);
   }
 }

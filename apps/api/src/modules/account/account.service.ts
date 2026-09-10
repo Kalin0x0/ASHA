@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { OBSERVATION_DISCLOSURE_VERSION } from '@asha/contracts';
 import { hashPassword, verifyPassword } from '@asha/crypto';
 import { prisma } from '@asha/db';
 import { AuditService } from '../../common/audit.service';
@@ -44,10 +45,10 @@ export class AccountService {
   async getProfile(user: AuthUser) {
     const row = await prisma.user.findUnique({
       where: { id: user.sub },
-      select: { ...SELF_SELECT, credentials: { where: { kind: 'PASSWORD' }, select: { id: true } }, twoFactorMethods: { where: { confirmed: true }, select: { id: true } }, groups: { select: { group: { select: { name: true } } } } },
+      select: { ...SELF_SELECT, observationAckVersion: true, credentials: { where: { kind: 'PASSWORD' }, select: { id: true } }, twoFactorMethods: { where: { confirmed: true }, select: { id: true } }, groups: { select: { group: { select: { name: true } } } } },
     });
     if (!row) throw new NotFoundException('User not found');
-    const { credentials, twoFactorMethods, groups, federatedFrom, ...rest } = row;
+    const { credentials, twoFactorMethods, groups, federatedFrom, observationAckVersion, ...rest } = row;
     return {
       ...rest,
       // Local (password) account ⇒ may change e-mail/password. Federated (SSO)
@@ -56,7 +57,58 @@ export class AccountService {
       hasPassword: credentials.length > 0,
       twoFactorEnabled: twoFactorMethods.length > 0,
       groups: groups.map((g) => g.group.name),
+      // Whether this user must accept the live-observation disclosure before the
+      // per-session banner may be dropped for them. Only true under `ack` mode
+      // and only until they accept the current version — the front end shows the
+      // one-time dialog off this flag.
+      observationDisclosure: {
+        required: await this.observationDisclosureRequired(user.orgId, observationAckVersion),
+        version: OBSERVATION_DISCLOSURE_VERSION,
+      },
     };
+  }
+
+  /**
+   * Record that the caller has read and accepted the live-observation
+   * disclosure. Server-authoritative on the version: a client posting anything
+   * but the current one saw different words, so it is turned away to reload
+   * rather than recorded as consent to text it never showed.
+   */
+  async acknowledgeObservation(user: AuthUser, version: number) {
+    if (version !== OBSERVATION_DISCLOSURE_VERSION) {
+      throw new BadRequestException('The disclosure has changed; please reload and read it again.');
+    }
+    await prisma.user.update({
+      where: { id: user.sub },
+      data: { observationAckAt: new Date(), observationAckVersion: OBSERVATION_DISCLOSURE_VERSION },
+    });
+    // A consent record is a security fact: who agreed to being observed, and
+    // when. It belongs in the same trail the observations themselves are in.
+    await this.security.emit({
+      action: 'observation.disclosure_ack',
+      severity: 'info',
+      orgId: user.orgId,
+      actorUserId: user.sub,
+      targetType: 'User',
+      targetId: user.sub,
+      metadata: { version: OBSERVATION_DISCLOSURE_VERSION },
+    });
+    return { ok: true, version: OBSERVATION_DISCLOSURE_VERSION };
+  }
+
+  /**
+   * True only when the org is in `ack` mode AND this user has not yet accepted
+   * the current disclosure. In `live` mode there is nothing to accept — the
+   * banner shows on every session — so it is never required. Absent setting =
+   * `live`, the default the whole feature ships with.
+   */
+  private async observationDisclosureRequired(orgId: string, ackVersion: number | null): Promise<boolean> {
+    const row = await prisma.setting.findUnique({
+      where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId, zoneId: '', key: 'observation.noticeMode' } },
+      select: { valueJson: true },
+    });
+    if (row?.valueJson !== 'ack') return false;
+    return ackVersion == null || ackVersion < OBSERVATION_DISCLOSURE_VERSION;
   }
 
   async updateProfile(user: AuthUser, dto: UpdateAccountInput) {

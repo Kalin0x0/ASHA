@@ -225,7 +225,7 @@ describe('SessionsGateway — the notice a joining socket is owed', () => {
   it('tells a reconnecting viewer that it is being watched right now', async () => {
     const client = socket({ auth: { token: 'good' }, query: { sessionId: 'sess1' } });
     await gateway.handleConnection(client as never);
-    expect(sessions.observedState).toHaveBeenCalledWith({ id: 'sess1', orgId: 'org1', kasmId: 'kid1' });
+    expect(sessions.observedState).toHaveBeenCalledWith({ id: 'sess1', orgId: 'org1', kasmId: 'kid1', userId: 'user1' });
     expect(client.emit).toHaveBeenCalledWith('event', { type: 'session.observed', payload: WATCHED });
   });
 

@@ -84,7 +84,7 @@ export class SessionsGateway implements OnGatewayConnection {
     // for an observation that has since ended.
     client.emit('event', {
       type: 'session.observed',
-      payload: await this.sessions.observedState({ id: sessionId, orgId: user.orgId, kasmId: session.kasmId }),
+      payload: await this.sessions.observedState({ id: sessionId, orgId: user.orgId, kasmId: session.kasmId, userId: session.userId }),
     } satisfies WsServerEvent);
   }
 
@@ -140,7 +140,7 @@ export class SessionsGateway implements OnGatewayConnection {
    * SESSION_VIEW_ANY holder, and nobody else. The row comes back rather than a
    * boolean because the notice replayed on the join is keyed by `kasmId`.
    */
-  private async sessionToJoin(sessionId: string, user: AuthUser): Promise<{ kasmId: string | null } | null> {
+  private async sessionToJoin(sessionId: string, user: AuthUser): Promise<{ kasmId: string | null; userId: string | null } | null> {
     // A handshake never passes through the tenant interceptor, so the Prisma
     // extension adds no orgId here and the filter has to be written out.
     const session = await prisma.session.findFirst({

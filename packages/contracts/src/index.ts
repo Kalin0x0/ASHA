@@ -388,6 +388,37 @@ export const startObservationSchema = z.object({
 });
 export type StartObservationDto = z.infer<typeof startObservationSchema>;
 
+/**
+ * How the watched user is told they can be observed.
+ *
+ *  - `live`  — the default. A banner names the observer for as long as they are
+ *    watching, on every session. Nothing is assumed about prior consent.
+ *  - `ack`   — the user agrees once (a disclosure they accept at sign-in), and
+ *    then the per-session banner is dropped. The agreement is real: it is shown,
+ *    recorded per user, and the audit trail still names every observation. A
+ *    user who has NOT accepted still gets the live banner — consent is the
+ *    condition for dropping it, never a default. This is the lawful middle
+ *    ground between a banner on every session and silent watching; silent
+ *    watching (`observation.notifyUser=false`) is a separate, unsurfaced switch
+ *    this mode does not touch.
+ */
+export const OBSERVATION_NOTICE_MODES = ['live', 'ack'] as const;
+export type ObservationNoticeMode = (typeof OBSERVATION_NOTICE_MODES)[number];
+export const observationNoticeModeSchema = z.enum(OBSERVATION_NOTICE_MODES);
+
+/**
+ * The disclosure the user accepts under `ack` mode. Bump this when the wording
+ * changes materially: a user whose recorded version is older is asked again,
+ * because a consent to different words is not a consent to these.
+ */
+export const OBSERVATION_DISCLOSURE_VERSION = 1;
+
+/** Self-service: the user records that they have read and accepted the notice. */
+export const acknowledgeObservationSchema = z.object({
+  version: z.number().int().min(1).max(1_000_000),
+});
+export type AcknowledgeObservationDto = z.infer<typeof acknowledgeObservationSchema>;
+
 // ── Identity: auth providers (OIDC / SAML / LDAP) ────────────────────────────
 export const createAuthConfigSchema = z.object({
   type: z.enum(['LOCAL', 'LDAP', 'SAML', 'OIDC']),

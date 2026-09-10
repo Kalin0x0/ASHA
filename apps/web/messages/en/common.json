@@ -1,4 +1,10 @@
 {
+  "observationDisclosure": {
+    "title": "Your sessions can be viewed",
+    "body": "An administrator of this platform can open a live view of your remote desktop — to help, or to check how it is being used. You are told here, once, so it is never a surprise.",
+    "detail": "Every time a session is viewed it is recorded with the viewer’s name and the time. By continuing you confirm you have read this.",
+    "accept": "I understand — continue"
+  },
   "actions": {
     "add": "Add",
     "back": "Back",

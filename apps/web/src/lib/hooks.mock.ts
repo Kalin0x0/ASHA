@@ -637,6 +637,9 @@ let mockAccount: MockAccount = {
   hasPassword: true,
   twoFactorEnabled: false,
   groups: ['All Users'],
+  // Mock mode runs in `live` notice mode: the banner shows on every session, so
+  // nothing to acknowledge and the sign-in dialog never appears.
+  observationDisclosure: { required: false, version: 1 },
 };
 const acctListeners = new Set<() => void>();
 const acctStore = {
@@ -673,5 +676,13 @@ export function useChangePassword() {
     mockAccount = { ...mockAccount, hasPassword: true };
     acctStore.emit();
     return { ok: true as const };
+  }, []);
+}
+
+export function useAcknowledgeObservation() {
+  return useCallback(async (version: number) => {
+    mockAccount = { ...mockAccount, observationDisclosure: { required: false, version } };
+    acctStore.emit();
+    return { ok: true as const, version };
   }, []);
 }

@@ -1,4 +1,13 @@
 {
+  "observation": {
+    "title": "Live observation notice",
+    "description": "How a user is told they can be watched while an administrator views their session.",
+    "modeLabel": "Notice mode",
+    "modeLive": "Banner on every session",
+    "modeAck": "One-time acknowledgement",
+    "helpLive": "A banner naming the observer stays on screen for as long as someone is watching, on every session. This is the default.",
+    "helpAck": "Each user accepts a disclosure once at sign-in; afterwards the per-session banner is dropped for them. A user who has not accepted still sees the banner, and every observation is recorded either way. Only use this where users have genuinely been informed."
+  },
   "general": {
     "title": "General",
     "description": "Organization-wide key/value settings — session defaults, security toggles, and other tunables consumed across the platform.",

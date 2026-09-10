@@ -240,6 +240,51 @@ describe('ObservationService', () => {
     });
   });
 
+  describe('acknowledgement notice mode', () => {
+    // In ack mode a user who accepted the disclosure gets no per-session banner —
+    // that is the whole point — but the observation is still audited, and marked
+    // as covered by prior consent rather than as unannounced.
+    const ackMode = () =>
+      prismaMock.setting.findUnique.mockImplementation((args: { where: { scope_orgId_zoneId_key: { key: string } } }) =>
+        Promise.resolve(args.where.scope_orgId_zoneId_key.key === 'observation.noticeMode' ? { valueJson: 'ack' } : null),
+      );
+    // observerName() and resolveNotice() both read prisma.user.findUnique; tell
+    // them apart by the column resolveNotice asks for.
+    const observedAck = (ackVersion: number | null) =>
+      prismaMock.user.findUnique.mockImplementation((args: { select?: { observationAckVersion?: boolean } }) =>
+        Promise.resolve(
+          args.select?.observationAckVersion
+            ? { observationAckVersion: ackVersion }
+            : { displayName: 'Ada Lovelace', email: 'admin@x.io' },
+        ),
+      );
+
+    it('drops the banner for a user who accepted, but still audits the observation', async () => {
+      ackMode();
+      observedAck(1);
+      await svc.start(ADMIN, 'sess1', DTO);
+      expect(notices().some((n) => n.active)).toBe(false);
+      expect(security.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'observation.start',
+          metadata: expect.objectContaining({ notified: false, noticeMode: 'ack', disclosureAck: true }),
+        }),
+      );
+    });
+
+    it('still shows the banner in ack mode for a user who never accepted', async () => {
+      ackMode();
+      observedAck(null);
+      await svc.start(ADMIN, 'sess1', DTO);
+      expect(notices().some((n) => n.active)).toBe(true);
+      expect(security.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({ notified: true, noticeMode: 'ack', disclosureAck: false }),
+        }),
+      );
+    });
+  });
+
   describe('capture', () => {
     it('asks the agent for frames on a container session and arms the dead-man switch', async () => {
       const res = await svc.start(ADMIN, 'sess1', DTO);

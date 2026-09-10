@@ -9,7 +9,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Interval } from '@nestjs/schedule';
 import type { Env } from '@asha/config';
-import type { SessionObservationDto, StartObservationDto } from '@asha/contracts';
+import { OBSERVATION_DISCLOSURE_VERSION, type SessionObservationDto, type StartObservationDto } from '@asha/contracts';
 import { prisma, runUnscoped } from '@asha/db';
 import type { SessionObservationSample } from '@asha/events';
 import type { AuthUser } from '../../common/decorators';
@@ -275,7 +275,8 @@ export class ObservationService {
       throw new BadRequestException(`Session is ${session.status}; only a running session can be observed`);
     }
 
-    const notify = await this.policyEnabled(user.orgId, 'observation.notifyUser');
+    const notice = await this.resolveNotice(user.orgId, session.userId);
+    const notify = notice.showBanner;
     const observerName = await this.observerName(user);
     const now = Date.now();
 
@@ -348,6 +349,12 @@ export class ObservationService {
         kasmId: session.kasmId,
         thumbnails: capture,
         notified: notify,
+        // How the user was told: `live` = the banner that just went out, `ack` =
+        // no banner because they accepted the disclosure beforehand. The trail
+        // must show which, so a silent-looking observation is legible as one the
+        // user consented to rather than one that hid.
+        noticeMode: notice.mode,
+        disclosureAck: notice.mode === 'ack' && !notify,
         // Someone else was already watching when this observer joined: the
         // trail has to show an overlap, not a second independent window.
         observers: observerCount(holds),
@@ -558,7 +565,7 @@ export class ObservationService {
       // there longest. Gated on the same policy start() honours: an org that
       // switched the notice off must not have it appear the moment one of two
       // observers walks away.
-      if (closed && (await this.policyEnabled(session.orgId, 'observation.notifyUser'))) {
+      if (closed && (await this.resolveNotice(session.orgId, session.userId)).showBanner) {
         const named = holds[0];
         this.gateway.emitToSession(session.id, {
           type: 'session.observed',
@@ -664,7 +671,7 @@ export class ObservationService {
       // the reason stop() gives — a lapse is not a licence to start announcing.
       if (
         before[0].observerUserId !== holds[0].observerUserId &&
-        (await this.policyEnabled(session.orgId, 'observation.notifyUser'))
+        (await this.resolveNotice(session.orgId, session.userId)).showBanner
       ) {
         this.gateway.emitToSession(session.id, {
           type: 'session.observed',
@@ -804,6 +811,43 @@ export class ObservationService {
       select: { valueJson: true },
     });
     return row?.valueJson !== false;
+  }
+
+  /**
+   * Whether the per-session banner goes out for this observation, and under
+   * which notice mode — the single decision every emit and the audit row read
+   * from, so they can never disagree.
+   *
+   * `ack` mode drops the banner ONLY for a user who accepted the current
+   * disclosure; a user who has not still sees it. That is the whole point of the
+   * mode — consent is the condition for silence, not an assumption — and it is
+   * why the observed user's own acceptance is read here rather than an org flag
+   * alone. The older `observation.notifyUser=false` switch still wins outright
+   * and is untouched: this mode is the disclosed alternative to it, not a rename.
+   */
+  private async resolveNotice(
+    orgId: string,
+    observedUserId: string | null,
+  ): Promise<{ showBanner: boolean; mode: 'live' | 'ack' }> {
+    const mode = await this.noticeMode(orgId);
+    if (!(await this.policyEnabled(orgId, 'observation.notifyUser'))) return { showBanner: false, mode };
+    if (mode !== 'ack') return { showBanner: true, mode };
+    if (!observedUserId) return { showBanner: true, mode };
+    const u = await prisma.user.findUnique({
+      where: { id: observedUserId },
+      select: { observationAckVersion: true },
+    });
+    const acked = u?.observationAckVersion != null && u.observationAckVersion >= OBSERVATION_DISCLOSURE_VERSION;
+    return { showBanner: !acked, mode };
+  }
+
+  /** The org's observation notice mode. Absent = `live`, the shipping default. */
+  private async noticeMode(orgId: string): Promise<'live' | 'ack'> {
+    const row = await prisma.setting.findUnique({
+      where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId, zoneId: '', key: 'observation.noticeMode' } },
+      select: { valueJson: true },
+    });
+    return row?.valueJson === 'ack' ? 'ack' : 'live';
   }
 
   /** The name the observed user reads in the notice — never an opaque id. */

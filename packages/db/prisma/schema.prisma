@@ -357,6 +357,15 @@ model User {
    * perpetual. Also enforced just-in-time at login/refresh.
    */
   deactivatesAt DateTime?
+  /**
+   * When this user last accepted the live-observation disclosure, and which
+   * version of it. Only meaningful under the org's `ack` notice mode: with a
+   * version at or above the current one, the per-session observation banner is
+   * dropped for this user because they agreed to it once. Null = never accepted,
+   * so the banner still shows — consent is the condition, not the default.
+   */
+  observationAckAt      DateTime?
+  observationAckVersion Int?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 

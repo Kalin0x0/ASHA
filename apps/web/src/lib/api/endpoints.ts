@@ -233,6 +233,13 @@ export interface ApiAccount {
   hasPassword: boolean;
   twoFactorEnabled: boolean;
   groups: string[];
+  /**
+   * Whether this user must accept the live-observation disclosure before the
+   * per-session banner may be dropped for them. `required` is only true under
+   * the org's one-time-acknowledgement mode, and only until they accept the
+   * given `version` — the sign-in dialog is driven off this.
+   */
+  observationDisclosure?: { required: boolean; version: number };
 }
 export interface UpdateAccountInput {
   displayName?: string | null;
@@ -244,6 +251,8 @@ export const getAccount = () => apiFetch<ApiAccount>('/account');
 export const updateAccount = (body: UpdateAccountInput) => apiFetch<ApiAccount>('/account', { method: 'PATCH', body });
 export const changePassword = (body: { currentPassword?: string; newPassword: string }) =>
   apiFetch<{ ok: true }>('/account/password', { method: 'POST', body });
+export const acknowledgeObservationDisclosure = (version: number) =>
+  apiFetch<{ ok: true; version: number }>('/account/observation-disclosure', { method: 'POST', body: { version } });
 
 // 2FA / TOTP self-service (backend already implements these).
 export interface TotpEnrollResponse {

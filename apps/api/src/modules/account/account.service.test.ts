@@ -7,6 +7,7 @@ const { prismaMock } = vi.hoisted(() => ({
     user: { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
     userCredential: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
     refreshToken: { updateMany: vi.fn() },
+    setting: { findUnique: vi.fn() },
   },
 }));
 
@@ -16,6 +17,8 @@ vi.mock('@asha/crypto', () => ({
   verifyPassword: (p: string, hash: string) => Promise.resolve(hash === `hashed(${p})`),
 }));
 
+import { OBSERVATION_DISCLOSURE_VERSION } from '@asha/contracts';
+import { BadRequestException } from '@nestjs/common';
 import { AccountService } from './account.service';
 
 const USER = { sub: 'u1', orgId: 'org1', email: 'me@example.com', isSystemAdmin: false } as const;
@@ -32,6 +35,83 @@ beforeEach(() => {
   // Default: a local (non-federated) account, and no refresh tokens to revoke.
   prismaMock.user.findUnique.mockResolvedValue({ id: 'u1', email: 'me@example.com', federatedFrom: null });
   prismaMock.refreshToken.updateMany.mockResolvedValue({ count: 0 });
+  // Default org: no observation notice mode set → `live`, nothing to acknowledge.
+  prismaMock.setting.findUnique.mockResolvedValue(null);
+});
+
+/** A getProfile row: the joins getProfile selects, plus the ack version under test. */
+function profileRow(ackVersion: number | null) {
+  return {
+    id: 'u1',
+    email: 'me@example.com',
+    username: 'me',
+    displayName: 'Me',
+    avatarUrl: null,
+    status: 'ACTIVE',
+    isSystemAdmin: false,
+    locale: 'en',
+    federatedFrom: null,
+    lastLoginAt: null,
+    createdAt: new Date().toISOString(),
+    observationAckVersion: ackVersion,
+    credentials: [{ id: 'c1' }],
+    twoFactorMethods: [],
+    groups: [],
+  };
+}
+
+describe('AccountService.getProfile — observation disclosure', () => {
+  it('is required under ack mode when the user has never accepted', async () => {
+    const { svc } = makeService();
+    prismaMock.user.findUnique.mockResolvedValue(profileRow(null));
+    prismaMock.setting.findUnique.mockResolvedValue({ valueJson: 'ack' });
+
+    const p = await svc.getProfile(USER as never);
+    expect(p.observationDisclosure).toEqual({ required: true, version: OBSERVATION_DISCLOSURE_VERSION });
+  });
+
+  it('is not required once the current version has been accepted', async () => {
+    const { svc } = makeService();
+    prismaMock.user.findUnique.mockResolvedValue(profileRow(OBSERVATION_DISCLOSURE_VERSION));
+    prismaMock.setting.findUnique.mockResolvedValue({ valueJson: 'ack' });
+
+    const p = await svc.getProfile(USER as never);
+    expect(p.observationDisclosure.required).toBe(false);
+  });
+
+  it('is never required in live mode, even for a user who never accepted', async () => {
+    const { svc } = makeService();
+    prismaMock.user.findUnique.mockResolvedValue(profileRow(null));
+    prismaMock.setting.findUnique.mockResolvedValue(null); // absent = live
+
+    const p = await svc.getProfile(USER as never);
+    expect(p.observationDisclosure.required).toBe(false);
+  });
+});
+
+describe('AccountService.acknowledgeObservation', () => {
+  it('records the acceptance and emits a security event', async () => {
+    const { svc, security } = makeService();
+    prismaMock.user.update.mockResolvedValue({ id: 'u1' });
+
+    const res = await svc.acknowledgeObservation(USER as never, OBSERVATION_DISCLOSURE_VERSION);
+
+    expect(res).toEqual({ ok: true, version: OBSERVATION_DISCLOSURE_VERSION });
+    expect(prismaMock.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { observationAckAt: expect.any(Date), observationAckVersion: OBSERVATION_DISCLOSURE_VERSION },
+    });
+    expect(security.emit).toHaveBeenCalledWith(expect.objectContaining({ action: 'observation.disclosure_ack' }));
+  });
+
+  it('refuses a version other than the current one and writes nothing', async () => {
+    const { svc, security } = makeService();
+    await expect(svc.acknowledgeObservation(USER as never, OBSERVATION_DISCLOSURE_VERSION + 1)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+    expect(security.emit).not.toHaveBeenCalled();
+  });
 });
 
 describe('AccountService.updateProfile', () => {

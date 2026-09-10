@@ -950,6 +950,16 @@ export function useUpdateAccount() {
   return useCallback((input: api.UpdateAccountInput) => mutateAsync(input), [mutateAsync]);
 }
 
+/** Record that the signed-in user accepted the live-observation disclosure. */
+export function useAcknowledgeObservation() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: api.acknowledgeObservationDisclosure,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ACCOUNT_KEY }),
+  });
+  return useCallback((version: number) => mutateAsync(version), [mutateAsync]);
+}
+
 export function useChangePassword() {
   return useCallback((input: { currentPassword?: string; newPassword: string }) => api.changePassword(input), []);
 }

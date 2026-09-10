@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { ObservationDisclosureGate } from '@/components/composite/observation-disclosure-gate';
 import { useAuth } from '@/lib/api/auth-context';
 import { isLive } from '@/lib/api/mode';
 
@@ -42,8 +43,18 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!isLive) return <>{children}</>;
   // Authenticated → render now. Store hydration is synchronous, so this is
-  // correct on the first client frame and is what removes the blank/hang.
-  if (isAuthenticated) return <>{children}</>;
+  // correct on the first client frame and is what removes the blank/hang. The
+  // observation disclosure rides alongside: it renders nothing unless the org is
+  // in acknowledgement mode and this user has not accepted yet, and then it
+  // overlays every authenticated area — the one place that covers portal and
+  // admin both, so a session cannot be reached around it.
+  if (isAuthenticated)
+    return (
+      <>
+        {children}
+        <ObservationDisclosureGate />
+      </>
+    );
   // Unknown (still mounting) or definitely logged out (redirect in flight):
   // a neutral spinner, never a blank null page.
   return <AuthGateFallback />;

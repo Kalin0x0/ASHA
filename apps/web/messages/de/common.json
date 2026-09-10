@@ -1,4 +1,10 @@
 {
+  "observationDisclosure": {
+    "title": "Deine Sitzungen können eingesehen werden",
+    "body": "Ein Administrator dieser Plattform kann eine Live-Ansicht deines entfernten Desktops öffnen — zur Unterstützung oder um zu sehen, wie er genutzt wird. Du wirst hier einmal darauf hingewiesen, damit es dich nie überrascht.",
+    "detail": "Jede Einsicht wird mit dem Namen des Beobachters und der Uhrzeit protokolliert. Mit „Weiter“ bestätigst du, dass du das gelesen hast.",
+    "accept": "Verstanden — weiter"
+  },
   "actions": {
     "add": "Hinzufügen",
     "back": "Zurück",

@@ -1,4 +1,13 @@
 {
+  "observation": {
+    "title": "Hinweis zur Live-Beobachtung",
+    "description": "Wie ein Nutzer erfährt, dass er beobachtet werden kann, während ein Administrator seine Sitzung ansieht.",
+    "modeLabel": "Hinweismodus",
+    "modeLive": "Banner in jeder Sitzung",
+    "modeAck": "Einmalige Bestätigung",
+    "helpLive": "Ein Banner mit dem Namen des Beobachters bleibt sichtbar, solange jemand zusieht — in jeder Sitzung. Das ist die Vorgabe.",
+    "helpAck": "Jeder Nutzer bestätigt einmal bei der Anmeldung einen Hinweis; danach entfällt für ihn das Banner je Sitzung. Wer nicht bestätigt hat, sieht das Banner weiterhin, und jede Beobachtung wird in beiden Fällen protokolliert. Nur einsetzen, wo die Nutzer wirklich informiert wurden."
+  },
   "general": {
     "title": "Allgemein",
     "description": "Organisationsweite Schlüssel/Wert-Einstellungen — Sitzungsstandards, Sicherheitsoptionen und weitere Parameter, die plattformweit verwendet werden.",

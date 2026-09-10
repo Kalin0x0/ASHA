@@ -10,7 +10,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import type { Env } from '@asha/config';
 import { ENV } from '../../common/env.module';
-import type { CreateSessionDto } from '@asha/contracts';
+import { type CreateSessionDto, OBSERVATION_DISCLOSURE_VERSION } from '@asha/contracts';
 import { prisma } from '@asha/db';
 import {
   type DlpPolicy,
@@ -1092,7 +1092,7 @@ export class SessionsService {
    * observer because there is none; the viewer reads neither field when
    * `active` is false.
    */
-  async observedState(session: { id: string; orgId: string; kasmId: string | null }): Promise<SessionObservedEvent> {
+  async observedState(session: { id: string; orgId: string; kasmId: string | null; userId: string | null }): Promise<SessionObservedEvent> {
     const observedBy = await this.observedBy(session);
     return {
       sessionId: session.id,
@@ -1111,10 +1111,10 @@ export class SessionsService {
    * that told the user anyway would put the banner back through a door the
    * policy cannot see.
    */
-  private async observedBy(session: { orgId: string; kasmId: string | null }) {
+  private async observedBy(session: { orgId: string; kasmId: string | null; userId: string | null }) {
     const holds = await this.observationHolds(session.kasmId);
     const longest = holds[0];
-    if (!longest || !(await this.observationNotifyEnabled(session.orgId))) return null;
+    if (!longest || !(await this.observationBannerShown(session.orgId, session.userId))) return null;
     return {
       observerName: longest.observerName,
       since: longest.since,
@@ -1140,13 +1140,32 @@ export class SessionsService {
       .sort((a, b) => Date.parse(a.since) - Date.parse(b.since));
   }
 
-  /** Absent means ON, the same reading ObservationService gives this switch. */
-  private async observationNotifyEnabled(orgId: string): Promise<boolean> {
-    const row = await prisma.setting.findUnique({
-      where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId, zoneId: '', key: 'observation.notifyUser' } },
-      select: { valueJson: true },
+  /**
+   * Whether the banner shows for THIS observed user, mirroring
+   * ObservationService.resolveNotice so the viewer's read-back and the push
+   * agree. `notifyUser=false` silences it outright (the unsurfaced switch);
+   * otherwise `ack` mode drops it only for a user who accepted the current
+   * disclosure, and everyone else — and `live` mode — still gets it.
+   */
+  private async observationBannerShown(orgId: string, observedUserId: string | null): Promise<boolean> {
+    const [notifyRow, modeRow] = await Promise.all([
+      prisma.setting.findUnique({
+        where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId, zoneId: '', key: 'observation.notifyUser' } },
+        select: { valueJson: true },
+      }),
+      prisma.setting.findUnique({
+        where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId, zoneId: '', key: 'observation.noticeMode' } },
+        select: { valueJson: true },
+      }),
+    ]);
+    if (notifyRow?.valueJson === false) return false;
+    if (modeRow?.valueJson !== 'ack' || !observedUserId) return true;
+    const u = await prisma.user.findUnique({
+      where: { id: observedUserId },
+      select: { observationAckVersion: true },
     });
-    return row?.valueJson !== false;
+    const acked = u?.observationAckVersion != null && u.observationAckVersion >= OBSERVATION_DISCLOSURE_VERSION;
+    return !acked;
   }
 
   /** Freeze a running session's container (no compute, state retained). */

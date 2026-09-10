@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Plus, Save, Settings2, Trash2 } from 'lucide-react';
+import { Eye, Loader2, Plus, Save, Settings2, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -16,6 +16,10 @@ interface Row {
   value: string;
 }
 
+const NOTICE_MODE_KEY = 'observation.noticeMode';
+type NoticeMode = 'live' | 'ack';
+const SELECT = 'h-9 w-full max-w-xs rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm';
+
 // Curated defaults so a fresh org shows meaningful keys to edit.
 const SUGGESTED: Row[] = [
   { key: 'session.idleTimeoutMin', value: '30' },
@@ -28,6 +32,8 @@ export default function GeneralSettingsPage() {
   const t = useTranslations('settings');
   const tCommon = useTranslations('common');
   const [rows, setRows] = useState<Row[]>(SUGGESTED);
+  const [noticeMode, setNoticeMode] = useState<NoticeMode>('live');
+  const [noticeSaving, setNoticeSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -39,12 +45,30 @@ export default function GeneralSettingsPage() {
       if (settings.length > 0) {
         setRows(settings.map((s) => ({ key: s.key, value: stringifyValue(s.valueJson) })));
       }
+      // The observation notice mode is edited through its own control, not the
+      // raw key list — absent means the shipping default, `live`.
+      const mode = settings.find((s) => s.key === NOTICE_MODE_KEY)?.valueJson;
+      setNoticeMode(mode === 'ack' ? 'ack' : 'live');
     } catch {
       toast.error(t('general.toasts.loadFailed'));
     } finally {
       setLoading(false);
     }
   }, [t]);
+
+  const onSaveNoticeMode = async (mode: NoticeMode) => {
+    setNoticeMode(mode);
+    setNoticeSaving(true);
+    try {
+      await upsertGeneralSettings([{ key: NOTICE_MODE_KEY, value: mode }]);
+      toast.success(t('general.toasts.saved'));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('general.toasts.saveFailed'));
+      await refresh();
+    } finally {
+      setNoticeSaving(false);
+    }
+  };
 
   useEffect(() => {
     void refresh();
@@ -93,6 +117,30 @@ export default function GeneralSettingsPage() {
           })}
         </Card>
       )}
+
+      <Card elevation={1} className="space-y-3 p-5">
+        <div className="flex items-center gap-2">
+          <Eye className="size-5 text-gold-300" />
+          <h2 className="font-display text-lg font-medium">{t('observation.title')}</h2>
+          {(loading || noticeSaving) && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+        </div>
+        <p className="text-sm text-muted-foreground">{t('observation.description')}</p>
+        <div>
+          <Label className="text-xs">{t('observation.modeLabel')}</Label>
+          <select
+            className={SELECT}
+            value={noticeMode}
+            disabled={!isLive || noticeSaving}
+            onChange={(e) => void onSaveNoticeMode(e.target.value as NoticeMode)}
+          >
+            <option value="live">{t('observation.modeLive')}</option>
+            <option value="ack">{t('observation.modeAck')}</option>
+          </select>
+        </div>
+        <p className="rounded-md border border-border-subtle/60 bg-anthracite-950/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+          {noticeMode === 'ack' ? t('observation.helpAck') : t('observation.helpLive')}
+        </p>
+      </Card>
 
       <Card elevation={1} className="space-y-3 p-5">
         <div className="flex items-center gap-2">
