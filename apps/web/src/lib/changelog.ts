@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.5',
+    date: '2026-09-14',
+    title: { en: 'Take control from the live view, and notices that get out of the way', de: 'Steuern aus der Live-Ansicht, und Hinweise, die Platz machen' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'While watching a desktop live, an administrator can now take shared control right from the viewer with a Take control button — no need to go back to the monitoring wall first.',
+          de: 'W\u00e4hrend man einen Desktop live ansieht, kann ein Administrator jetzt direkt im Viewer mit einem Steuern-Knopf die Steuerung mit\u00fcbernehmen — man muss nicht mehr erst zur\u00fcck zur \u00dcberwachungs-Wand.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'The "an administrator is watching" and "is controlling" banners no longer sit across the top of your desktop the whole time. They show in full for a few seconds, then shrink on their own to a small indicator in the corner that you can reopen — so they keep you informed without covering your work.',
+          de: 'Die Hinweise \u201eein Administrator sieht zu\u201c und \u201esteuert\u201c liegen nicht mehr die ganze Zeit oben \u00fcber deinem Desktop. Sie erscheinen ein paar Sekunden vollst\u00e4ndig und schrumpfen dann von selbst zu einem kleinen Symbol in der Ecke, das du wieder \u00f6ffnen kannst — sie halten dich informiert, ohne deine Arbeit zu verdecken.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.4',
     date: '2026-09-14',
     title: { en: 'You’ll now be told what changed', de: 'Du erf\u00e4hrst jetzt, was sich ge\u00e4ndert hat' },
