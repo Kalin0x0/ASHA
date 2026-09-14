@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.6',
+    date: '2026-09-14',
+    title: { en: 'Your admin tools, one click from the launcher', de: 'Deine Admin-Werkzeuge, ein Klick vom Launcher' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'The workstation launcher now shows an Admin tools row with a tile for each admin area your role can open — Live monitoring, Users, Servers, and so on — each with its own icon and a click straight to the page. It reflects your permissions, so a limited admin sees only their tools and a regular user sees none. It is especially useful on the plain user portal, which has no sidebar.',
+          de: 'Der Workstation-Launcher zeigt jetzt eine Zeile \u201eAdmin-Werkzeuge\u201c mit einer Kachel f\u00fcr jeden Admin-Bereich, den deine Rolle \u00f6ffnen darf — Live-\u00dcberwachung, Nutzer, Server und so weiter — jede mit eigenem Symbol und einem Klick direkt zur Seite. Sie richtet sich nach deinen Rechten: ein eingeschr\u00e4nkter Admin sieht nur seine Werkzeuge, ein normaler Nutzer keine. Besonders n\u00fctzlich im schlichten Nutzer-Portal, das keine Seitenleiste hat.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.5',
     date: '2026-09-14',
     title: { en: 'Take control from the live view, and notices that get out of the way', de: 'Steuern aus der Live-Ansicht, und Hinweise, die Platz machen' },
