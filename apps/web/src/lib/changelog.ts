@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.4',
+    date: '2026-09-14',
+    title: { en: 'You’ll now be told what changed', de: 'Du erf\u00e4hrst jetzt, was sich ge\u00e4ndert hat' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'After every update you now see a short popup that names the new version and lists what changed — this note is the first one. It appears once per update and only for people who were already using Asha, never for a first-time visitor, and a quiet reload prompt still offers to pick the new version up right away.',
+          de: 'Nach jeder Aktualisierung siehst du jetzt ein kurzes Fenster, das die neue Version nennt und auflistet, was sich ge\u00e4ndert hat — dieser Hinweis ist der erste davon. Es erscheint einmal je Aktualisierung und nur f\u00fcr alle, die Asha schon genutzt haben, nie f\u00fcr Erstbesucher, und ein dezenter Neu-laden-Hinweis bietet weiterhin an, die neue Version sofort zu \u00fcbernehmen.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.3',
     date: '2026-09-14',
     title: { en: 'Taking the wheel, when someone asks for help', de: 'Das Steuer \u00fcbernehmen, wenn jemand um Hilfe bittet' },
