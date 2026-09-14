@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.7',
+    date: '2026-09-14',
+    title: { en: 'A new look for Asha', de: 'Ein neues Gesicht f\u00fcr Asha' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'Asha has a new logo and icon — a gold mark on anthracite: a monitor with a shield and container cube framed by server panels. It now appears everywhere the old emblem did: the sidebar, the sign-in screen, the browser tab and favicon, the installed-app and home-screen icon, and the link preview when Asha is shared.',
+          de: 'Asha hat ein neues Logo und Icon — eine goldene Marke auf Anthrazit: ein Monitor mit Schild und Container-W\u00fcrfel, gerahmt von Server-Panels. Es erscheint jetzt \u00fcberall dort, wo das alte Emblem war: in der Seitenleiste, auf dem Anmeldebildschirm, im Browser-Tab und Favicon, als Symbol der installierten App und auf dem Startbildschirm sowie in der Link-Vorschau, wenn Asha geteilt wird.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.6',
     date: '2026-09-14',
     title: { en: 'Your admin tools, one click from the launcher', de: 'Deine Admin-Werkzeuge, ein Klick vom Launcher' },

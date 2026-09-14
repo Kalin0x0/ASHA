@@ -11,11 +11,11 @@
  * Bump VERSION on a release to roll the caches and trigger the in-app
  * "update available" prompt for installed users.
  */
-const VERSION = 'asha-v17';
+const VERSION = 'asha-v18';
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = '/offline';
-const PRECACHE = [OFFLINE_URL, '/manifest.webmanifest', '/asha-logo.svg', '/icon-maskable.svg'];
+const PRECACHE = [OFFLINE_URL, '/manifest.webmanifest', '/asha-logo.png', '/icon-maskable.png', '/favicon.ico'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
