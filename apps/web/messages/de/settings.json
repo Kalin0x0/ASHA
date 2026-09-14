@@ -1,4 +1,13 @@
 {
+  "assist": {
+    "title": "Fernsteuerung (Support)",
+    "description": "Wie es abläuft, wenn ein Administrator zur Hilfe den Desktop eines Nutzers übernimmt. Steuerung ist nie unsichtbar — der Nutzer sieht sie immer und kann sie beenden.",
+    "modeLabel": "Wenn ein Admin die Steuerung übernimmt",
+    "modeApprove": "Erst den Nutzer fragen",
+    "modeNotify": "Starten und den Nutzer benachrichtigen",
+    "helpApprove": "Der Nutzer wird gefragt „Admin X möchte deinen Desktop steuern“, und die Steuerung startet nur bei Zustimmung. Am sichersten, und die Vorgabe.",
+    "helpNotify": "Die Steuerung startet sofort, und der Nutzer sieht ein Banner mit dem Namen des Steuernden und einem Knopf zum Beenden. Schneller im Notfall, aber ohne Zustimmungsschritt. Nur einsetzen, wo die Nutzer es erwarten."
+  },
   "observation": {
     "title": "Hinweis zur Live-Beobachtung",
     "description": "Wie ein Nutzer erfährt, dass er beobachtet werden kann, während ein Administrator seine Sitzung ansieht.",

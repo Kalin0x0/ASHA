@@ -27,16 +27,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
 import { ObservationNotice } from '@/components/composite/observation-notice';
+import { ControlRequestDialog, SessionControlNotice } from '@/components/composite/session-control-notice';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TouchKeyBar } from '@/components/viewer/touch-key-bar';
 import { ApiError } from '@/lib/api/client';
-import { getSessionConnection, terminateSession } from '@/lib/api/endpoints';
+import { getSessionConnection, respondSessionControl, stopSessionControl, terminateSession } from '@/lib/api/endpoints';
 import { getAccessToken } from '@/lib/api/auth-store';
 import { isLive } from '@/lib/api/mode';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
-import { useLaunchableWorkspaces, useOwnSessions, useSessions, useStartObservation, useStopObservation } from '@/lib/hooks';
+import { useAccount, useLaunchableWorkspaces, useOwnSessions, useSessions, useStartObservation, useStopObservation } from '@/lib/hooks';
 import {
   isRemoteLayout,
   LAYOUT_CHOICES,
@@ -149,7 +150,12 @@ export default function ConnectPage() {
   // stays only as the client-side hint that keeps this page's own input
   // handlers detached; on its own it authorizes nothing.
   const urlWatchToken = searchParams?.get('watch') ?? null;
-  const monitor = searchParams?.get('monitor') === '1' || urlWatchToken !== null;
+  // A control (assist) session also arrives with a `watch` token, but the admin
+  // holding it must SEND input — so it is deliberately not monitor mode. `assist`
+  // is what tells the two apart, and it also marks this tab as the one that must
+  // release the control grant when it goes away.
+  const assist = searchParams?.get('assist') === '1';
+  const monitor = (searchParams?.get('monitor') === '1' || urlWatchToken !== null) && !assist;
   // The token in the URL lives 120 s; the observation lives as long as the
   // admin keeps watching. Every renewal below mints a fresh one, and the socket
   // adopts it the next time it opens — held in a ref rather than state so a
@@ -265,13 +271,50 @@ export default function ConnectPage() {
   const noticeRef = useRef(notice);
   noticeRef.current = notice;
   const observed = notice.observed;
+  const myId = useAccount()?.id;
+  // Support control: an admin sharing this desktop's keyboard/mouse. `requested`
+  // asks the user first (approve mode); `active` is the banner while it runs. The
+  // controller's own viewer must not be prompted or alarmed about its own grant,
+  // so anything naming this user as the controller is ignored here.
+  const [control, setControl] = useState<null | { state: 'requested' | 'active'; controllerName: string; since?: string }>(null);
   const realtime = useRealtimeEvents(
     (event) => {
-      if (event.type !== 'session.observed' || event.payload.sessionId !== sessionId) return;
-      setNotice((current) => applyObservedPush(current, event.payload));
+      if (event.type === 'session.observed' && event.payload.sessionId === sessionId) {
+        setNotice((current) => applyObservedPush(current, event.payload));
+        return;
+      }
+      if (event.type === 'session.control' && event.payload.sessionId === sessionId) {
+        const p = event.payload;
+        if (p.controllerUserId === myId) return;
+        if (p.state === 'requested') setControl({ state: 'requested', controllerName: p.controllerName });
+        else if (p.state === 'active') setControl({ state: 'active', controllerName: p.controllerName, since: p.since });
+        else setControl(null); // ended, denied — and granted never reaches the session room
+      }
     },
     { sessionId, enabled: Boolean(sessionId) },
   );
+  const answerControl = useCallback(
+    (allow: boolean) => {
+      // Clear the prompt at once; an allow is confirmed by the `active` push that
+      // follows, a deny leaves nothing. A failed call falls back to no banner.
+      setControl(allow ? (c) => (c ? { ...c, state: 'active' } : null) : null);
+      if (isLive && sessionId) void respondSessionControl(sessionId, allow).catch(() => setControl(null));
+    },
+    [sessionId],
+  );
+  const endControl = useCallback(() => {
+    setControl(null);
+    if (isLive && sessionId) void stopSessionControl(sessionId).catch(() => undefined);
+  }, [sessionId]);
+  // The admin's own control tab releases the grant when it closes, so the user's
+  // "being controlled" banner clears the moment support ends rather than lingering
+  // until the token lapses. Bound to this tab by the `assist` marker.
+  useEffect(() => {
+    if (!assist || !isLive || !sessionId) return;
+    return () => {
+      void stopSessionControl(sessionId).catch(() => undefined);
+    };
+  }, [assist, sessionId]);
   // `session.observed` is pushed on the transition only. A viewer that reloaded
   // — or whose socket dropped — while somebody was already watching has no
   // event to replay, and used to spend the rest of the observation with no
@@ -1209,6 +1252,23 @@ export default function ConnectPage() {
             refitted on a resize event — so the watched user lost the bottom of
             their desktop, taskbar included, for the whole observation. */}
         {observed && <ObservationNotice observed={observed} className="absolute inset-x-0 top-0 z-40" />}
+        {/* Control sits above observation: a session can be both watched and
+            controlled, and the stronger notice belongs on top. */}
+        {control?.state === 'active' && (
+          <SessionControlNotice
+            controllerName={control.controllerName}
+            since={control.since}
+            onEnd={endControl}
+            className="absolute inset-x-0 top-0 z-40"
+          />
+        )}
+        {control?.state === 'requested' && (
+          <ControlRequestDialog
+            controllerName={control.controllerName}
+            onAllow={() => answerControl(true)}
+            onDeny={() => answerControl(false)}
+          />
+        )}
         {/* The guacd display canvas mounts here. `isolate` (+ relative z-0) gives
             this subtree its own stacking context: guacamole-common-js ships the
             default desktop layer canvas with z-index:-1, which would otherwise

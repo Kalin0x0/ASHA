@@ -39,8 +39,22 @@ describe('verifyToken — what a token is allowed to be', () => {
     expect(() => verifyToken(sign({ ...WATCH, kasmId: undefined }))).toThrow(/names no session/);
   });
 
-  it('refuses a watch token whose mode was changed to control', () => {
-    expect(() => verifyToken(sign({ ...WATCH, mode: 'control' }))).toThrow(/names no session/);
+  it('accepts a control watch token — an admin granted shared input for support', () => {
+    // Control is a watch mode too: the API mints it after the SESSION_CONTROL
+    // check and the user's consent, and it still names its one session. What
+    // stays refused is a control claim on a token with no `typ` (below) and a
+    // watch token carrying no mode at all.
+    const payload = verifyToken(sign({ ...WATCH, mode: 'control' }));
+    expect(payload.mode).toBe('control');
+    expect(payload.kasmId).toBe('k1');
+  });
+
+  it('refuses control claims on a token that is not a watch token', () => {
+    expect(() => verifyToken(sign({ ...ACCESS, mode: 'control', kasmId: 'k1' }))).toThrow(AuthError);
+  });
+
+  it('refuses a watch token carrying no mode', () => {
+    expect(() => verifyToken(sign({ ...WATCH, mode: undefined }))).toThrow(/names no session/);
   });
 
   it('refuses a token minted for some other service', () => {

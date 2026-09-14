@@ -1,4 +1,14 @@
 {
+  "control": {
+    "requestTitle": "Ein Administrator möchte deinen Desktop steuern",
+    "requestBody": "{name} möchte Tastatur und Maus übernehmen, um dir zu helfen. Du behältst die Steuerung — du kannst die Maus jederzeit bewegen.",
+    "allow": "Erlauben",
+    "deny": "Ablehnen",
+    "activeTitle": "{name} steuert deinen Desktop",
+    "since": "seit {time}",
+    "activeHint": "Ihr steuert gemeinsam — bewege die Maus jederzeit. Zum Stoppen auf „Beenden“.",
+    "end": "Beenden"
+  },
   "toolbar": {
     "clipboard": "Zwischenablage",
     "clipboardToast": "Verwenden Sie die Toolbar in der Sitzung für die Zwischenablage-Synchronisierung",

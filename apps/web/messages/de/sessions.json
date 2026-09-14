@@ -202,6 +202,11 @@
     "toastRevokeFailed": "Freigabe konnte nicht widerrufen werden"
   },
   "monitor": {
+    "control": {
+      "requested": "Warte auf die Zustimmung des Nutzers zur Steuerung…",
+      "failed": "Steuerung konnte nicht gestartet werden",
+      "denied": "Der Nutzer hat die Steueranfrage abgelehnt"
+    },
     "title": "Live-Überwachung",
     "description": "Alle Desktops, die gerade laufen — wer daran arbeitet und was er vor sich hat.",
     "sessionCount": "{count, plural, one {# Desktop} other {# Desktops}}",
@@ -229,6 +234,7 @@
       "off": "Erfassung ist aus",
       "waiting": "Warten auf das erste Bild…",
       "watch": "Live ansehen",
+      "control": "Steuern",
       "details": "Details",
       "memory": "Arbeitsspeicher",
       "uptime": "Laufzeit",

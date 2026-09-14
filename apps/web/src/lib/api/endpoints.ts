@@ -254,6 +254,16 @@ export const changePassword = (body: { currentPassword?: string; newPassword: st
 export const acknowledgeObservationDisclosure = (version: number) =>
   apiFetch<{ ok: true; version: number }>('/account/observation-disclosure', { method: 'POST', body: { version } });
 
+/** Admin asks to take control of a session; the reply says whether it started or awaits the user. */
+export const startSessionControl = (sessionId: string) =>
+  apiFetch<{ state: 'active' | 'requested'; watchUrl?: string }>(`/sessions/${sessionId}/control`, { method: 'POST' });
+/** The user at the desktop answers a control request (approve mode). */
+export const respondSessionControl = (sessionId: string, allow: boolean) =>
+  apiFetch<{ ok: true }>(`/sessions/${sessionId}/control/respond`, { method: 'POST', body: { allow } });
+/** End control — the controlling admin, or the user at the desktop. */
+export const stopSessionControl = (sessionId: string) =>
+  apiFetch<{ ok: true }>(`/sessions/${sessionId}/control`, { method: 'DELETE' });
+
 // 2FA / TOTP self-service (backend already implements these).
 export interface TotpEnrollResponse {
   methodId: string;

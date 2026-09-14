@@ -40,9 +40,12 @@ function extractKasmId(url: string | undefined): string | null {
  * Which input rights a token grants over a session's stream. The org check is
  * the caller's, so it keeps its own rejection log line.
  *
- * A watch token is minted for exactly one session and carries no input rights,
- * so it is answered first: it must never fall through to a branch that grants
- * control.
+ * A watch token is minted for exactly one session, so it is answered first, off
+ * its own claims, and never falls through to the owner branch. A `view` token
+ * carries no input rights; a `control` token carries shared input, and it is the
+ * only way a non-owner gets any — safe to honour here because auth.ts refuses a
+ * `mode` claim on anything that is not a watch token, so a `control` mode can
+ * only come from one the API minted after SESSION_CONTROL and the user's consent.
  */
 export function resolveStreamMode(
   session: Pick<SessionRecord, 'userId'>,
@@ -50,6 +53,7 @@ export function resolveStreamMode(
   kasmId: string,
 ): StreamMode | null {
   if (token.mode === 'view') return token.kasmId === kasmId ? 'view' : null;
+  if (token.mode === 'control') return token.kasmId === kasmId ? 'control' : null;
   if (session.userId === token.sub) return 'control';
   // A staged pool session has no owner for the moment between the agent
   // publishing it and the launcher claiming it. Refusing here would not close a
@@ -82,6 +86,13 @@ export function bindViewToGrant(
   kasmId: string,
   expiresAt: number,
   store: WatchRecordStore,
+  /**
+   * Which grant this socket lives under. A control grant is a different record
+   * from an observation window: the user pressing "end" on a support session
+   * must close the admin's control at once, even while an observer is still
+   * watching — so the poll asks about this socket's own kind, not the session.
+   */
+  mode: StreamMode,
 ): void {
   let expiry: ReturnType<typeof setTimeout> | undefined;
   let poll: ReturnType<typeof setInterval> | undefined;
@@ -108,10 +119,10 @@ export function bindViewToGrant(
     if (checking) return;
     checking = true;
     void store
-      .isWatchActive(kasmId)
+      .isGrantActive(kasmId, mode)
       .then((active) => {
         if (active !== false) return;
-        log.info({ kasmId }, 'Observation stopped — closing the observation stream');
+        log.info({ kasmId, mode }, 'Grant ended — closing the stream');
         end(CLOSE_WATCH_REVOKED, REASON_REVOKED);
       })
       .finally(() => {
@@ -177,25 +188,31 @@ export async function handleUpgrade(
     return;
   }
 
-  if (mode === 'view') {
+  // Every watch token — a view, and now a control grant an admin holds for
+  // support — is tied to the record that authorised it: it dies on the token's
+  // expiry and when the API deletes the record (the user revokes, the admin
+  // stops, the window lapses). The owner's own connection carries no `typ` and
+  // is untouched: permanent, and never bound to a grant it does not need.
+  if (tokenPayload.typ === 'watch') {
     // A watch token with no expiry would authorize a stream nobody can end, so
     // it is not a grant. jwt.verify already refuses an expired one; this is the
     // token that never carried an `exp` in the first place.
     const expiresAt = typeof tokenPayload.exp === 'number' ? tokenPayload.exp * 1000 : 0;
     if (expiresAt <= Date.now()) {
-      log.warn({ kasmId, userId: tokenPayload.sub }, 'Watch token carries no expiry — rejecting');
+      log.warn({ kasmId, userId: tokenPayload.sub, mode }, 'Watch token carries no expiry — rejecting');
       ws.close(CLOSE_WATCH_EXPIRED, REASON_EXPIRED);
       return;
     }
-    // The window may already be closed: the token outlives the record by 30 s,
+    // The grant may already be closed: the token outlives the record by 30 s,
     // and a stop deletes the record the moment it is pressed. Only a definite
-    // "gone" refuses — see isWatchActive on why unknown must not.
-    if ((await store.isWatchActive(kasmId)) === false) {
-      log.warn({ kasmId, userId: tokenPayload.sub }, 'No observation window open for this session — rejecting');
+    // "gone" refuses — see isGrantActive on why unknown must not. A control
+    // socket asks about its own control grant, a view socket about the window.
+    if ((await store.isGrantActive(kasmId, mode)) === false) {
+      log.warn({ kasmId, userId: tokenPayload.sub, mode }, 'No grant open for this session — rejecting');
       ws.close(CLOSE_WATCH_REVOKED, REASON_REVOKED);
       return;
     }
-    bindViewToGrant(ws, kasmId, expiresAt, store);
+    bindViewToGrant(ws, kasmId, expiresAt, store, mode);
   }
 
   log.info({ kasmId, sessionId: session.sessionId, protocol: session.protocol, userId: tokenPayload.sub, mode }, 'WebSocket connected');
@@ -206,7 +223,10 @@ export async function handleUpgrade(
       break;
     case 'RDP':
     case 'VNC':
-      await handleGuacamole(ws, req, session, mode, store);
+      // isWatch tells the handler to JOIN the owner's live connection rather than
+      // log in a second time (a non-owner must never open its own logon), and to
+      // leave the uuid publish to the owner. read-only/input still follow `mode`.
+      await handleGuacamole(ws, req, session, mode, store, tokenPayload.typ === 'watch');
       break;
     case 'SSH':
       handleSSH(ws, req, session, mode);

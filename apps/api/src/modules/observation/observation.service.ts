@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -38,6 +39,17 @@ const sampleKey = (kasmId: string) => `asha:obs:${kasmId}`;
  * delete it.
  */
 const watchKey = (kasmId: string) => `asha:obs:watch:${kasmId}`;
+/**
+ * An admin's LIVE control grant on a session — support, RustDesk-style. Kept
+ * apart from the observation window on purpose: the user ending control must
+ * close the admin's input at once, even while an observer is still watching, so
+ * the connection-proxy revokes the two independently (isGrantActive keys on the
+ * socket's mode). The key exists exactly while control is active. Spelled out as
+ * a literal in the proxy's session-store.ts, which shares no code with the API.
+ */
+const controlKey = (kasmId: string) => `asha:obs:control:${kasmId}`;
+/** A pending control request awaiting the user's answer (approve mode only). */
+const controlReqKey = (kasmId: string) => `asha:obs:control-req:${kasmId}`;
 
 // A frame of someone's desktop is the most sensitive artefact this product
 // holds. Samples live in Redis for half a minute and reach neither Postgres nor
@@ -53,6 +65,14 @@ const CAPTURE_TTL_MS = 60_000;
 // Long enough to open the stream, and short enough that a copy of one is stale
 // before it is useful.
 const WATCH_TOKEN_TTL_SEC = 120;
+// A support control session is not indefinite. The token lasts a working
+// half-hour so the admin's viewer needs no renewal loop, and prompt revocation
+// does not ride on the token at all — the proxy polls the control grant record
+// and closes the socket within seconds of the user pressing "end". After the
+// ceiling the admin simply starts again.
+const CONTROL_TOKEN_TTL_SEC = 1800;
+// How long the user has to answer a control request before it lapses.
+const CONTROL_REQ_TTL_SEC = 60;
 // What the watch token is, written into the token itself. It is signed with the
 // API's access secret because that is the only secret the connection-proxy
 // holds, so the claim — not the signature — is what keeps it from being a
@@ -865,4 +885,229 @@ export class ObservationService {
     if (!session) throw new NotFoundException('Session not found');
     return session;
   }
+
+  // ── Support control (RustDesk-style) ──────────────────────────────────────
+  //
+  // An admin takes shared keyboard/mouse on a user's desktop to help. It is
+  // never silent — the cursor moves — so every path here ends in a banner the
+  // user cannot dismiss and an audit row, and the user can end it at any moment.
+  // Phase 1 is the guacd desktops (RDP/VNC fixed servers); a container desktop's
+  // observation is a one-way frame stream with no input channel, so it is turned
+  // away here rather than half-answered.
+
+  /**
+   * Begin taking control. In `approve` mode the user is asked first and this
+   * only posts the request; in `notify` mode control opens at once and the user
+   * is told. Either way the answer says which happened, so the caller knows
+   * whether to open the viewer now or wait for the grant.
+   */
+  async startControl(user: AuthUser, sessionId: string) {
+    const session = await this.findInOrg(sessionId, user.orgId);
+    await this.assertMayControl(session, user);
+    if (session.status !== 'RUNNING' && session.status !== 'DEGRADED') {
+      throw new BadRequestException(`Session is ${session.status}; only a running session can be controlled`);
+    }
+    if (!session.userId) {
+      throw new BadRequestException('This session has not been claimed by a user');
+    }
+    // guacd only: a container desktop is observed through a frame stream that has
+    // no way back in, so there is nothing here to type into.
+    if (!this.isGuacSession(session.connectionType)) {
+      throw new BadRequestException('Live control is only available for RDP/VNC desktops');
+    }
+    // One controller at a time — two admins sharing input with the user at once
+    // is chaos, not support.
+    const held = await this.redis.get<ControlGrant>(controlKey(session.kasmId));
+    if (held && held.controllerUserId !== user.sub) {
+      throw new ConflictException(`This desktop is already being controlled by ${held.controllerName}`);
+    }
+
+    const controllerName = await this.observerName(user);
+    const mode = await this.consentMode(user.orgId);
+
+    if (mode === 'approve') {
+      await this.redis.set(
+        controlReqKey(session.kasmId),
+        { controllerUserId: user.sub, controllerName, sessionId: session.id } satisfies ControlRequest,
+        CONTROL_REQ_TTL_SEC,
+      );
+      this.gateway.emitToSession(session.id, {
+        type: 'session.control',
+        payload: { sessionId: session.id, state: 'requested', controllerName, controllerUserId: user.sub },
+      });
+      await this.security.emit({
+        action: 'session.control.request',
+        severity: 'info',
+        orgId: session.orgId,
+        actorUserId: user.sub,
+        targetType: 'Session',
+        targetId: session.id,
+        metadata: { controlledUserId: session.userId, kasmId: session.kasmId, consentMode: mode },
+      });
+      return { state: 'requested' as const };
+    }
+
+    // notify mode: control opens now, the user is told.
+    const watchUrl = await this.openControlGrant(session, user.sub, controllerName, mode);
+    return { state: 'active' as const, watchUrl };
+  }
+
+  /**
+   * The user's answer to a control request (approve mode). Only the person at the
+   * desktop may answer, and only their own. Allow opens the grant and hands the
+   * route to the waiting admin; deny tells the admin and leaves nothing behind.
+   */
+  async respondControl(user: AuthUser, sessionId: string, allow: boolean) {
+    const session = await this.findInOrg(sessionId, user.orgId);
+    if (session.userId !== user.sub) {
+      throw new ForbiddenException('Only the person at this desktop can answer a control request');
+    }
+    const req = await this.redis.get<ControlRequest>(controlReqKey(session.kasmId));
+    if (!req) throw new BadRequestException('There is no control request to answer — it may have lapsed');
+    await this.redis.del(controlReqKey(session.kasmId));
+
+    if (!allow) {
+      this.gateway.emitToObserver(session.orgId, req.controllerUserId, {
+        type: 'session.control',
+        payload: { sessionId: session.id, state: 'denied', controllerName: req.controllerName, controllerUserId: req.controllerUserId },
+      });
+      await this.security.emit({
+        action: 'session.control.denied',
+        severity: 'info',
+        orgId: session.orgId,
+        actorUserId: user.sub,
+        targetType: 'Session',
+        targetId: session.id,
+        metadata: { controllerUserId: req.controllerUserId, kasmId: session.kasmId },
+      });
+      return { ok: true };
+    }
+
+    const watchUrl = await this.openControlGrant(session, req.controllerUserId, req.controllerName, 'approve');
+    // The route carries the control token, so it goes only to the admin who
+    // asked — their own observer room, never the session room the user is in.
+    this.gateway.emitToObserver(session.orgId, req.controllerUserId, {
+      type: 'session.control',
+      payload: { sessionId: session.id, state: 'granted', controllerName: req.controllerName, controllerUserId: req.controllerUserId, watchUrl },
+    });
+    return { ok: true };
+  }
+
+  /**
+   * End control. The admin holding it may stop, and so may the user whose desktop
+   * it is — pressing "end" deletes the grant, and the proxy closes the admin's
+   * input within its next poll. A stale request is cleared with it.
+   */
+  async stopControl(user: AuthUser, sessionId: string) {
+    const session = await this.findInOrg(sessionId, user.orgId);
+    const grant = await this.redis.get<ControlGrant>(controlKey(session.kasmId));
+    const isController = grant?.controllerUserId === user.sub;
+    const isOwner = session.userId != null && session.userId === user.sub;
+    if (!grant) {
+      // Nothing live — but a pending request the same caller may cancel might be.
+      await this.redis.del(controlReqKey(session.kasmId));
+      return { ok: true };
+    }
+    if (!isController && !isOwner && !user.isSystemAdmin) {
+      throw new ForbiddenException('Only the controlling administrator or the person at the desktop can end control');
+    }
+    await this.redis.del(controlKey(session.kasmId));
+    await this.redis.del(controlReqKey(session.kasmId));
+    this.gateway.emitToSession(session.id, {
+      type: 'session.control',
+      payload: { sessionId: session.id, state: 'ended', controllerName: grant.controllerName, controllerUserId: grant.controllerUserId },
+    });
+    await this.security.emit({
+      action: 'session.control.stop',
+      severity: 'warn',
+      orgId: session.orgId,
+      actorUserId: user.sub,
+      targetType: 'Session',
+      targetId: session.id,
+      metadata: { controllerUserId: grant.controllerUserId, controlledUserId: session.userId, kasmId: session.kasmId, endedBy: isController ? 'admin' : 'user' },
+    });
+    return { ok: true };
+  }
+
+  /**
+   * Write the control grant, mint the admin's control token, tell the user, and
+   * return the route the admin opens. The grant record is what the proxy revokes
+   * through; the token rides in the URL and buys shared input on the join.
+   */
+  private async openControlGrant(
+    session: { id: string; orgId: string; kasmId: string; userId: string | null },
+    controllerUserId: string,
+    controllerName: string,
+    consentMode: 'approve' | 'notify',
+  ): Promise<string> {
+    const since = new Date().toISOString();
+    await this.redis.set(
+      controlKey(session.kasmId),
+      { controllerUserId, controllerName, sessionId: session.id, since } satisfies ControlGrant,
+      CONTROL_TOKEN_TTL_SEC,
+    );
+    const token = await this.jwt.signAsync(
+      { sub: controllerUserId, orgId: session.orgId, kasmId: session.kasmId, mode: 'control', typ: WATCH_TOKEN_TYPE },
+      { secret: this.env.JWT_ACCESS_SECRET, expiresIn: CONTROL_TOKEN_TTL_SEC },
+    );
+    // The banner is not optional and not suppressible: control moves the user's
+    // own cursor, so it is shown in every notice mode, unlike passive watching.
+    this.gateway.emitToSession(session.id, {
+      type: 'session.control',
+      payload: { sessionId: session.id, state: 'active', controllerName, controllerUserId, since },
+    });
+    await this.security.emit({
+      action: 'session.control.start',
+      severity: 'warn',
+      orgId: session.orgId,
+      actorUserId: controllerUserId,
+      targetType: 'Session',
+      targetId: session.id,
+      metadata: { controlledUserId: session.userId, kasmId: session.kasmId, consentMode },
+    });
+    // No monitor=1: this viewer SENDS input. The control token is what buys it.
+    return `/connect/${encodeURIComponent(session.kasmId)}?watch=${encodeURIComponent(token)}`;
+  }
+
+  /** Only a guacd desktop can be joined read-write; a container has no way in. */
+  private isGuacSession(connectionType: string): boolean {
+    return connectionType === 'GUAC_RDP' || connectionType === 'GUAC_VNC';
+  }
+
+  /**
+   * Row-level authorization for control, the guard's companion: SESSION_CONTROL_ANY
+   * says the caller may take control of something, not of THIS session. The owner
+   * never needs it (they already have their own input); a system admin always has
+   * it; anyone else must hold it for real.
+   */
+  private async assertMayControl(session: { userId: string | null }, user: AuthUser) {
+    if (user.isSystemAdmin) return;
+    const granted = await this.rbac.effectivePermissions(user.sub);
+    if (granted.has('SESSION_CONTROL_ANY') || granted.has('*')) return;
+    throw new ForbiddenException('You do not have permission to control this session');
+  }
+
+  /** How the org handles a control request. Absent = `approve`, the safer default. */
+  private async consentMode(orgId: string): Promise<'approve' | 'notify'> {
+    const row = await prisma.setting.findUnique({
+      where: { scope_orgId_zoneId_key: { scope: 'ORG', orgId, zoneId: '', key: 'assist.consentMode' } },
+      select: { valueJson: true },
+    });
+    return row?.valueJson === 'notify' ? 'notify' : 'approve';
+  }
+}
+
+/** An admin's live control grant, as stored in Redis while control is active. */
+interface ControlGrant {
+  controllerUserId: string;
+  controllerName: string;
+  sessionId: string;
+  since: string;
+}
+
+/** A control request awaiting the user's answer (approve mode). */
+interface ControlRequest {
+  controllerUserId: string;
+  controllerName: string;
+  sessionId: string;
 }

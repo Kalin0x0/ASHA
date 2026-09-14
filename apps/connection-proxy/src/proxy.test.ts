@@ -54,6 +54,17 @@ describe('resolveStreamMode — who may open a session stream', () => {
     expect(resolveStreamMode(unclaimed, token({ mode: 'view', kasmId: 'k1' }), 'k1')).toBe('view');
     expect(resolveStreamMode(owned, token({ mode: 'view', kasmId: 'k1' }), 'k1')).toBe('view');
   });
+
+  it('gives a control watch token shared input on its one session', () => {
+    // Support: an admin the API granted control (after SESSION_CONTROL and the
+    // user's consent) gets `control` on a session that is not theirs — and only
+    // that session. auth.ts guarantees this mode can only ride a watch token.
+    expect(resolveStreamMode(someoneElses, token({ mode: 'control', kasmId: 'k1' }), 'k1')).toBe('control');
+  });
+
+  it('refuses a control watch token replayed against another session', () => {
+    expect(resolveStreamMode(someoneElses, token({ mode: 'control', kasmId: 'k2' }), 'k1')).toBeNull();
+  });
 });
 
 /**
@@ -87,11 +98,12 @@ const SESSION = {
   status: 'RUNNING',
 } as unknown as SessionRecord;
 
-/** `null` from isWatchActive is "Redis did not answer", not "nobody is watching". */
+/** `null` from the grant check is "Redis did not answer", not "nobody is watching". */
 function fakeStore(watchActive: boolean | null) {
   return {
     get: vi.fn(async () => SESSION),
     isWatchActive: vi.fn(async () => watchActive),
+    isGrantActive: vi.fn(async () => watchActive),
   };
 }
 
@@ -122,24 +134,24 @@ describe('a view socket lives no longer than the grant that opened it', () => {
     const store = fakeStore(null);
     const { ws, done } = upgrade(store, watchClaims);
     await done;
-    expect(store.isWatchActive).toHaveBeenCalledWith('k1');
+    expect(store.isGrantActive).toHaveBeenCalledWith('k1', 'view');
     expect(ws.closeCode).not.toBe(4006);
     expect(ws.closeCode).not.toBe(4005);
   });
 
-  it('does not consult the watch record for the session owner', async () => {
+  it('does not consult the grant record for the session owner', async () => {
     const store = fakeStore(false);
     const { ws, done } = upgrade(store, { sub: 'u2', orgId: 'o1' });
     await done;
-    expect(store.isWatchActive).not.toHaveBeenCalled();
+    expect(store.isGrantActive).not.toHaveBeenCalled();
     expect(ws.closeCode).not.toBe(4006);
   });
 
   it('closes the stream when the watch token expires', () => {
     vi.useFakeTimers();
     const ws = new FakeSocket();
-    const store: WatchRecordStore = { isWatchActive: vi.fn(async () => true) };
-    bindViewToGrant(ws as never, 'k1', Date.now() + 120_000, store);
+    const store: WatchRecordStore = { isWatchActive: vi.fn(async () => true), isGrantActive: vi.fn(async () => true) };
+    bindViewToGrant(ws as never, 'k1', Date.now() + 120_000, store, 'view');
 
     vi.advanceTimersByTime(119_000);
     expect(ws.closeCode).toBeNull();
@@ -150,8 +162,8 @@ describe('a view socket lives no longer than the grant that opened it', () => {
   it('closes the stream once the observation is stopped', async () => {
     vi.useFakeTimers();
     const ws = new FakeSocket();
-    const store: WatchRecordStore = { isWatchActive: vi.fn(async () => false) };
-    bindViewToGrant(ws as never, 'k1', Date.now() + 120_000, store);
+    const store: WatchRecordStore = { isWatchActive: vi.fn(async () => false), isGrantActive: vi.fn(async () => false) };
+    bindViewToGrant(ws as never, 'k1', Date.now() + 120_000, store, 'view');
 
     await vi.advanceTimersByTimeAsync(6_000);
     expect(ws.closeCode).toBe(4006);
@@ -160,24 +172,24 @@ describe('a view socket lives no longer than the grant that opened it', () => {
   it('keeps the stream open while the watch record is unreadable', async () => {
     vi.useFakeTimers();
     const ws = new FakeSocket();
-    const store: WatchRecordStore = { isWatchActive: vi.fn(async () => null) };
-    bindViewToGrant(ws as never, 'k1', Date.now() + 120_000, store);
+    const store: WatchRecordStore = { isWatchActive: vi.fn(async () => null), isGrantActive: vi.fn(async () => null) };
+    bindViewToGrant(ws as never, 'k1', Date.now() + 120_000, store, 'view');
 
     await vi.advanceTimersByTimeAsync(60_000);
     expect(ws.closeCode).toBeNull();
-    expect(store.isWatchActive).toHaveBeenCalled();
+    expect(store.isGrantActive).toHaveBeenCalled();
   });
 
   it('stops re-reading the watch record once the socket is gone', async () => {
     vi.useFakeTimers();
     const ws = new FakeSocket();
-    const store: WatchRecordStore = { isWatchActive: vi.fn(async () => true) };
-    bindViewToGrant(ws as never, 'k1', Date.now() + 120_000, store);
+    const store: WatchRecordStore = { isWatchActive: vi.fn(async () => true), isGrantActive: vi.fn(async () => true) };
+    bindViewToGrant(ws as never, 'k1', Date.now() + 120_000, store, 'view');
 
     await vi.advanceTimersByTimeAsync(6_000);
-    const reads = (store.isWatchActive as ReturnType<typeof vi.fn>).mock.calls.length;
+    const reads = (store.isGrantActive as ReturnType<typeof vi.fn>).mock.calls.length;
     ws.close(1000);
     await vi.advanceTimersByTimeAsync(60_000);
-    expect((store.isWatchActive as ReturnType<typeof vi.fn>).mock.calls.length).toBe(reads);
+    expect((store.isGrantActive as ReturnType<typeof vi.fn>).mock.calls.length).toBe(reads);
   });
 });

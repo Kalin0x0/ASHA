@@ -372,6 +372,32 @@ export interface SessionObservedEvent {
   active: boolean;
 }
 
+/**
+ * Support control (RustDesk-style): an administrator sharing keyboard and mouse
+ * on a user's desktop. Unlike observation this is never silent — the cursor
+ * moves — so the state travels two ways: to the user at the desktop (the request
+ * to approve, the banner while it is live), and back to the admin's own room
+ * (the outcome of a request, and the route to open once it is granted).
+ *
+ *  - `requested` → the user is asked to allow it (approve mode only).
+ *  - `active`    → control is live; the user sees a banner they cannot dismiss.
+ *  - `ended`     → it stopped (the admin, the user, or a lapse).
+ *  - `denied`    → the user refused the request (reaches the admin only).
+ *  - `granted`   → approved/started; carries the route, and reaches the admin only.
+ */
+export interface SessionControlEvent {
+  sessionId: string;
+  state: 'requested' | 'active' | 'ended' | 'denied' | 'granted';
+  /** Display name of the administrator asking for or holding control. */
+  controllerName: string;
+  /** The admin who is controlling — lets a viewer address its own request. */
+  controllerUserId: string;
+  /** ISO timestamp control started; present for `active`. */
+  since?: string;
+  /** Where the admin opens the control viewer; present for `granted` only. */
+  watchUrl?: string;
+}
+
 /** Realtime events pushed to dashboards over the WebSocket gateway. */
 export type WsServerEvent =
   | { type: 'session.status'; payload: SessionStatusUpdate }
@@ -382,4 +408,5 @@ export type WsServerEvent =
   | { type: 'share.chat'; payload: ShareChatEvent }
   | { type: 'share.participant'; payload: ShareParticipantEvent }
   | { type: 'session.observation'; payload: SessionObservationSample & { sessionId: string } }
-  | { type: 'session.observed'; payload: SessionObservedEvent };
+  | { type: 'session.observed'; payload: SessionObservedEvent }
+  | { type: 'session.control'; payload: SessionControlEvent };

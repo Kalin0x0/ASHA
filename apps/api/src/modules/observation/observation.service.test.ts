@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { prismaMock } = vi.hoisted(() => ({
@@ -1037,6 +1037,109 @@ describe('ObservationService', () => {
     it('404s an unknown session', async () => {
       prismaMock.session.findUnique.mockResolvedValue(null);
       await expect(svc.ingest('nope', SAMPLE, { scope: 'global' })).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('support control', () => {
+    const controlKey = (kasmId: string) => `asha:obs:control:${kasmId}`;
+    const controlReqKey = (kasmId: string) => `asha:obs:control-req:${kasmId}`;
+    // Control acts on the fixed-server (guacd) session; findInOrg reads it back.
+    beforeEach(() => {
+      prismaMock.session.findFirst.mockResolvedValue(SERVER_SESSION);
+    });
+    const controlActions = (): string[] =>
+      security.emit.mock.calls
+        .map((c) => (c[0] as { action: string }).action)
+        .filter((a) => a.startsWith('session.control'));
+
+    it('approve mode: asks the user first and opens no grant yet', async () => {
+      const store = memoryRedis();
+      const res = await svc.startControl(ADMIN, 'sess2');
+      expect(res).toEqual({ state: 'requested' });
+      expect(gateway.emitToSession).toHaveBeenCalledWith(
+        'sess2',
+        expect.objectContaining({ type: 'session.control', payload: expect.objectContaining({ state: 'requested' }) }),
+      );
+      expect(store.get(controlKey('kid2'))).toBeUndefined();
+      expect(store.get(controlReqKey('kid2'))).toBeTruthy();
+      expect(controlActions()).toContain('session.control.request');
+    });
+
+    it('notify mode: control opens at once, the user is told, and it is audited', async () => {
+      prismaMock.setting.findUnique.mockImplementation((args: { where: { scope_orgId_zoneId_key: { key: string } } }) =>
+        Promise.resolve(args.where.scope_orgId_zoneId_key.key === 'assist.consentMode' ? { valueJson: 'notify' } : null),
+      );
+      const store = memoryRedis();
+      const res = await svc.startControl(ADMIN, 'sess2');
+      expect(res.state).toBe('active');
+      expect(res.watchUrl).toContain('/connect/kid2?watch=');
+      expect(res.watchUrl).not.toContain('monitor=1');
+      expect(store.get(controlKey('kid2'))).toBeTruthy();
+      expect(gateway.emitToSession).toHaveBeenCalledWith(
+        'sess2',
+        expect.objectContaining({ payload: expect.objectContaining({ state: 'active' }) }),
+      );
+      expect(controlActions()).toContain('session.control.start');
+    });
+
+    it('refuses a container desktop — it has no input path', async () => {
+      prismaMock.session.findFirst.mockResolvedValue(CONTAINER_SESSION);
+      await expect(svc.startControl(ADMIN, 'sess1')).rejects.toThrow(BadRequestException);
+    });
+
+    it('refuses a second controller while one already holds it', async () => {
+      const store = memoryRedis();
+      store.set(controlKey('kid2'), { controllerUserId: 'someone-else', controllerName: 'Bob', sessionId: 'sess2', since: 'x' });
+      await expect(svc.startControl(ADMIN, 'sess2')).rejects.toThrow(ConflictException);
+    });
+
+    it('allow: opens the grant and hands the route to the waiting admin only', async () => {
+      const store = memoryRedis();
+      store.set(controlReqKey('kid2'), { controllerUserId: 'admin1', controllerName: 'Ada Lovelace', sessionId: 'sess2' });
+      await svc.respondControl(WORKER, 'sess2', true);
+      expect(store.get(controlKey('kid2'))).toBeTruthy();
+      // The route (which carries the token) goes to the admin's own room, never
+      // the session room the user is in.
+      expect(gateway.emitToObserver).toHaveBeenCalledWith(
+        'org1',
+        'admin1',
+        expect.objectContaining({ payload: expect.objectContaining({ state: 'granted', watchUrl: expect.stringContaining('/connect/kid2?watch=') }) }),
+      );
+      expect(gateway.emitToSession).toHaveBeenCalledWith(
+        'sess2',
+        expect.objectContaining({ payload: expect.objectContaining({ state: 'active' }) }),
+      );
+    });
+
+    it('deny: tells the admin, opens nothing', async () => {
+      const store = memoryRedis();
+      store.set(controlReqKey('kid2'), { controllerUserId: 'admin1', controllerName: 'Ada Lovelace', sessionId: 'sess2' });
+      await svc.respondControl(WORKER, 'sess2', false);
+      expect(store.get(controlKey('kid2'))).toBeUndefined();
+      expect(gateway.emitToObserver).toHaveBeenCalledWith(
+        'org1',
+        'admin1',
+        expect.objectContaining({ payload: expect.objectContaining({ state: 'denied' }) }),
+      );
+    });
+
+    it('only the person at the desktop may answer a request', async () => {
+      const store = memoryRedis();
+      store.set(controlReqKey('kid2'), { controllerUserId: 'admin1', controllerName: 'Ada Lovelace', sessionId: 'sess2' });
+      // A system admin who is not the user at this desktop cannot answer for them.
+      await expect(svc.respondControl(ADMIN2, 'sess2', true)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('either the admin or the user can end control, and it is torn down', async () => {
+      const store = memoryRedis();
+      store.set(controlKey('kid2'), { controllerUserId: 'admin1', controllerName: 'Ada Lovelace', sessionId: 'sess2', since: 'x' });
+      await svc.stopControl(WORKER, 'sess2'); // the user presses "end"
+      expect(store.get(controlKey('kid2'))).toBeUndefined();
+      expect(gateway.emitToSession).toHaveBeenCalledWith(
+        'sess2',
+        expect.objectContaining({ payload: expect.objectContaining({ state: 'ended' }) }),
+      );
+      expect(controlActions()).toContain('session.control.stop');
     });
   });
 });

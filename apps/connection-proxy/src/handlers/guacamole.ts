@@ -235,6 +235,13 @@ export async function handleGuacamole(
   session: SessionRecord,
   mode: StreamMode = 'control',
   store?: GuacUuidStore,
+  /**
+   * A watch token (an observer, or an admin granted control), as opposed to the
+   * session's owner. It decides who JOINS the live connection and who logs in —
+   * not `mode`, which only decides read-only and the input filter. An admin's
+   * control grant JOINS read-write; it never opens a second logon on the target.
+   */
+  isWatch = false,
 ): Promise<void> {
   const protocol = session.protocol === 'RDP' ? 'rdp' : 'vnc';
   // Desktop size requested by the browser (its viewport `?w=&h=`) so the remote
@@ -262,11 +269,12 @@ export async function handleGuacamole(
     }
   })();
 
-  // An observer joins the connection the session's own viewer already has open,
-  // so the uuid guacd handed out for it has to be known before the handshake
-  // starts.
-  const joinUuid = mode === 'view' && store ? await store.getGuacUuid(session.kasmId) : null;
-  if (mode === 'view' && joinUuid === null) {
+  // A watch token — an observer, or an admin granted control — joins the
+  // connection the session's own viewer already has open, so the uuid guacd
+  // handed out for it has to be known before the handshake starts. It is keyed on
+  // isWatch, not mode: a control grant JOINS read-write, never logging in twice.
+  const joinUuid = isWatch && store ? await store.getGuacUuid(session.kasmId) : null;
+  if (isWatch && joinUuid === null) {
     // Nobody is streaming this desktop through the proxy — or Redis could not
     // say, which from here is the same thing. Connecting anyway would mean a
     // logon with the session's credentials, and on a single-session Windows host
@@ -407,10 +415,12 @@ export async function handleGuacamole(
             try {
               const ready = new GuacamoleParser().push(frame).find((inst) => inst[0] === 'ready');
               const uuid = ready?.[1]?.replace(/^\$/, '');
-              // Only the connection somebody is working in is worth joining.
-              // Publishing an observer's own uuid would let observers chain onto
-              // each other and outlive the session they were watching.
-              if (uuid && mode === 'control' && store) {
+              // Only the connection somebody is working in is worth joining, and
+              // only the OWNER's is that: publishing a joiner's own uuid would let
+              // observers and admins chain onto each other and outlive the session
+              // they joined. An admin's control grant is a watch token too, so it
+              // must not republish — hence !isWatch, not just mode.
+              if (uuid && !isWatch && mode === 'control' && store) {
                 publishedUuid = uuid;
                 void store.setGuacUuid(session.kasmId, uuid);
               }

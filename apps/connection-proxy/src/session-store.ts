@@ -1,5 +1,6 @@
 import { createLogger } from '@asha/logger';
 import Redis from 'ioredis';
+import type { StreamMode } from './auth.js';
 import { proxyEnv } from './env.js';
 
 const log = createLogger('proxy:session-store');
@@ -56,6 +57,14 @@ const GUAC_TTL_SEC = 3600;
 const WATCH_KEY = (kasmId: string) => `asha:obs:watch:${kasmId}`;
 
 /**
+ * The API's record of an admin's live control grant — a support session where
+ * an administrator shares keyboard/mouse. Kept apart from the observation window
+ * on purpose: the user ending control must close the admin's input at once, even
+ * while an observer is still watching, so the two are revoked independently.
+ */
+const CONTROL_KEY = (kasmId: string) => `asha:obs:control:${kasmId}`;
+
+/**
  * The part of the store the guacd bridge needs: the connection uuid guacd hands
  * out in `ready`, which a second viewer selects to JOIN the live connection
  * instead of opening a second logon on the target.
@@ -66,9 +75,15 @@ export interface GuacUuidStore {
   clearGuacUuid(kasmId: string, uuid: string): Promise<void>;
 }
 
-/** The part of the store an observation stream needs to know it may continue. */
+/** The part of the store a watched or controlled stream needs, to know it may continue. */
 export interface WatchRecordStore {
   isWatchActive(kasmId: string): Promise<boolean | null>;
+  /**
+   * Whether the grant behind THIS socket's mode still stands: the observation
+   * window for a view socket, the control grant for a control socket. `null` on
+   * a Redis outage — never a stop, or a blip would drop every stream.
+   */
+  isGrantActive(kasmId: string, mode: StreamMode): Promise<boolean | null>;
 }
 
 export class SessionStore implements GuacUuidStore, WatchRecordStore {
@@ -183,6 +198,22 @@ export class SessionStore implements GuacUuidStore, WatchRecordStore {
     if (!this.healthy) return null;
     try {
       return (await this.redis.exists(WATCH_KEY(kasmId))) > 0;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Whether this socket's grant still stands. A view socket rides the observation
+   * window (WATCH_KEY); a control socket rides the admin's control grant
+   * (CONTROL_KEY), a separate record so ending control does not wait on the
+   * observation and vice versa. Same three-state contract as isWatchActive.
+   */
+  async isGrantActive(kasmId: string, mode: StreamMode): Promise<boolean | null> {
+    if (!this.healthy) return null;
+    try {
+      const key = mode === 'control' ? CONTROL_KEY(kasmId) : WATCH_KEY(kasmId);
+      return (await this.redis.exists(key)) > 0;
     } catch {
       return null;
     }

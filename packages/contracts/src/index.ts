@@ -419,6 +419,20 @@ export const acknowledgeObservationSchema = z.object({
 });
 export type AcknowledgeObservationDto = z.infer<typeof acknowledgeObservationSchema>;
 
+/**
+ * How an org handles an admin asking to control a user's desktop (support).
+ *  - `approve` (default) — the user is asked and must allow it first.
+ *  - `notify`            — control starts at once and the user is told.
+ * Control is never silent in either mode: the banner and the audit row always go.
+ */
+export const ASSIST_CONSENT_MODES = ['approve', 'notify'] as const;
+export type AssistConsentMode = (typeof ASSIST_CONSENT_MODES)[number];
+export const assistConsentModeSchema = z.enum(ASSIST_CONSENT_MODES);
+
+/** The user's answer to a control request (approve mode). */
+export const controlRespondSchema = z.object({ allow: z.boolean() });
+export type ControlRespondDto = z.infer<typeof controlRespondSchema>;
+
 // ── Identity: auth providers (OIDC / SAML / LDAP) ────────────────────────────
 export const createAuthConfigSchema = z.object({
   type: z.enum(['LOCAL', 'LDAP', 'SAML', 'OIDC']),

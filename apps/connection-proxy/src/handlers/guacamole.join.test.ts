@@ -126,7 +126,7 @@ describe('handleGuacamole — join an existing connection or open a fresh one', 
     const ws = new FakeSocket();
     teardown.push(() => ws.close());
 
-    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'));
+    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'), true);
 
     const conn = await until(() => conns[0], 'a guacd connection');
     expect(await select(conn)).toEqual(['select', '$conn-uuid']);
@@ -153,7 +153,7 @@ describe('handleGuacamole — join an existing connection or open a fresh one', 
     const ws = new FakeSocket();
     teardown.push(() => ws.close());
 
-    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore(null));
+    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore(null), true);
 
     expect(ws.closeCode).toBe(CLOSE_NO_LIVE_CONNECTION);
     expect(conns).toHaveLength(0);
@@ -167,7 +167,7 @@ describe('handleGuacamole — join an existing connection or open a fresh one', 
     const ws = new FakeSocket();
     teardown.push(() => ws.close());
 
-    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('stale-uuid'));
+    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('stale-uuid'), true);
 
     const first = await until(() => conns[0], 'the join attempt');
     expect(await select(first)).toEqual(['select', '$stale-uuid']);
@@ -199,7 +199,7 @@ describe('handleGuacamole — join an existing connection or open a fresh one', 
     const ws = new FakeSocket();
     teardown.push(() => ws.close());
 
-    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'));
+    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'), true);
     const conn = await until(() => conns[0], 'a guacd connection');
     const connect = await completeHandshake(conn, 'conn-uuid');
 
@@ -239,11 +239,31 @@ describe('handleGuacamole — join an existing connection or open a fresh one', 
     teardown.push(() => ws.close());
     const store = fakeStore('conn-uuid');
 
-    await handleGuacamole(ws as never, REQ, SESSION, 'view', store);
+    await handleGuacamole(ws as never, REQ, SESSION, 'view', store, true);
     const conn = await until(() => conns[0], 'a guacd connection');
     await completeHandshake(conn, 'observer-uuid');
     await until(() => ws.sent.length, 'the bridged stream');
 
+    expect(store.setGuacUuid).not.toHaveBeenCalled();
+  });
+
+  it('an admin control grant joins the live connection read-write, and never republishes', async () => {
+    // The support case: a watch token in control mode. It JOINS the owner's
+    // connection (no second logon), guacd is told read-only=false so the admin's
+    // keys and clicks flow, and — being a joiner, not the owner — it publishes no
+    // uuid of its own for others to chain onto.
+    const { conns, port } = await startGuacd();
+    const { handleGuacamole } = await load(port);
+    const ws = new FakeSocket();
+    teardown.push(() => ws.close());
+    const store = fakeStore('conn-uuid');
+
+    await handleGuacamole(ws as never, REQ, SESSION, 'control', store, true);
+    const conn = await until(() => conns[0], 'a guacd connection');
+    expect(await select(conn)).toEqual(['select', '$conn-uuid']);
+    const connect = await completeHandshake(conn, 'joined-uuid');
+    expect(connect[2 + PARAMS.indexOf('read-only')]).toBe('false');
+    await until(() => ws.sent.length, 'the bridged stream');
     expect(store.setGuacUuid).not.toHaveBeenCalled();
   });
 });
@@ -255,7 +275,7 @@ describe('handleGuacamole — what reaches guacd from the browser', () => {
     const ws = new FakeSocket();
     teardown.push(() => ws.close());
 
-    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'));
+    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'), true);
     const conn = await until(() => conns[0], 'a guacd connection');
     await completeHandshake(conn, 'conn-uuid');
 
@@ -272,7 +292,7 @@ describe('handleGuacamole — what reaches guacd from the browser', () => {
     const ws = new FakeSocket();
     teardown.push(() => ws.close());
 
-    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'));
+    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'), true);
     const conn = await until(() => conns[0], 'a guacd connection');
     await completeHandshake(conn, 'conn-uuid');
 
@@ -291,7 +311,7 @@ describe('handleGuacamole — what reaches guacd from the browser', () => {
     const ws = new FakeSocket();
     teardown.push(() => ws.close());
 
-    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'));
+    await handleGuacamole(ws as never, REQ, SESSION, 'view', fakeStore('conn-uuid'), true);
     const conn = await until(() => conns[0], 'a guacd connection');
     await completeHandshake(conn, 'conn-uuid');
 

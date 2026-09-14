@@ -54,18 +54,25 @@ export function verifyToken(token: string): TokenPayload {
 }
 
 /**
- * View rights come from a watch token and from nothing else.
+ * Stream claims come from a watch token and from nothing else.
  *
- * `mode`/`kasmId` are the only claims that open the view branch downstream, so
+ * `mode`/`kasmId` are the only claims that open a non-owner branch downstream, so
  * they are refused unless the token says outright that it is a watch token: an
  * ordinary access token can then never reach that branch, whatever it carries,
  * and a watch token stripped of a claim is rejected rather than quietly
- * downgraded into a control token.
+ * changing what it grants.
+ *
+ * A watch token is `view` (read-only observation) or `control` (an admin granted
+ * a shared keyboard/mouse for support). The `control` value is the ONLY way a
+ * non-owner ever gets input, and it exists only on a watch token — which the API
+ * mints only after the SESSION_CONTROL check and the user's consent path. That
+ * `token.mode === 'control'` can therefore never come from an ordinary access
+ * token is what makes `resolveStreamMode` safe to trust it.
  */
 function assertTokenType(payload: TokenPayload): void {
   if (payload.typ === WATCH_TOKEN_TYPE) {
-    if (payload.mode !== 'view' || !payload.kasmId) {
-      throw new AuthError('Watch token names no session to view');
+    if ((payload.mode !== 'view' && payload.mode !== 'control') || !payload.kasmId) {
+      throw new AuthError('Watch token names no session to act on');
     }
     return;
   }

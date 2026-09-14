@@ -128,11 +128,16 @@ export class SessionsGateway implements OnGatewayConnection {
     }
   }
 
-  /** System admin or a real SESSION_OBSERVE holder — the same test the REST route makes. */
+  /**
+   * Who gets their own observer room: a system admin, an observer, or an admin
+   * who can take control. The room carries desktop frames to the wall AND the
+   * outcome of a control request back to the admin who made it, so a controller
+   * has to be in it even if they never watch — hence SESSION_CONTROL_ANY too.
+   */
   private async mayObserve(user: AuthUser): Promise<boolean> {
     if (user.isSystemAdmin) return true;
     const granted = await this.rbac.effectivePermissions(user.sub);
-    return granted.has('SESSION_OBSERVE') || granted.has('*');
+    return granted.has('SESSION_OBSERVE') || granted.has('SESSION_CONTROL_ANY') || granted.has('*');
   }
 
   /**

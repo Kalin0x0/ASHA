@@ -1,4 +1,13 @@
 {
+  "assist": {
+    "title": "Support control",
+    "description": "How an administrator taking control of a user’s desktop to help is handled. Control is never silent — the user always sees it and can end it.",
+    "modeLabel": "When an admin takes control",
+    "modeApprove": "Ask the user first",
+    "modeNotify": "Start, and notify the user",
+    "helpApprove": "The user is asked “Admin X wants to control your desktop” and control only starts if they allow it. Safest, and the default.",
+    "helpNotify": "Control starts at once and the user sees a banner naming who is controlling, with a button to end it. Faster in a pinch, but there is no approval step. Only use where users expect it."
+  },
   "observation": {
     "title": "Live observation notice",
     "description": "How a user is told they can be watched while an administrator views their session.",

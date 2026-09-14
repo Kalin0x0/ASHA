@@ -202,6 +202,11 @@
     "toastRevokeFailed": "Could not revoke share"
   },
   "monitor": {
+    "control": {
+      "requested": "Waiting for the user to allow control…",
+      "failed": "Could not start control",
+      "denied": "The user declined the control request"
+    },
     "title": "Live Monitor",
     "description": "Every desktop running right now — who is at it, and what they have in front of them.",
     "sessionCount": "{count, plural, one {# desktop} other {# desktops}}",
@@ -229,6 +234,7 @@
       "off": "Capture is off",
       "waiting": "Waiting for the first frame…",
       "watch": "Watch live",
+      "control": "Control",
       "details": "Details",
       "memory": "Memory",
       "uptime": "Uptime",

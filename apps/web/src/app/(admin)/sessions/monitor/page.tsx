@@ -1,7 +1,7 @@
 'use client';
 
 import type { WsServerEvent } from '@asha/events';
-import { AppWindow, Eye, Lock, Radio, ScanEye } from 'lucide-react';
+import { AppWindow, Eye, Lock, MousePointer2, Radio, ScanEye } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { SessionStatusPill } from '@/components/ui/status-pill';
 import { useAuth } from '@/lib/api/auth-context';
+import { startSessionControl } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
 import { useObservations, useSessions, useStartObservation, useStopObservation } from '@/lib/hooks';
 import { canAccessRoute } from '@/lib/nav';
@@ -78,6 +79,10 @@ export default function SessionMonitorPage() {
   // permission they are missing.
   const mayList =
     !isLive || !user || canAccessRoute('/sessions/monitor', user.permissions, user.isSystemAdmin);
+  // Taking control is a bigger power than watching, so it has its own permission
+  // (SESSION_CONTROL_ANY) and its own button — shown only to an admin who holds
+  // it, and only on desktops that can actually be joined read-write.
+  const canControl = Boolean(user?.isSystemAdmin || user?.permissions?.includes('SESSION_CONTROL_ANY'));
 
   const live = useMemo(() => observableSessions(sessions), [sessions]);
   const filtered = useMemo(() => {
@@ -152,6 +157,25 @@ export default function SessionMonitorPage() {
     [startObservation, intervalMs, router, t],
   );
 
+  // Take control of a desktop for support. In approve mode the API only posts
+  // the request and the user is asked; the desktop opens once the `granted`
+  // event lands (handled in onEvent). In notify mode it comes back active with
+  // the route to open now.
+  const takeControl = useCallback(
+    async (sessionId: string) => {
+      try {
+        const res = await startSessionControl(sessionId);
+        // `assist=1` marks the controller's own tab: it sends input (not a
+        // view-only monitor stream) and releases the grant when it closes.
+        if (res.state === 'active' && res.watchUrl) router.push(`${res.watchUrl}&assist=1`);
+        else if (res.state === 'requested') toast.info(t('control.requested'));
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t('control.failed'));
+      }
+    },
+    [router, t],
+  );
+
   // Only the tiles actually on screen are observed. Joined into a string so the
   // effects below re-run when the set changes, not on every list rebuild.
   const watchKey = useMemo(() => filtered.map((s) => s.id).join(','), [filtered]);
@@ -198,10 +222,22 @@ export default function SessionMonitorPage() {
 
   // The socket is the fast path; the 8s poll behind `useObservations` keeps the
   // wall filled when it cannot connect.
-  const onEvent = useCallback((event: WsServerEvent) => {
-    if (event.type !== 'session.observation') return;
-    setStreamed((current) => mergeObservation(current, event.payload));
-  }, []);
+  const onEvent = useCallback(
+    (event: WsServerEvent) => {
+      if (event.type === 'session.observation') {
+        setStreamed((current) => mergeObservation(current, event.payload));
+        return;
+      }
+      // The outcome of a control request the admin made (approve mode): the user
+      // allowed it (open the desktop now) or refused it. These reach this admin's
+      // own observer room and nobody else's.
+      if (event.type === 'session.control') {
+        if (event.payload.state === 'granted' && event.payload.watchUrl) router.push(`${event.payload.watchUrl}&assist=1`);
+        else if (event.payload.state === 'denied') toast.error(t('control.denied'));
+      }
+    },
+    [router, t],
+  );
   const realtime = useRealtimeEvents(onEvent);
 
   const samples = useMemo(() => {
@@ -315,6 +351,7 @@ export default function SessionMonitorPage() {
               capability={capability[session.id]}
               capturing={capturing}
               onWatch={() => void watchLive(session.id)}
+              onControl={canControl && isControllable(session) ? () => void takeControl(session.id) : undefined}
               onDetails={() => router.push(`/sessions/${session.id}`)}
             />
           ))}
@@ -330,6 +367,7 @@ function MonitorTile({
   capability,
   capturing,
   onWatch,
+  onControl,
   onDetails,
 }: {
   session: SessionRow;
@@ -337,6 +375,7 @@ function MonitorTile({
   capability: ObservationCapability | undefined;
   capturing: boolean;
   onWatch: () => void;
+  onControl?: () => void;
   onDetails: () => void;
 }) {
   const t = useTranslations('sessions.monitor');
@@ -442,6 +481,13 @@ function MonitorTile({
           <Button variant="secondary" size="sm" className="flex-1" onClick={onWatch}>
             <Eye className="size-4" /> {t('tile.watch')}
           </Button>
+          {/* Control shows only for RDP/VNC desktops (a container has no input
+              path) and only for an admin who holds the permission. */}
+          {onControl && (
+            <Button variant="secondary" size="sm" onClick={onControl}>
+              <MousePointer2 className="size-4" /> {t('tile.control')}
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={onDetails}>
             {t('tile.details')}
           </Button>
@@ -449,6 +495,17 @@ function MonitorTile({
       </div>
     </Card>
   );
+}
+
+/**
+ * Whether this session can be controlled: only the guacd desktops (RDP/VNC),
+ * which is where a read-write join exists. A container (KasmVNC) is watched
+ * through a one-way frame stream, and SSH is a terminal with no shared seat — the
+ * API refuses both, so the button is not offered for them.
+ */
+function isControllable(session: SessionRow): boolean {
+  const type = (session.connectionType ?? '').toUpperCase();
+  return type === 'RDP' || type === 'VNC';
 }
 
 function Meter({ label, value, children }: { label: string; value: string; children: React.ReactNode }) {

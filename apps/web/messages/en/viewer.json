@@ -1,4 +1,14 @@
 {
+  "control": {
+    "requestTitle": "An administrator wants to control your desktop",
+    "requestBody": "{name} would like to take your keyboard and mouse to help you. You keep control too — you can move the mouse at any time.",
+    "allow": "Allow",
+    "deny": "Deny",
+    "activeTitle": "{name} is controlling your desktop",
+    "since": "since {time}",
+    "activeHint": "You share control — move the mouse any time. Press End to stop.",
+    "end": "End"
+  },
   "toolbar": {
     "clipboard": "Clipboard",
     "clipboardToast": "Use the in-session toolbar for clipboard sync",

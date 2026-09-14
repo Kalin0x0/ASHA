@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Post, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
+  type ControlRespondDto,
+  controlRespondSchema,
   type SessionObservationDto,
   sessionObservationSchema,
   type StartObservationDto,
@@ -58,6 +60,35 @@ export class ObservationController {
   @Delete('sessions/:id/observe')
   stop(@CurrentUser() user: AuthUser, @Param('id') id: string, @Query('window') window?: string) {
     return this.observation.stop(user, id, window);
+  }
+
+  // ── Support control: an admin takes shared keyboard/mouse to help ──────────
+  // The permission is the companion to the observe grant: taking control needs
+  // SESSION_CONTROL_ANY, and the service adds the row-level "may control THIS
+  // session" the guard cannot. `respond` and the user's own `stop` need no
+  // permission — they are the person at the desktop answering for their own
+  // session, and the service checks ownership.
+  @ApiBearerAuth()
+  @RequirePermissions('SESSION_CONTROL_ANY')
+  @Post('sessions/:id/control')
+  startControl(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.observation.startControl(user, id);
+  }
+
+  @ApiBearerAuth()
+  @Post('sessions/:id/control/respond')
+  respondControl(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body(new ZodPipe(controlRespondSchema)) dto: ControlRespondDto,
+  ) {
+    return this.observation.respondControl(user, id, dto.allow);
+  }
+
+  @ApiBearerAuth()
+  @Delete('sessions/:id/control')
+  stopControl(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.observation.stopControl(user, id);
   }
 
   // ── Internal: agent → manager (shared-token / mTLS network) ────────────────
