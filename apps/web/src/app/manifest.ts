@@ -5,8 +5,8 @@ import type { MetadataRoute } from 'next';
  * launchable as a standalone window. Next serves this at /manifest.webmanifest
  * and injects the <link rel="manifest"> automatically.
  *
- * Icons are SVG (crisp at any size, `sizes: "any"`). The maskable variant is
- * full-bleed so platform masks don't clip the mark.
+ * PNG icons at the sizes installers ask for. The maskable variant keeps the
+ * mark inside its safe zone so platform masks (circle, squircle) don't clip it.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -23,8 +23,9 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#1a1a2e',
     categories: ['business', 'productivity', 'utilities'],
     icons: [
-      { src: '/asha-logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-      { src: '/icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
     shortcuts: [
       { name: 'My Workspaces', short_name: 'Workspaces', url: '/' },

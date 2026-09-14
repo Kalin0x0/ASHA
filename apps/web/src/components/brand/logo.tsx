@@ -4,10 +4,10 @@ import { cn } from '@/lib/utils';
 export function AshaMark({ className }: { className?: string }) {
   return (
     <Image
-      src="/asha-logo.svg"
+      src="/asha-logo.png"
       alt="Asha"
-      width={32}
-      height={32}
+      width={512}
+      height={512}
       priority
       unoptimized
       className={cn('size-7 rounded-lg', className)}
