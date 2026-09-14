@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { AdminToolsShelf } from '@/components/composite/admin-tools-shelf';
 import { CategoryRail } from '@/components/composite/category-rail';
 import { FavoritesRail } from '@/components/composite/favorites-rail';
 import { LaunchDialog } from '@/components/composite/launch-dialog';
@@ -240,6 +241,12 @@ export function WorkstationLauncher() {
           </aside>
 
           <div className="min-w-0 flex-1 space-y-10">
+            {/* Admin quick-launch: the admin areas this user's role may open, as
+                icon tiles. Renders nothing for a non-admin, so a regular
+                launcher is unchanged. Above the catalog and outside the
+                no-results branch so it is always reachable. */}
+            <AdminToolsShelf />
+
             {/* Narrow viewports have no left rail → open sessions as a top strip. */}
             <OpenSessions orientation="horizontal" className="lg:hidden" />
 

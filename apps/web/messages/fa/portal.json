@@ -1,4 +1,7 @@
 {
+  "adminTools": {
+    "title": "ابزارهای مدیریت"
+  },
   "header": {
     "myWorkspaces": "فضاهای کاری من",
     "admin": "مدیریت"

@@ -1,4 +1,7 @@
 {
+  "adminTools": {
+    "title": "Admin-Werkzeuge"
+  },
   "header": {
     "myWorkspaces": "Meine Workspaces",
     "admin": "Admin"
