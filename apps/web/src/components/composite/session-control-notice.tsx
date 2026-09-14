@@ -1,16 +1,21 @@
 'use client';
 
-import { MousePointer2, X } from 'lucide-react';
+import { ChevronDown, MousePointer2, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+/** How long the full strip stays before it shrinks to the corner indicator. */
+const AUTO_MINIMIZE_MS = 6000;
+
 /**
  * Shown to the person AT the desktop while an administrator is controlling it —
- * RustDesk-style support. Unlike the observation strip this is never optional
- * and never suppressible: control moves the user's own cursor, so it says who is
- * doing it, since when, and gives them a button to end it at any moment. Shared
- * control — the user keeps their own mouse and keyboard the whole time.
+ * RustDesk-style support. Control moves the user's own cursor, so it says who is
+ * doing it, since when, and gives them a button to end it at any moment. It
+ * announces in full, then shrinks on its own to a small pulsing indicator so it
+ * stops covering the desktop — reopening it (one tap) brings the end button
+ * back; it never disappears, because being controlled must stay visible.
  */
 export function SessionControlNotice({
   controllerName,
@@ -25,8 +30,34 @@ export function SessionControlNotice({
 }) {
   const t = useTranslations('viewer.control');
   const locale = useLocale();
+  const [minimized, setMinimized] = useState(false);
   const at = since ? new Date(since) : null;
   const time = at && !Number.isNaN(at.getTime()) ? at.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : '';
+
+  useEffect(() => {
+    setMinimized(false);
+    const id = setTimeout(() => setMinimized(true), AUTO_MINIMIZE_MS);
+    return () => clearTimeout(id);
+  }, [controllerName, since]);
+
+  if (minimized) {
+    return (
+      <div className={cn('pointer-events-none flex justify-end p-1.5', className)}>
+        <button
+          type="button"
+          onClick={() => setMinimized(false)}
+          aria-label={t('activeTitle', { name: controllerName })}
+          className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-gold-500/50 bg-gold-500/20 px-2.5 py-1 text-gold-200 shadow-sm backdrop-blur"
+        >
+          <span className="relative flex size-3.5 items-center justify-center">
+            <span className="absolute inline-flex size-3.5 rounded-full bg-gold-500/30 animate-pulse-ring" />
+            <MousePointer2 className="relative size-3" />
+          </span>
+          <span className="text-[11px] font-medium">{t('short')}</span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -50,6 +81,14 @@ export function SessionControlNotice({
         <X className="size-3.5" />
         {t('end')}
       </Button>
+      <button
+        type="button"
+        onClick={() => setMinimized(true)}
+        aria-label={t('minimize')}
+        className="shrink-0 rounded p-1 text-gold-200/80 transition-colors hover:bg-gold-500/20 hover:text-gold-200"
+      >
+        <ChevronDown className="size-4" />
+      </button>
     </div>
   );
 }

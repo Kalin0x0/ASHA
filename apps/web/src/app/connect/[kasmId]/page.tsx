@@ -15,6 +15,7 @@ import {
   Maximize2,
   Monitor,
   MonitorX,
+  MousePointer2,
   Power,
   RefreshCw,
   Wifi,
@@ -33,7 +34,8 @@ import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { TouchKeyBar } from '@/components/viewer/touch-key-bar';
 import { ApiError } from '@/lib/api/client';
-import { getSessionConnection, respondSessionControl, stopSessionControl, terminateSession } from '@/lib/api/endpoints';
+import { useAuth } from '@/lib/api/auth-context';
+import { getSessionConnection, respondSessionControl, startSessionControl, stopSessionControl, terminateSession } from '@/lib/api/endpoints';
 import { getAccessToken } from '@/lib/api/auth-store';
 import { isLive } from '@/lib/api/mode';
 import { captureCanvasThumb } from '@/lib/capture-thumb';
@@ -285,7 +287,15 @@ export default function ConnectPage() {
       }
       if (event.type === 'session.control' && event.payload.sessionId === sessionId) {
         const p = event.payload;
-        if (p.controllerUserId === myId) return;
+        if (p.controllerUserId === myId) {
+          // The outcome of MY own take-control request (I am the admin). In
+          // approve mode the user has now answered: allowed → open the control
+          // viewer here; refused → say so. `granted` reaches only my observer
+          // room, never the session room, so it cannot leak the token.
+          if (p.state === 'granted' && p.watchUrl) router.push(`${p.watchUrl}&assist=1`);
+          else if (p.state === 'denied') toast.error(t('connect.control.denied'));
+          return;
+        }
         if (p.state === 'requested') setControl({ state: 'requested', controllerName: p.controllerName });
         else if (p.state === 'active') setControl({ state: 'active', controllerName: p.controllerName, since: p.since });
         else setControl(null); // ended, denied — and granted never reaches the session room
@@ -293,6 +303,31 @@ export default function ConnectPage() {
     },
     { sessionId, enabled: Boolean(sessionId) },
   );
+  // An admin who is watching may escalate to shared control from here, instead
+  // of going back to the wall — the one control affordance the live view was
+  // missing. Only for a real observer (monitor mode, not the owner, not already
+  // controlling) who holds the permission, and only on an RDP/VNC desktop, which
+  // is the only kind a control grant can join.
+  const { user } = useAuth();
+  const canControlPerm = Boolean(user?.isSystemAdmin || user?.permissions?.includes('SESSION_CONTROL_ANY'));
+  const controllableProto = ['RDP', 'VNC'].includes((session?.connectionType ?? '').toUpperCase());
+  const canTakeControl = monitor && !assist && canControlPerm && controllableProto;
+  const [takingControl, setTakingControl] = useState(false);
+  const takeControl = useCallback(async () => {
+    if (!sessionId) return;
+    setTakingControl(true);
+    try {
+      const res = await startSessionControl(sessionId);
+      // notify mode → control is live now, open the controlling viewer; approve
+      // mode → the user is being asked, and `granted` above opens it if allowed.
+      if (res.state === 'active' && res.watchUrl) router.push(`${res.watchUrl}&assist=1`);
+      else if (res.state === 'requested') toast.info(t('connect.control.requested'));
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : t('connect.control.failed'));
+    } finally {
+      setTakingControl(false);
+    }
+  }, [sessionId, router, t]);
   const answerControl = useCallback(
     (allow: boolean) => {
       // Clear the prompt at once; an allow is confirmed by the `active` push that
@@ -1155,10 +1190,22 @@ export default function ConnectPage() {
             {workspaceDescription || `Live · ${protocolLabel}`}
           </p>
         </div>
-        {monitor && (
+        {monitor && !canTakeControl && (
           <span className="ms-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-info/40 bg-info/10 px-2.5 py-1 text-[11px] font-medium text-info">
             <Eye className="size-3.5" /> {t('connect.toolbar.viewOnly')}
           </span>
+        )}
+        {canTakeControl && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="ms-1 shrink-0"
+            disabled={takingControl || !connected}
+            onClick={() => void takeControl()}
+          >
+            {takingControl ? <Loader2 className="size-3.5 animate-spin" /> : <MousePointer2 className="size-3.5" />}
+            {t('connect.toolbar.takeControl')}
+          </Button>
         )}
 
         <div className="ms-auto flex items-center gap-0.5">

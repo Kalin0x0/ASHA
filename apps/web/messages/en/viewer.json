@@ -1,5 +1,7 @@
 {
   "control": {
+    "short": "Controlled",
+    "minimize": "Minimize",
     "requestTitle": "An administrator wants to control your desktop",
     "requestBody": "{name} would like to take your keyboard and mouse to help you. You keep control too — you can move the mouse at any time.",
     "allow": "Allow",
@@ -124,7 +126,13 @@
     "dropDisabled": "Uploads disabled by policy"
   },
   "connect": {
+    "control": {
+      "requested": "Waiting for the user to allow control…",
+      "failed": "Could not start control",
+      "denied": "The user declined the control request"
+    },
     "toolbar": {
+      "takeControl": "Take control",
       "backToWorkspaces": "Back to Workspaces",
       "paste": "Paste (local → remote)",
       "ctrlAltDel": "Ctrl + Alt + Del",
@@ -217,6 +225,8 @@
     "backToMonitor": "Go to live monitoring"
   },
   "observed": {
+    "short": "Watched",
+    "minimize": "Minimize",
     "title": "An administrator is watching this session",
     "by": "{name} · since {time}",
     "hint": "Your screen is being viewed. Nobody is taking control — input stays with you."
