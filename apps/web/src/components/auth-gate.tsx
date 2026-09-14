@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ObservationDisclosureGate } from '@/components/composite/observation-disclosure-gate';
+import { WhatsNewPopup } from '@/components/composite/whats-new-popup';
 import { useAuth } from '@/lib/api/auth-context';
 import { isLive } from '@/lib/api/mode';
 
@@ -52,6 +53,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <>
         {children}
+        {/* The what's-new popup renders before the disclosure gate so that a
+            blocking disclosure — which the user MUST answer — always sits on top
+            of the dismissible update notes when the two coincide. */}
+        <WhatsNewPopup />
         <ObservationDisclosureGate />
       </>
     );

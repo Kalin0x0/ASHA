@@ -1,4 +1,9 @@
 {
+  "whatsNew": {
+    "title": "Asha wurde aktualisiert",
+    "subtitle": "Version {version} — das ist neu:",
+    "dismiss": "Verstanden"
+  },
   "install": "App installieren",
   "installHint": "Asha als Desktop-App installieren",
   "offlineBadge": "Offline — zwischengespeicherte Daten",

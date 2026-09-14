@@ -1,4 +1,9 @@
 {
+  "whatsNew": {
+    "title": "Asha has been updated",
+    "subtitle": "Version {version} — what’s new:",
+    "dismiss": "Got it"
+  },
   "install": "Install app",
   "installHint": "Install Asha as a desktop app",
   "offlineBadge": "Offline — showing cached data",

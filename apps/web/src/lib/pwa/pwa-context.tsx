@@ -59,6 +59,11 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
             onClick: () => {
               reloading = true;
               worker.postMessage('SKIP_WAITING');
+              // sw.js also calls skipWaiting() at install, so the new worker may
+              // already be in control and no `controllerchange` would follow this
+              // click. Reload directly so the button is never a no-op — a full
+              // load fetches the new bundle regardless of which worker answers.
+              window.location.reload();
             },
           },
         });
