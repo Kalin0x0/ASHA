@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.3',
+    date: '2026-09-14',
+    title: { en: 'Taking the wheel, when someone asks for help', de: 'Das Steuer \u00fcbernehmen, wenn jemand um Hilfe bittet' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'From the live monitor an administrator can now take shared control of a remote desktop (RDP/VNC) to help \u2014 keyboard and mouse, like a remote-support tool. It is never silent: the person at the desktop sees who is controlling it and can end it at any moment, and every control session is recorded. An organisation chooses under Settings \u2192 General whether the user is asked to allow it first (the default) or is told as it starts.',
+          de: 'Aus der Live-\u00dcberwachung kann ein Administrator jetzt einen entfernten Desktop (RDP/VNC) zur Hilfe mitsteuern \u2014 Tastatur und Maus, wie ein Fernwartungs-Werkzeug. Es ist nie unsichtbar: Wer am Desktop sitzt, sieht, wer steuert, und kann es jederzeit beenden, und jede Steuersitzung wird protokolliert. Eine Organisation w\u00e4hlt unter Einstellungen \u2192 Allgemein, ob der Nutzer erst um Erlaubnis gefragt wird (Vorgabe) oder beim Start benachrichtigt wird.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.2',
     date: '2026-09-10',
     title: { en: 'Told once, not on every session', de: 'Einmal gesagt, nicht in jeder Sitzung' },
