@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.8',
+    date: '2026-09-15',
+    title: { en: 'The desktop back arrow goes where you came from', de: 'Der Zur\u00fcck-Pfeil im Desktop f\u00fchrt dorthin zur\u00fcck, wo du warst' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'The back arrow in the remote-desktop viewer no longer always drops you on the plain launcher — it now returns to the page you opened the desktop from (the workstation, the live monitor, wherever), and falls back to your home only when there is nowhere to go back to. It also always leaves the viewer now, including from the "couldn\u2019t connect" error screen.',
+          de: 'Der Zur\u00fcck-Pfeil im Remote-Desktop-Viewer wirft dich nicht mehr immer auf den schlichten Launcher — er f\u00fchrt jetzt zur\u00fcck zu der Seite, von der du den Desktop ge\u00f6ffnet hast (Workstation, Live-\u00dcberwachung, wo auch immer), und geht nur zur Startseite, wenn es kein Zur\u00fcck gibt. Und er verl\u00e4sst den Viewer jetzt immer zuverl\u00e4ssig, auch vom \u201eVerbindung fehlgeschlagen\u201c-Bildschirm aus.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.7',
     date: '2026-09-14',
     title: { en: 'A new look for Asha', de: 'Ein neues Gesicht f\u00fcr Asha' },
