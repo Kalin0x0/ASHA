@@ -5,11 +5,8 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { useAuth } from '@/lib/api/auth-context';
-import { canAccessAdmin, visibleNavGroups } from '@/lib/nav';
+import { adminToolItems, canAccessAdmin } from '@/lib/nav';
 import { cn } from '@/lib/utils';
-
-// The launcher itself is not a tool to jump to — we are already on it.
-const SKIP = new Set(['workstation']);
 
 /**
  * Quick-launch tiles for the admin areas THIS user may open — one per nav item
@@ -30,10 +27,7 @@ export function AdminToolsShelf() {
   const router = useRouter();
 
   const items = useMemo(
-    () =>
-      visibleNavGroups(user?.permissions, user?.isSystemAdmin ?? false)
-        .flatMap((g) => g.items)
-        .filter((i) => !SKIP.has(i.key)),
+    () => adminToolItems(user?.permissions, user?.isSystemAdmin ?? false),
     [user?.permissions, user?.isSystemAdmin],
   );
 

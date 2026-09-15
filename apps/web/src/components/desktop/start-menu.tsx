@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { LayoutDashboard, Loader2, Power, Search, Star } from 'lucide-react';
+import { LayoutDashboard, Loader2, Power, Search, ShieldCheck, Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -10,7 +10,7 @@ import { AppIcon } from '@/components/composite/app-icon';
 import { LiquidGlass } from '@/components/ui/liquid-glass';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/lib/api/auth-context';
-import { canAccessAdmin } from '@/lib/nav';
+import { adminToolItems, canAccessAdmin } from '@/lib/nav';
 import { useProfileDialog } from '@/lib/profile-store';
 import { orderByFavorites, useFavorites } from '@/lib/favorites-store';
 import { useThumbnails } from '@/lib/thumbnail-store';
@@ -41,8 +41,13 @@ export function StartMenu({
   onOpenSession: (s: SessionRow) => void;
 }) {
   const t = useTranslations('portal');
+  const tNav = useTranslations('shell.nav');
   const { user, logout } = useAuth();
   const canAdmin = canAccessAdmin(user?.permissions, user?.isSystemAdmin ?? false);
+  const adminItems = useMemo(
+    () => adminToolItems(user?.permissions, user?.isSystemAdmin ?? false),
+    [user?.permissions, user?.isSystemAdmin],
+  );
   const router = useRouter();
   const openProfile = useProfileDialog((s) => s.openProfile);
   const favorites = useFavorites();
@@ -186,6 +191,42 @@ export function StartMenu({
                         {sessions.slice(0, 6).map((s) => (
                           <RecommendedItem key={s.id} session={s} workspaces={workspaces} onOpen={() => onOpenSession(s)} />
                         ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Admin tools — one tile per admin area this role can open,
+                      the same set the launcher shelf shows. The Start menu is
+                      the natural home for it here, since the Windows shell has
+                      no sidebar to carry the admin nav. */}
+                  {!query && canAdmin && adminItems.length > 0 && (
+                    <div className="mt-5">
+                      <h2 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <ShieldCheck className="size-3.5 text-gold-300" aria-hidden />
+                        {t('adminTools.title')}
+                      </h2>
+                      <div className="grid grid-cols-4 gap-1 sm:grid-cols-6">
+                        {adminItems.map((item) => {
+                          const Icon = item.icon;
+                          return (
+                            <button
+                              key={item.href}
+                              type="button"
+                              onClick={() => {
+                                onClose();
+                                router.push(item.href);
+                              }}
+                              className="group flex flex-col items-center gap-1.5 rounded-xl p-2 outline-none transition-colors hover:bg-white/8 ring-gold-focus"
+                            >
+                              <span className="grid size-12 place-items-center rounded-2xl border border-white/12 bg-white/8 text-gold-300 transition-colors group-hover:border-gold-500/40 group-hover:bg-gold-500/10">
+                                <Icon className="size-5" aria-hidden />
+                              </span>
+                              <span className="line-clamp-2 w-full text-center text-[11px] font-medium leading-tight text-foreground/90">
+                                {tNav(`items.${item.key}`)}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

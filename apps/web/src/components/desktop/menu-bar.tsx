@@ -1,10 +1,9 @@
 'use client';
 
-import { LayoutDashboard, LogOut, UserCircle2 } from 'lucide-react';
+import { LayoutDashboard, LogOut, ShieldCheck, UserCircle2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AshaMark } from '@/components/brand/logo';
 import { BackgroundPicker } from '@/components/composite/background-picker';
 import { InstallButton } from '@/components/composite/install-button';
@@ -21,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/api/auth-context';
-import { canAccessAdmin } from '@/lib/nav';
+import { adminToolItems, canAccessAdmin } from '@/lib/nav';
 import { useProfileDialog } from '@/lib/profile-store';
 
 /**
@@ -31,8 +30,13 @@ import { useProfileDialog } from '@/lib/profile-store';
  */
 export function MenuBar() {
   const t = useTranslations('portal');
+  const tNav = useTranslations('shell.nav');
   const { user, logout } = useAuth();
   const canAdmin = canAccessAdmin(user?.permissions, user?.isSystemAdmin ?? false);
+  const adminItems = useMemo(
+    () => adminToolItems(user?.permissions, user?.isSystemAdmin ?? false),
+    [user?.permissions, user?.isSystemAdmin],
+  );
   const router = useRouter();
   const openProfile = useProfileDialog((s) => s.openProfile);
 
@@ -89,15 +93,34 @@ export function MenuBar() {
       <div className="ms-auto flex items-center gap-0.5">
         <TariffChip className="me-1 hidden sm:inline-flex" />
         <InstallButton className="hidden md:inline-flex" />
-        {canAdmin && (
-          <Link
-            href="/dashboard"
-            title={t('header.admin')}
-            aria-label={t('header.admin')}
-            className="hidden size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground ring-gold-focus sm:inline-flex"
-          >
-            <LayoutDashboard className="size-4" />
-          </Link>
+        {canAdmin && adminItems.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title={t('adminTools.title')}
+                aria-label={t('adminTools.title')}
+                className="hidden size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground ring-gold-focus sm:inline-flex"
+              >
+                <ShieldCheck className="size-4" />
+              </button>
+            </DropdownMenuTrigger>
+            {/* The macOS shell has no sidebar either, so this menu is the way
+                through to the admin areas — the same set the launcher shelf and
+                the Windows Start menu list. */}
+            <DropdownMenuContent align="end" className="max-h-[70vh] w-56 overflow-y-auto">
+              <DropdownMenuLabel>{t('adminTools.title')}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {adminItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <DropdownMenuItem key={item.href} onSelect={() => router.push(item.href)}>
+                    <Icon className="size-4" /> {tNav(`items.${item.key}`)}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         <BackgroundPicker />
         <LanguageSwitcher />

@@ -267,6 +267,19 @@ export function visibleNavGroups(perms: string[] | undefined, isSystemAdmin: boo
     .filter((g) => g.items.length > 0);
 }
 
+/**
+ * The admin areas THIS user may open, flattened into one list — every visible
+ * nav item except the workstation launcher itself (the tools are reached FROM
+ * it, so it never links to itself). One source for the launcher shelf, the
+ * Windows Start menu and the macOS menu bar, so the three can never disagree
+ * about what a role may reach. Empty for a user with no admin access.
+ */
+export function adminToolItems(perms: string[] | undefined, isSystemAdmin: boolean): NavItem[] {
+  return visibleNavGroups(perms, isSystemAdmin)
+    .flatMap((g) => g.items)
+    .filter((i) => i.key !== 'workstation');
+}
+
 /** `perm` as an OR, `alsoNeeds` as an AND on top. Untagged → system-admin-only. */
 function holdsItemPermissions(item: NavItem, held: Set<string>): boolean {
   if (!item.perm) return false;
