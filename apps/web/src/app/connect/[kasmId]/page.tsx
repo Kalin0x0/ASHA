@@ -47,6 +47,7 @@ import {
   layoutParam,
   type RemoteLayout,
 } from '@/lib/keyboard-layout';
+import { canAccessAdmin } from '@/lib/nav';
 import {
   NO_OBSERVATION_NOTICE,
   OBSERVE_RENEW_MS,
@@ -1063,11 +1064,17 @@ export default function ConnectPage() {
     return () => clearInterval(id);
   }, [state, captureThumb]);
 
-  // Leave the viewer and return to the workstation. Uses router.push('/'), NOT
-  // router.back(): back() is a no-op when the session was opened directly, in a
-  // new tab, or after a reload / the RDP router.replace redirect — which is why
-  // the Back and End buttons "did nothing". The session keeps running so the
-  // user can jump back into it from the workstation.
+  // Leave the viewer and go back where the session was launched from. A back
+  // arrow that always pushed '/' dumped an admin — who launched from the
+  // workstation or the monitor wall — onto the plain end-user launcher instead
+  // of the page they came from. So it steps back through history when there is
+  // an in-app page to return to, and only falls back to a home when there isn't
+  // (a direct link or a fresh tab): the workstation for anyone with admin
+  // access, the launcher for a plain user. Falling back also covers the case
+  // history.back() cannot leave — a reload or a redirect that replaced this
+  // entry — so the arrow is never the dead button it used to be. The session
+  // keeps running either way, so the user can jump back into it.
+  const homeHref = canAccessAdmin(user?.permissions, user?.isSystemAdmin ?? false) ? '/workstation' : '/';
   const disconnect = useCallback(() => {
     leavingRef.current = true; // before disconnect(): suppress the auto-reconnect
     try {
@@ -1080,8 +1087,19 @@ export default function ConnectPage() {
     } catch {
       /* already closed */
     }
-    router.push('/');
-  }, [router, captureThumb]);
+    const here = window.location.pathname;
+    if (window.history.length > 1) {
+      router.back();
+      // back() cannot leave after a direct open, a reload, or a redirect that
+      // replaced this entry. If we are still on the viewer a beat later, go home
+      // so the arrow is guaranteed to take the user somewhere.
+      window.setTimeout(() => {
+        if (window.location.pathname === here) router.replace(homeHref);
+      }, 250);
+    } else {
+      router.push(homeHref);
+    }
+  }, [router, captureThumb, homeHref]);
   // End = actually terminate the session server-side, then return. AWAITS the
   // DELETE (rather than fire-and-forget before an immediate unmount, which could
   // drop the request) and surfaces a failure as a toast instead of silently
@@ -1136,8 +1154,8 @@ export default function ConnectPage() {
     } catch {
       /* already closed */
     }
-    router.push('/');
-  }, [router, session?.id, confirm, t, workspaceName]);
+    router.push(homeHref);
+  }, [router, session?.id, confirm, t, workspaceName, homeHref]);
 
   // Download a full-resolution screenshot of the live desktop.
   const screenshot = useCallback(() => {
@@ -1379,7 +1397,7 @@ export default function ConnectPage() {
         onFullscreen={toggleFullscreen}
         onTogglePerf={togglePerf}
         onReconnect={reconnect}
-        onWorkspaces={() => router.push('/')}
+        onWorkspaces={() => router.push(homeHref)}
         onEnd={() => void endSession()}
       />
     </div>
