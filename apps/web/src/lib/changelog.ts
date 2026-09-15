@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.9',
+    date: '2026-09-15',
+    title: { en: 'The desktop viewer no longer freezes', de: 'Der Desktop-Viewer friert nicht mehr ein' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'A remote desktop could open with the picture showing but every tap, click and keystroke ignored — the whole viewer, toolbar and Back button included, frozen solid. A leftover screen lock left behind by a dialog that closed as the desktop opened was the cause; it is now cleared on every screen change and can no longer reach the viewer, so touch, pen, mouse and keyboard all work again.',
+          de: 'Ein Remote-Desktop konnte sich öffnen, das Bild war da, aber jeder Tipp, Klick und Tastendruck wurde ignoriert — der ganze Viewer samt Werkzeugleiste und Zurück-Knopf eingefroren. Ursache war eine hängengebliebene Bildschirmsperre eines Dialogs, der sich beim Öffnen des Desktops schloss; sie wird jetzt bei jedem Seitenwechsel gelöst und erreicht den Viewer nicht mehr — Touch, Stift, Maus und Tastatur gehen wieder.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: '"Back to Workspaces" in the container desktop viewer now returns to the page you opened the desktop from and takes admins to their workstation instead of the plain launcher — the same behaviour the remote-desktop viewer already had.',
+          de: '„Zurück zu Workspaces“ im Container-Desktop-Viewer führt jetzt zu der Seite zurück, von der du den Desktop geöffnet hast, und bringt Admins zur Workstation statt auf den schlichten Launcher — genau wie es der Remote-Desktop-Viewer schon konnte.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.8',
     date: '2026-09-15',
     title: { en: 'The desktop back arrow goes where you came from', de: 'Der Zur\u00fcck-Pfeil im Desktop f\u00fchrt dorthin zur\u00fcck, wo du warst' },
