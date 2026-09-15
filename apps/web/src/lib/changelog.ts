@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.10',
+    date: '2026-09-15',
+    title: { en: 'Admin tools in every desktop style', de: 'Admin-Werkzeuge in jedem Desktop-Stil' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'The admin tools that already sat on the classic launcher now also appear in the Windows and macOS desktop styles — an "Admin tools" section in the Start menu, and an admin menu in the macOS menu bar. Both list exactly the admin areas your role can open, so there is a way through to Live monitoring, Users, Servers and the rest whichever desktop style you use.',
+          de: 'Die Admin-Werkzeuge, die schon auf dem klassischen Launcher lagen, erscheinen jetzt auch im Windows- und macOS-Desktop-Stil — als Bereich „Admin-Werkzeuge“ im Startmenü und als Admin-Menü in der macOS-Menüleiste. Beide zeigen genau die Admin-Bereiche, die deine Rolle öffnen darf, sodass du in jedem Desktop-Stil zu Live-Überwachung, Nutzern, Servern und dem Rest kommst.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.9',
     date: '2026-09-15',
     title: { en: 'The desktop viewer no longer freezes', de: 'Der Desktop-Viewer friert nicht mehr ein' },
