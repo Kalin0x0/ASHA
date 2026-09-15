@@ -5,6 +5,7 @@ import { GeistSans } from 'geist/font/sans';
 import type { Metadata, Viewport } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
+import { BodyLockGuard } from '@/components/body-lock-guard';
 import { GrainOverlay } from '@/components/decor/aurora-background';
 import { Providers } from '@/components/providers';
 import { localeDir } from '@/i18n/locales';
@@ -72,6 +73,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <NextIntlClientProvider messages={messages}>
+          <BodyLockGuard />
           <Providers>{children}</Providers>
         </NextIntlClientProvider>
         <GrainOverlay />

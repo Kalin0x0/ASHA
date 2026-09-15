@@ -1182,7 +1182,12 @@ export default function ConnectPage() {
   }, []);
 
   return (
-    <div ref={containerRef} className="fixed inset-0 z-viewer flex flex-col bg-anthracite-950 text-foreground">
+    // `pointer-events-auto`: `pointer-events` inherits from <body>, and Radix
+    // sets `body { pointer-events: none }` for an open modal — which it never
+    // restores if that modal unmounts on a navigation instead of closing (e.g.
+    // the launch dialog while it routes here), freezing the whole viewer (see
+    // lib/z-layers.test). Forcing it back keeps toolbar, canvas and Back alive.
+    <div ref={containerRef} className="pointer-events-auto fixed inset-0 z-viewer flex flex-col bg-anthracite-950 text-foreground">
       {resMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setResMenuOpen(false)} aria-hidden />}
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border-subtle bg-[var(--surface-1)] px-2 sm:px-3">
         <Button variant="ghost" size="icon-sm" onClick={disconnect} aria-label={t('connect.toolbar.backToWorkspaces')} className="shrink-0 rtl:rotate-180">

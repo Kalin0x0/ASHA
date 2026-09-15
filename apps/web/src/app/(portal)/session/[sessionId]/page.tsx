@@ -44,8 +44,10 @@ import {
   resumeSession,
   terminateSession,
 } from '@/lib/api/endpoints';
+import { useAuth } from '@/lib/api/auth-context';
 import { ApiError } from '@/lib/api/client';
 import { isLive } from '@/lib/api/mode';
+import { canAccessAdmin } from '@/lib/nav';
 import { useLaunchableWorkspaces, useSession } from '@/lib/hooks';
 import { useSessionObserved } from '@/lib/realtime';
 import { planSessionExit } from '@/lib/session-exit';
@@ -457,10 +459,18 @@ export default function StreamingViewerPage() {
   };
 
   // Back to Workspaces PAUSES the session (freezes the container so it stops
-  // burning compute) and returns to the launcher — the session's state is
-  // preserved and reopening it auto-resumes (see the effect below). Best-effort:
-  // if the pause call fails we still leave, never trapping the user in the
-  // viewer. Non-running states (error/timeout) just navigate.
+  // burning compute) and returns to where the desktop was launched from — the
+  // session's state is preserved and reopening it auto-resumes (see the effect
+  // below). Best-effort: if the pause call fails we still leave, never trapping
+  // the user in the viewer. Non-running states (error/timeout) just navigate.
+  //
+  // Destination mirrors the guacd viewer: step back through history to the page
+  // the user actually came from (workstation, monitor wall, …) and only fall
+  // back to a home — the workstation for an admin, the launcher for a plain
+  // user — when there is nowhere to step back to. Pushing a hardcoded '/' used
+  // to dump an admin on the end-user launcher, which read as a dead button.
+  const { user } = useAuth();
+  const homeHref = canAccessAdmin(user?.permissions, user?.isSystemAdmin ?? false) ? '/workstation' : '/';
   const disconnect = useCallback(async () => {
     if (isLive && isRunning && session?.id) {
       setLeaving(true);
@@ -470,8 +480,18 @@ export default function StreamingViewerPage() {
         /* leave anyway — the session simply stays running */
       }
     }
-    router.push('/');
-  }, [isLive, isRunning, session?.id, router]);
+    const here = window.location.pathname;
+    if (window.history.length > 1) {
+      router.back();
+      // back() cannot leave after a direct open, a reload, or a redirect that
+      // replaced this entry — fall back to a home so the button always moves.
+      window.setTimeout(() => {
+        if (window.location.pathname === here) router.replace(homeHref);
+      }, 250);
+    } else {
+      router.push(homeHref);
+    }
+  }, [isLive, isRunning, session?.id, router, homeHref]);
   const onTerminate = async () => {
     if (
       !(await confirm({
@@ -502,7 +522,7 @@ export default function StreamingViewerPage() {
       }
     }
     toast.success(t('status.endedToast'));
-    router.push('/');
+    router.push(homeHref);
   };
   // Speaker (audio-out): toggle a jsmpeg player on the per-session audio route.
   // Created inside the click so the AudioContext starts under a user gesture (no
@@ -622,8 +642,14 @@ export default function StreamingViewerPage() {
   };
 
   if (!mounted) return null;
+  // `pointer-events-auto`: this viewer is portaled into <body>, and Radix sets
+  // `body { pointer-events: none }` for an open modal — which, if that modal
+  // unmounts on a navigation instead of closing (e.g. the launch dialog while it
+  // routes here), it never restores, freezing the whole viewer: canvas, control
+  // bar and Back all dead while the desktop stays visible (see lib/z-layers.test).
+  // Forcing it back on this root immunises the viewer against a stray lock.
   return createPortal(
-    <div ref={rootRef} className="on-dark fixed inset-0 z-viewer flex flex-col bg-anthracite-950">
+    <div ref={rootRef} className="on-dark pointer-events-auto fixed inset-0 z-viewer flex flex-col bg-anthracite-950">
       {/* Control bar */}
       <div className="glass-strong absolute inset-x-0 top-0 z-20 flex h-14 items-center gap-3 px-3 sm:px-4">
         {/* Back to Workspaces — non-destructive; keeps the session running so the

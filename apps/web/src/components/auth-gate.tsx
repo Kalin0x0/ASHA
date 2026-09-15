@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ObservationDisclosureGate } from '@/components/composite/observation-disclosure-gate';
 import { WhatsNewPopup } from '@/components/composite/whats-new-popup';
@@ -29,7 +29,13 @@ import { isLive } from '@/lib/api/mode';
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  // A full-screen session viewer takes over the whole screen; a dismissible
+  // "what's new" popover over a live desktop just covers it. Keep it to the
+  // ordinary app. The observation disclosure is NOT scoped out — it is a
+  // mandatory, audited gate that must stand in front of a desktop too.
+  const inViewer = /^\/(session|connect|observe)\//.test(pathname ?? '');
 
   useEffect(() => setMounted(true), []);
 
@@ -55,8 +61,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         {children}
         {/* The what's-new popup renders before the disclosure gate so that a
             blocking disclosure — which the user MUST answer — always sits on top
-            of the dismissible update notes when the two coincide. */}
-        <WhatsNewPopup />
+            of the dismissible update notes when the two coincide. It is held off
+            the full-screen viewers so it never covers a live desktop. */}
+        {!inViewer && <WhatsNewPopup />}
         <ObservationDisclosureGate />
       </>
     );
