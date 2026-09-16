@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.11',
+    date: '2026-09-16',
+    title: { en: 'Admin tools and favourites, easier to find', de: 'Admin-Werkzeuge und Favoriten, leichter zu finden' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'In the macOS desktop style the admin areas now open from a clearly labelled "Admin" menu in the menu bar, instead of a small icon that was easy to miss. And the favourite star on each workspace — in the macOS Launchpad and the Windows Start menu — is now always visible, not only on hover, so pinning a workspace is easy to find.',
+          de: 'Im macOS-Desktop-Stil öffnen sich die Admin-Bereiche jetzt über ein klar beschriftetes „Admin“-Menü in der Menüleiste statt über ein leicht zu übersehendes kleines Symbol. Und der Favoriten-Stern an jedem Workspace — in der macOS-Launchpad und im Windows-Startmenü — ist jetzt dauerhaft sichtbar, nicht nur beim Drüberfahren, damit das Anheften leicht zu finden ist.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.10',
     date: '2026-09-15',
     title: { en: 'Admin tools in every desktop style', de: 'Admin-Werkzeuge in jedem Desktop-Stil' },
