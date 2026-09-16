@@ -2,7 +2,8 @@
   "adminTools": {
     "title": "ابزارهای مدیریت",
     "searchPlaceholder": "جستجوی ابزارها …",
-    "noResults": "ابزار مطابقی یافت نشد."
+    "noResults": "ابزار مطابقی یافت نشد.",
+    "count": "{count} ابزار"
   },
   "header": {
     "myWorkspaces": "فضاهای کاری من",
