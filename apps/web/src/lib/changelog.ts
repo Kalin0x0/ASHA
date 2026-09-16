@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.13',
+    date: '2026-09-16',
+    title: { en: 'Admin tools fold into one tile', de: 'Admin-Werkzeuge klappen in eine Kachel' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'On the launcher the admin tools now sit behind a single "Admin tools" tile that unfolds on click into the grouped, searchable set — so the launcher stays tidy until you need them.',
+          de: 'Im Launcher liegen die Admin-Werkzeuge jetzt hinter einer einzigen Kachel „Admin-Werkzeuge“, die sich per Klick zur gruppierten, durchsuchbaren Übersicht aufklappt — so bleibt der Launcher aufgeräumt, bis du sie brauchst.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.12',
     date: '2026-09-16',
     title: { en: 'Admin tools, grouped and searchable', de: 'Admin-Werkzeuge, gruppiert und durchsuchbar' },
