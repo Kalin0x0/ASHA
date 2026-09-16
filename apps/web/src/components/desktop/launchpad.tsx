@@ -182,7 +182,10 @@ export function Launchpad({
                       )}
                     </button>
 
-                    {/* Favorite toggle — appears on hover, top-end of the icon */}
+                    {/* Favorite toggle — always visible so the way to pin a
+                        workspace is discoverable (a hover-only star could not be
+                        found at all on first look); muted until it is a favorite,
+                        brighter on hover/focus. */}
                     <button
                       type="button"
                       onClick={() => onToggleFavorite(ws)}
@@ -190,8 +193,8 @@ export function Launchpad({
                         favorites.isFavorite(ws.id) ? t('card.removeFavorite') : t('card.addFavorite')
                       }
                       className={cn(
-                        'absolute -top-2 end-1/2 z-10 flex size-6 translate-x-[2.4rem] items-center justify-center rounded-full border border-border-subtle glass-strong opacity-0 shadow-sm transition-opacity focus-visible:opacity-100 group-hover:opacity-100 ring-gold-focus rtl:-translate-x-[2.4rem]',
-                        favorites.isFavorite(ws.id) && 'opacity-100',
+                        'absolute -top-2 end-1/2 z-10 flex size-6 translate-x-[2.4rem] items-center justify-center rounded-full border border-border-subtle glass-strong shadow-sm transition-opacity hover:opacity-100 focus-visible:opacity-100 ring-gold-focus rtl:-translate-x-[2.4rem]',
+                        favorites.isFavorite(ws.id) ? 'opacity-100' : 'opacity-70',
                       )}
                     >
                       <Star

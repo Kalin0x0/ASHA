@@ -329,8 +329,10 @@ function StartTile({
         aria-label={favorite ? t('card.removeFavorite') : t('card.addFavorite')}
         title={favorite ? t('card.removeFavorite') : t('card.addFavorite')}
         className={cn(
-          'absolute end-1 top-1 flex size-6 items-center justify-center rounded-full border border-white/12 glass-strong opacity-0 shadow-sm transition-opacity focus-visible:opacity-100 group-hover:opacity-100 ring-gold-focus',
-          favorite && 'opacity-100',
+          // Always visible so pinning is discoverable — a hover-only star was
+          // invisible until you happened to hover the tile; muted until pinned.
+          'absolute end-1 top-1 flex size-6 items-center justify-center rounded-full border border-white/12 glass-strong shadow-sm transition-opacity hover:opacity-100 focus-visible:opacity-100 ring-gold-focus',
+          favorite ? 'opacity-100' : 'opacity-70',
         )}
       >
         <Star className={cn('size-3', favorite ? 'fill-gold-400 text-gold-300' : 'text-muted-foreground')} aria-hidden />

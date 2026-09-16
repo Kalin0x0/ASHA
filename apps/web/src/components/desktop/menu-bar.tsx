@@ -89,39 +89,41 @@ export function MenuBar() {
         {t('header.myWorkspaces')}
       </span>
 
+      {/* Admin menu — a labelled top-level menu bar item (macOS apps carry their
+          menus here), the way through to the admin areas since this shell has no
+          sidebar. A small icon buried among the status items on the right was too
+          easy to miss. Same role-filtered set as the launcher shelf and the
+          Windows Start menu. */}
+      {canAdmin && adminItems.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="ms-1 hidden h-7 items-center gap-1.5 rounded-md px-2 text-[13px] font-medium text-foreground/90 transition-colors hover:bg-secondary/70 ring-gold-focus sm:inline-flex"
+            >
+              <ShieldCheck className="size-4 text-gold-300" aria-hidden />
+              {t('header.admin')}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-[70vh] w-56 overflow-y-auto">
+            <DropdownMenuLabel>{t('adminTools.title')}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {adminItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <DropdownMenuItem key={item.href} onSelect={() => router.push(item.href)}>
+                  <Icon className="size-4" /> {tNav(`items.${item.key}`)}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
       {/* Status items */}
       <div className="ms-auto flex items-center gap-0.5">
         <TariffChip className="me-1 hidden sm:inline-flex" />
         <InstallButton className="hidden md:inline-flex" />
-        {canAdmin && adminItems.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                title={t('adminTools.title')}
-                aria-label={t('adminTools.title')}
-                className="hidden size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground ring-gold-focus sm:inline-flex"
-              >
-                <ShieldCheck className="size-4" />
-              </button>
-            </DropdownMenuTrigger>
-            {/* The macOS shell has no sidebar either, so this menu is the way
-                through to the admin areas — the same set the launcher shelf and
-                the Windows Start menu list. */}
-            <DropdownMenuContent align="end" className="max-h-[70vh] w-56 overflow-y-auto">
-              <DropdownMenuLabel>{t('adminTools.title')}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {adminItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <DropdownMenuItem key={item.href} onSelect={() => router.push(item.href)}>
-                    <Icon className="size-4" /> {tNav(`items.${item.key}`)}
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
         <BackgroundPicker />
         <LanguageSwitcher />
         <ThemeToggle />
