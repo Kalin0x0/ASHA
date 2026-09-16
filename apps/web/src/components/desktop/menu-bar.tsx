@@ -14,13 +14,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/api/auth-context';
-import { adminToolItems, canAccessAdmin } from '@/lib/nav';
+import { adminToolGroups, canAccessAdmin } from '@/lib/nav';
 import { useProfileDialog } from '@/lib/profile-store';
 
 /**
@@ -33,8 +34,8 @@ export function MenuBar() {
   const tNav = useTranslations('shell.nav');
   const { user, logout } = useAuth();
   const canAdmin = canAccessAdmin(user?.permissions, user?.isSystemAdmin ?? false);
-  const adminItems = useMemo(
-    () => adminToolItems(user?.permissions, user?.isSystemAdmin ?? false),
+  const adminGroups = useMemo(
+    () => adminToolGroups(user?.permissions, user?.isSystemAdmin ?? false),
     [user?.permissions, user?.isSystemAdmin],
   );
   const router = useRouter();
@@ -94,7 +95,7 @@ export function MenuBar() {
           sidebar. A small icon buried among the status items on the right was too
           easy to miss. Same role-filtered set as the launcher shelf and the
           Windows Start menu. */}
-      {canAdmin && adminItems.length > 0 && (
+      {canAdmin && adminGroups.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -105,17 +106,23 @@ export function MenuBar() {
               {t('header.admin')}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="max-h-[70vh] w-56 overflow-y-auto">
-            <DropdownMenuLabel>{t('adminTools.title')}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {adminItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <DropdownMenuItem key={item.href} onSelect={() => router.push(item.href)}>
-                  <Icon className="size-4" /> {tNav(`items.${item.key}`)}
-                </DropdownMenuItem>
-              );
-            })}
+          <DropdownMenuContent align="start" className="max-h-[70vh] w-64 overflow-y-auto">
+            {adminGroups.map((group, gi) => (
+              <DropdownMenuGroup key={group.key}>
+                {gi > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {tNav(`groups.${group.key}`)}
+                </DropdownMenuLabel>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem key={item.href} onSelect={() => router.push(item.href)}>
+                      <Icon className="size-4" /> {tNav(`items.${item.key}`)}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuGroup>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

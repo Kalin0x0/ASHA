@@ -1,6 +1,8 @@
 {
   "adminTools": {
-    "title": "Admin tools"
+    "title": "Admin tools",
+    "searchPlaceholder": "Search tools …",
+    "noResults": "No matching tools."
   },
   "header": {
     "myWorkspaces": "My Workspaces",

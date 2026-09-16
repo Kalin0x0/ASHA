@@ -1,6 +1,8 @@
 {
   "adminTools": {
-    "title": "Admin-Werkzeuge"
+    "title": "Admin-Werkzeuge",
+    "searchPlaceholder": "Werkzeuge suchen …",
+    "noResults": "Keine passenden Werkzeuge."
   },
   "header": {
     "myWorkspaces": "Meine Workspaces",

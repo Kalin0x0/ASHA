@@ -268,16 +268,15 @@ export function visibleNavGroups(perms: string[] | undefined, isSystemAdmin: boo
 }
 
 /**
- * The admin areas THIS user may open, flattened into one list — every visible
- * nav item except the workstation launcher itself (the tools are reached FROM
- * it, so it never links to itself). One source for the launcher shelf, the
- * Windows Start menu and the macOS menu bar, so the three can never disagree
- * about what a role may reach. Empty for a user with no admin access.
+ * The admin areas THIS user may open, kept in their sidebar GROUPS (Overview,
+ * Sessions, Access, Infrastructure, …) minus the workstation launcher itself —
+ * the tools are reached FROM it, so it never links to itself. One source for the
+ * launcher shelf, the Windows Start menu and the macOS menu bar, so the three
+ * can never disagree about what a role may reach, and each can show the tools
+ * grouped rather than as a flat wall. Empty for a user with no admin access.
  */
-export function adminToolItems(perms: string[] | undefined, isSystemAdmin: boolean): NavItem[] {
-  return visibleNavGroups(perms, isSystemAdmin)
-    .flatMap((g) => g.items)
-    .filter((i) => i.key !== 'workstation');
+export function adminToolGroups(perms: string[] | undefined, isSystemAdmin: boolean): NavGroup[] {
+  return visibleNavGroups(perms, isSystemAdmin).filter((g) => g.key !== 'workstation');
 }
 
 /** `perm` as an OR, `alsoNeeds` as an AND on top. Untagged → system-admin-only. */
