@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.12',
+    date: '2026-09-16',
+    title: { en: 'Admin tools, grouped and searchable', de: 'Admin-Werkzeuge, gruppiert und durchsuchbar' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'The admin tools were one long wall of every page. They are now grouped by area — Overview, Sessions, Access, Infrastructure and so on, exactly like the sidebar — with a search box on the launcher to jump straight to a tool. The Windows Start menu and the macOS admin menu show the same grouping.',
+          de: 'Die Admin-Werkzeuge waren eine lange Wand aus allen Seiten. Sie sind jetzt nach Bereich gruppiert — Übersicht, Sitzungen, Zugriff, Infrastruktur und so weiter, genau wie die Seitenleiste — mit einem Suchfeld im Launcher, um direkt zu einem Werkzeug zu springen. Windows-Startmenü und macOS-Admin-Menü zeigen dieselbe Gruppierung.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.11',
     date: '2026-09-16',
     title: { en: 'Admin tools and favourites, easier to find', de: 'Admin-Werkzeuge und Favoriten, leichter zu finden' },
