@@ -97,7 +97,7 @@ export function CommandPalette() {
                 <Item onSelect={() => run(() => router.push('/'))} icon={<Play className="size-4" />}>
                   {t('launchAWorkspace')}
                 </Item>
-                <Item onSelect={() => run(() => router.push('/sessions'))} icon={<MonitorPlay className="size-4" />}>
+                <Item onSelect={() => run(() => router.push('/sessions/monitor'))} icon={<MonitorPlay className="size-4" />}>
                   {t('viewLiveSessions')}
                 </Item>
                 <Item

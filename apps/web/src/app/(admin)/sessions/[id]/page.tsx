@@ -85,7 +85,7 @@ export default function SessionDetailPage() {
       <div className="flex flex-col items-center gap-4 py-24 text-center">
         <p className="font-display text-xl">{t('detail.notFoundTitle')}</p>
         <p className="text-sm text-muted-foreground">{t('detail.notFoundDescription')}</p>
-        <Button variant="secondary" onClick={() => router.push('/sessions')}>
+        <Button variant="secondary" onClick={() => router.push('/sessions/monitor')}>
           <ArrowLeft className="size-4 rtl:rotate-180" /> {t('detail.backToSessions')}
         </Button>
       </div>
@@ -111,13 +111,13 @@ export default function SessionDetailPage() {
       return;
     }
     toast.success(t('detail.toastTerminated'));
-    router.push('/sessions');
+    router.push('/sessions/monitor');
   };
 
   return (
     <div className="space-y-6">
       <button
-        onClick={() => router.push('/sessions')}
+        onClick={() => router.push('/sessions/monitor')}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4 rtl:rotate-180" /> {t('detail.breadcrumb')}

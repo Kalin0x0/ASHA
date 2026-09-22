@@ -118,9 +118,10 @@ export const navGroups: NavGroup[] = [
     key: 'sessions',
     icon: MonitorPlay,
     items: [
-      { key: 'liveSessions', href: '/sessions', icon: MonitorPlay, perm: 'SESSION_VIEW_ANY' },
-      // Observing opens the windows, but the wall is a list of sessions first:
-      // without SESSION_VIEW_ANY the tiles it would draw them on never arrive.
+      // "Live Sessions" (/sessions) was retired as a duplicate of Live Monitor;
+      // /sessions now redirects here. Observing opens the windows, but the wall
+      // is a list of sessions first: without SESSION_VIEW_ANY the tiles it would
+      // draw them on never arrive.
       {
         key: 'monitor',
         href: '/sessions/monitor',

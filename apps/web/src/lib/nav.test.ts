@@ -57,8 +57,8 @@ describe('live monitor navigation', () => {
   });
 
   it('resolves the route back to its nav entry, so the sidebar highlights it', () => {
-    // Unregistered, the longest-prefix match would land on /sessions and the
-    // sidebar would highlight "Live Sessions" while the wall is open.
+    // A nested route must resolve to its own entry, never a broader one that is
+    // only a prefix — the sidebar highlights whatever findNavItem returns.
     const hit = findNavItem('/sessions/monitor');
     expect(hit?.item.key).toBe('monitor');
     expect(hit?.group.key).toBe('sessions');
