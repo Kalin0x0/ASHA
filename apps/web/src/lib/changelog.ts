@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.14',
+    date: '2026-09-22',
+    title: { en: 'Live Sessions retired in favour of Live Monitor', de: 'Live-Sitzungen zugunsten der Live-Überwachung entfernt' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'The "Live Sessions" page did the same job as Live Monitor, so it has been removed from the navigation. Any old link to it now opens the live monitor wall instead.',
+          de: 'Die Seite „Live-Sitzungen“ machte dasselbe wie die Live-Überwachung und wurde daher aus der Navigation entfernt. Alte Links dorthin öffnen jetzt die Live-Überwachungswand.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.13',
     date: '2026-09-16',
     title: { en: 'Admin tools fold into one tile', de: 'Admin-Werkzeuge klappen in eine Kachel' },
