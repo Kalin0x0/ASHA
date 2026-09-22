@@ -48,7 +48,7 @@ import { useAuth } from '@/lib/api/auth-context';
 import { ApiError } from '@/lib/api/client';
 import { isLive } from '@/lib/api/mode';
 import { canAccessAdmin } from '@/lib/nav';
-import { useLaunchableWorkspaces, useSession } from '@/lib/hooks';
+import { useAccount, useLaunchableWorkspaces, useSession } from '@/lib/hooks';
 import { useSessionObserved } from '@/lib/realtime';
 import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
@@ -168,9 +168,16 @@ export default function StreamingViewerPage() {
   const isPaused = status === 'PAUSED' || paused;
   const isRunning = status === 'RUNNING' || status === 'DEGRADED';
   const isError = status === 'ERROR' || status === 'DESTROYED' || status === 'TERMINATING';
+  // Whose desktop is this? An admin can reach a colleague's container session
+  // here from the session detail page, and everything below acts on the id in
+  // the URL. An unknown owner (staged/pool row) counts as mine, so claiming a
+  // pre-warmed desktop does not lock its own user out of ending it.
+  const myId = useAccount()?.id;
+  const notMine = Boolean(myId && session?.user.id && session.user.id !== myId);
   // Keep the session alive while it's live so the idle reaper doesn't terminate
-  // a desktop the user is actively watching/using.
-  useKeepalive(session?.id, isRunning);
+  // a desktop the user is actively watching/using — but never on someone
+  // else's, where it would defeat the reaper and burn their budget.
+  useKeepalive(session?.id, isRunning && !notMine);
   // Told to whoever is at this desktop while an administrator watches it.
   const observed = useSessionObserved(session?.id);
   // Fetched once per live session from /connection (see below). Live mode waits
@@ -493,6 +500,12 @@ export default function StreamingViewerPage() {
     }
   }, [isLive, isRunning, session?.id, router, homeHref]);
   const onTerminate = async () => {
+    // Only the person whose desktop this is may shut it down from the viewer.
+    // An admin reaching a colleague's container session from the session detail
+    // page landed here, where End terminates by the id in the URL with no
+    // ownership check at all. Unknown owner (a staged/pool row not yet claimed)
+    // keeps End, or a user who just claimed a pre-warmed desktop loses it.
+    if (notMine) return;
     if (
       !(await confirm({
         title: t('confirmEnd.title'),
@@ -815,12 +828,14 @@ export default function StreamingViewerPage() {
           <ControlButton label={t('toolbar.fullscreen')} onClick={fullscreen}>
             <Maximize2 className="size-4" />
           </ControlButton>
-          <button
-            onClick={() => void onTerminate()}
-            className="ms-1 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-destructive/90 px-3 text-xs font-medium text-destructive-foreground transition-colors hover:bg-destructive ring-gold-focus"
-          >
-            <Power className="size-3.5" /> <span className="hidden sm:inline">{t('toolbar.end')}</span>
-          </button>
+          {!notMine && (
+            <button
+              onClick={() => void onTerminate()}
+              className="ms-1 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md bg-destructive/90 px-3 text-xs font-medium text-destructive-foreground transition-colors hover:bg-destructive ring-gold-focus"
+            >
+              <Power className="size-3.5" /> <span className="hidden sm:inline">{t('toolbar.end')}</span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -159,6 +159,12 @@ export default function ConnectPage() {
   // release the control grant when it goes away.
   const assist = searchParams?.get('assist') === '1';
   const monitor = (searchParams?.get('monitor') === '1' || urlWatchToken !== null) && !assist;
+  // Someone else's desktop. Observing and assisting both arrive with a watch
+  // token; either way the session on screen belongs to the person sitting at it,
+  // so nothing here may act ON it — only on this view. `monitor` alone is the
+  // wrong test: it is deliberately false in assist mode, which left the
+  // destructive End live for an admin holding a control grant.
+  const watching = monitor || assist;
   // The token in the URL lives 120 s; the observation lives as long as the
   // admin keeps watching. Every renewal below mints a fresh one, and the socket
   // adopts it the next time it opens — held in a ref rather than state so a
@@ -266,7 +272,10 @@ export default function ConnectPage() {
 
   // Keep the session alive while connected so the idle reaper never terminates a
   // desktop the user is actively using (previously NOTHING refreshed keepalive).
-  useKeepalive(session?.id, connected);
+  // Never on someone else's session: an admin who leaves a monitor tab open was
+  // refreshing the watched user's lastKeepaliveAt every 60 s, so the idle reaper
+  // could never collect it and their time budget kept burning.
+  useKeepalive(session?.id, connected && !watching);
 
   // Told to whoever is at this desktop while an administrator watches it.
   const sessionId = session?.id;
@@ -575,7 +584,10 @@ export default function ConnectPage() {
         // A soft keyboard sliding in fires the same resize event as a real window
         // change. Resizing the desktop to the few hundred pixels left above the
         // keyboard would reflow every window on it — and undo it on every hide.
-        if (!kbOpenRef.current) {
+        // Never on someone else's desktop either: the proxy lets `size` through
+        // for a watcher and joins read-write while assisting, so merely
+        // narrowing the observer's browser window reflowed the user's screen.
+        if (!kbOpenRef.current && !watching) {
           const w = clampEven(screen.clientWidth || reqW, 640, 3840);
           const h = clampEven(screen.clientHeight || reqH, 480, 2160);
           try {
@@ -730,6 +742,12 @@ export default function ConnectPage() {
     // Remote → local: when the desktop's clipboard changes, mirror it into the
     // OS clipboard so "copy on the desktop → paste locally" works.
     client.onclipboard = (stream, mimetype) => {
+      // View-only means view only in BOTH directions. guacd's read-only flag
+      // stops an observer sending, but the desktop→browser stream is unfiltered,
+      // so everything the watched user copied was landing in the observer's own
+      // OS clipboard — silently, and overwriting whatever was in it. The
+      // local→remote half was already guarded; this is the other half.
+      if (monitor) return;
       if (!mimetype.startsWith('text/')) return;
       const reader = new Guacamole.StringReader(stream);
       let data = '';
@@ -892,7 +910,7 @@ export default function ConnectPage() {
       }
       clientRef.current = null;
     };
-  }, [kasmId, attempt, perfMode, monitor, resOverride, urlWatchToken, layout]);
+  }, [kasmId, attempt, perfMode, monitor, watching, resOverride, urlWatchToken, layout]);
 
   const togglePerf = useCallback(() => {
     setPerfMode((p) => {
@@ -1053,9 +1071,13 @@ export default function ConnectPage() {
 
   // Snapshot the live desktop so the "My Sessions" switcher shows a real preview.
   const captureThumb = useCallback(() => {
+    // Never persist someone else's desktop to this machine. These thumbnails go
+    // to localStorage and surface as previews in the admin's own switcher, so
+    // they outlive the observation and the audit trail that covers it.
+    if (watching) return;
     const dataUrl = captureCanvasThumb(screenRef.current);
     if (dataUrl) useThumbnails.getState().setThumb(kasmId, { dataUrl, capturedAt: new Date().toISOString() });
-  }, [kasmId]);
+  }, [kasmId, watching]);
 
   // Refresh the preview every so often while the desktop is live.
   useEffect(() => {
@@ -1108,6 +1130,13 @@ export default function ConnectPage() {
   // dead button while the desktop kept running. Navigation always happens.
   const [ending, setEnding] = useState(false);
   const endSession = useCallback(async () => {
+    // Never from a viewer onto somebody else's desktop. An observer reading
+    // "End" as "end the observation" was destroying the session a colleague was
+    // working in; watching ends by leaving this view, never by killing it. The
+    // API cannot tell the two apart — the watch token never reaches it and an
+    // Operator holds SESSION_OBSERVE and SESSION_TERMINATE_ANY together — so
+    // this guard is the one that counts. Every call site is covered here.
+    if (watching) return;
     // Confirm BEFORE touching the client: ending is destructive and unrecoverable
     // (Back, right next to it, leaves the desktop running), so a mis-click must
     // cost nothing.
@@ -1155,7 +1184,7 @@ export default function ConnectPage() {
       /* already closed */
     }
     router.push(homeHref);
-  }, [router, session?.id, confirm, t, workspaceName, homeHref]);
+  }, [router, session?.id, confirm, t, workspaceName, homeHref, watching]);
 
   // Download a full-resolution screenshot of the live desktop.
   const screenshot = useCallback(() => {
@@ -1213,7 +1242,10 @@ export default function ConnectPage() {
             {workspaceDescription || `Live · ${protocolLabel}`}
           </p>
         </div>
-        {monitor && !canTakeControl && (
+        {/* Shown alongside "Take control", not instead of it: hiding it from the
+            admins who hold SESSION_CONTROL_ANY left the most powerful viewers
+            with the fewest cues about whose desktop they are on. */}
+        {monitor && (
           <span className="ms-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-info/40 bg-info/10 px-2.5 py-1 text-[11px] font-medium text-info">
             <Eye className="size-3.5" /> {t('connect.toolbar.viewOnly')}
           </span>
@@ -1261,7 +1293,9 @@ export default function ConnectPage() {
               />
             </>
           )}
-          {connected && (
+          {/* Downloading a full-resolution still of someone else's desktop would
+              leave the observation and the audit trail that covers it. */}
+          {connected && !watching && (
             <ToolBtn
               icon={Camera}
               label={t('connect.toolbar.screenshot')}
@@ -1269,6 +1303,10 @@ export default function ConnectPage() {
               className={cn(touch && 'hidden sm:inline-flex')}
             />
           )}
+          {/* Resolution and quality re-parametrise the connection, which a
+              JOINED viewer cannot do: it would only drop the observer's own
+              stream and burn a re-mint. */}
+          {!watching && (
           <div className={cn('relative', touch && 'hidden sm:block')}>
             <ToolBtn icon={Monitor} label={t('connect.toolbar.displayResolution')} active={resMenuOpen} onClick={() => setResMenuOpen((o) => !o)} />
             {resMenuOpen && (
@@ -1292,7 +1330,10 @@ export default function ConnectPage() {
               </div>
             )}
           </div>
-          <ToolBtn icon={Gauge} label={perfMode ? t('connect.toolbar.qualityPerformance') : t('connect.toolbar.qualityFull')} active={perfMode} onClick={togglePerf} />
+          )}
+          {!watching && (
+            <ToolBtn icon={Gauge} label={perfMode ? t('connect.toolbar.qualityPerformance') : t('connect.toolbar.qualityFull')} active={perfMode} onClick={togglePerf} />
+          )}
           <ToolBtn icon={Maximize2} label={t('connect.toolbar.fullscreen')} onClick={toggleFullscreen} />
           <ToolBtn icon={LayoutGrid} label={t('connect.toolbar.controlPanel')} active={panelOpen} onClick={() => setPanelOpen((o) => !o)} />
           {(state === 'disconnected' || state === 'error') && (
@@ -1300,19 +1341,25 @@ export default function ConnectPage() {
               <RefreshCw className="size-3.5" /> <span className="hidden sm:inline">{t('connect.toolbar.reconnect')}</span>
             </Button>
           )}
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => void endSession()}
-            disabled={ending}
-            title={t('connect.toolbar.endSession')}
-            className="ms-1"
-          >
-            {ending ? <Loader2 className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}{' '}
-            <span className="hidden sm:inline">
-              {ending ? t('connect.toolbar.ending') : t('connect.toolbar.end')}
-            </span>
-          </Button>
+          {/* Shutting the desktop down is the owner's action. Sitting next to
+              Back in an observer's toolbar it read as "end the observation" and
+              destroyed the session a colleague was working in. An admin who
+              means it terminates deliberately from the session list. */}
+          {!watching && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => void endSession()}
+              disabled={ending}
+              title={t('connect.toolbar.endSession')}
+              className="ms-1"
+            >
+              {ending ? <Loader2 className="size-3.5 animate-spin" /> : <Power className="size-3.5" />}{' '}
+              <span className="hidden sm:inline">
+                {ending ? t('connect.toolbar.ending') : t('connect.toolbar.end')}
+              </span>
+            </Button>
+          )}
         </div>
       </header>
 
@@ -1332,7 +1379,9 @@ export default function ConnectPage() {
             className="absolute inset-x-0 top-0 z-40"
           />
         )}
-        {control?.state === 'requested' && (
+        {/* The consent prompt belongs to the person AT the desktop. An observer
+            sits in the same realtime room and was being asked to answer it. */}
+        {!watching && control?.state === 'requested' && (
           <ControlRequestDialog
             controllerName={control.controllerName}
             onAllow={() => answerControl(true)}
@@ -1395,7 +1444,7 @@ export default function ConnectPage() {
         onClose={() => setPanelOpen(false)}
         connected={state === 'connected'}
         perfMode={perfMode}
-        layout={layoutApplies && !monitor ? layoutChoice : null}
+        layout={layoutApplies && !watching ? layoutChoice : null}
         onPickLayout={pickLayout}
         onPaste={() => void pasteToRemote()}
         onCtrlAltDel={sendCtrlAltDel}
@@ -1403,7 +1452,7 @@ export default function ConnectPage() {
         onTogglePerf={togglePerf}
         onReconnect={reconnect}
         onWorkspaces={() => router.push(homeHref)}
-        onEnd={() => void endSession()}
+        onEndSession={watching ? undefined : () => void endSession()}
       />
     </div>
   );
@@ -1430,7 +1479,7 @@ function ControlPanel({
   onTogglePerf,
   onReconnect,
   onWorkspaces,
-  onEnd,
+  onEndSession,
 }: {
   open: boolean;
   onOpen: () => void;
@@ -1446,7 +1495,10 @@ function ControlPanel({
   onTogglePerf: () => void;
   onReconnect: () => void;
   onWorkspaces: () => void;
-  onEnd: () => void;
+  /** Shut the desktop down. Absent while watching someone else's — deliberately
+   *  named apart from the control notice's `onEnd`, which only releases a
+   *  control grant; that collision is how a destructive End reached observers. */
+  onEndSession?: () => void;
 }) {
   const t = useTranslations('viewer');
   return (
@@ -1504,13 +1556,15 @@ function ControlPanel({
             {layout !== null && <LayoutPicker choice={layout} onPick={onPickLayout} />}
             <PanelRow icon={RefreshCw} title={t('connect.panel.reconnectTitle')} subtitle={t('connect.panel.reconnectSubtitle')} onClick={onReconnect} />
             <PanelRow icon={LayoutGrid} title={t('connect.panel.workspacesTitle')} subtitle={t('connect.panel.workspacesSubtitle')} onClick={onWorkspaces} />
-            <PanelRow
-              icon={Power}
-              title={t('connect.panel.endTitle')}
-              subtitle={t('connect.panel.endSubtitle')}
-              onClick={onEnd}
-              destructive
-            />
+            {onEndSession && (
+              <PanelRow
+                icon={Power}
+                title={t('connect.panel.endTitle')}
+                subtitle={t('connect.panel.endSubtitle')}
+                onClick={onEndSession}
+                destructive
+              />
+            )}
           </div>
         </div>
       </aside>

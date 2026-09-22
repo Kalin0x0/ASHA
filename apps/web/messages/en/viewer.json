@@ -164,7 +164,7 @@
       "workspacesTitle": "Workspaces",
       "workspacesSubtitle": "Leave this session",
       "endTitle": "End session",
-      "endSubtitle": "Disconnect"
+      "endSubtitle": "Shut this desktop down"
     },
     "layout": {
       "title": "Remote keyboard layout",
