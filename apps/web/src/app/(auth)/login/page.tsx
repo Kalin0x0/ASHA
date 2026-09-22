@@ -35,6 +35,8 @@ export default function LoginPage() {
   const { login, loginWithPasskey, loginAsDemo } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [totp, setTotp] = useState('');
+  const [orgSlug, setOrgSlug] = useState('');
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
@@ -82,7 +84,7 @@ export default function LoginPage() {
       return;
     }
     try {
-      await login(email, password);
+      await login(email, password, totp || undefined, orgSlug.trim() || undefined);
       router.push(
         canAccessAdmin(getAuth().user?.permissions, getAuth().user?.isSystemAdmin ?? false) ? '/dashboard' : '/',
       );
@@ -197,6 +199,10 @@ export default function LoginPage() {
 
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
+              <Label htmlFor="organization">{t('organizationLabel')}</Label>
+              <Input id="organization" value={orgSlug} onChange={(e) => setOrgSlug(e.target.value)} autoComplete="organization" />
+            </div>
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="email">{t('emailLabel')}</Label>
               <Input
                 id="email"
@@ -207,6 +213,10 @@ export default function LoginPage() {
                 placeholder={t('emailPlaceholder')}
                 required
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="totp">{t('totpLabel')}</Label>
+              <Input id="totp" value={totp} onChange={(e) => setTotp(e.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" />
             </div>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">

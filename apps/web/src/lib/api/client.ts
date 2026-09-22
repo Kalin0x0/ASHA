@@ -78,11 +78,13 @@ let refreshing: Promise<boolean> | null = null;
 async function refreshTokens(): Promise<boolean> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
+  const clock = withTimeout({});
   try {
     const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
+      signal: clock.signal,
     });
     if (!res.ok) return false;
     const tokens = (await res.json()) as AuthTokens;
@@ -90,6 +92,8 @@ async function refreshTokens(): Promise<boolean> {
     return true;
   } catch {
     return false;
+  } finally {
+    clock.done();
   }
 }
 

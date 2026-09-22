@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, apiFetch } from './client';
+import { clearAuth, setAuth } from './auth-store';
 
 /**
  * `fetch` never times out on its own. A request to an API that accepts the
@@ -21,8 +22,20 @@ describe('apiFetch timeouts', () => {
   });
 
   afterEach(() => {
+    clearAuth();
     vi.useRealTimers();
     globalThis.fetch = originalFetch;
+  });
+
+  it('also bounds a stalled refresh after an authenticated 401', async () => {
+    setAuth({ accessToken: 'a', refreshToken: 'r', expiresIn: 900, tokenType: 'Bearer' }, { id: 'u', orgId: 'o', email: 'u@x', username: 'u', displayName: null, isSystemAdmin: false });
+    const seen = hangingFetch();
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response('{}', { status: 401 }));
+    const pending = apiFetch('/sessions');
+    const result = pending.catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(await result).toBeInstanceOf(ApiError);
+    expect(seen.some((signal) => signal.aborted)).toBe(true);
   });
 
   /** A fetch that never settles until its abort signal fires. */

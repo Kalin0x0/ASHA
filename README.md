@@ -212,6 +212,11 @@ pnpm --filter @asha/web dev
 
 ```bash
 cp .env.example .env
+# Before booting, replace ALL development secrets in .env with unique values
+# (JWT access/refresh, session, seal key, guac key, agent enrollment, Postgres).
+# Set ASHA_SEED_ADMIN_PASSWORD to a unique strong password as well.
+# GUAC_CRYPT_SECRET must be exactly 32 characters.
+# Set NEXT_PUBLIC_API_MODE=live; the example .env uses mock for UI development.
 docker compose up -d --build
 # web:      https://asha.local        (add `127.0.0.1 asha.local` to your hosts file)
 # api docs: https://asha.local/api/docs
@@ -219,6 +224,11 @@ docker compose up -d --build
 
 The `db-migrate` one-shot container applies the Prisma migrations and runs the idempotent
 seed automatically. Default admin credentials are printed by the seed (see `packages/db/prisma/seed.ts`).
+
+Production refuses published development signing/sealing secrets. Prefer the
+reviewed installer for secret generation; copying the example alone is not a
+production configuration. Helm remains a scaffold, not a turnkey installation:
+see [deployment limitations](docs/HARDENING.md).
 
 ### Local dev against a real API
 

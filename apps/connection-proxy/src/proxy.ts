@@ -55,10 +55,8 @@ export function resolveStreamMode(
   if (token.mode === 'view') return token.kasmId === kasmId ? 'view' : null;
   if (token.mode === 'control') return token.kasmId === kasmId ? 'control' : null;
   if (session.userId === token.sub) return 'control';
-  // A staged pool session has no owner for the moment between the agent
-  // publishing it and the launcher claiming it. Refusing here would not close a
-  // hole — it would break launching.
-  if (session.userId === null) return 'control';
+  // Unclaimed sessions are not public desktops. The launcher must complete
+  // ownership assignment before an ordinary user can connect.
   return null;
 }
 

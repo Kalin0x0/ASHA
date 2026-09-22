@@ -7,6 +7,15 @@ import type { Env } from '@asha/config';
 import { prisma } from '@asha/db';
 import { ENV } from '../../common/env.module';
 
+/** Prisma's schema query parameter is not a libpq connection option. */
+export function pgDumpConnection(databaseUrl: string): { url: string; password: string } {
+  const url = new URL(databaseUrl);
+  const password = decodeURIComponent(url.password);
+  url.password = '';
+  for (const key of ['schema', 'connection_limit', 'pool_timeout', 'pgbouncer']) url.searchParams.delete(key);
+  return { url: url.toString(), password };
+}
+
 /**
  * Automated Postgres backups via the open-source `pg_dump`. The scheduler runs
  * on `BACKUP_CRON` when `BACKUP_ENABLED` is set, writing a custom-format dump
@@ -52,8 +61,10 @@ export class BackupsService {
   /** Invoke pg_dump (custom format) against DATABASE_URL; resolve with byte size. */
   protected performDump(filepath: string): Promise<number> {
     return new Promise<number>((resolve, reject) => {
-      const child = spawn('pg_dump', ['--format=custom', `--file=${filepath}`, this.env.DATABASE_URL], {
+      const connection = pgDumpConnection(this.env.DATABASE_URL);
+      const child = spawn('pg_dump', ['--format=custom', `--file=${filepath}`, connection.url], {
         stdio: ['ignore', 'ignore', 'pipe'],
+        env: { ...process.env, PGPASSWORD: connection.password },
       });
       let stderr = '';
       child.stderr?.on('data', (d) => (stderr += String(d)));

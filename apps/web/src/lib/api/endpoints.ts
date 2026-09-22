@@ -115,7 +115,7 @@ export interface ApiUser {
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
-export function login(body: { email: string; password: string; totp?: string }) {
+export function login(body: { email: string; password: string; totp?: string; orgSlug?: string }) {
   return apiFetch<ApiLoginResponse>('/auth/login', { method: 'POST', body, auth: false });
 }
 
@@ -273,7 +273,7 @@ export interface TotpEnrollResponse {
 export const enrollTotp = () => apiFetch<TotpEnrollResponse>('/auth/2fa/totp/enroll', { method: 'POST' });
 export const confirmTotp = (body: { methodId: string; code: string }) =>
   apiFetch<{ ok: true }>('/auth/2fa/totp/confirm', { method: 'POST', body });
-export const disableTotp = () => apiFetch<{ ok: true }>('/auth/2fa/totp', { method: 'DELETE' });
+export const disableTotp = (code: string) => apiFetch<{ ok: true }>('/auth/2fa/totp', { method: 'DELETE', body: { code } });
 
 export function logout(refreshToken: string | null) {
   return apiFetch<{ ok: true }>('/auth/logout', {

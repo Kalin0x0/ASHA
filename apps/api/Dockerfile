@@ -1,5 +1,5 @@
 # ── Asha API (NestJS manager/control plane) ───────────────────────────────
-FROM node:22-slim AS builder
+FROM node:22-trixie-slim AS builder
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
@@ -12,8 +12,9 @@ RUN pnpm --filter @asha/db run db:generate \
   && pnpm --filter "./packages/*" --workspace-concurrency=1 build \
   && pnpm --filter @asha/api build
 
-FROM node:22-slim AS runner
-RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
+FROM node:22-trixie-slim AS runner
+# PostgreSQL 17 client can dump the bundled PostgreSQL 16 server.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates postgresql-client-17 \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production

@@ -71,6 +71,8 @@ agent:
 
 # ── Secrets (use sealed-secrets / external-secrets in production) ─────────────
 secrets:
+  sealKey: ''
+  guacCrypt: ''
   jwtAccess: dev-access-secret-change-me-please-32++chars
   jwtRefresh: dev-refresh-secret-change-me-please-32++chars
   sessionToken: dev-session-token-secret-change-me-32++chars

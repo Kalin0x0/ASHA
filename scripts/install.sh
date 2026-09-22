@@ -557,7 +557,7 @@ action_install() {
   ensure_hosts_entry
   check_ports
   deploy
-  wait_health || true
+  wait_health || die "Health checks failed. Inspect logs before using this installation."
   rule
   show_credentials
   ok "Done. ${C_GREY}Manage with:${C_RESET} cd ${ASHA_DIR} && ${DC} ${COMPOSE_FILES[*]} ps"
@@ -600,13 +600,13 @@ action_update() {
   APP_MODE="$(get_env NEXT_PUBLIC_API_MODE)"; APP_MODE="${APP_MODE:-live}"
   if [ -d "$ASHA_DIR/.git" ]; then
     step "Pulling latest source"
-    ( cd "$ASHA_DIR" && $SUDO git pull --ff-only ) || warn "git pull failed — continuing with the current checkout."
+    ( cd "$ASHA_DIR" && $SUDO git pull --ff-only ) || die "git pull failed — update aborted before deployment."
   fi
   # Regenerate the prod override AFTER pulling, so it tracks the just-updated
   # base compose (the override's traefik command must mirror the base).
   select_compose_files
   deploy
-  wait_health || true
+  wait_health || die "Update health checks failed. Inspect logs and restore the previous verified deployment."
   ok "Update complete."
 }
 

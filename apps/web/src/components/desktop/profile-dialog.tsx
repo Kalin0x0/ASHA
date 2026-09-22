@@ -328,8 +328,9 @@ function TwoFactorSection({ twoFactorEnabled, confirm }: { twoFactorEnabled: boo
     if (!ok) return;
     setBusy(true);
     try {
-      await disableTotp();
+      await disableTotp(code);
       setEnrolled(false);
+      setCode('');
       toast.success(t('account.security.twoFactorDisabled'));
     } catch {
       toast.error(t('account.security.twoFactorFailed'));
@@ -341,12 +342,18 @@ function TwoFactorSection({ twoFactorEnabled, confirm }: { twoFactorEnabled: boo
   return (
     <div>
       <SectionHeader icon={ShieldCheck} title={t('account.security.twoFactorTitle')} description={t('account.security.twoFactorDescription')} />
+      {enrolled && (
+        <div className="mt-4">
+          <Label htmlFor="disable-totp-code">TOTP</Label>
+          <Input id="disable-totp-code" value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="123456" />
+        </div>
+      )}
       <div className="mt-4 flex items-center gap-2">
         <Badge variant={enrolled ? 'success' : 'outline'}>
           {enrolled ? t('account.security.enabled') : t('account.security.disabled')}
         </Badge>
         {enrolled ? (
-          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => void onDisable()} disabled={busy}>
+          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => void onDisable()} disabled={busy || !/^\d{6}$/.test(code)}>
             {t('account.security.disable')}
           </Button>
         ) : (

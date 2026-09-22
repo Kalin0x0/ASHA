@@ -1,13 +1,28 @@
 import 'reflect-metadata';
 import { describe, expect, it, vi } from 'vitest';
 
-const { prismaMock } = vi.hoisted(() => ({ prismaMock: {} }));
+const { prismaMock } = vi.hoisted(() => ({ prismaMock: {
+  user: { findFirst: vi.fn() },
+  maintenanceTask: { findUnique: vi.fn(), update: vi.fn() },
+  maintenanceRun: { create: vi.fn() },
+} }));
 vi.mock('@asha/db', () => ({ prisma: prismaMock, runUnscoped: (fn: () => unknown) => fn() }));
 
 import { MaintenanceSchedulerService } from './maintenance-scheduler.service';
 
 const svc = new MaintenanceSchedulerService({ run: vi.fn() } as never);
 const base = { intervalMinutes: null, atMinuteOfDay: null, weekday: null } as const;
+
+it('disables legacy tasks whose creator is not an active system administrator', async () => {
+  prismaMock.maintenanceTask.findUnique.mockResolvedValue({ id: 'task', orgId: 'o', createdById: 'tenant-admin' });
+  prismaMock.user.findFirst.mockResolvedValue(null);
+  const executor = { run: vi.fn() };
+  const scheduler = new MaintenanceSchedulerService(executor as never);
+  expect(await scheduler.runTask('task', 'SCHEDULE')).toEqual({ skipped: true });
+  expect(executor.run).not.toHaveBeenCalled();
+  expect(prismaMock.maintenanceRun.create).not.toHaveBeenCalled();
+  expect(prismaMock.maintenanceTask.update).toHaveBeenCalledWith({ where: { id: 'task' }, data: { enabled: false, nextRunAt: null } });
+});
 
 describe('MaintenanceSchedulerService.computeNext', () => {
   it('INTERVAL adds intervalMinutes', () => {
