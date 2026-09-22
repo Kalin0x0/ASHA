@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.15',
+    date: '2026-09-22',
+    title: { en: 'Watching a desktop can no longer change it', de: 'Zuschauen verändert den Desktop nicht mehr' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'While watching someone else’s desktop, the red "End" next to Back shut THEIR session down — a colleague lost the desktop they were working in. Shutting a desktop down is now offered only to the person whose desktop it is; an administrator who means it still terminates deliberately from the session list. The same unguarded End was reachable in the container viewer and is closed there too.',
+          de: 'Beim Zuschauen bei einem fremden Desktop hat das rote „Beenden“ neben „Zurück“ dessen Sitzung heruntergefahren — ein Kollege verlor den Desktop, in dem er gerade arbeitete. Einen Desktop herunterfahren kann jetzt nur noch die Person, der er gehört; ein Administrator beendet eine Sitzung weiterhin bewusst über die Sitzungsliste. Dasselbe ungeschützte „Beenden“ gab es auch im Container-Viewer und ist dort ebenfalls zu.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Watching is now genuinely view-only. The watched person’s clipboard no longer lands in the observer’s own, screenshots and desktop thumbnails of their screen are no longer stored on the observer’s machine, resizing the observer’s browser window no longer reflows their desktop, and an open monitoring tab no longer keeps their session artificially alive against the idle timeout.',
+          de: 'Zuschauen heißt jetzt wirklich nur zuschauen. Die Zwischenablage der beobachteten Person landet nicht mehr in der des Beobachters, Screenshots und Vorschaubilder ihres Bildschirms werden nicht mehr auf dem Gerät des Beobachters gespeichert, das Verkleinern des Beobachter-Fensters verstellt nicht mehr ihre Bildschirmauflösung, und ein offener Überwachungs-Tab hält ihre Sitzung nicht mehr künstlich gegen die Leerlauf-Abschaltung am Leben.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.14',
     date: '2026-09-22',
     title: { en: 'Live Sessions retired in favour of Live Monitor', de: 'Live-Sitzungen zugunsten der Live-Überwachung entfernt' },
