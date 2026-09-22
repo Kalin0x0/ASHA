@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+// Environment variables are strings: Boolean('false') is true.
+const envBoolean = (fallback: boolean) => z.preprocess(
+  (v) => v === 'true' || v === '1' ? true : v === 'false' || v === '0' ? false : v,
+  z.boolean().default(fallback),
+);
+
 /**
  * Zod-validated environment. Dev-friendly defaults let `pnpm dev:api` boot
  * without a full `.env`; production overrides everything via real secrets.
@@ -75,11 +81,11 @@ export const envSchema = z.object({
   S3_BUCKET: z.string().default('asha-recordings'),
   S3_ACCESS_KEY_ID: z.string().default(''),
   S3_SECRET_ACCESS_KEY: z.string().default(''),
-  S3_FORCE_PATH_STYLE: z.coerce.boolean().default(true),
+  S3_FORCE_PATH_STYLE: envBoolean(true),
 
   // Automated Postgres backups (pg_dump). Disabled by default; when enabled the
   // scheduler writes a dump into BACKUP_DIR on the cron below and prunes old ones.
-  BACKUP_ENABLED: z.coerce.boolean().default(false),
+  BACKUP_ENABLED: envBoolean(false),
   BACKUP_DIR: z.string().default('/var/lib/asha/backups'),
   BACKUP_CRON: z.string().default('0 3 * * *'),
   BACKUP_RETENTION: z.coerce.number().int().min(1).default(7),

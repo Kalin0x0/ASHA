@@ -43,12 +43,13 @@ export class WebhooksService {
     }
   }
 
-  list(orgId: string) {
-    return prisma.webhook.findMany({
+  async list(orgId: string) {
+    const hooks = await prisma.webhook.findMany({
       where: { orgId },
       orderBy: { name: 'asc' },
       include: { _count: { select: { deliveries: true } } },
     });
+    return hooks.map((hook) => this.redact(hook));
   }
 
   async create(orgId: string, actorUserId: string, dto: CreateWebhookDto) {

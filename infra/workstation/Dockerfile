@@ -10,14 +10,20 @@ ARG BASE_IMAGE=kasmweb/firefox:1.16.0
 FROM ${BASE_IMAGE}
 
 ARG ENABLE_DLP=1
+ARG INSTALL_CUSTOM_CAS=0
 USER root
 
-# Every certs/*.crt is added to the OS trust store.
-COPY certs/ /usr/local/share/ca-certificates/asha/
+# Keep certificates outside the trust store until explicitly opted in.
+COPY certs/ /tmp/asha-custom-cas/
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends ca-certificates; \
-    update-ca-certificates; \
+    if [ "$INSTALL_CUSTOM_CAS" = "1" ]; then \
+      mkdir -p /usr/local/share/ca-certificates/asha; \
+      cp /tmp/asha-custom-cas/*.crt /usr/local/share/ca-certificates/asha/; \
+      update-ca-certificates; \
+    fi; \
+    rm -rf /tmp/asha-custom-cas; \
     # Firefox honours OS "enterprise" roots at runtime (reads the system store).
     mkdir -p /etc/firefox/policies; \
     printf '%s' '{"policies":{"Certificates":{"ImportEnterpriseRoots":true}}}' \

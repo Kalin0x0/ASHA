@@ -55,6 +55,11 @@ describe('WebhooksService', () => {
     });
   });
 
+  it('redacts secrets in list responses including legacy plaintext', async () => {
+    prismaMock.webhook.findMany.mockResolvedValue([{ id: 'w', secret: 'legacy-secret' }, { id: 'n', secret: null }]);
+    expect(await svc.list('org1')).toEqual([{ id: 'w', hasSecret: true }, { id: 'n', hasSecret: false }]);
+  });
+
   it('signs the payload with HMAC-SHA256 and records a delivery', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal('fetch', fetchMock);

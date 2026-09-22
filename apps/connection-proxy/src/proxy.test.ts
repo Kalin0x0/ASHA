@@ -30,8 +30,8 @@ describe('resolveStreamMode — who may open a session stream', () => {
     expect(resolveStreamMode(someoneElses, token(), 'k1')).toBeNull();
   });
 
-  it('lets the launcher through on a staged session that has no owner yet', () => {
-    expect(resolveStreamMode(unclaimed, token(), 'k1')).toBe('control');
+  it('refuses ordinary users until a staged session has been claimed', () => {
+    expect(resolveStreamMode(unclaimed, token(), 'k1')).toBeNull();
   });
 
   it('gives a watch token for this session view-only', () => {
@@ -49,8 +49,7 @@ describe('resolveStreamMode — who may open a session stream', () => {
   });
 
   it('never lets a watch token collect input rights from an unowned session', () => {
-    // Both the owner branch and the unclaimed-session branch grant control, so
-    // a view token has to be answered before either of them.
+    // View grants must remain view-only even after ownership is assigned.
     expect(resolveStreamMode(unclaimed, token({ mode: 'view', kasmId: 'k1' }), 'k1')).toBe('view');
     expect(resolveStreamMode(owned, token({ mode: 'view', kasmId: 'k1' }), 'k1')).toBe('view');
   });

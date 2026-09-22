@@ -11,8 +11,10 @@ DLP epics (F4/F5).
 - Sets `ASHA_DLP_ENABLED` (honoured by DLP-capable KasmVNC builds).
 
 ## Add your CA
-Drop your root CA PEM into `certs/` (already includes `persia-root-ca.crt` —
-the Persia Internal Root CA). Any number of `*.crt` files are trusted.
+Custom CA trust is **off by default**. Review and replace the example certificate
+in `certs/` with only the public root certificates your deployment intends to
+trust. Never put private keys here. Opt in with the fourth build argument `1`:
+`./build.sh kasmweb/firefox:1.16.0 myimg:tag 1 1`.
 
 ## Build
 ```bash
@@ -50,6 +52,6 @@ tiles. Add the line to your own derived image when you want the picture.
 ## Use
 Set a Workspace's image (Admin → Workspaces → Images, or the registry install
 `imageOverride`) to the built tag, e.g. `asha/firefox-trusted:1.16.0`. New
-sessions on that workspace then trust the internal CA automatically.
+sessions on that workspace trust custom CAs only if the image was built with the explicit opt-in.
 
 > Push the tag to your registry (or build it on every agent host) so agents can pull it.

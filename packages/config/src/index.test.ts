@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { insecureDefaultsInUse, isPlaceholderHost, loadEnv, resolveSessionBaseUrl } from './index';
 
+describe('environment booleans', () => {
+  it.each(['false', '0'])('parses %s as false', (value) => {
+    const env = loadEnv({ BACKUP_ENABLED: value, S3_FORCE_PATH_STYLE: value });
+    expect(env.BACKUP_ENABLED).toBe(false);
+    expect(env.S3_FORCE_PATH_STYLE).toBe(false);
+  });
+  it.each(['true', '1'])('parses %s as true', (value) => {
+    expect(loadEnv({ BACKUP_ENABLED: value }).BACKUP_ENABLED).toBe(true);
+  });
+  it('rejects ambiguous values', () => {
+    expect(() => loadEnv({ BACKUP_ENABLED: 'maybe' })).toThrow();
+  });
+});
+
 describe('loadEnv production secret guard', () => {
   // Every one of these defaults is published in this repository, so a
   // production deployment still holding one signs tokens (or seals stored

@@ -9,7 +9,7 @@ import * as api from './endpoints';
 interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, totp?: string) => Promise<void>;
+  login: (email: string, password: string, totp?: string, orgSlug?: string) => Promise<void>;
   loginWithPasskey: (email: string) => Promise<void>;
   loginAsDemo: (email: string, fingerprint: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -34,10 +34,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // before their own data arrives (and instead of it, if their refetch 403s).
   const queryClient = useQueryClient();
 
-  const login = useCallback(async (email: string, password: string, totp?: string) => {
+  const login = useCallback(async (email: string, password: string, totp?: string, orgSlug?: string) => {
     // Also on the way IN: a tab can switch accounts without a clean sign-out.
     queryClient.clear();
-    const res = await api.login({ email, password, totp });
+    const res = await api.login({ email, password, totp, orgSlug });
     setAuth(
       { accessToken: res.accessToken, refreshToken: res.refreshToken, expiresIn: res.expiresIn, tokenType: res.tokenType },
       res.user,

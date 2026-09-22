@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { ConfirmTotpDto, LoginDto } from '@asha/contracts';
-import { hashToken, randomToken, verifyPassword } from '@asha/crypto';
+import { hashToken, randomToken, verifyPassword, seal, unseal } from '@asha/crypto';
 import { prisma } from '@asha/db';
 import type { Env } from '@asha/config';
 import { generateSecret, generateURI, verify as verifyOtp } from 'otplib';
@@ -28,10 +28,17 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto, ip?: string, userAgent?: string) {
-    const user = await prisma.user.findFirst({
-      where: { OR: [{ email: dto.email }, { username: dto.email }] },
+    const org = dto.orgSlug ? await prisma.org.findUnique({ where: { slug: dto.orgSlug } }) : null;
+    if (dto.orgSlug && (!org || org.status !== 'ACTIVE')) throw new UnauthorizedException('Invalid credentials');
+    const candidates = await prisma.user.findMany({
+      where: { ...(org ? { orgId: org.id } : {}), OR: [{ email: dto.email }, { username: dto.email }] },
       include: { credentials: true, twoFactorMethods: true },
+      take: 2,
     });
+    // Emails/usernames are unique per tenant, not globally. Never authenticate
+    // whichever row findFirst happens to return when the identity is ambiguous.
+    if (candidates.length !== 1) throw new UnauthorizedException('Invalid credentials');
+    const user = candidates[0]!;
     // Sellable time-limited accounts: reject an expired license just-in-time
     // (before the ≤60s license-reaper tick) and persist the deactivation +
     // revoke any live refresh tokens. Folded into the same generic rejection as a
@@ -70,7 +77,7 @@ export class AuthService {
         }
       }
 
-      const result = await verifyOtp({ secret: confirmedTotp.secret, token: dto.totp });
+      const result = await verifyOtp({ secret: this.readTotpSecret(confirmedTotp.secret), token: dto.totp });
       if (!result.valid) throw new UnauthorizedException('Invalid two-factor code');
       await prisma.twoFactorMethod.update({
         where: { id: confirmedTotp.id },
@@ -202,7 +209,7 @@ export class AuthService {
         userId,
         type: 'TOTP',
         label: 'Authenticator app',
-        secret,
+        secret: `sealed:v1:${seal(secret, this.env.SECRET_SEAL_KEY)}`,
         confirmed: false,
       },
     });
@@ -217,7 +224,7 @@ export class AuthService {
     });
     if (!method) throw new NotFoundException('Pending TOTP enrollment not found');
 
-    const result = await verifyOtp({ secret: method.secret, token: dto.code });
+    const result = await verifyOtp({ secret: this.readTotpSecret(method.secret), token: dto.code });
     if (!result.valid) throw new BadRequestException('Invalid TOTP code');
 
     // Mark confirmed but do NOT stamp lastUsedAt here: that field tracks login
@@ -231,8 +238,13 @@ export class AuthService {
   }
 
   /** Remove all TOTP methods from a user account. */
-  async disableTotp(userId: string) {
+  async disableTotp(userId: string, code: string, orgId?: string) {
+    const method = await prisma.twoFactorMethod.findFirst({ where: { userId, type: 'TOTP', confirmed: true } });
+    if (!method) throw new BadRequestException('No confirmed TOTP method enrolled');
+    const verified = await verifyOtp({ secret: this.readTotpSecret(method.secret), token: code });
+    if (!verified.valid) throw new UnauthorizedException('Invalid two-factor code');
     await prisma.twoFactorMethod.deleteMany({ where: { userId, type: 'TOTP' } });
+    await this.audit.record({ orgId, actorUserId: userId, action: 'auth.totp_disabled' });
     return { ok: true };
   }
 
@@ -279,7 +291,7 @@ export class AuthService {
       where: { userId: user.sub, type: 'TOTP', confirmed: true },
     });
     if (!method) throw new BadRequestException('No confirmed TOTP method enrolled');
-    const result = await verifyOtp({ secret: method.secret, token: totp });
+    const result = await verifyOtp({ secret: this.readTotpSecret(method.secret), token: totp });
     if (!result.valid) throw new UnauthorizedException('Invalid two-factor code');
     const ttl = Math.min(this.env.JWT_ACCESS_TTL, 300);
     const accessToken = await this.jwt.signAsync(
@@ -326,6 +338,14 @@ export class AuthService {
       },
     });
     return { accessToken, refreshToken, expiresIn: this.env.JWT_ACCESS_TTL, tokenType: 'Bearer' };
+  }
+
+  private readTotpSecret(stored: string): string {
+    // Explicit version marker: a corrupted encrypted secret must fail closed.
+    // Unmarked legacy base32 secrets remain readable until re-enrollment.
+    return stored.startsWith('sealed:v1:')
+      ? unseal(stored.slice('sealed:v1:'.length), this.env.SECRET_SEAL_KEY)
+      : stored;
   }
 
   private publicUser(user: {

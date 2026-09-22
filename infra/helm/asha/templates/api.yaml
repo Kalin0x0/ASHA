@@ -38,6 +38,12 @@ spec:
               value: {{ .Values.secrets.jwtRefresh | quote }}
             - name: SESSION_TOKEN_SECRET
               value: {{ .Values.secrets.sessionToken | quote }}
+            - name: SECRET_SEAL_KEY
+              value: {{ required "secrets.sealKey is required" .Values.secrets.sealKey | quote }}
+            - name: GUAC_CRYPT_SECRET
+              value: {{ required "secrets.guacCrypt is required (32 characters)" .Values.secrets.guacCrypt | quote }}
+            - name: ASHA_AGENT_ENROLLMENT_TOKEN
+              value: {{ .Values.secrets.agentEnrollmentToken | quote }}
           readinessProbe:
             httpGet:
               path: /api/v1/health/ready

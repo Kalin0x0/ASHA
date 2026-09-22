@@ -8,6 +8,7 @@ import {
   loginSchema,
   type RefreshDto,
   refreshSchema,
+  verifyTotpSchema,
 } from '@asha/contracts';
 import { z } from 'zod';
 import { type AuthUser, CurrentUser, Public } from '../../common/decorators';
@@ -104,7 +105,7 @@ export class AuthController {
 
   @ApiBearerAuth()
   @Delete('2fa/totp')
-  disableTotp(@CurrentUser() user: AuthUser) {
-    return this.auth.disableTotp(user.sub);
+  disableTotp(@CurrentUser() user: AuthUser, @Body(new ZodPipe(verifyTotpSchema)) dto: { code: string }) {
+    return this.auth.disableTotp(user.sub, dto.code, user.orgId);
   }
 }

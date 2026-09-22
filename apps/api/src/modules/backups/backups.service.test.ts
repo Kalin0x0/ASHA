@@ -16,7 +16,16 @@ vi.mock('node:fs/promises', () => ({
   unlink: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { BackupsService } from './backups.service';
+import { BackupsService, pgDumpConnection } from './backups.service';
+
+it('keeps credentials off the pg_dump command line and strips Prisma options', () => {
+  const result = pgDumpConnection('postgresql://u:p%40ss@postgres:5432/asha?schema=public&connection_limit=5&sslmode=require');
+  expect(result.password).toBe('p@ss');
+  expect(result.url).not.toContain('p%40ss');
+  expect(result.url).not.toContain('schema');
+  expect(result.url).not.toContain('connection_limit');
+  expect(result.url).toContain('sslmode=require');
+});
 
 const env = {
   DATABASE_URL: 'postgresql://localhost/asha',

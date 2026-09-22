@@ -81,6 +81,17 @@ export class MaintenanceSchedulerService implements OnModuleInit {
         const task = await prisma.maintenanceTask.findUnique({ where: { id: taskId } });
         if (!task) return { skipped: true as const };
 
+        // Recheck persisted authority: jobs created before global maintenance
+        // became system-admin-only must not keep executing under tenant roles.
+        const owner = task.createdById && await prisma.user.findFirst({
+          where: { id: task.createdById, orgId: task.orgId ?? undefined, isSystemAdmin: true, status: 'ACTIVE' },
+          select: { id: true },
+        });
+        if (!owner) {
+          await prisma.maintenanceTask.update({ where: { id: task.id }, data: { enabled: false, nextRunAt: null } });
+          return { skipped: true as const };
+        }
+
         const run = await prisma.maintenanceRun.create({
           data: {
             taskId: task.id,

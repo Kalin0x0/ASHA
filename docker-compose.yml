@@ -13,6 +13,7 @@ networks:
 volumes:
   pg-data: {}
   redis-data: {}
+  backup-data: {}
   # Persists ACME/Let's Encrypt certificates across restarts (see traefik below).
   traefik-acme: {}
 
@@ -82,7 +83,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-asha}:${POSTGRES_PASSWORD:-asha_dev_change_me}@postgres:5432/${POSTGRES_DB:-asha}?schema=public
       # Password for the seeded admin (admin@asha.local). Set in .env to override;
       # the installer generates a strong one for public deployments.
-      ASHA_SEED_ADMIN_PASSWORD: ${ASHA_SEED_ADMIN_PASSWORD:-AshaAdmin!2026}
+      ASHA_SEED_ADMIN_PASSWORD: ${ASHA_SEED_ADMIN_PASSWORD:?Set a unique seed admin password before first boot}
     depends_on:
       postgres: { condition: service_healthy }
     networks: [asha-core]
@@ -122,6 +123,12 @@ services:
       ASHA_AGENT_ENROLLMENT_TOKEN: ${ASHA_AGENT_ENROLLMENT_TOKEN:-dev-enrollment-token-change-me}
       # Auto-terminate sessions PAUSED longer than this many minutes (0 = never).
       ASHA_MAX_PAUSED_MINUTES: ${ASHA_MAX_PAUSED_MINUTES:-0}
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-false}
+      BACKUP_CRON: ${BACKUP_CRON:-0 3 * * *}
+      BACKUP_DIR: /var/lib/asha/backups
+      BACKUP_RETENTION: ${BACKUP_RETENTION:-7}
+    volumes:
+      - backup-data:/var/lib/asha/backups
     depends_on:
       postgres: { condition: service_healthy }
       # Gate on redis HEALTHY (not just started): with Redis down there is no
@@ -148,7 +155,7 @@ services:
         # asha and the legacy chista domain (no baked-in host → no cross-origin).
         NEXT_PUBLIC_API_URL: /api/v1
         NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-}
-        NEXT_PUBLIC_API_MODE: ${NEXT_PUBLIC_API_MODE:-mock}
+        NEXT_PUBLIC_API_MODE: ${NEXT_PUBLIC_API_MODE:-live}
     restart: unless-stopped
     depends_on: [api]
     networks: [asha-edge]

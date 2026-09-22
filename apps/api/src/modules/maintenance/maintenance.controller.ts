@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { SystemAdminGuard } from '../../common/system-admin.guard';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { z } from 'zod';
 import { Audit } from '../../common/audit.interceptor';
@@ -65,6 +66,7 @@ type UpdateDto = z.infer<typeof updateSchema>;
 @ApiTags('maintenance')
 @ApiBearerAuth()
 @RequirePermissions('MAINTENANCE_MANAGE')
+@UseGuards(SystemAdminGuard)
 @Controller('maintenance')
 export class MaintenanceController {
   constructor(private readonly maintenance: MaintenanceService) {}
