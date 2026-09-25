@@ -64,16 +64,47 @@ Base: `d9fc421ad2e6e5d53fc0871d61f5974cc30b81ee` (2026-09-16).
 Use the matching PostgreSQL 17 restore client when inspecting these custom
 archives, and validate restoration against the intended target server version.
 
+## Second round (2026-09-25)
+
+Re-verified against the tree as it stands, not against the notes above. Seven of
+the eight claims in "Changes in this branch" still hold; none of the four commits
+merged after PR #84 touched `apps/api`, `packages` or `apps/connection-proxy` at
+all. The password-login ambiguity fix is the incomplete one: login now refuses to
+guess between two matching rows, but `users.service.update` and the SCIM writers
+still check a new username only against the `username` column, so a USER_EDIT
+holder can manufacture the collision inside one organization and lock an account
+out permanently. That is listed below rather than fixed here.
+
+Fixed in this round:
+
+- Refresh rotation and TOTP consumption are atomic. Both guards read a row,
+  decided, and wrote the decision back, and the guarantee lived in the gap. The
+  precondition now travels inside the UPDATE. Refresh additionally distinguishes a
+  two-tab race from a replay: a live sibling token younger than ten seconds is
+  served and recorded as `auth.refresh_race_graced`, everything else still burns
+  the family. Step-up previously recorded no use at all, so a code observed once
+  could elevate repeatedly for the rest of its window.
+- The audio stream URL no longer carries a full API bearer. The route was already
+  authorised by the session cookie and never read the parameter.
+- `PGPASSWORD` is no longer forced to the empty string when `DATABASE_URL` carries
+  no password, which previously overrode `.pgpass` and the ambient environment.
+
 ## Still open — not claimed fixed
 
 - Browser refresh/access-token storage: migrate localStorage credentials to an
   HttpOnly refresh-cookie design with CSRF controls and multi-tab rotation tests.
-- General access tokens in stream URLs: replace with purpose-bound short-lived
-  tickets across proxy, audio, reconnect and ownership flows. Session cookies
-  also need revocation/lifecycle tests, not just JWT signature checks.
+  Do it in one change — the cookie, CSRF, the SSO callback and logout revocation
+  are one migration, and `session-auth.controller` already demonstrates the cookie
+  pattern this would follow.
+- Access tokens in stream URLs: the audio case is fixed, `/connect` is not. There
+  the token is load-bearing, so it needs purpose-bound short-lived tickets across
+  proxy, reconnect, observer and ownership flows, deployed web-before-proxy. Session
+  cookies also need revocation/lifecycle tests, not just JWT signature checks.
+- Within-tenant username collisions: `users.service.update` and the SCIM write
+  paths check only the `username` column where `create` checks both, so the
+  fail-closed login check can be turned into a permanent account lockout.
 - Complete multi-tenant identity design for passkeys, federation and public
   account discovery; the password lookup fix is not a full identity redesign.
-- Refresh rotation and TOTP consumption need atomic concurrency/replay tests.
 - Tenant scoping on bulk/upsert/nested/raw operations and optional-org models;
   real PostgreSQL cross-tenant integration tests; RLS remains inactive.
 - SSRF protection for operator-configured registry/webhook/provider endpoints:
@@ -81,8 +112,10 @@ archives, and validate restoration against the intended target server version.
   and response-size limits. Do not blindly block legitimate internal services.
 - Durable queues/reconciliation, distributed scheduler locks and shared SSO/
   WebAuthn challenges before enabling API replicas or HPA.
-- Docker/Traefik/guacd/browser E2E, migration/restore drills, Helm install tests,
-  dependency/container scanning and real provider smoke tests.
+- Docker/Traefik/guacd E2E, migration/restore drills, Helm install tests,
+  dependency/container scanning and real provider smoke tests. The web interface
+  itself has now been exercised in a real browser, but only against MSW mock data:
+  no API, no proxy, no guacd, no container.
 - Protected branches, reviewed CI requirements, signed releases and immutable
   installer/update artifacts. Repository settings and deployments were untouched.
 - DLP guarantees and README maturity claims require validation against actual
