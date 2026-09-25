@@ -265,7 +265,7 @@ export default function AuthenticationPage() {
               }}
               className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${
                 newType === pt
-                  ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
+                  ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
                   : 'border-border-subtle text-muted-foreground hover:bg-secondary'
               }`}
             >

@@ -35,7 +35,7 @@ const SCHEDULE_KINDS: ScheduleKind[] = ['INTERVAL', 'DAILY', 'WEEKLY'];
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 
 const fieldClass =
-  'flex h-9.5 w-full rounded-md border border-input bg-[var(--surface-1)] px-3 text-sm focus-visible:border-[rgba(212,175,55,0.5)] focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none';
+  'flex h-9.5 w-full rounded-md border border-input bg-[var(--surface-1)] px-3 text-sm focus-visible:border-gold-500/50 focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none';
 
 const minToTime = (m: number) => {
   const h = Math.floor(m / 60);
@@ -157,7 +157,7 @@ export function MaintenanceTaskDialog({
                   className={cn(
                     'h-9.5 rounded-md border text-sm font-medium transition-colors ring-gold-focus',
                     scheduleKind === k
-                      ? 'border-[rgba(212,175,55,0.5)] bg-[rgba(212,175,55,0.1)] text-gold-300'
+                      ? 'border-gold-500/50 bg-gold-500/10 text-gold-300'
                       : 'border-input bg-[var(--surface-1)] text-muted-foreground hover:text-foreground',
                   )}
                 >

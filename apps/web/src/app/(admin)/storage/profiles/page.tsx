@@ -103,7 +103,7 @@ export default function PersistentProfilesPage() {
             <EmptyState icon={FolderCog} title={t('profiles.empty.title')} description={t('profiles.empty.description')} />
           ) : (
             profiles.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
+              <div key={p.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgb(var(--brand-rgb)/0.55)]">
                 <FolderCog className="size-4 text-gold-300" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{p.volumeName}</p>
@@ -145,7 +145,7 @@ export default function PersistentProfilesPage() {
               onClick={() => setBackend(b)}
               className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${
                 backend === b
-                  ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
+                  ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
                   : 'border-border-subtle text-muted-foreground hover:bg-secondary'
               }`}
             >

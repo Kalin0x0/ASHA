@@ -138,14 +138,14 @@ export default function LoginPage() {
         <div
           aria-hidden
           className="absolute inset-0"
-          style={{ background: 'radial-gradient(70% 60% at 78% 28%, rgba(212,175,55,0.22), transparent 60%)' }}
+          style={{ background: 'radial-gradient(70% 60% at 78% 28%, rgb(var(--brand-rgb)/0.22), transparent 60%)' }}
         />
         <div aria-hidden className="absolute inset-0" style={{ boxShadow: 'inset 0 0 160px 30px rgba(8,8,16,0.6)' }} />
         {/* Gold hairline divider on the seam */}
         <div
           aria-hidden
           className="absolute inset-y-0 end-0 w-px"
-          style={{ background: 'linear-gradient(180deg, transparent, rgba(212,175,55,0.5), transparent)' }}
+          style={{ background: 'linear-gradient(180deg, transparent, rgb(var(--brand-rgb)/0.5), transparent)' }}
         />
 
         {/* Brand lockup */}

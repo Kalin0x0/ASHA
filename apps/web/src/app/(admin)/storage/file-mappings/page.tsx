@@ -108,7 +108,7 @@ export default function FileMappingsPage() {
             <EmptyState icon={FileCog} title={t('fileMappings.empty.title')} description={t('fileMappings.empty.description')} />
           ) : (
             files.map((f) => (
-              <div key={f.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
+              <div key={f.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgb(var(--brand-rgb)/0.55)]">
                 <FileCog className="size-4 text-gold-300" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{f.name}</p>
@@ -151,7 +151,7 @@ export default function FileMappingsPage() {
               onClick={() => setTarget(tgt)}
               className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${
                 target === tgt
-                  ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
+                  ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
                   : 'border-border-subtle text-muted-foreground hover:bg-secondary'
               }`}
             >

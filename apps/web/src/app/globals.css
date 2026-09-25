@@ -6,35 +6,76 @@
    LAYER 1 — PRIMITIVES  (raw scales → become Tailwind utilities)
    ============================================================================ */
 @theme {
-  /* Anthracite — blue-leaning charcoal neutral base */
-  --color-anthracite-950: #0e0e1a;
-  --color-anthracite-900: #14141f;
-  --color-anthracite-850: #181826;
-  --color-anthracite-800: #1a1a2e; /* BRAND base */
-  --color-anthracite-750: #1f1f38;
-  --color-anthracite-700: #242442;
-  --color-anthracite-600: #2d2d50;
-  --color-anthracite-500: #3a3a63;
-  --color-anthracite-400: #4b4b7a;
-  --color-anthracite-300: #6b6b94;
-  --color-anthracite-200: #9a9ab8;
-  --color-anthracite-100: #c4c4d6;
-  --color-anthracite-50: #e8e8f0;
+  /* Slate — cool, teal-leaning neutral base. Anchored on Night Slate at 900 and
+     Cloud Ivory at 50; the 500 and 200 steps are pinned so the middle of the ramp
+     keeps its cool cast instead of drifting olive on the way to the faintly green
+     ivory. Interpolated through OKLab, so the steps are perceptually even. */
+  --color-slate-950: #0a181b;
+  --color-slate-900: #11262a; /* Night Slate — dark theme background */
+  --color-slate-850: #1b2f34;
+  --color-slate-800: #24393e;
+  --color-slate-750: #2e4348;
+  --color-slate-700: #384e52;
+  --color-slate-600: #4d6368;
+  --color-slate-500: #63797e;
+  --color-slate-400: #829599;
+  --color-slate-300: #a3b1b5;
+  --color-slate-200: #c4cfd1;
+  --color-slate-100: #e4eae8;
+  --color-slate-50: #f5f7f4; /* Cloud Ivory — light surfaces, and text on dark */
 
-  /* Gold — warm, AA-tuned accent */
-  --color-gold-950: #2e2410;
-  --color-gold-900: #4a3a16;
-  --color-gold-800: #6b541f;
-  --color-gold-700: #8f7129;
-  --color-gold-600: #b8923a;
-  --color-gold-500: #d4af37; /* BRAND accent */
-  --color-gold-400: #e0c25c;
-  --color-gold-300: #ecd584; /* AA text on dark */
-  --color-gold-200: #f3e3ad;
-  --color-gold-100: #f9f1d6;
-  --color-gold-50: #fdf9ec;
+  /* Brand — one teal ramp carrying both brand colours: Aurora Mint at 500 for
+     actions on dark, Deep Teal at 800 for the primary on light. */
+  --color-brand-950: #05191b;
+  --color-brand-900: #082426;
+  --color-brand-800: #103b3f; /* Deep Teal — primary on light */
+  --color-brand-700: #1e6b69;
+  --color-brand-600: #2d9f96;
+  --color-brand-500: #3dd6c6; /* Aurora Mint — action on dark */
+  --color-brand-400: #74dfd1;
+  --color-brand-300: #9be7dc; /* AA text on dark — 11.13:1 on Night Slate */
+  --color-brand-200: #bdefe7;
+  --color-brand-100: #ddf7f2;
+  --color-brand-50: #edfbf8;
 
-  /* Semantic hues — harmonized toward gold */
+  /* Champagne Gold — sparing accent only. The brand value clears AA on dark
+     (6.64:1 on Night Slate) but reaches 2.20:1 on Cloud Ivory, which misses even the
+     3:1 floor for non-text controls, so light surfaces take the darker twin. */
+  --color-champagne-500: #c6a45a;
+  --color-champagne-700: #8a6b28; /* 4.63:1 on Cloud Ivory */
+
+  /* Legacy scale names. Around 580 call sites still say gold-* / anthracite-*;
+     keeping them as aliases recolours the whole interface from this block rather
+     than burying the palette in a 700-line rename. Renaming the call sites is a
+     separate mechanical change. New code uses --color-brand-* / --color-slate-*. */
+  --color-anthracite-950: var(--color-slate-950);
+  --color-anthracite-900: var(--color-slate-900);
+  --color-anthracite-850: var(--color-slate-850);
+  --color-anthracite-800: var(--color-slate-800);
+  --color-anthracite-750: var(--color-slate-750);
+  --color-anthracite-700: var(--color-slate-700);
+  --color-anthracite-600: var(--color-slate-600);
+  --color-anthracite-500: var(--color-slate-500);
+  --color-anthracite-400: var(--color-slate-400);
+  --color-anthracite-300: var(--color-slate-300);
+  --color-anthracite-200: var(--color-slate-200);
+  --color-anthracite-100: var(--color-slate-100);
+  --color-anthracite-50: var(--color-slate-50);
+
+  --color-gold-950: var(--color-brand-950);
+  --color-gold-900: var(--color-brand-900);
+  --color-gold-800: var(--color-brand-800);
+  --color-gold-700: var(--color-brand-700);
+  --color-gold-600: var(--color-brand-600);
+  --color-gold-500: var(--color-brand-500);
+  --color-gold-400: var(--color-brand-400);
+  --color-gold-300: var(--color-brand-300);
+  --color-gold-200: var(--color-brand-200);
+  --color-gold-100: var(--color-brand-100);
+  --color-gold-50: var(--color-brand-50);
+
+  /* Semantic hues — deliberately off the brand ramp, so success, warning and error
+     never read as a teal action. */
   --color-success-600: #4aa37c;
   --color-success-500: #5fb88f;
   --color-success-400: #7fcaa6;
@@ -48,8 +89,9 @@
   --color-info-500: #6a8fc4;
   --color-info-400: #8aa8d6;
 
-  /* Chart palette (gold-anchored) */
-  --color-chart-1: #d4af37;
+  /* Chart palette (brand-anchored). Currently unread — charts.tsx carries its own
+     TONE ramp; kept in step so a future consumer does not inherit the old brand. */
+  --color-chart-1: #3dd6c6;
   --color-chart-2: #6a8fc4;
   --color-chart-3: #5fb88f;
   --color-chart-4: #b07fc4;
@@ -97,40 +139,46 @@
    ============================================================================ */
 :root,
 .dark {
-  --background: var(--color-anthracite-900);
-  --foreground: var(--color-anthracite-50);
+  --background: var(--color-slate-900);
+  --foreground: var(--color-slate-50);
 
-  --surface-1: var(--color-anthracite-800);
-  --surface-2: var(--color-anthracite-700);
-  --surface-3: var(--color-anthracite-600);
+  --surface-1: var(--color-slate-800);
+  --surface-2: var(--color-slate-700);
+  --surface-3: var(--color-slate-600);
 
-  --card: var(--color-anthracite-800);
-  --card-foreground: var(--color-anthracite-50);
-  --popover: var(--color-anthracite-700);
-  --popover-foreground: var(--color-anthracite-50);
+  --card: var(--color-slate-800);
+  --card-foreground: var(--color-slate-50);
+  --popover: var(--color-slate-700);
+  --popover-foreground: var(--color-slate-50);
 
-  --primary: var(--color-gold-500);
-  --primary-foreground: var(--color-anthracite-950);
-  --secondary: var(--color-anthracite-700);
-  --secondary-foreground: var(--color-anthracite-50);
-  --muted: var(--color-anthracite-750);
-  --muted-foreground: var(--color-anthracite-200);
-  --accent: var(--color-anthracite-700);
-  --accent-foreground: var(--color-gold-300);
+  /* Aurora Mint carries actions on dark, and always with dark text on top:
+     ivory on mint is 1.81:1, slate-950 on mint is 15.1:1. */
+  --primary: var(--color-brand-500);
+  --primary-foreground: var(--color-slate-950);
+  --secondary: var(--color-slate-700);
+  --secondary-foreground: var(--color-slate-50);
+  --muted: var(--color-slate-750);
+  --muted-foreground: var(--color-slate-200);
+  --accent: var(--color-slate-700);
+  --accent-foreground: var(--color-brand-300);
 
   --success: var(--color-success-500);
   --warning: var(--color-warn-500);
   --destructive: var(--color-error-500);
-  --destructive-foreground: var(--color-anthracite-50);
+  --destructive-foreground: var(--color-slate-50);
   --info: var(--color-info-500);
 
-  --border: var(--color-anthracite-500);
-  --border-subtle: var(--color-anthracite-700);
-  --input: var(--color-anthracite-600);
-  --ring: var(--color-gold-500);
+  --border: var(--color-slate-500);
+  --border-subtle: var(--color-slate-700);
+  --input: var(--color-slate-600);
+  --ring: var(--color-brand-500);
 
   --highlight-top: rgba(255, 255, 255, 0.06);
-  --gold-glow: 0 0 0 1px rgba(212, 175, 55, 0.25), 0 0 28px -6px rgba(212, 175, 55, 0.4);
+  /* Focus/emphasis glow. --gold-glow is the legacy name the utilities still read. */
+  /* Brand as channels, so the glows and washes below keep their exact alpha. */
+  --brand-rgb: 61 214 198;
+  --brand-glow: 0 0 0 1px rgba(61, 214, 198, 0.3), 0 0 28px -6px rgba(61, 214, 198, 0.45);
+  --gold-glow: var(--brand-glow);
   /* Layered, soft shadows for premium depth (close + mid + far casts). */
   --shadow-ambient: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px -6px rgba(0, 0, 0, 0.5),
     0 16px 40px -18px rgba(0, 0, 0, 0.6);
@@ -151,26 +199,27 @@
 }
 
 .light {
-  --background: #f4f4f7;
-  --foreground: var(--color-anthracite-900);
+  --background: var(--color-slate-50); /* Cloud Ivory */
+  --foreground: var(--color-slate-900); /* Night Slate on ivory — 14.61:1 */
 
   --surface-1: #ffffff;
   --surface-2: #ffffff;
   --surface-3: #ffffff;
 
   --card: #ffffff;
-  --card-foreground: var(--color-anthracite-900);
+  --card-foreground: var(--color-slate-900);
   --popover: #ffffff;
-  --popover-foreground: var(--color-anthracite-900);
+  --popover-foreground: var(--color-slate-900);
 
-  --primary: var(--color-gold-700);
-  --primary-foreground: #ffffff;
-  --secondary: #ececf2;
-  --secondary-foreground: var(--color-anthracite-900);
-  --muted: #ececf2;
-  --muted-foreground: #5b5b73;
-  --accent: #f3ead3;
-  --accent-foreground: var(--color-gold-800);
+  /* Deep Teal carries the primary on light, with ivory on top — 11.34:1. */
+  --primary: var(--color-brand-800);
+  --primary-foreground: var(--color-slate-50);
+  --secondary: var(--color-slate-100);
+  --secondary-foreground: var(--color-slate-900);
+  --muted: var(--color-slate-100);
+  --muted-foreground: var(--color-slate-600); /* 5.91:1 on ivory */
+  --accent: var(--color-brand-100);
+  --accent-foreground: var(--color-brand-800);
 
   /* Saturated status hues must go deeper on white to clear AA as text
      (the -500/-600 ramp is tuned for dark surfaces). */
@@ -180,13 +229,17 @@
   --destructive-foreground: #ffffff;
   --info: #3f63a0;
 
-  --border: #d9d9e3;
-  --border-subtle: #e8e8ef;
-  --input: #d4d4e0;
-  --ring: var(--color-gold-600);
+  --border: var(--color-slate-300);
+  --border-subtle: var(--color-slate-200);
+  --input: var(--color-slate-400);
+  /* brand-600 measures 2.99:1 on ivory and would miss the 3:1 floor for non-text
+     controls (WCAG 2.2, 1.4.11), so the light focus ring goes a step darker. */
+  --ring: var(--color-brand-700); /* 5.80:1 on ivory */
 
   --highlight-top: rgba(255, 255, 255, 0.9);
-  --gold-glow: 0 0 0 1px rgba(184, 146, 58, 0.3), 0 0 22px -8px rgba(184, 146, 58, 0.32);
+  --brand-rgb: 16 59 63;
+  --brand-glow: 0 0 0 1px rgba(30, 107, 105, 0.35), 0 0 22px -8px rgba(16, 59, 63, 0.35);
+  --gold-glow: var(--brand-glow);
   /* Soft, airy shadows on light — layered but low-opacity so cards float. */
   --shadow-ambient: 0 1px 2px rgba(16, 16, 30, 0.05), 0 6px 16px -8px rgba(16, 16, 30, 0.1),
     0 16px 40px -20px rgba(16, 16, 30, 0.12);
@@ -305,7 +358,7 @@
   }
 
   ::selection {
-    background-color: rgba(212, 175, 55, 0.28);
+    background-color: rgb(var(--brand-rgb) / 0.28);
     color: var(--color-anthracite-50);
   }
 
@@ -356,7 +409,7 @@
   }
   .elev-gold {
     box-shadow: var(--gold-glow), var(--shadow-ambient), inset 0 1px 0 var(--highlight-top);
-    border-color: rgba(212, 175, 55, 0.4);
+    border-color: rgb(var(--brand-rgb) / 0.4);
   }
 
   /* Glass — overlays only */
@@ -395,7 +448,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgba(212, 175, 55, 0.6),
+      rgb(var(--brand-rgb) / 0.6),
       transparent
     );
   }
@@ -420,10 +473,10 @@
   .bg-aurora {
     background-color: var(--color-anthracite-950);
     background-image:
-      radial-gradient(60% 55% at 18% 20%, rgba(212, 175, 55, 0.18), transparent 60%),
+      radial-gradient(60% 55% at 18% 20%, rgb(var(--brand-rgb) / 0.18), transparent 60%),
       radial-gradient(55% 50% at 82% 26%, rgba(106, 143, 196, 0.14), transparent 62%),
       radial-gradient(50% 48% at 72% 78%, rgba(176, 127, 196, 0.12), transparent 64%),
-      radial-gradient(72% 62% at 38% 108%, rgba(212, 175, 55, 0.1), transparent 72%);
+      radial-gradient(72% 62% at 38% 108%, rgb(var(--brand-rgb) / 0.1), transparent 72%);
     background-size: 200% 200%;
     animation: aurora-drift 32s var(--ease-in-out-soft) infinite alternate;
   }
@@ -524,10 +577,10 @@
     padding: 1px;
     background: linear-gradient(
       135deg,
-      rgba(212, 175, 55, 0.6) 0%,
-      rgba(212, 175, 55, 0.1) 40%,
-      rgba(212, 175, 55, 0.0) 60%,
-      rgba(212, 175, 55, 0.4) 100%
+      rgb(var(--brand-rgb) / 0.6) 0%,
+      rgb(var(--brand-rgb) / 0.1) 40%,
+      rgb(var(--brand-rgb) / 0.0) 60%,
+      rgb(var(--brand-rgb) / 0.4) 100%
     );
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -556,13 +609,13 @@
 
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.45);
+    box-shadow: 0 0 0 0 rgb(var(--brand-rgb) / 0.45);
   }
   70% {
-    box-shadow: 0 0 0 8px rgba(212, 175, 55, 0);
+    box-shadow: 0 0 0 8px rgb(var(--brand-rgb) / 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+    box-shadow: 0 0 0 0 rgb(var(--brand-rgb) / 0);
   }
 }
 
@@ -666,10 +719,10 @@
 .light .bg-aurora {
   background-color: var(--background);
   background-image:
-    radial-gradient(60% 55% at 18% 20%, rgba(212, 175, 55, 0.1), transparent 60%),
+    radial-gradient(60% 55% at 18% 20%, rgb(var(--brand-rgb) / 0.1), transparent 60%),
     radial-gradient(55% 50% at 82% 26%, rgba(106, 143, 196, 0.1), transparent 62%),
     radial-gradient(50% 48% at 72% 78%, rgba(176, 127, 196, 0.08), transparent 64%),
-    radial-gradient(72% 62% at 38% 108%, rgba(212, 175, 55, 0.07), transparent 72%);
+    radial-gradient(72% 62% at 38% 108%, rgb(var(--brand-rgb) / 0.07), transparent 72%);
 }
 
 /* Wallpaper base is dark by default; in light mode use the light background so

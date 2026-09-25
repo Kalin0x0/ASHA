@@ -6,9 +6,13 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import type { KpiSeriesPoint } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-/* ── Tone ramps (bright → deep) for gradient strokes & arcs ───────────────── */
+/* ── Tone ramps (bright → deep) for gradient strokes & arcs ───────────────────
+   `gold` is the brand tone and now carries the brand ramp (brand-300 → brand-500);
+   the key keeps its old name because `variant="gold"` / `elevation="gold"` are the
+   same vocabulary across Badge and Card, and renaming one of the three is worse
+   than renaming none. The status tones stay off the brand ramp on purpose. */
 const TONE = {
-  gold: ['#ecd584', '#d4af37'],
+  gold: ['#9be7dc', '#3dd6c6'],
   success: ['#7fcaa6', '#4aa37c'],
   warning: ['#edbd6e', '#c9933b'],
   destructive: ['#e08980', '#bd564d'],
@@ -23,14 +27,14 @@ export function AreaTrend({ data, height = 260 }: { data: KpiSeriesPoint[]; heig
       <AreaChart data={data} margin={{ top: 12, right: 8, left: -14, bottom: 0 }}>
         <defs>
           <linearGradient id={`fill-${id}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#e0c25c" stopOpacity={0.26} />
-            <stop offset="48%" stopColor="#d4af37" stopOpacity={0.07} />
-            <stop offset="100%" stopColor="#d4af37" stopOpacity={0} />
+            <stop offset="0%" stopColor="#74dfd1" stopOpacity={0.26} />
+            <stop offset="48%" stopColor="#3dd6c6" stopOpacity={0.07} />
+            <stop offset="100%" stopColor="#3dd6c6" stopOpacity={0} />
           </linearGradient>
           <linearGradient id={`stroke-${id}`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#b8923a" />
-            <stop offset="50%" stopColor="#ecd584" />
-            <stop offset="100%" stopColor="#e0c25c" />
+            <stop offset="0%" stopColor="#2d9f96" />
+            <stop offset="50%" stopColor="#9be7dc" />
+            <stop offset="100%" stopColor="#74dfd1" />
           </linearGradient>
           <filter id={`glow-${id}`} x="-20%" y="-50%" width="140%" height="200%">
             <feGaussianBlur stdDeviation="3.2" result="b" />
@@ -70,7 +74,7 @@ export function AreaTrend({ data, height = 260 }: { data: KpiSeriesPoint[]; heig
           fill={`url(#fill-${id})`}
           filter={`url(#glow-${id})`}
           dot={false}
-          activeDot={{ r: 4, fill: '#ecd584', stroke: '#14141f', strokeWidth: 2 }}
+          activeDot={{ r: 4, fill: '#9be7dc', stroke: '#11262a', strokeWidth: 2 }}
           animationDuration={700}
         />
       </AreaChart>

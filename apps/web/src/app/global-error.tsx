@@ -34,8 +34,8 @@ export default function GlobalError({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#14141f',
-          color: '#e8e8f0',
+          background: '#11262a',
+          color: '#f5f7f4',
           fontFamily: 'ui-sans-serif, system-ui, sans-serif',
         }}
       >
@@ -57,11 +57,11 @@ export default function GlobalError({
             ⚠
           </div>
           <h1 style={{ fontSize: 20, fontWeight: 500, margin: '0 0 8px' }}>Something went wrong</h1>
-          <p style={{ fontSize: 14, color: '#9a9ab8', margin: '0 0 16px' }}>
+          <p style={{ fontSize: 14, color: '#c4cfd1', margin: '0 0 16px' }}>
             An unexpected error occurred and was reported automatically.
           </p>
           {error.digest && (
-            <p style={{ fontSize: 12, color: '#6b6b94', fontFamily: 'ui-monospace, monospace' }}>
+            <p style={{ fontSize: 12, color: '#a3b1b5', fontFamily: 'ui-monospace, monospace' }}>
               Reference: {error.digest}
             </p>
           )}
@@ -72,8 +72,8 @@ export default function GlobalError({
               padding: '10px 20px',
               borderRadius: 8,
               border: 'none',
-              background: '#d4af37',
-              color: '#0e0e1a',
+              background: '#3dd6c6',
+              color: '#0a181b',
               fontWeight: 600,
               cursor: 'pointer',
             }}

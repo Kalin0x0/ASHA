@@ -125,7 +125,7 @@ export default function ZonesPage() {
             <EmptyState icon={Globe} title={t('zones.empty.title')} description={t('zones.empty.description')} />
           ) : (
             zones.map((z) => (
-              <div key={z.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
+              <div key={z.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgb(var(--brand-rgb)/0.55)]">
                 <Globe className="size-4 text-gold-300" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{z.name}</p>

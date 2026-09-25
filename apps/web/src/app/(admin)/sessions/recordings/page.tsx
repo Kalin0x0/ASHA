@@ -90,7 +90,7 @@ export default function RecordingsPage() {
         <Card elevation={1} className="relative overflow-hidden">
           <div className="pointer-events-none absolute inset-0 bg-aurora opacity-[0.12]" />
           <div className="relative flex flex-col items-center gap-5 px-6 py-20 text-center">
-            <span className="flex size-16 items-center justify-center rounded-2xl border border-[rgba(212,175,55,0.3)] bg-gold-500/10 text-gold-300">
+            <span className="flex size-16 items-center justify-center rounded-2xl border border-gold-500/30 bg-gold-500/10 text-gold-300">
               <Film className="size-7" />
             </span>
             <div className="space-y-2">
