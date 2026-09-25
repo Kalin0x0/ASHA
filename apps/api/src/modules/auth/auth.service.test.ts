@@ -9,6 +9,7 @@ const { prismaMock } = vi.hoisted(() => ({
   prismaMock: {
     refreshToken: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
       create: vi.fn(),
@@ -59,14 +60,15 @@ describe('AuthService.refresh — rotation & replay detection', () => {
       expiresAt: new Date(Date.now() + 60_000),
     });
     prismaMock.user.findUnique.mockResolvedValue(ACTIVE_USER);
-    prismaMock.refreshToken.update.mockResolvedValue({});
+    prismaMock.refreshToken.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.refreshToken.create.mockResolvedValue({});
 
     const result = await svc.refresh('good-token');
 
-    // old token revoked
-    expect(prismaMock.refreshToken.update).toHaveBeenCalledWith({
-      where: { id: 'rt1' },
+    // The revoke carries its own precondition, so the database decides the winner
+    // instead of a read taken moments earlier.
+    expect(prismaMock.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { id: 'rt1', revokedAt: null },
       data: { revokedAt: expect.any(Date) },
     });
     // new token persisted with the SAME family
@@ -74,6 +76,96 @@ describe('AuthService.refresh — rotation & replay detection', () => {
       expect.objectContaining({ data: expect.objectContaining({ family: 'fam-1' }) }),
     );
     expect(result).toMatchObject({ accessToken: 'signed-token', tokenType: 'Bearer' });
+  });
+
+  it('serves the loser of a two-tab race instead of calling it theft', async () => {
+    const { svc } = makeService(async () => ({ sub: 'u1' }));
+    prismaMock.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt1',
+      userId: 'u1',
+      family: 'fam-1',
+      revokedAt: null, // still null when we read it
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    prismaMock.user.findUnique.mockResolvedValue(ACTIVE_USER);
+    // The other tab revoked it between our read and our write.
+    prismaMock.refreshToken.updateMany.mockResolvedValue({ count: 0 });
+    // …and left its own successor behind, seconds old.
+    prismaMock.refreshToken.findFirst.mockResolvedValue({
+      id: 'rt2',
+      family: 'fam-1',
+      revokedAt: null,
+      createdAt: new Date(Date.now() - 1_000),
+    });
+    prismaMock.refreshToken.create.mockResolvedValue({});
+
+    const result = await svc.refresh('good-token');
+
+    expect(result).toMatchObject({ accessToken: 'signed-token', tokenType: 'Bearer' });
+    // The family survives: no sweeping revoke was issued.
+    expect(prismaMock.refreshToken.updateMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: { family: 'fam-1', revokedAt: null } }),
+    );
+    // Logged, but not as a theft — the replay alert has to keep its meaning.
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'auth.refresh_race_graced' }),
+    );
+    expect(audit.record).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'auth.refresh_replay_detected' }),
+    );
+  });
+
+  it('still burns the family when the lost race left no live successor', async () => {
+    const { svc } = makeService(async () => ({ sub: 'u1' }));
+    prismaMock.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt1',
+      userId: 'u1',
+      family: 'fam-1',
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    prismaMock.user.findUnique.mockResolvedValue(ACTIVE_USER);
+    prismaMock.refreshToken.updateMany.mockResolvedValue({ count: 0 });
+    // A logout or a password change revoked everything — nothing live remains.
+    prismaMock.refreshToken.findFirst.mockResolvedValue(null);
+
+    await expect(svc.refresh('good-token')).rejects.toThrow(UnauthorizedException);
+
+    expect(prismaMock.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { family: 'fam-1', revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'auth.refresh_replay_detected' }),
+    );
+    expect(prismaMock.refreshToken.create).not.toHaveBeenCalled();
+  });
+
+  it('burns the family when the surviving successor is too old to be a race', async () => {
+    const { svc } = makeService(async () => ({ sub: 'u1' }));
+    prismaMock.refreshToken.findUnique.mockResolvedValue({
+      id: 'rt1',
+      userId: 'u1',
+      family: 'fam-1',
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    prismaMock.user.findUnique.mockResolvedValue(ACTIVE_USER);
+    prismaMock.refreshToken.updateMany.mockResolvedValue({ count: 0 });
+    // Minted a minute ago: the legitimate client has long since moved on, so a
+    // token turning up now is one it should no longer be holding.
+    prismaMock.refreshToken.findFirst.mockResolvedValue({
+      id: 'rt2',
+      family: 'fam-1',
+      revokedAt: null,
+      createdAt: new Date(Date.now() - 60_000),
+    });
+
+    await expect(svc.refresh('good-token')).rejects.toThrow(UnauthorizedException);
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'auth.refresh_replay_detected' }),
+    );
+    expect(prismaMock.refreshToken.create).not.toHaveBeenCalled();
   });
 
   it('detects replay of a revoked token and burns the whole family', async () => {
