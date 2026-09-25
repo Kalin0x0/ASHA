@@ -32,7 +32,6 @@ import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { AshaMark } from '@/components/brand/logo';
 import { ObservationNotice } from '@/components/composite/observation-notice';
-import { getAccessToken } from '@/lib/api/auth-store';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -566,8 +565,11 @@ export default function StreamingViewerPage() {
       ).JSMpeg;
       if (!J) throw new Error('jsmpeg unavailable');
       const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const token = getAccessToken() ?? '';
-      const url = `${scheme}://${window.location.host}/session/${encodeURIComponent(kasmId)}/audio?token=${encodeURIComponent(token)}`;
+      // No token on this URL. The session cookie minted when the viewer opened is
+      // what authorises the audio router — session-auth.controller.test.ts:281 pins
+      // that — and the gate never read this parameter, so all it ever did was copy
+      // a full-API bearer into proxy logs, access logs and the Referer chain.
+      const url = `${scheme}://${window.location.host}/session/${encodeURIComponent(kasmId)}/audio`;
       let established = false;
       const player = new J.Player(url, {
         audio: true,
