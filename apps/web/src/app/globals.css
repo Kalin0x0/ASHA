@@ -806,9 +806,22 @@
 }
 
 /* Elements that are deliberately dark in BOTH themes (the streaming cockpit,
-   dark chips over imagery) opt back in to light-on-dark gold via `.on-dark`. */
+   dark chips over imagery, the sign-in photo panel) opt back in to light-on-dark
+   brand via `.on-dark`. */
 .light .on-dark .text-gold-200,
 .light .on-dark .text-gold-300,
 .light .on-dark .text-gold-400 {
   color: var(--color-gold-300);
+}
+
+/* The gradient headline needs the same escape hatch. Without it the deep ramp
+   above paints Deep Teal onto a dark photograph and the accent word disappears —
+   which is exactly what happened on the sign-in page in light mode. */
+.light .on-dark .text-gradient-gold {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-gold-300),
+    var(--color-gold-500) 55%,
+    var(--color-gold-700)
+  );
 }

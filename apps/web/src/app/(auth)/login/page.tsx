@@ -119,7 +119,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen w-full bg-anthracite-950">
       {/* ── Showcase panel (cinematic) — hidden on narrow viewports ─────── */}
-      <aside className="relative hidden flex-[1.1] flex-col justify-between overflow-hidden p-12 md:flex lg:p-[52px]">
+      <aside className="on-dark relative hidden flex-[1.1] flex-col justify-between overflow-hidden p-12 md:flex lg:p-[52px]">
         {/* Forest photo */}
         <div
           aria-hidden

@@ -78,7 +78,7 @@ export default function RequestAccessPage() {
   return (
     <div className="flex min-h-screen w-full bg-anthracite-950">
       {/* ── Showcase panel — mirrors the sign-in screen ─────────────────── */}
-      <aside className="relative hidden flex-[1.1] flex-col justify-between overflow-hidden p-12 md:flex lg:p-[52px]">
+      <aside className="on-dark relative hidden flex-[1.1] flex-col justify-between overflow-hidden p-12 md:flex lg:p-[52px]">
         <div
           aria-hidden
           className="absolute inset-0 scale-[1.04] bg-cover bg-center"
