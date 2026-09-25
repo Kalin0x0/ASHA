@@ -174,11 +174,30 @@
   --ring: var(--color-brand-500);
 
   --highlight-top: rgba(255, 255, 255, 0.06);
-  /* Focus/emphasis glow. --gold-glow is the legacy name the utilities still read. */
-  /* Brand as channels, so the glows and washes below keep their exact alpha. */
+  /* Focus/emphasis glow. --gold-glow is the legacy name the utilities still read.
+     --brand-rgb holds the brand as channels, so the glows and washes further down
+     keep their exact alpha and still change with the theme. */
   --brand-rgb: 61 214 198;
   --brand-glow: 0 0 0 1px rgba(61, 214, 198, 0.3), 0 0 28px -6px rgba(61, 214, 198, 0.45);
   --gold-glow: var(--brand-glow);
+
+  /* Chart tones — the two gradient ends of gauge arcs and series strokes. They are
+     theme-scoped because a ramp tuned for a dark surface is unreadable on a light
+     one: Aurora Mint carries 8.72:1 on Night Slate and 1.68:1 on white. Every step
+     clears 3:1 against both this theme's page and its card surface, the floor WCAG
+     2.2 sets for graphical objects (1.4.11). Error and info take their -500 step as
+     the deep end; -600 measured 2.66:1 and 2.82:1 on a card and was already short. */
+  --tone-brand-bright: var(--color-brand-300);
+  --tone-brand-deep: var(--color-brand-500);
+  --tone-success-bright: var(--color-success-400);
+  --tone-success-deep: var(--color-success-600);
+  --tone-warn-bright: var(--color-warn-400);
+  --tone-warn-deep: var(--color-warn-600);
+  --tone-error-bright: var(--color-error-400);
+  --tone-error-deep: var(--color-error-500);
+  --tone-info-bright: var(--color-info-400);
+  --tone-info-deep: var(--color-info-500);
+
   /* Layered, soft shadows for premium depth (close + mid + far casts). */
   --shadow-ambient: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 16px -6px rgba(0, 0, 0, 0.5),
     0 16px 40px -18px rgba(0, 0, 0, 0.6);
@@ -237,6 +256,21 @@
   --ring: var(--color-brand-700); /* 5.80:1 on ivory */
 
   --highlight-top: rgba(255, 255, 255, 0.9);
+
+  /* Chart tones, light twin. Measured against both Cloud Ivory and the white card:
+     brand 4.40/4.73, success 3.95/4.26, warning 3.56/3.84, error 4.66/5.02,
+     info 4.86/5.24 at the bright end, and higher at the deep end. */
+  --tone-brand-bright: #238079;
+  --tone-brand-deep: var(--color-brand-800);
+  --tone-success-bright: #2f8a62;
+  --tone-success-deep: #1f7a52;
+  --tone-warn-bright: #a87a24;
+  --tone-warn-deep: #936a15;
+  --tone-error-bright: #c0463c;
+  --tone-error-deep: #b23b30;
+  --tone-info-bright: #4a6da3;
+  --tone-info-deep: #3f63a0;
+
   --brand-rgb: 16 59 63;
   --brand-glow: 0 0 0 1px rgba(30, 107, 105, 0.35), 0 0 22px -8px rgba(16, 59, 63, 0.35);
   --gold-glow: var(--brand-glow);

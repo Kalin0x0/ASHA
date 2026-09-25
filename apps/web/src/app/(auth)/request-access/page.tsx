@@ -142,7 +142,7 @@ export default function RequestAccessPage() {
 
       {/* ── Request panel ──────────────────────────────────────────────── */}
       <main className="bg-aurora relative flex flex-1 items-center justify-center p-6 sm:p-10 md:min-w-[400px] md:flex-[0.9]">
-        <div className="w-[380px] max-w-full animate-fade-up">
+        <div className="w-full max-w-[380px] animate-fade-up">
           {done ? (
             /* Submitted — nothing exists yet, an admin must approve. */
             <div className="text-center">

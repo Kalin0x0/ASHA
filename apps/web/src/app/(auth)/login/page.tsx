@@ -187,7 +187,7 @@ export default function LoginPage() {
 
       {/* ── Sign-in panel ──────────────────────────────────────────────── */}
       <main className="bg-aurora relative flex flex-1 items-center justify-center p-6 sm:p-10 md:min-w-[400px] md:flex-[0.9]">
-        <div className="w-[380px] max-w-full animate-fade-up">
+        <div className="w-full max-w-[380px] animate-fade-up">
           <div className="mb-6">
             <h1 className="font-display text-3xl font-semibold tracking-tight">
               {t.rich('welcome', {
