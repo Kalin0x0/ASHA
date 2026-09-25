@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 type Tone = 'gold' | 'info' | 'success' | 'warning';
 
 const TONE: Record<Tone, { value: string; chip: string; stroke: string; glow: string }> = {
-  gold: { value: 'text-gold-300', chip: 'bg-gold-500/15 text-gold-300 ring-gold-500/25', stroke: 'var(--color-gold-400)', glow: 'rgba(212,175,55,0.14)' },
+  gold: { value: 'text-gold-300', chip: 'bg-gold-500/15 text-gold-300 ring-gold-500/25', stroke: 'var(--color-gold-400)', glow: 'rgb(var(--brand-rgb)/0.14)' },
   info: { value: 'text-foreground', chip: 'bg-info-500/12 text-info-400 ring-info-500/20', stroke: 'var(--color-info-400)', glow: 'rgba(106,143,196,0.12)' },
   success: { value: 'text-foreground', chip: 'bg-success-500/12 text-success-400 ring-success-500/20', stroke: 'var(--color-success-400)', glow: 'rgba(95,184,143,0.12)' },
   warning: { value: 'text-foreground', chip: 'bg-warn-500/12 text-warn-400 ring-warn-500/20', stroke: 'var(--color-warn-400)', glow: 'rgba(224,168,74,0.12)' },

@@ -1651,7 +1651,7 @@ function QuickTile({
       disabled={disabled}
       className={cn(
         'flex flex-col items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-[var(--surface-2)] px-2 py-3 text-center transition-colors ring-gold-focus',
-        disabled ? 'cursor-not-allowed opacity-40' : 'hover:border-[rgba(212,175,55,0.4)] hover:text-foreground',
+        disabled ? 'cursor-not-allowed opacity-40' : 'hover:border-gold-500/40 hover:text-foreground',
       )}
     >
       <Icon className="size-5 text-gold-300" />
@@ -1681,7 +1681,7 @@ function PanelRow({
       onClick={onClick}
       className={cn(
         'flex w-full items-center gap-3 rounded-lg border border-border-subtle bg-[var(--surface-2)] px-3 py-2.5 text-start transition-colors ring-gold-focus',
-        destructive ? 'hover:border-destructive/50' : 'hover:border-[rgba(212,175,55,0.4)]',
+        destructive ? 'hover:border-destructive/50' : 'hover:border-gold-500/40',
       )}
     >
       <span
@@ -1743,7 +1743,7 @@ function Overlay({
       <div className="flex max-w-sm flex-col items-center gap-4 px-6 text-center">
         {state === 'connecting' && (
           <>
-            <span className="flex size-14 items-center justify-center rounded-2xl border border-[rgba(212,175,55,0.3)] bg-gold-500/10 text-gold-300">
+            <span className="flex size-14 items-center justify-center rounded-2xl border border-gold-500/30 bg-gold-500/10 text-gold-300">
               <Loader2 className="size-6 animate-spin" />
             </span>
             <div className="space-y-1">

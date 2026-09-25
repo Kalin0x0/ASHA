@@ -17,7 +17,7 @@ export function AgentHealthCard({ agent }: { agent: Agent }) {
   return (
     <Card
       elevation={1}
-      className="group relative overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-[rgba(212,175,55,0.25)] hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5)]"
+      className="group relative overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-500/25 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5)]"
     >
       {/* Header */}
       <div className="flex items-center justify-between gap-3">

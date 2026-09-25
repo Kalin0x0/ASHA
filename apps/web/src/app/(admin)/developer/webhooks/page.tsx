@@ -152,7 +152,7 @@ export default function WebhooksPage() {
             <EmptyState icon={Webhook} title={t('webhooks.emptyTitle')} description={t('webhooks.emptyDescription')} />
           ) : (
             webhooks.map((w) => (
-              <div key={w.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
+              <div key={w.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgb(var(--brand-rgb)/0.55)]">
                 <Webhook className="size-4 text-gold-300" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{w.name}</p>
@@ -202,7 +202,7 @@ export default function WebhooksPage() {
                 onClick={() => toggleEvent(e)}
                 className={`rounded-md border px-2.5 py-1 font-mono text-[11px] transition-colors ${
                   events.includes(e)
-                    ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
+                    ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
                     : 'border-border-subtle text-muted-foreground hover:bg-secondary'
                 }`}
               >

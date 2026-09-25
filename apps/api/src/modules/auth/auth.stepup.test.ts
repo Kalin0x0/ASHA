@@ -3,7 +3,7 @@ import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { prismaMock, otpMock } = vi.hoisted(() => ({
-  prismaMock: { twoFactorMethod: { findFirst: vi.fn() } },
+  prismaMock: { twoFactorMethod: { findFirst: vi.fn(), updateMany: vi.fn() } },
   otpMock: { verify: vi.fn() },
 }));
 vi.mock('@asha/db', () => ({ prisma: prismaMock }));
@@ -28,12 +28,34 @@ describe('AuthService.stepUp (C4)', () => {
     const { svc, jwt } = makeSvc();
     prismaMock.twoFactorMethod.findFirst.mockResolvedValue({ id: 'm', secret: 'S', type: 'TOTP', confirmed: true });
     otpMock.verify.mockReturnValue({ valid: true });
+    prismaMock.twoFactorMethod.updateMany.mockResolvedValue({ count: 1 });
     const res = await svc.stepUp(USER, '123456');
     expect(res).toMatchObject({ accessToken: 'elevated-token', acr: 'step-up', expiresIn: 300 });
     expect(jwt.signAsync).toHaveBeenCalledWith(
       expect.objectContaining({ acr: 'step-up', sub: 'u1' }),
       expect.objectContaining({ expiresIn: 300 }),
     );
+  });
+
+  it('spends the code, so the same one cannot elevate twice', async () => {
+    const { svc, jwt } = makeSvc();
+    prismaMock.twoFactorMethod.findFirst.mockResolvedValue({ id: 'm', secret: 'S', type: 'TOTP', confirmed: true });
+    otpMock.verify.mockReturnValue({ valid: true });
+    // The window was already spent — by the login that produced this code, or by a
+    // first elevation. The verify still succeeds: the digits are genuinely right.
+    prismaMock.twoFactorMethod.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(svc.stepUp(USER, '123456')).rejects.toThrow(UnauthorizedException);
+    expect(jwt.signAsync).not.toHaveBeenCalled();
+  });
+
+  it('claims the window only after the code verified', async () => {
+    const { svc } = makeSvc();
+    prismaMock.twoFactorMethod.findFirst.mockResolvedValue({ id: 'm', secret: 'S', type: 'TOTP', confirmed: true });
+    otpMock.verify.mockReturnValue({ valid: false });
+    await expect(svc.stepUp(USER, '000000')).rejects.toThrow(UnauthorizedException);
+    // Otherwise six random digits would burn the victim's window for them.
+    expect(prismaMock.twoFactorMethod.updateMany).not.toHaveBeenCalled();
   });
 
   it('rejects an invalid TOTP', async () => {

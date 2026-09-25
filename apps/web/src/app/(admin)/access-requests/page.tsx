@@ -363,7 +363,7 @@ export default function AccessRequestsPage() {
                   rows.map((r) => (
                     <tr
                       key={r.id}
-                      className="border-b border-border-subtle/60 transition-colors last:border-0 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]"
+                      className="border-b border-border-subtle/60 transition-colors last:border-0 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgb(var(--brand-rgb)/0.55)]"
                     >
                       <td className="px-4 py-3">
                         <p className="font-medium text-foreground">{r.displayName || r.username}</p>
@@ -485,8 +485,8 @@ export default function AccessRequestsPage() {
                       className={cn(
                         'ring-gold-focus rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors duration-150',
                         selected
-                          ? 'border-[rgba(212,175,55,0.5)] bg-gold-500/15 text-gold-200'
-                          : 'border-border-subtle text-muted-foreground hover:border-[rgba(212,175,55,0.35)] hover:text-foreground',
+                          ? 'border-gold-500/50 bg-gold-500/15 text-gold-200'
+                          : 'border-border-subtle text-muted-foreground hover:border-gold-500/35 hover:text-foreground',
                       )}
                     >
                       {tLicense(`presets.${p}`)}

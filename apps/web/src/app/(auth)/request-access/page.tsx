@@ -78,7 +78,7 @@ export default function RequestAccessPage() {
   return (
     <div className="flex min-h-screen w-full bg-anthracite-950">
       {/* ── Showcase panel — mirrors the sign-in screen ─────────────────── */}
-      <aside className="relative hidden flex-[1.1] flex-col justify-between overflow-hidden p-12 md:flex lg:p-[52px]">
+      <aside className="on-dark relative hidden flex-[1.1] flex-col justify-between overflow-hidden p-12 md:flex lg:p-[52px]">
         <div
           aria-hidden
           className="absolute inset-0 scale-[1.04] bg-cover bg-center"
@@ -95,13 +95,13 @@ export default function RequestAccessPage() {
         <div
           aria-hidden
           className="absolute inset-0"
-          style={{ background: 'radial-gradient(70% 60% at 78% 28%, rgba(212,175,55,0.22), transparent 60%)' }}
+          style={{ background: 'radial-gradient(70% 60% at 78% 28%, rgb(var(--brand-rgb)/0.22), transparent 60%)' }}
         />
         <div aria-hidden className="absolute inset-0" style={{ boxShadow: 'inset 0 0 160px 30px rgba(8,8,16,0.6)' }} />
         <div
           aria-hidden
           className="absolute inset-y-0 end-0 w-px"
-          style={{ background: 'linear-gradient(180deg, transparent, rgba(212,175,55,0.5), transparent)' }}
+          style={{ background: 'linear-gradient(180deg, transparent, rgb(var(--brand-rgb)/0.5), transparent)' }}
         />
 
         <div className="relative flex items-center gap-3.5">
@@ -142,7 +142,7 @@ export default function RequestAccessPage() {
 
       {/* ── Request panel ──────────────────────────────────────────────── */}
       <main className="bg-aurora relative flex flex-1 items-center justify-center p-6 sm:p-10 md:min-w-[400px] md:flex-[0.9]">
-        <div className="w-[380px] max-w-full animate-fade-up">
+        <div className="w-full max-w-[380px] animate-fade-up">
           {done ? (
             /* Submitted — nothing exists yet, an admin must approve. */
             <div className="text-center">
@@ -229,7 +229,7 @@ export default function RequestAccessPage() {
                     rows={3}
                     maxLength={2000}
                     disabled={enabled === null}
-                    className="ring-gold-focus min-h-[76px] w-full resize-y rounded-md border border-input bg-[var(--surface-1)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors focus-visible:border-[rgba(212,175,55,0.5)] focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    className="ring-gold-focus min-h-[76px] w-full resize-y rounded-md border border-input bg-[var(--surface-1)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 transition-colors focus-visible:border-gold-500/50 focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   <p className="text-[11px] text-muted-foreground/70">{t('reasonHint')}</p>
                 </div>

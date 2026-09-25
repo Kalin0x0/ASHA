@@ -195,7 +195,7 @@ function SessionWindow({
       radius="rounded-xl"
       sheen={false}
       tint="var(--glass-tint-strong)"
-      className="group w-[320px] border border-white/12 transition-colors duration-200 hover:border-[rgba(212,175,55,0.4)] sm:w-[360px]"
+      className="group w-[320px] border border-white/12 transition-colors duration-200 hover:border-gold-500/40 sm:w-[360px]"
     >
       {chrome === 'mac' ? (
         /* macOS titlebar — traffic lights on the start, centered title. */
@@ -259,7 +259,7 @@ function SessionWindow({
             )}
           />
         ) : (
-          <span className="flex size-full items-center justify-center bg-[radial-gradient(120%_120%_at_50%_0%,#23234a,#14141f)]">
+          <span className="flex size-full items-center justify-center bg-[radial-gradient(120%_120%_at_50%_0%,#2e4348,#11262a)]">
             <AppIcon
               name={s.workspaceName}
               dockerImage={ws?.dockerImage}

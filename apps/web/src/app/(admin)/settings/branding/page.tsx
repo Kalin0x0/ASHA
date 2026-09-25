@@ -39,8 +39,8 @@ export default function BrandingPage() {
     logoUrl: null,
     faviconUrl: null,
     loginBackgroundUrl: null,
-    primaryColor: '#1a1a2e',
-    accentColor: '#d4af37',
+    primaryColor: '#103b3f',
+    accentColor: '#3dd6c6',
     customCss: null,
   };
 
@@ -137,7 +137,7 @@ export default function BrandingPage() {
               value={b.customCss ?? ''}
               onChange={(e) => set({ customCss: e.target.value })}
               rows={6}
-              placeholder=":root { --brand: #d4af37; }"
+              placeholder=":root { --brand: #3dd6c6; }"
               className="w-full rounded-md border border-border-subtle bg-[var(--surface-1)] p-2 font-mono text-xs"
             />
           </div>

@@ -99,7 +99,7 @@ export function ReportBugDialog() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t('fields.descriptionPlaceholder')}
               rows={5}
-              className="flex w-full resize-y rounded-md border border-input bg-[var(--surface-1)] px-3 py-2 text-sm transition-shadow placeholder:text-muted-foreground/70 focus-visible:border-[rgba(212,175,55,0.5)] focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none"
+              className="flex w-full resize-y rounded-md border border-input bg-[var(--surface-1)] px-3 py-2 text-sm transition-shadow placeholder:text-muted-foreground/70 focus-visible:border-gold-500/50 focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none"
             />
           </div>
 
@@ -109,7 +109,7 @@ export function ReportBugDialog() {
               id="bug-severity"
               value={severity}
               onChange={(e) => setSeverity(e.target.value as BugSeverity)}
-              className="flex h-9.5 w-full rounded-md border border-input bg-[var(--surface-1)] px-3 text-sm focus-visible:border-[rgba(212,175,55,0.5)] focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none"
+              className="flex h-9.5 w-full rounded-md border border-input bg-[var(--surface-1)] px-3 text-sm focus-visible:border-gold-500/50 focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none"
             >
               {SEVERITIES.map((s) => (
                 <option key={s} value={s}>

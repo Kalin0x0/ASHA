@@ -119,7 +119,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen w-full bg-anthracite-950">
       {/* ── Showcase panel (cinematic) — hidden on narrow viewports ─────── */}
-      <aside className="relative hidden flex-[1.1] flex-col justify-between overflow-hidden p-12 md:flex lg:p-[52px]">
+      <aside className="on-dark relative hidden flex-[1.1] flex-col justify-between overflow-hidden p-12 md:flex lg:p-[52px]">
         {/* Forest photo */}
         <div
           aria-hidden
@@ -138,14 +138,14 @@ export default function LoginPage() {
         <div
           aria-hidden
           className="absolute inset-0"
-          style={{ background: 'radial-gradient(70% 60% at 78% 28%, rgba(212,175,55,0.22), transparent 60%)' }}
+          style={{ background: 'radial-gradient(70% 60% at 78% 28%, rgb(var(--brand-rgb)/0.22), transparent 60%)' }}
         />
         <div aria-hidden className="absolute inset-0" style={{ boxShadow: 'inset 0 0 160px 30px rgba(8,8,16,0.6)' }} />
         {/* Gold hairline divider on the seam */}
         <div
           aria-hidden
           className="absolute inset-y-0 end-0 w-px"
-          style={{ background: 'linear-gradient(180deg, transparent, rgba(212,175,55,0.5), transparent)' }}
+          style={{ background: 'linear-gradient(180deg, transparent, rgb(var(--brand-rgb)/0.5), transparent)' }}
         />
 
         {/* Brand lockup */}
@@ -187,7 +187,7 @@ export default function LoginPage() {
 
       {/* ── Sign-in panel ──────────────────────────────────────────────── */}
       <main className="bg-aurora relative flex flex-1 items-center justify-center p-6 sm:p-10 md:min-w-[400px] md:flex-[0.9]">
-        <div className="w-[380px] max-w-full animate-fade-up">
+        <div className="w-full max-w-[380px] animate-fade-up">
           <div className="mb-6">
             <h1 className="font-display text-3xl font-semibold tracking-tight">
               {t.rich('welcome', {

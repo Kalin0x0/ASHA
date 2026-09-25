@@ -32,7 +32,6 @@ import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { AshaMark } from '@/components/brand/logo';
 import { ObservationNotice } from '@/components/composite/observation-notice';
-import { getAccessToken } from '@/lib/api/auth-store';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -566,8 +565,11 @@ export default function StreamingViewerPage() {
       ).JSMpeg;
       if (!J) throw new Error('jsmpeg unavailable');
       const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const token = getAccessToken() ?? '';
-      const url = `${scheme}://${window.location.host}/session/${encodeURIComponent(kasmId)}/audio?token=${encodeURIComponent(token)}`;
+      // No token on this URL. The session cookie minted when the viewer opened is
+      // what authorises the audio router — session-auth.controller.test.ts:281 pins
+      // that — and the gate never read this parameter, so all it ever did was copy
+      // a full-API bearer into proxy logs, access logs and the Referer chain.
+      const url = `${scheme}://${window.location.host}/session/${encodeURIComponent(kasmId)}/audio`;
       let established = false;
       const player = new J.Player(url, {
         audio: true,
@@ -1199,7 +1201,7 @@ function Provisioning({ status, workspaceName }: { status: string | undefined; w
               className={cn(
                 'flex items-center gap-3 rounded-lg border px-4 py-2.5 text-sm transition-all',
                 done && 'border-success/30 bg-success/5 text-foreground',
-                active && 'border-[rgba(212,175,55,0.4)] bg-gold-500/5 text-foreground',
+                active && 'border-gold-500/40 bg-gold-500/5 text-foreground',
                 !done && !active && 'border-border-subtle text-muted-foreground',
               )}
             >
@@ -1355,7 +1357,7 @@ function PlaceholderStream({ workspaceName, clock }: { workspaceName: string; cl
         <AshaMark className="absolute left-1/2 top-1/2 size-[560px] -translate-x-1/2 -translate-y-1/2 opacity-[0.03]" />
 
         {/* Central setup panel — high-contrast so it's unmistakable */}
-        <div className="absolute left-1/2 top-1/2 w-[min(560px,90vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-gold-500/30 bg-anthracite-900 shadow-[0_0_0_1px_rgba(212,175,55,0.08),0_24px_64px_rgba(0,0,0,0.6)]">
+        <div className="absolute left-1/2 top-1/2 w-[min(560px,90vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-gold-500/30 bg-anthracite-900 shadow-[0_0_0_1px_rgb(var(--brand-rgb)/0.08),0_24px_64px_rgba(0,0,0,0.6)]">
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-border-subtle bg-anthracite-800 px-5 py-3.5">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success/15">

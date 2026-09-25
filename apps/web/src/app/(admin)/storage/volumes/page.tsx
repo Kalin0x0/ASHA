@@ -83,7 +83,7 @@ export default function VolumeMappingsPage() {
             <EmptyState icon={Database} title={t('volumes.empty.title')} description={t('volumes.empty.description')} />
           ) : (
             volumes.map((v) => (
-              <div key={v.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
+              <div key={v.id} className="flex items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgb(var(--brand-rgb)/0.55)]">
                 <Database className="size-4 text-gold-300" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{v.name}</p>

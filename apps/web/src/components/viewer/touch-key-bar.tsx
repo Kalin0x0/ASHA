@@ -64,7 +64,7 @@ function Key({
         'inline-flex h-11 shrink-0 items-center justify-center rounded-lg border px-3 text-xs font-medium transition-colors ring-gold-focus',
         wide && 'px-4',
         active
-          ? 'border-[rgba(212,175,55,0.45)] bg-gold-500/20 text-gold-700 dark:text-gold-200'
+          ? 'border-gold-500/45 bg-gold-500/20 text-gold-700 dark:text-gold-200'
           : 'border-border-subtle bg-secondary text-muted-foreground active:bg-secondary/70',
       )}
     >

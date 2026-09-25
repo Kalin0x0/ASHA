@@ -15,7 +15,7 @@ import { useBugReports, useBugStats } from '@/lib/hooks';
 import type { BugStatus } from '@/lib/types';
 
 const selectClass =
-  'h-9.5 rounded-md border border-input bg-[var(--surface-1)] px-3 text-sm focus-visible:border-[rgba(212,175,55,0.5)] focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none';
+  'h-9.5 rounded-md border border-input bg-[var(--surface-1)] px-3 text-sm focus-visible:border-gold-500/50 focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none';
 
 const STATUS_FILTERS: (BugStatus | 'ALL' | 'ACTIVE')[] = ['ACTIVE', 'ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'];
 const ACTIVE: BugStatus[] = ['OPEN', 'TRIAGED', 'IN_PROGRESS'];

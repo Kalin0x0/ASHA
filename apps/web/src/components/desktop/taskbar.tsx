@@ -25,7 +25,7 @@ export function StartGlyph({ className }: { className?: string }) {
   return (
     <span className={cn('grid grid-cols-2 gap-[3px]', className)} aria-hidden>
       {[0, 1, 2, 3].map((i) => (
-        <span key={i} className="block size-[7px] rounded-[2px] bg-gold-300 shadow-[0_0_5px_rgba(212,175,55,0.55)]" />
+        <span key={i} className="block size-[7px] rounded-[2px] bg-gold-300 shadow-[0_0_5px_rgb(var(--brand-rgb)/0.55)]" />
       ))}
     </span>
   );
@@ -195,7 +195,7 @@ function TaskbarApp({
       {running && (
         <span
           aria-hidden
-          className="absolute bottom-[3px] left-1/2 h-[3px] w-4 -translate-x-1/2 rounded-full bg-gold-400 shadow-[0_0_6px_rgba(212,175,55,0.7)]"
+          className="absolute bottom-[3px] left-1/2 h-[3px] w-4 -translate-x-1/2 rounded-full bg-gold-400 shadow-[0_0_6px_rgb(var(--brand-rgb)/0.7)]"
         />
       )}
     </button>

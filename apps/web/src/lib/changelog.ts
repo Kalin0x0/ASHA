@@ -38,6 +38,41 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.0',
+    date: '2026-09-25',
+    title: { en: 'A new look, and an end to the surprise sign-outs', de: 'Neues Erscheinungsbild — und Schluss mit den plötzlichen Abmeldungen' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'Asha has its own colours. Deep teal with a mint accent replaces the old gold, over a night-slate background in dark mode and a soft ivory one in light mode. Nothing moved: the same pages, the same buttons, in the same places. Status colours are untouched, so green still means running and red still means trouble — and the contents of your desktops are never tinted. What you see inside a session is exactly what the application draws.',
+          de: 'Asha hat eigene Farben. Tiefes Petrol mit einem Mint-Akzent ersetzt das bisherige Gold, auf schiefergrauem Grund im dunklen und weichem Elfenbein im hellen Modus. Verschoben wurde nichts: dieselben Seiten, dieselben Schaltflächen, an denselben Stellen. Die Statusfarben bleiben, wie sie waren — Grün heißt weiterhin „läuft“, Rot weiterhin „Problem“ — und die Inhalte Ihrer Desktops werden nie eingefärbt. Was Sie in einer Sitzung sehen, zeichnet die Anwendung selbst.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Having Asha open in two tabs could sign you out of both at once, without warning and without you doing anything to cause it. Both tabs renew the same login in the background, and when they happened to renew at the same moment, Asha mistook it for a stolen session and ended every session you had. It now recognises your own second tab and leaves you signed in.',
+          de: 'Wer Asha in zwei Tabs geöffnet hatte, konnte ohne Vorwarnung aus beiden gleichzeitig abgemeldet werden, ohne etwas falsch gemacht zu haben. Beide Tabs erneuern im Hintergrund dieselbe Anmeldung, und traf das zufällig im selben Moment zusammen, hielt Asha es für eine gestohlene Sitzung und beendete alle. Der eigene zweite Tab wird jetzt erkannt, die Anmeldung bleibt bestehen.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Two-factor codes are now properly used up. A six-digit code is good for one sign-in and no longer works a second time inside its thirty seconds — neither for another sign-in nor for confirming a sensitive action. If you are asked for a code twice in a row, wait for the next one.',
+          de: 'Zwei-Faktor-Codes werden jetzt richtig verbraucht. Ein sechsstelliger Code gilt für eine Anmeldung und funktioniert innerhalb seiner dreißig Sekunden kein zweites Mal — weder für eine weitere Anmeldung noch zum Bestätigen einer sensiblen Aktion. Werden Sie zweimal hintereinander nach einem Code gefragt, warten Sie den nächsten ab.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'On a phone, the sign-in panel ran off the edge of the screen. It fits now.',
+          de: 'Auf dem Handy lief die Anmeldemaske über den Bildschirmrand hinaus. Sie passt jetzt.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.15',
     date: '2026-09-22',
     title: { en: 'Watching a desktop can no longer change it', de: 'Zuschauen verändert den Desktop nicht mehr' },

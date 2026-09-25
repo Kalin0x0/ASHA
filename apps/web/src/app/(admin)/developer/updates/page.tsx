@@ -83,7 +83,7 @@ export default function UpdatesPage() {
 
       {/* Current version banner */}
       <Card elevation="gold" className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-[rgba(212,175,55,0.35)] bg-gold-500/10 text-gold-300">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-gold-500/35 bg-gold-500/10 text-gold-300">
           <Rocket className="size-6" />
         </div>
         <div className="min-w-0">
@@ -118,7 +118,7 @@ export default function UpdatesPage() {
       {/* Update-available banner */}
       {updateAvailable && status && (
         <Card elevation={1} className="gold-hairline flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-[rgba(212,175,55,0.35)] bg-gold-500/10 text-gold-300">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-gold-500/35 bg-gold-500/10 text-gold-300">
             <ArrowUpCircle className="size-6" />
           </div>
           <div className="min-w-0 flex-1">
@@ -220,7 +220,7 @@ function UpdateProgressPanel({
             'flex size-10 shrink-0 items-center justify-center rounded-xl border',
             done
               ? 'border-[rgba(95,184,143,0.35)] bg-[rgba(95,184,143,0.1)] text-success'
-              : 'border-[rgba(212,175,55,0.35)] bg-gold-500/10 text-gold-300',
+              : 'border-gold-500/35 bg-gold-500/10 text-gold-300',
           )}
         >
           {done ? <CheckCircle2 className="size-5" /> : <Loader2 className="size-5 animate-spin" />}
