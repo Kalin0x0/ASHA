@@ -39,7 +39,9 @@ export function MenuHandle({
   const label = viewOnly ? `${viewOnly} · ${t('menu.show')}` : t('menu.show');
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 top-0 z-50 flex justify-center"
+      // on-dark: the tab hangs over the desktop, never over the page, so the
+      // light theme must not recolour it dark-on-dark.
+      className="on-dark pointer-events-none absolute inset-x-0 top-0 z-50 flex justify-center"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <button
@@ -54,9 +56,12 @@ export function MenuHandle({
         onClick={(e) => onShow(e.detail === 0)}
         className="group pointer-events-auto flex h-11 min-w-11 items-start justify-center rounded-b-lg ring-gold-focus [[data-pressing]_&]:pointer-events-none"
       >
-        <span className="flex h-5 min-w-10 items-center justify-center gap-1.5 rounded-b-lg border border-t-0 border-gold-500/35 bg-anthracite-900/80 px-2 text-gold-300 opacity-80 shadow-[var(--shadow-lifted)] backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 group-active:opacity-100">
+        <span
+          data-cue={viewOnly ? '' : undefined}
+          className="flex h-5 min-w-10 items-center justify-center gap-1.5 rounded-b-lg border border-t-0 border-gold-500/35 bg-anthracite-900/80 px-2 text-gold-300 opacity-80 data-[cue]:bg-anthracite-900 data-[cue]:opacity-100 shadow-[var(--shadow-lifted)] backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 group-active:opacity-100"
+        >
           {viewOnly && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-info">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--color-info-400)]">
               <Eye className="size-3" aria-hidden /> {viewOnly}
             </span>
           )}

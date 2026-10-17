@@ -76,7 +76,7 @@ describe('the notice survives fullscreen', () => {
     const src = read('app/connect/[kasmId]/page.tsx');
     // Fullscreen is requested on containerRef — the fixed root that holds the
     // toolbar, the notice and the canvas — not on the stage under it.
-    expect(src).toMatch(/const el = containerRef\.current;[\s\S]{0,240}el\.requestFullscreen/);
+    expect(src).toMatch(/const el = containerRef\.current;[\s\S]{0,240}void el\.requestFullscreen\(\)/);
     expect(src).toMatch(/<div ref=\{containerRef\}[^>]*fixed inset-0/);
     // The notice is a child of that root, overlaid on the stage inside it.
     expect(src).toContain('<ObservationNotice');
@@ -86,7 +86,8 @@ describe('the notice survives fullscreen', () => {
     const src = read('app/connect/[kasmId]/page.tsx');
     // Fullscreen folds the toolbar away and is read from the browser's own
     // event, so leaving it by Esc brings the toolbar back.
-    expect(src).toContain("document.addEventListener('fullscreenchange'");
+    expect(src).toMatch(/document\.addEventListener\('fullscreenchange', sync\)/);
+    expect(src).toMatch(/dispatchMenu\(\{ type: 'fullscreen', on \}\)/);
     // Last in the viewer root, after the control panel and the pull-tab, on the
     // top layer: nothing in the viewer paints over them, whatever the toolbar
     // is doing.

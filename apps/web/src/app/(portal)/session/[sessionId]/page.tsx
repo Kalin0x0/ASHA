@@ -173,6 +173,11 @@ export default function StreamingViewerPage() {
   // to <body>. Never after a touch: focusing the frame can raise the soft
   // keyboard, and that resize would reflow the remote.
   const barPointer = useRef('');
+  // Set while WE are leaving fullscreen. KasmVNC's own in-frame button can leave
+  // the frame in the top layer under the root; our exit then pops only the root
+  // and the frame resurfaces, which must be left too — not handed back to the
+  // root as if the frame had asked for fullscreen.
+  const exitingRef = useRef(false);
 
   const workspaceName = session?.workspaceName ?? t('status.workspaceFallback');
   // Resolve the workspace's description to show under the title in the control bar.
@@ -527,7 +532,8 @@ export default function StreamingViewerPage() {
     if (notMine) return;
     // The confirmation is portaled to <body>, and element fullscreen paints
     // nothing outside the viewer: asked from fullscreen, it would wait unseen.
-    if (document.fullscreenElement) await document.exitFullscreen?.().catch(() => {});
+    exitingRef.current = true;
+    for (let i = 0; i < 3 && document.fullscreenElement; i++) await document.exitFullscreen?.().catch(() => {});
     if (
       !(await confirm({
         title: t('confirmEnd.title'),
@@ -658,6 +664,7 @@ export default function StreamingViewerPage() {
       // Anything inside the viewer but the viewer itself hands over to the root.
       if (!el || el === root || !root?.contains(el)) {
         const on = el != null && el === root;
+        if (!el) exitingRef.current = false;
         if (
           on &&
           barPointer.current !== 'touch' &&
@@ -669,7 +676,7 @@ export default function StreamingViewerPage() {
         return;
       }
       const leave = () => void document.exitFullscreen?.().catch(() => {});
-      if (!root) return leave();
+      if (!root || exitingRef.current) return leave();
       const swap = root.requestFullscreen?.();
       if (swap) void swap.catch(leave);
       else leave();
@@ -681,8 +688,10 @@ export default function StreamingViewerPage() {
   const fullscreen = () => {
     // The toolbar is inside the fullscreen element now, so the same button has
     // to lead back out of it.
-    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
-    else void rootRef.current?.requestFullscreen?.().catch(() => {});
+    if (document.fullscreenElement) {
+      exitingRef.current = true;
+      void document.exitFullscreen?.().catch(() => {});
+    } else void rootRef.current?.requestFullscreen?.().catch(() => {});
   };
   // Focus follows the bar only for the keyboard; a pointer is already where it
   // means to be.
@@ -944,12 +953,16 @@ export default function StreamingViewerPage() {
         {/* Outside the scrolling row, so a phone can never scroll them away. */}
         <div className="-ms-1 flex shrink-0 items-center gap-1">
           {floating && !menu.fullscreen && (
-            <ControlButton label={t('menu.pin')} onClick={pinMenu}>
+            <ControlButton label={t('menu.pin')} onClick={pinMenu} className="size-11 sm:size-8">
               <Pin className="size-4" />
             </ControlButton>
           )}
           {canFullscreen && (
-            <ControlButton label={menu.fullscreen ? t('toolbar.exitFullscreen') : t('toolbar.fullscreen')} onClick={fullscreen}>
+            <ControlButton
+              label={menu.fullscreen ? t('toolbar.exitFullscreen') : t('toolbar.fullscreen')}
+              onClick={fullscreen}
+              className="size-11 sm:size-8"
+            >
               {menu.fullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
             </ControlButton>
           )}
@@ -1025,7 +1038,14 @@ export default function StreamingViewerPage() {
             own document (Print + Download), instead of the guest's fragile
             hidden-iframe print. */}
         {printOpen && printPdf && (
-          <div className={cn('absolute inset-0 z-50 flex flex-col bg-anthracite-950/92 backdrop-blur', menu.open && 'top-14')}>
+          <div
+            className={cn(
+              'absolute inset-0 z-50 flex flex-col bg-anthracite-950/92 backdrop-blur',
+              menu.open && 'top-14',
+              // The notice stays on top; the Close and Print row moves below it.
+              observed && 'pt-12',
+            )}
+          >
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Printer className="size-4 text-gold-400" /> {t('toolbar.printPreview')}
@@ -1144,12 +1164,14 @@ function ControlButton({
   onClick,
   disabled = false,
   disabledHint,
+  className,
 }: {
   children: React.ReactNode;
   label: string;
   onClick: () => void;
   disabled?: boolean;
   disabledHint?: string;
+  className?: string;
 }) {
   const t = useTranslations('viewer');
 
@@ -1162,6 +1184,7 @@ function ControlButton({
           aria-disabled={disabled}
           className={cn(
             'inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors ring-gold-focus',
+            className,
             disabled
               ? 'cursor-not-allowed text-muted-foreground/30'
               : 'text-muted-foreground hover:bg-secondary hover:text-foreground',

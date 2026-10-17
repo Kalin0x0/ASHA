@@ -1353,7 +1353,7 @@ export default function ConnectPage() {
             with the fewest cues about whose desktop they are on. */}
         {monitor && (
           <span className="ms-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-info/40 bg-info/10 px-2.5 py-1 text-[11px] font-medium text-info">
-            <Eye className="size-3.5" /> {t('connect.toolbar.viewOnly')}
+            <Eye className="size-3.5" aria-hidden /> <span className="sr-only sm:not-sr-only">{t('connect.toolbar.viewOnly')}</span>
           </span>
         )}
         {canTakeControl && (
@@ -1363,9 +1363,10 @@ export default function ConnectPage() {
             className="ms-1 shrink-0"
             disabled={takingControl || !connected}
             onClick={() => void takeControl()}
+            aria-label={t('connect.toolbar.takeControl')}
           >
             {takingControl ? <Loader2 className="size-3.5 animate-spin" /> : <MousePointer2 className="size-3.5" />}
-            {t('connect.toolbar.takeControl')}
+            <span className="hidden sm:inline">{t('connect.toolbar.takeControl')}</span>
           </Button>
         )}
 
@@ -1451,6 +1452,7 @@ export default function ConnectPage() {
               icon={menu.fullscreen ? Minimize2 : Maximize2}
               label={menu.fullscreen ? t('connect.toolbar.exitFullscreen') : t('connect.toolbar.fullscreen')}
               onClick={toggleFullscreen}
+              className={cn(touch && !menu.fullscreen && 'hidden sm:inline-flex')}
             />
           )}
           {floating && !menu.fullscreen && (
