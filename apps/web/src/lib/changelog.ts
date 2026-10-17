@@ -38,6 +38,41 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.1',
+    date: '2026-10-18',
+    title: { en: 'Fullscreen is all desktop, and the menu folds away', de: 'Vollbild ist ganz Desktop, und das Menü klappt weg' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Fullscreen now gives the whole screen to the desktop: the menu bar folds away as you enter it. A small tab at the top centre brings the menu back over the desktop when you need it, and a click into the desktop puts it away again. Leaving fullscreen — with Esc or any other way — always brings the normal menu back.',
+          de: 'Im Vollbild gehört jetzt der ganze Bildschirm dem Desktop: Die Menüleiste klappt beim Wechsel ins Vollbild weg. Ein kleiner Griff oben in der Mitte holt das Menü bei Bedarf über den Desktop zurück, ein Klick in den Desktop räumt es wieder weg. Beim Verlassen des Vollbilds — per Esc oder auf jedem anderen Weg — kommt immer das normale Menü zurück.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'The menu can also be folded away outside fullscreen, with the new button at the end of the bar — on an iPhone, which has no fullscreen for web pages, that is the way to a desktop that fills the screen. Brought back from the tab, the menu lies over the desktop without resizing it; the pin button docks it again.',
+          de: 'Auch außerhalb des Vollbilds lässt sich das Menü wegklappen, mit dem neuen Knopf am Ende der Leiste — auf dem iPhone, das für Webseiten kein Vollbild kennt, ist das der Weg zum bildschirmfüllenden Desktop. Über den Griff zurückgeholt, liegt das Menü über dem Desktop, ohne seine Größe zu ändern; der Pin-Knopf dockt es wieder an.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'The notices that an administrator is watching or controlling the session now stay on top of everything in the viewer; the open control panel and the print preview used to cover them.',
+          de: 'Die Hinweise, dass ein Administrator die Sitzung beobachtet oder steuert, liegen jetzt über allem im Viewer; das geöffnete Bedienfeld und die Druckvorschau haben sie bisher verdeckt.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'A display resolution picked from the menu now survives a window or fullscreen change instead of quietly snapping back to the window size. Ending a session from fullscreen shows its confirmation instead of waiting for it out of sight, and in Persian the closed control panel no longer sits on screen.',
+          de: 'Eine im Menü gewählte Bildschirmauflösung übersteht jetzt Fenster- und Vollbildwechsel, statt still auf die Fenstergröße zurückzuspringen. Beenden aus dem Vollbild zeigt seine Rückfrage, statt unsichtbar auf sie zu warten, und auf Persisch steht das geschlossene Bedienfeld nicht mehr auf dem Bildschirm.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.3.0',
     date: '2026-09-25',
     title: { en: 'A new look, and an end to the surprise sign-outs', de: 'Neues Erscheinungsbild — und Schluss mit den plötzlichen Abmeldungen' },
