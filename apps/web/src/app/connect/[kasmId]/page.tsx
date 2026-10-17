@@ -13,9 +13,12 @@ import {
   LayoutGrid,
   Loader2,
   Maximize2,
+  Minimize2,
   Monitor,
   MonitorX,
   MousePointer2,
+  PanelTopClose,
+  Pin,
   Power,
   RefreshCw,
   Wifi,
@@ -24,7 +27,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AppIcon } from '@/components/composite/app-icon';
 import { ObservationNotice } from '@/components/composite/observation-notice';
@@ -32,6 +35,7 @@ import { ControlRequestDialog, SessionControlNotice } from '@/components/composi
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { MenuHandle } from '@/components/viewer/menu-handle';
 import { TouchKeyBar } from '@/components/viewer/touch-key-bar';
 import { ApiError } from '@/lib/api/client';
 import { useAuth } from '@/lib/api/auth-context';
@@ -67,6 +71,7 @@ import { useRealtimeEvents } from '@/lib/realtime';
 import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
 import { cn } from '@/lib/utils';
+import { INITIAL_VIEWER_MENU, menuDocked, menuFloating, menuHanging, viewerMenuReducer } from '@/lib/viewer-menu';
 
 // X11 keysyms for the control-menu shortcuts.
 const KEYSYM = { CTRL: 0xffe3, ALT: 0xffe9, DEL: 0xffff, V: 0x0076 } as const;
@@ -92,17 +97,19 @@ function ToolBtn({
   onClick,
   active,
   className,
+  ...rest
 }: {
   icon: typeof Camera;
   label: string;
   onClick: () => void;
   active?: boolean;
   className?: string;
-}) {
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'className'>) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
+          {...rest}
           type="button"
           onClick={onClick}
           aria-label={label}
@@ -210,6 +217,17 @@ export default function ConnectPage() {
   // Forced resolution (null = fit the viewport). Changing it reconnects.
   const [resOverride, setResOverride] = useState<{ w: number; h: number } | null>(null);
   const [resMenuOpen, setResMenuOpen] = useState(false);
+  // The toolbar: docked above the desktop, floating over it, or folded away to a
+  // pull-tab (lib/viewer-menu). Never a dependency of the connection effect —
+  // showing or hiding a toolbar must not rebuild the tunnel.
+  const [menu, dispatchMenu] = useReducer(viewerMenuReducer, INITIAL_VIEWER_MENU);
+  const docked = menuDocked(menu);
+  const floating = menuFloating(menu);
+  const hanging = menuHanging(menu);
+  // iPhone Safari has no element fullscreen at all; there, folding the toolbar
+  // away is the only way to give the desktop the whole screen. Decided after
+  // mount, like `touch` below.
+  const [canFullscreen, setCanFullscreen] = useState(false);
   // Auto-reconnect bookkeeping: capped exponential backoff on a transient drop
   // or a "not ready yet" race. Reset to 0 once solidly connected.
   const [autoAttempts, setAutoAttempts] = useState(0);
@@ -587,7 +605,9 @@ export default function ConnectPage() {
         // Never on someone else's desktop either: the proxy lets `size` through
         // for a watcher and joins read-write while assisting, so merely
         // narrowing the observer's browser window reflowed the user's screen.
-        if (!kbOpenRef.current && !watching) {
+        // Nor over a resolution the user picked: folding the toolbar away or
+        // going fullscreen letterboxes a fixed size, it does not replace it.
+        if (!kbOpenRef.current && !watching && !resOverride) {
           const w = clampEven(screen.clientWidth || reqW, 640, 3840);
           const h = clampEven(screen.clientHeight || reqH, 480, 2160);
           try {
@@ -611,8 +631,18 @@ export default function ConnectPage() {
     rescale();
 
     client.onstatechange = (s) => {
-      if (s === 3) setState('connected'); // CONNECTED
-      else if (s === 5) setState((prev) => (prev === 'error' ? 'error' : 'disconnected')); // DISCONNECTED
+      if (s === 3) {
+        setState('connected'); // CONNECTED
+        // A size sent while the tunnel was still opening never arrived — the
+        // proxy drops frames until guacd has answered. Fullscreen or a folded
+        // toolbar during "Establishing connection" would otherwise leave the
+        // desktop letterboxed at the size it was first asked for.
+        if (
+          clampEven(screen.clientWidth || reqW, 640, 3840) !== reqW ||
+          clampEven(screen.clientHeight || reqH, 480, 2160) !== reqH
+        )
+          onWindowResize();
+      } else if (s === 5) setState((prev) => (prev === 'error' ? 'error' : 'disconnected')); // DISCONNECTED
     };
     client.onerror = (status) => {
       setErrMsg(status?.message || 'The remote connection failed.');
@@ -725,6 +755,18 @@ export default function ConnectPage() {
         return true;
       };
     }
+
+    // Entering or leaving fullscreen can swallow the keyup of a key held through
+    // it — Esc above all — and Guacamole repeats a held key on its own, so the
+    // remote would see it pressed until the next keystroke. Let go of all of them.
+    const releaseKeys = () => {
+      try {
+        (keyboard as unknown as { reset?: () => void }).reset?.();
+      } catch {
+        /* nothing held */
+      }
+    };
+    document.addEventListener('fullscreenchange', releaseKeys);
 
     // Soft keyboards mostly do not produce usable key events, so the same hidden
     // sink that captures pastes doubles as the text-entry bridge on touch.
@@ -872,6 +914,7 @@ export default function ConnectPage() {
       if (resizeTimer) clearTimeout(resizeTimer);
       boxObserver?.disconnect();
       window.removeEventListener('resize', onWindowResize);
+      document.removeEventListener('fullscreenchange', releaseKeys);
       window.removeEventListener('focus', syncFromLocal);
       document.removeEventListener('visibilitychange', syncFromLocal);
       document.removeEventListener('paste', onPaste);
@@ -1066,7 +1109,52 @@ export default function ConnectPage() {
     const el = containerRef.current;
     if (!el) return;
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
-    else void el.requestFullscreen().catch(() => {});
+    else if (typeof el.requestFullscreen === 'function') void el.requestFullscreen().catch(() => {});
+  }, []);
+
+  // Fullscreen is read from the browser, never from our own button: Esc, the
+  // browser's exit control and Android's back gesture all leave it without
+  // asking us, and a refused request must not hide a toolbar for nothing.
+  // Entering folds the toolbar away so the whole screen is desktop; leaving
+  // brings it back, whatever happened to it in between.
+  useEffect(() => {
+    setCanFullscreen(Boolean(document.fullscreenEnabled) && typeof containerRef.current?.requestFullscreen === 'function');
+    const sync = () => {
+      const on = document.fullscreenElement != null && document.fullscreenElement === containerRef.current;
+      dispatchMenu({ type: 'fullscreen', on });
+      setResMenuOpen(false);
+      if (on) setPanelOpen(false);
+    };
+    sync();
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
+  // While a press that began on the desktop is held, the pull-tab lets the
+  // pointer through (see MenuHandle). Over the tab the canvas would see a
+  // mouseout, on which Guacamole releases every button — dropping the drag.
+  // An attribute rather than state: no re-render of this page on every click.
+  useEffect(() => {
+    const root = containerRef.current;
+    const screen = screenRef.current;
+    if (!root || !screen) return;
+    const press = () => root.setAttribute('data-pressing', '');
+    const release = () => root.removeAttribute('data-pressing');
+    screen.addEventListener('pointerdown', press);
+    window.addEventListener('pointerup', release);
+    window.addEventListener('pointercancel', release);
+    return () => {
+      screen.removeEventListener('pointerdown', press);
+      window.removeEventListener('pointerup', release);
+      window.removeEventListener('pointercancel', release);
+      release();
+    };
+  }, []);
+  const showMenu = useCallback(() => dispatchMenu({ type: 'show' }), []);
+  const pinMenu = useCallback(() => dispatchMenu({ type: 'pin' }), []);
+  const hideMenu = useCallback(() => {
+    dispatchMenu({ type: 'hide' });
+    setResMenuOpen(false);
+    setPanelOpen(false);
   }, []);
 
   // Snapshot the live desktop so the "My Sessions" switcher shows a real preview.
@@ -1137,6 +1225,9 @@ export default function ConnectPage() {
     // Operator holds SESSION_OBSERVE and SESSION_TERMINATE_ANY together — so
     // this guard is the one that counts. Every call site is covered here.
     if (watching) return;
+    // The confirmation is portaled to <body>, and element fullscreen paints
+    // nothing outside the viewer: asked from fullscreen, it would wait unseen.
+    if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
     // Confirm BEFORE touching the client: ending is destructive and unrecoverable
     // (Back, right next to it, leaves the desktop running), so a mis-click must
     // cost nothing.
@@ -1218,7 +1309,22 @@ export default function ConnectPage() {
     // lib/z-layers.test). Forcing it back keeps toolbar, canvas and Back alive.
     <div ref={containerRef} className="pointer-events-auto fixed inset-0 z-viewer flex flex-col bg-anthracite-950 text-foreground">
       {resMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setResMenuOpen(false)} aria-hidden />}
-      <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border-subtle bg-[var(--surface-1)] px-2 sm:px-3">
+      <header
+        id="viewer-menu"
+        inert={!menu.open}
+        className={cn(
+          'flex h-14 shrink-0 items-center gap-2 border-b border-border-subtle bg-[var(--surface-1)] px-2 transition-[translate,opacity,visibility] duration-200 ease-out-soft motion-reduce:transition-[opacity,visibility] sm:px-3',
+          // Out of the flow unless docked. Floating or folded away, the toolbar
+          // must not take its 56 px out of the screen box: every change of that
+          // box resizes the remote desktop.
+          !docked && 'absolute inset-x-0 top-0 z-50 shadow-[var(--shadow-lifted)]',
+          // Floating, it hangs from the top edge rather than spanning it, so on
+          // a wide screen the remote's own top corners (a maximised window's
+          // close button) stay within reach.
+          hanging && 'mx-auto max-w-5xl rounded-b-xl border-x',
+          !menu.open && 'pointer-events-none invisible -translate-y-full opacity-0 motion-reduce:translate-none',
+        )}
+      >
         <Button variant="ghost" size="icon-sm" onClick={disconnect} aria-label={t('connect.toolbar.backToWorkspaces')} className="shrink-0 rtl:rotate-180">
           <ArrowLeft className="size-4" />
         </Button>
@@ -1332,9 +1438,34 @@ export default function ConnectPage() {
           </div>
           )}
           {!watching && (
-            <ToolBtn icon={Gauge} label={perfMode ? t('connect.toolbar.qualityPerformance') : t('connect.toolbar.qualityFull')} active={perfMode} onClick={togglePerf} />
+            <ToolBtn
+              icon={Gauge}
+              label={perfMode ? t('connect.toolbar.qualityPerformance') : t('connect.toolbar.qualityFull')}
+              active={perfMode}
+              onClick={togglePerf}
+              className={cn(touch && 'hidden sm:inline-flex')}
+            />
           )}
-          <ToolBtn icon={Maximize2} label={t('connect.toolbar.fullscreen')} onClick={toggleFullscreen} />
+          {canFullscreen && (
+            <ToolBtn
+              icon={menu.fullscreen ? Minimize2 : Maximize2}
+              label={menu.fullscreen ? t('connect.toolbar.exitFullscreen') : t('connect.toolbar.fullscreen')}
+              onClick={toggleFullscreen}
+            />
+          )}
+          {floating && !menu.fullscreen && (
+            <ToolBtn icon={Pin} label={t('menu.pin')} onMouseDown={(e) => e.preventDefault()} onClick={pinMenu} />
+          )}
+          <ToolBtn
+            id="viewer-menu-toggle"
+            icon={PanelTopClose}
+            label={t('menu.hide')}
+            aria-controls="viewer-menu"
+            aria-expanded
+            // Keeps the paste sink focused, as the pull-tab does on the way back.
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={hideMenu}
+          />
           <ToolBtn icon={LayoutGrid} label={t('connect.toolbar.controlPanel')} active={panelOpen} onClick={() => setPanelOpen((o) => !o)} />
           {(state === 'disconnected' || state === 'error') && (
             <Button variant="outline" size="sm" onClick={reconnect} className="ms-1">
@@ -1363,22 +1494,12 @@ export default function ConnectPage() {
         </div>
       </header>
 
-      <main className="relative flex-1 overflow-hidden bg-anthracite-950">
-        {/* Overlaid, not stacked above the canvas. As a flex sibling the strip
-            took its ~50 px out of the screen box below, and the remote is only
-            refitted on a resize event — so the watched user lost the bottom of
-            their desktop, taskbar included, for the whole observation. */}
-        {observed && <ObservationNotice observed={observed} className="absolute inset-x-0 top-0 z-40" />}
-        {/* Control sits above observation: a session can be both watched and
-            controlled, and the stronger notice belongs on top. */}
-        {control?.state === 'active' && (
-          <SessionControlNotice
-            controllerName={control.controllerName}
-            since={control.since}
-            onEnd={endControl}
-            className="absolute inset-x-0 top-0 z-40"
-          />
-        )}
+      <main
+        className="relative flex-1 overflow-hidden bg-anthracite-950"
+        // A floating toolbar folds away again once the user goes back to the
+        // desktop. Nothing is prevented: the press still reaches the remote.
+        onPointerDown={floating ? hideMenu : undefined}
+      >
         {/* The consent prompt belongs to the person AT the desktop. An observer
             sits in the same realtime room and was being asked to answer it. */}
         {!watching && control?.state === 'requested' && (
@@ -1448,12 +1569,40 @@ export default function ConnectPage() {
         onPickLayout={pickLayout}
         onPaste={() => void pasteToRemote()}
         onCtrlAltDel={sendCtrlAltDel}
-        onFullscreen={toggleFullscreen}
+        fullscreen={menu.fullscreen}
+        tab={menu.open}
+        onFullscreen={canFullscreen ? toggleFullscreen : undefined}
         onTogglePerf={togglePerf}
         onReconnect={reconnect}
         onWorkspaces={() => router.push(homeHref)}
         onEndSession={watching ? undefined : () => void endSession()}
       />
+
+      {!menu.open && <MenuHandle onShow={showMenu} keepFocus viewOnly={monitor ? t('connect.toolbar.viewOnly') : undefined} />}
+
+      {/* Overlaid, not stacked above the canvas. As a flex sibling the strip
+          took its ~50 px out of the screen box below, and the remote is only
+          refitted on a resize event — so the watched user lost the bottom of
+          their desktop, taskbar included, for the whole observation.
+          Last in the root on z-50, so nothing in the viewer paints over them:
+          not the open control panel, not the pull-tab. Under the toolbar while
+          it shows, at the top of the screen while it is folded away. */}
+      {observed && (
+        <ObservationNotice
+          observed={observed}
+          className={cn('absolute inset-x-0 z-50', menu.open ? 'top-14' : 'top-[env(safe-area-inset-top,0px)]')}
+        />
+      )}
+      {/* Control sits above observation: a session can be both watched and
+          controlled, and the stronger notice belongs on top. */}
+      {control?.state === 'active' && (
+        <SessionControlNotice
+          controllerName={control.controllerName}
+          since={control.since}
+          onEnd={endControl}
+          className={cn('absolute inset-x-0 z-50', menu.open ? 'top-14' : 'top-[env(safe-area-inset-top,0px)]')}
+        />
+      )}
     </div>
   );
 }
@@ -1475,6 +1624,8 @@ function ControlPanel({
   onPickLayout,
   onPaste,
   onCtrlAltDel,
+  fullscreen,
+  tab,
   onFullscreen,
   onTogglePerf,
   onReconnect,
@@ -1486,12 +1637,18 @@ function ControlPanel({
   onClose: () => void;
   connected: boolean;
   perfMode: boolean;
+  /** The viewer holds fullscreen: the tile leads back out of it. */
+  fullscreen: boolean;
+  /** Show the edge tab. Not while the toolbar is folded away — then the whole
+   *  screen is desktop, and the pull-tab is the one way back to the controls. */
+  tab: boolean;
   /** The chosen layout, or null where the connection has none to announce. */
   layout: string | null;
   onPickLayout: (choice: string) => void;
   onPaste: () => void;
   onCtrlAltDel: () => void;
-  onFullscreen: () => void;
+  /** Absent where the browser has no element fullscreen (iPhone). */
+  onFullscreen?: () => void;
   onTogglePerf: () => void;
   onReconnect: () => void;
   onWorkspaces: () => void;
@@ -1503,8 +1660,8 @@ function ControlPanel({
   const t = useTranslations('viewer');
   return (
     <>
-      {/* Collapsed right-edge tab (always reachable) */}
-      {!open && (
+      {/* Collapsed right-edge tab, reachable whenever the toolbar is */}
+      {!open && tab && (
         <button
           type="button"
           onClick={onOpen}
@@ -1521,9 +1678,10 @@ function ControlPanel({
       {/* Slide-out panel */}
       <aside
         aria-hidden={!open}
+        inert={!open}
         className={cn(
           'absolute end-0 top-0 z-50 flex h-full w-[300px] max-w-[85vw] flex-col border-s border-border-subtle bg-[var(--surface-1)] shadow-[var(--shadow-lifted)] transition-transform duration-300 ease-out',
-          open ? 'translate-x-0' : 'translate-x-full',
+          open ? 'translate-x-0' : 'translate-x-full rtl:-translate-x-full',
         )}
       >
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-border-subtle px-4">
@@ -1542,7 +1700,13 @@ function ControlPanel({
           <div className="grid grid-cols-3 gap-2">
             <QuickTile icon={ClipboardPaste} label={t('connect.panel.paste')} onClick={onPaste} disabled={!connected} />
             <QuickTile icon={Command} label={t('connect.panel.ctrlAltDel')} onClick={onCtrlAltDel} disabled={!connected} />
-            <QuickTile icon={Maximize2} label={t('connect.panel.fullscreen')} onClick={onFullscreen} />
+            {onFullscreen && (
+              <QuickTile
+                icon={fullscreen ? Minimize2 : Maximize2}
+                label={fullscreen ? t('connect.panel.exitFullscreen') : t('connect.panel.fullscreen')}
+                onClick={onFullscreen}
+              />
+            )}
           </div>
 
           <div className="mt-3 space-y-1.5">

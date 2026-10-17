@@ -51,6 +51,7 @@
     "settings": "تنظیمات",
     "settingsToast": "تنظیمات استریم",
     "fullscreen": "تمام‌صفحه",
+    "exitFullscreen": "خروج از تمام‌صفحه",
     "end": "پایان",
     "disabledByPolicy": "{label} — بر اساس سیاست غیرفعال شده است",
     "dropToUpload": "برای بارگذاری در نشست، فایل‌ها را اینجا رها کنید",
@@ -143,6 +144,7 @@
       "qualityFull": "کیفیت: کامل",
       "copyViewLink": "کپی پیوند فقط‌خواندنی",
       "fullscreen": "تمام‌صفحه",
+      "exitFullscreen": "خروج از تمام‌صفحه",
       "controlPanel": "کنترل پنل",
       "reconnect": "اتصال دوباره",
       "endSession": "پایان نشست",
@@ -156,6 +158,7 @@
       "paste": "چسباندن",
       "ctrlAltDel": "Ctrl + Alt + Del",
       "fullscreen": "تمام‌صفحه",
+      "exitFullscreen": "خروج از تمام‌صفحه",
       "qualityTitle": "کیفیت پخش",
       "qualityPerformanceOn": "حالت کارایی: روشن",
       "qualityFull": "کیفیت کامل",
@@ -230,5 +233,10 @@
     "title": "یک مدیر هم‌اکنون این نشست را می‌بیند",
     "by": "{name} · از {time}",
     "hint": "صفحه شما دیده می‌شود. کسی کنترل را در دست نمی‌گیرد — ورودی در اختیار شماست."
+  },
+  "menu": {
+    "show": "نمایش منو",
+    "hide": "پنهان کردن منو",
+    "pin": "ثابت نگه داشتن منو"
   }
 }

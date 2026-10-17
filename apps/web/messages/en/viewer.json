@@ -51,6 +51,7 @@
     "settings": "Settings",
     "settingsToast": "Stream settings",
     "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit fullscreen",
     "end": "End",
     "disabledByPolicy": "{label} — disabled by policy",
     "dropToUpload": "Drop files to upload to the session",
@@ -143,6 +144,7 @@
       "qualityFull": "Quality: full",
       "copyViewLink": "Copy view-only link",
       "fullscreen": "Fullscreen",
+      "exitFullscreen": "Exit fullscreen",
       "controlPanel": "Control Panel",
       "reconnect": "Reconnect",
       "endSession": "End session",
@@ -156,6 +158,7 @@
       "paste": "Paste",
       "ctrlAltDel": "Ctrl + Alt + Del",
       "fullscreen": "Fullscreen",
+      "exitFullscreen": "Exit fullscreen",
       "qualityTitle": "Streaming quality",
       "qualityPerformanceOn": "Performance mode: on",
       "qualityFull": "Full quality",
@@ -230,5 +233,10 @@
     "title": "An administrator is watching this session",
     "by": "{name} · since {time}",
     "hint": "Your screen is being viewed. Nobody is taking control — input stays with you."
+  },
+  "menu": {
+    "show": "Show menu",
+    "hide": "Hide menu",
+    "pin": "Keep menu visible"
   }
 }
