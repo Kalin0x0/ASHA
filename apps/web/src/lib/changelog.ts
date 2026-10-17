@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.2',
+    date: '2026-10-18',
+    title: { en: 'Fullscreen menu polish', de: 'Feinschliff am Vollbild-Menü' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'After the desktop’s own fullscreen button had been used, "Exit fullscreen" and End could not leave fullscreen in the container viewer — End then waited for a confirmation nobody could see. Both leave fullscreen reliably now.',
+          de: 'Nachdem der Vollbild-Knopf im Desktop selbst benutzt worden war, kamen „Vollbild beenden“ und „Beenden“ im Container-Viewer nicht mehr aus dem Vollbild — „Beenden“ wartete dann auf eine unsichtbare Rückfrage. Beide verlassen das Vollbild jetzt zuverlässig.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'On narrow phones the menu buttons stay on screen while watching a desktop, the new buttons are full-size touch targets, the pull-tab stays visible in the light theme, and the print preview’s Close and Print buttons are no longer hidden under the "being watched" notice.',
+          de: 'Auf schmalen Handys bleiben die Menüknöpfe beim Zuschauen auf dem Bildschirm, die neuen Knöpfe sind volle Touch-Ziele, der Griff bleibt im hellen Design sichtbar, und „Schließen“ und „Drucken“ der Druckvorschau liegen nicht mehr unter dem Beobachtungs-Hinweis.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.3.1',
     date: '2026-10-18',
     title: { en: 'Fullscreen is all desktop, and the menu folds away', de: 'Vollbild ist ganz Desktop, und das Menü klappt weg' },
