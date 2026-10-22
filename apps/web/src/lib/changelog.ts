@@ -38,6 +38,20 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.3',
+    date: '2026-10-22',
+    title: { en: 'Copy and paste work in container desktops again', de: 'Kopieren und Einfügen gehen in Container-Desktops wieder' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'Copy and paste were dead in every container desktop — from your computer into the desktop, back out, and even inside it. The embedded stream client switches its clipboard off unless it is told otherwise, and it never was. It is now switched on in both directions, except where your organisation’s data-loss policy forbids a direction.',
+          de: 'Kopieren und Einfügen funktionierten in keinem Container-Desktop — weder vom eigenen Rechner in den Desktop noch zurück noch innerhalb des Desktops. Der eingebettete Stream-Client schaltet seine Zwischenablage ab, wenn man ihm nichts anderes sagt, und das geschah nie. Sie ist jetzt in beide Richtungen an, außer wo die Datenschutz-Richtlinie Ihrer Organisation eine Richtung verbietet.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.3.2',
     date: '2026-10-18',
     title: { en: 'Fullscreen menu polish', de: 'Feinschliff am Vollbild-Menü' },
