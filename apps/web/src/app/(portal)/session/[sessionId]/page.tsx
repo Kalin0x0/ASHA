@@ -55,7 +55,7 @@ import { useAccount, useLaunchableWorkspaces, useSession } from '@/lib/hooks';
 import { useSessionObserved } from '@/lib/realtime';
 import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
-import { isLikelyUnreachableUrl } from '@/lib/stream';
+import { isLikelyUnreachableUrl, withClipboard } from '@/lib/stream';
 import { cn } from '@/lib/utils';
 import { INITIAL_VIEWER_MENU, menuDocked, menuFloating, menuHanging, viewerMenuReducer } from '@/lib/viewer-menu';
 
@@ -340,12 +340,13 @@ export default function StreamingViewerPage() {
       .then((c) => {
         if (cancelled) return;
         if (c.dlp) setDlp(c.dlp);
-        setStreamUrl(c.connectionUrl ?? session.connectionUrl ?? null);
+        const url = c.connectionUrl ?? session.connectionUrl;
+        setStreamUrl(url ? withClipboard(url, c.dlp ?? {}) : null);
       })
       // Endpoint unreachable: fall back to the stored URL rather than leaving
       // the user on a placeholder with a running desktop behind it.
       .catch(() => {
-        if (!cancelled) setStreamUrl(session.connectionUrl ?? null);
+        if (!cancelled) setStreamUrl(session.connectionUrl ? withClipboard(session.connectionUrl, {}) : null);
       });
     return () => {
       cancelled = true;

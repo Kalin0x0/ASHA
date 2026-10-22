@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isLikelyUnreachableUrl, isStreamConfigured, resolveStreamUrl } from './stream';
+import { isLikelyUnreachableUrl, isStreamConfigured, resolveStreamUrl, withClipboard } from './stream';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -64,5 +64,27 @@ describe('isLikelyUnreachableUrl', () => {
 
   it('does not flag (so the iframe still tries) when the URL is unparseable', () => {
     expect(isLikelyUnreachableUrl('::::', 'app.example.com')).toBe(false);
+  });
+});
+
+describe('withClipboard', () => {
+  const URL_ = 'https://asha.example/session/k1/?path=session/k1/websockify&resize=remote&token=t';
+  const params = (u: string) => new URL(u).searchParams;
+
+  it('switches the embedded KasmVNC clipboard on, both ways and seamless', () => {
+    // Inside an iframe KasmVNC defaults all three to off unless the URL says so.
+    const p = params(withClipboard(URL_, {}));
+    expect([p.get('clipboard_up'), p.get('clipboard_down'), p.get('clipboard_seamless')]).toEqual(['true', 'true', 'true']);
+    // Nothing the stream needs is lost on the way.
+    expect([p.get('path'), p.get('resize'), p.get('token')]).toEqual(['session/k1/websockify', 'remote', 't']);
+  });
+
+  it('keeps a direction the DLP policy forbids switched off', () => {
+    const p = params(withClipboard(URL_, { clipboardUp: false }));
+    expect([p.get('clipboard_up'), p.get('clipboard_down'), p.get('clipboard_seamless')]).toEqual(['false', 'true', 'false']);
+  });
+
+  it('leaves an unparseable URL alone', () => {
+    expect(withClipboard('not a url', {})).toBe('not a url');
   });
 });
