@@ -10,8 +10,11 @@ import {
   Download,
   Loader2,
   Maximize2,
+  Minimize2,
   Monitor,
+  PanelTopClose,
   Pause,
+  Pin,
   Play,
   Power,
   Printer,
@@ -27,14 +30,14 @@ import {
 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import { AshaMark } from '@/components/brand/logo';
 import { ObservationNotice } from '@/components/composite/observation-notice';
-import { getAccessToken } from '@/lib/api/auth-store';
 import { useConfirm } from '@/components/ui/confirm';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { MenuHandle } from '@/components/viewer/menu-handle';
 import {
   type ApiSessionConnection,
   createShare,
@@ -52,8 +55,9 @@ import { useAccount, useLaunchableWorkspaces, useSession } from '@/lib/hooks';
 import { useSessionObserved } from '@/lib/realtime';
 import { planSessionExit } from '@/lib/session-exit';
 import { useKeepalive } from '@/lib/use-keepalive';
-import { isLikelyUnreachableUrl } from '@/lib/stream';
+import { isLikelyUnreachableUrl, withClipboard } from '@/lib/stream';
 import { cn } from '@/lib/utils';
+import { INITIAL_VIEWER_MENU, menuDocked, menuFloating, menuHanging, viewerMenuReducer } from '@/lib/viewer-menu';
 
 // How long to wait for a launch to reach RUNNING before showing a clear
 // "taking too long" state with a retry — so a stuck launch (no agent, slow
@@ -154,6 +158,26 @@ export default function StreamingViewerPage() {
   const [dragActive, setDragActive] = useState(false);
   const [dlp, setDlp] = useState<Dlp>({});
   const [timedOut, setTimedOut] = useState(false);
+  // The control bar: docked above the stream, floating over it, or folded away
+  // to a pull-tab (lib/viewer-menu). Only `docked` may change the stream's box:
+  // with resize=remote, every change of that box resizes the remote desktop.
+  const [menu, dispatchMenu] = useReducer(viewerMenuReducer, INITIAL_VIEWER_MENU);
+  const docked = menuDocked(menu);
+  const floating = menuFloating(menu);
+  const hanging = menuHanging(menu);
+  // iPhone Safari has no element fullscreen; there, folding the bar away is the
+  // only way to give the desktop the whole screen. Decided after mount.
+  const [canFullscreen, setCanFullscreen] = useState(false);
+  // What last pressed something on the bar. When the bar folds away under a
+  // mouse or pen, focus goes straight back into the desktop instead of falling
+  // to <body>. Never after a touch: focusing the frame can raise the soft
+  // keyboard, and that resize would reflow the remote.
+  const barPointer = useRef('');
+  // Set while WE are leaving fullscreen. KasmVNC's own in-frame button can leave
+  // the frame in the top layer under the root; our exit then pops only the root
+  // and the frame resurfaces, which must be left too — not handed back to the
+  // root as if the frame had asked for fullscreen.
+  const exitingRef = useRef(false);
 
   const workspaceName = session?.workspaceName ?? t('status.workspaceFallback');
   // Resolve the workspace's description to show under the title in the control bar.
@@ -316,12 +340,13 @@ export default function StreamingViewerPage() {
       .then((c) => {
         if (cancelled) return;
         if (c.dlp) setDlp(c.dlp);
-        setStreamUrl(c.connectionUrl ?? session.connectionUrl ?? null);
+        const url = c.connectionUrl ?? session.connectionUrl;
+        setStreamUrl(url ? withClipboard(url, c.dlp ?? {}) : null);
       })
       // Endpoint unreachable: fall back to the stored URL rather than leaving
       // the user on a placeholder with a running desktop behind it.
       .catch(() => {
-        if (!cancelled) setStreamUrl(session.connectionUrl ?? null);
+        if (!cancelled) setStreamUrl(session.connectionUrl ? withClipboard(session.connectionUrl, {}) : null);
       });
     return () => {
       cancelled = true;
@@ -506,6 +531,10 @@ export default function StreamingViewerPage() {
     // ownership check at all. Unknown owner (a staged/pool row not yet claimed)
     // keeps End, or a user who just claimed a pre-warmed desktop loses it.
     if (notMine) return;
+    // The confirmation is portaled to <body>, and element fullscreen paints
+    // nothing outside the viewer: asked from fullscreen, it would wait unseen.
+    exitingRef.current = true;
+    for (let i = 0; i < 3 && document.fullscreenElement; i++) await document.exitFullscreen?.().catch(() => {});
     if (
       !(await confirm({
         title: t('confirmEnd.title'),
@@ -566,8 +595,11 @@ export default function StreamingViewerPage() {
       ).JSMpeg;
       if (!J) throw new Error('jsmpeg unavailable');
       const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const token = getAccessToken() ?? '';
-      const url = `${scheme}://${window.location.host}/session/${encodeURIComponent(kasmId)}/audio?token=${encodeURIComponent(token)}`;
+      // No token on this URL. The session cookie minted when the viewer opened is
+      // what authorises the audio router — session-auth.controller.test.ts:281 pins
+      // that — and the gate never read this parameter, so all it ever did was copy
+      // a full-API bearer into proxy logs, access logs and the Referer chain.
+      const url = `${scheme}://${window.location.host}/session/${encodeURIComponent(kasmId)}/audio`;
       let established = false;
       const player = new J.Player(url, {
         audio: true,
@@ -616,12 +648,36 @@ export default function StreamingViewerPage() {
   // if the swap is refused all the same, leaving fullscreen is the honest
   // fallback, because a desktop full of screen with no notice on it is the one
   // outcome this feature may not produce.
+  //
+  // Every other change is the bar's business. Fullscreen is read from the
+  // browser, never from our own button: Esc, the browser's exit control and
+  // Android's back gesture all leave it without asking us, and a refused request
+  // must not fold a bar away for nothing. Entering folds the bar away so the
+  // whole screen is desktop; leaving brings it back. The frame holding
+  // fullscreen is only ever a moment on the way to the swap, so it changes
+  // nothing on screen.
   useEffect(() => {
+    setCanFullscreen(Boolean(document.fullscreenEnabled) && typeof document.documentElement.requestFullscreen === 'function');
     const onChange = () => {
-      if (!document.fullscreenElement || document.fullscreenElement !== kasmFrameRef.current) return;
+      const el = document.fullscreenElement;
       const root = rootRef.current;
+      // Not only the stream frame: the print preview is a same-origin frame too.
+      // Anything inside the viewer but the viewer itself hands over to the root.
+      if (!el || el === root || !root?.contains(el)) {
+        const on = el != null && el === root;
+        if (!el) exitingRef.current = false;
+        if (
+          on &&
+          barPointer.current !== 'touch' &&
+          document.getElementById('viewer-menu')?.contains(document.activeElement)
+        )
+          requestAnimationFrame(() => kasmFrameRef.current?.focus());
+        dispatchMenu({ type: 'fullscreen', on });
+        setResMenuOpen(false);
+        return;
+      }
       const leave = () => void document.exitFullscreen?.().catch(() => {});
-      if (!root) return leave();
+      if (!root || exitingRef.current) return leave();
       const swap = root.requestFullscreen?.();
       if (swap) void swap.catch(leave);
       else leave();
@@ -633,9 +689,50 @@ export default function StreamingViewerPage() {
   const fullscreen = () => {
     // The toolbar is inside the fullscreen element now, so the same button has
     // to lead back out of it.
-    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
-    else void rootRef.current?.requestFullscreen?.().catch(() => {});
+    if (document.fullscreenElement) {
+      exitingRef.current = true;
+      void document.exitFullscreen?.().catch(() => {});
+    } else void rootRef.current?.requestFullscreen?.().catch(() => {});
   };
+  // Focus follows the bar only for the keyboard; a pointer is already where it
+  // means to be.
+  const showMenu = useCallback((viaKeyboard: boolean) => {
+    dispatchMenu({ type: 'show' });
+    if (viaKeyboard) requestAnimationFrame(() => document.getElementById('viewer-menu-toggle')?.focus({ preventScroll: true }));
+  }, []);
+  const pinMenu = useCallback(() => dispatchMenu({ type: 'pin' }), []);
+  const hideMenu = useCallback((viaKeyboard: boolean) => {
+    dispatchMenu({ type: 'hide' });
+    setResMenuOpen(false);
+    requestAnimationFrame(() => {
+      if (viaKeyboard) document.getElementById('viewer-menu-handle')?.focus({ preventScroll: true });
+      else if (barPointer.current !== 'touch') kasmFrameRef.current?.focus();
+    });
+  }, []);
+  // A floating bar folds away again once the user goes back to the desktop. A
+  // click into the stream never reaches this document; all it leaves behind is
+  // focus moving into the frame. Esc folds it too, wherever focus is in this
+  // document — keys typed into the stream never arrive here.
+  useEffect(() => {
+    if (!floating) return;
+    const onBlur = () =>
+      window.setTimeout(() => {
+        if (document.activeElement !== kasmFrameRef.current) return;
+        dispatchMenu({ type: 'hide' });
+        setResMenuOpen(false);
+      }, 0);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      e.preventDefault();
+      hideMenu(true);
+    };
+    window.addEventListener('blur', onBlur);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('blur', onBlur);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [floating, hideMenu]);
   const onShare = async () => {
     if (!session) return;
     if (!isLive) {
@@ -663,8 +760,28 @@ export default function StreamingViewerPage() {
   // Forcing it back on this root immunises the viewer against a stray lock.
   return createPortal(
     <div ref={rootRef} className="on-dark pointer-events-auto fixed inset-0 z-viewer flex flex-col bg-anthracite-950">
-      {/* Control bar */}
-      <div className="glass-strong absolute inset-x-0 top-0 z-20 flex h-14 items-center gap-3 px-3 sm:px-4">
+      {/* Control bar. Absolute already: showing or folding it never touches
+          the stage, and only `docked` reserves the stream's top 56 px.
+          `invisible` also stops its backdrop blur from rendering over the live
+          stream while it is away. */}
+      <div
+        id="viewer-menu"
+        inert={!menu.open}
+        onPointerDownCapture={(e) => {
+          barPointer.current = e.pointerType;
+        }}
+        className={cn(
+          'absolute inset-x-0 top-0 z-20 flex h-14 items-center gap-3 px-3 transition-[translate,opacity,visibility] duration-200 ease-out-soft motion-reduce:transition-[opacity,visibility] sm:px-4',
+          // Floating over the live stream it is solid, not glass: a 24 px
+          // backdrop blur re-rendered under every frame of video costs more
+          // than it is worth. And it hangs from the top edge instead of
+          // spanning it, so the remote's own top corners stay within reach.
+          hanging
+            ? 'mx-auto max-w-5xl rounded-b-xl border border-t-0 border-border-subtle bg-[var(--surface-1)] shadow-[var(--shadow-lifted)]'
+            : 'glass-strong',
+          !menu.open && 'pointer-events-none invisible -translate-y-full opacity-0 motion-reduce:translate-none',
+        )}
+      >
         {/* Back to Workspaces — non-destructive; keeps the session running so the
             user can switch to another from the portal's "My Sessions" strip. */}
         {/* Always-visible, clearly-labelled exit — users reported getting "stuck"
@@ -825,9 +942,6 @@ export default function StreamingViewerPage() {
           <ControlButton label={t('toolbar.settings')} onClick={openKasmSettings}>
             <Settings className="size-4" />
           </ControlButton>
-          <ControlButton label={t('toolbar.fullscreen')} onClick={fullscreen}>
-            <Maximize2 className="size-4" />
-          </ControlButton>
           {!notMine && (
             <button
               onClick={() => void onTerminate()}
@@ -837,12 +951,38 @@ export default function StreamingViewerPage() {
             </button>
           )}
         </div>
+        {/* Outside the scrolling row, so a phone can never scroll them away. */}
+        <div className="-ms-1 flex shrink-0 items-center gap-1">
+          {floating && !menu.fullscreen && (
+            <ControlButton label={t('menu.pin')} onClick={pinMenu} className="size-11 sm:size-8">
+              <Pin className="size-4" />
+            </ControlButton>
+          )}
+          {canFullscreen && (
+            <ControlButton
+              label={menu.fullscreen ? t('toolbar.exitFullscreen') : t('toolbar.fullscreen')}
+              onClick={fullscreen}
+              className="size-11 sm:size-8"
+            >
+              {menu.fullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </ControlButton>
+          )}
+          {/* A native title, because Radix tooltips are portaled to <body> and
+              do not paint in fullscreen — where this button matters most. */}
+          <button
+            type="button"
+            id="viewer-menu-toggle"
+            aria-controls="viewer-menu"
+            aria-expanded
+            aria-label={t('menu.hide')}
+            title={t('menu.hide')}
+            onClick={(e) => hideMenu(e.detail === 0)}
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground ring-gold-focus sm:size-8"
+          >
+            <PanelTopClose className="size-4" />
+          </button>
+        </div>
       </div>
-
-      {/* Observation notice — sits directly under the control bar and above the
-          stream, because the person at this desktop has to see it without
-          looking for it. Not dismissible: it goes when the watching stops. */}
-      {observed && <ObservationNotice observed={observed} className="absolute inset-x-0 top-14 z-40" />}
 
       {/* Stage */}
       <div
@@ -872,9 +1012,10 @@ export default function StreamingViewerPage() {
               ready={frameReady}
               onReady={() => setFrameReady(true)}
               frameRef={kasmFrameRef}
+              reserveTop={docked}
             />
           ) : (
-            <PlaceholderStream workspaceName={workspaceName} clock={clock} />
+            <PlaceholderStream workspaceName={workspaceName} clock={clock} reserveTop={docked} />
           )
         ) : timedOut ? (
           <LaunchTimedOut
@@ -898,7 +1039,14 @@ export default function StreamingViewerPage() {
             own document (Print + Download), instead of the guest's fragile
             hidden-iframe print. */}
         {printOpen && printPdf && (
-          <div className="absolute inset-0 top-14 z-50 flex flex-col bg-anthracite-950/92 backdrop-blur">
+          <div
+            className={cn(
+              'absolute inset-0 z-50 flex flex-col bg-anthracite-950/92 backdrop-blur',
+              menu.open && 'top-14',
+              // The notice stays on top; the Close and Print row moves below it.
+              observed && 'pt-12',
+            )}
+          >
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-2.5">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Printer className="size-4 text-gold-400" /> {t('toolbar.printPreview')}
@@ -944,7 +1092,12 @@ export default function StreamingViewerPage() {
 
         {/* Drag-and-drop file upload overlay */}
         {dragActive && (
-          <div className="absolute inset-0 top-14 z-40 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gold-500/60 bg-anthracite-950/80 backdrop-blur-sm">
+          <div
+            className={cn(
+              'absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gold-500/60 bg-anthracite-950/80 backdrop-blur-sm',
+              menu.open && 'top-14',
+            )}
+          >
             <Upload className="size-10 text-gold-400" />
             <p className="font-display text-lg">
               {allow('uploads') ? t('toolbar.dropToUpload') : t('dlp.dropDisabled')}
@@ -957,7 +1110,12 @@ export default function StreamingViewerPage() {
             reopened session Back had paused (`!paused`) → a "Resuming…" spinner
             while the auto-resume effect thaws it. */}
         {isPaused && (
-          <div className="absolute inset-0 top-14 z-30 flex flex-col items-center justify-center gap-4 bg-anthracite-950/85 backdrop-blur">
+          <div
+            className={cn(
+              'absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-anthracite-950/85 backdrop-blur',
+              menu.open && 'top-14',
+            )}
+          >
             {paused ? (
               <>
                 <Pause className="size-12 rounded-full bg-gold-500/15 p-3 text-gold-400" />
@@ -981,6 +1139,21 @@ export default function StreamingViewerPage() {
           </div>
         )}
       </div>
+
+      {!menu.open && <MenuHandle onShow={showMenu} />}
+
+      {/* Observation notice — directly under the control bar while it shows, at
+          the top of the screen while it is folded away, and above the stream
+          either way, because the person at this desktop has to see it without
+          looking for it. Last in the root on z-50, so nothing here paints over
+          it: not the print preview, not the pull-tab. Not dismissible: it goes
+          when the watching stops. */}
+      {observed && (
+        <ObservationNotice
+          observed={observed}
+          className={cn('absolute inset-x-0 z-50', menu.open ? 'top-14' : 'top-[env(safe-area-inset-top,0px)]')}
+        />
+      )}
     </div>,
     document.body,
   );
@@ -992,12 +1165,14 @@ function ControlButton({
   onClick,
   disabled = false,
   disabledHint,
+  className,
 }: {
   children: React.ReactNode;
   label: string;
   onClick: () => void;
   disabled?: boolean;
   disabledHint?: string;
+  className?: string;
 }) {
   const t = useTranslations('viewer');
 
@@ -1010,6 +1185,7 @@ function ControlButton({
           aria-disabled={disabled}
           className={cn(
             'inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors ring-gold-focus',
+            className,
             disabled
               ? 'cursor-not-allowed text-muted-foreground/30'
               : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
@@ -1031,6 +1207,7 @@ function LiveStream({
   ready,
   onReady,
   frameRef,
+  reserveTop,
 }: {
   url: string;
   workspaceName: string;
@@ -1039,6 +1216,10 @@ function LiveStream({
   onReady: () => void;
   /** Shared with the parent so toolbar buttons can drive the KasmVNC DOM. */
   frameRef: React.RefObject<HTMLIFrameElement | null>;
+  /** Keep the control bar's 56 px clear: true only while it is docked. The
+   *  frame itself never remounts, so a change resizes the desktop, nothing
+   *  more. */
+  reserveTop: boolean;
 }) {
   const t = useTranslations('viewer');
   const iframeRef = frameRef;
@@ -1084,7 +1265,7 @@ function LiveStream({
   };
 
   return (
-    <div className="absolute inset-0 pt-14">
+    <div className={cn('absolute inset-0', reserveTop && 'pt-14')}>
       <iframe
         ref={iframeRef}
         src={url}
@@ -1099,7 +1280,7 @@ function LiveStream({
         allow="clipboard-read; clipboard-write; autoplay; microphone; camera; display-capture"
       />
       {!ready && (
-        <div className="absolute inset-0 top-14 flex flex-col items-center justify-center gap-3 bg-aurora">
+        <div className={cn('absolute inset-0 flex flex-col items-center justify-center gap-3 bg-aurora', reserveTop && 'top-14')}>
           <Loader2 className="size-6 animate-spin text-gold-400" />
           <p className="text-sm text-muted-foreground">{loadingText}</p>
         </div>
@@ -1199,7 +1380,7 @@ function Provisioning({ status, workspaceName }: { status: string | undefined; w
               className={cn(
                 'flex items-center gap-3 rounded-lg border px-4 py-2.5 text-sm transition-all',
                 done && 'border-success/30 bg-success/5 text-foreground',
-                active && 'border-[rgba(212,175,55,0.4)] bg-gold-500/5 text-foreground',
+                active && 'border-gold-500/40 bg-gold-500/5 text-foreground',
                 !done && !active && 'border-border-subtle text-muted-foreground',
               )}
             >
@@ -1345,17 +1526,25 @@ function LaunchTimedOut({
  * (mock mode without NEXT_PUBLIC_DEMO_STREAM_URL). Tells the operator exactly
  * how to wire a real container while keeping the launch → viewer flow working.
  */
-function PlaceholderStream({ workspaceName, clock }: { workspaceName: string; clock: string }) {
+function PlaceholderStream({
+  workspaceName,
+  clock,
+  reserveTop,
+}: {
+  workspaceName: string;
+  clock: string;
+  reserveTop: boolean;
+}) {
   const t = useTranslations('viewer');
 
   return (
-    <div className="absolute inset-0 pt-12">
+    <div className={cn('absolute inset-0', reserveTop && 'pt-14')}>
       <div className="relative size-full overflow-hidden bg-aurora">
         <div className="absolute inset-0 bg-grid opacity-20" />
         <AshaMark className="absolute left-1/2 top-1/2 size-[560px] -translate-x-1/2 -translate-y-1/2 opacity-[0.03]" />
 
         {/* Central setup panel — high-contrast so it's unmistakable */}
-        <div className="absolute left-1/2 top-1/2 w-[min(560px,90vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-gold-500/30 bg-anthracite-900 shadow-[0_0_0_1px_rgba(212,175,55,0.08),0_24px_64px_rgba(0,0,0,0.6)]">
+        <div className="absolute left-1/2 top-1/2 w-[min(560px,90vw)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-gold-500/30 bg-anthracite-900 shadow-[0_0_0_1px_rgb(var(--brand-rgb)/0.08),0_24px_64px_rgba(0,0,0,0.6)]">
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-border-subtle bg-anthracite-800 px-5 py-3.5">
             <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success/15">

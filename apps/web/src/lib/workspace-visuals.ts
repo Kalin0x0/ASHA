@@ -29,11 +29,11 @@ const CATEGORY_VISUALS: Record<string, CategoryVisual> = {
   Development: { Icon: Code2, accent: '#5fb88f' },
   Security: { Icon: ShieldHalf, accent: '#d2685f' },
   Creative: { Icon: Palette, accent: '#b07fc4' },
-  Productivity: { Icon: Briefcase, accent: '#d4af37' },
+  Productivity: { Icon: Briefcase, accent: '#3dd6c6' },
   Desktops: { Icon: Monitor, accent: '#7c83d4' },
 };
 
-const FALLBACK: CategoryVisual = { Icon: AppWindow, accent: '#d4af37' };
+const FALLBACK: CategoryVisual = { Icon: AppWindow, accent: '#3dd6c6' };
 
 export function categoryVisual(category: string): CategoryVisual {
   return CATEGORY_VISUALS[category] ?? FALLBACK;

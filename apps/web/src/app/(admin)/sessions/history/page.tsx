@@ -98,7 +98,7 @@ export default function HistoryPage() {
               {filtered.map((h) => (
                 <tr
                   key={h.id}
-                  className="group border-b border-border-subtle/60 transition-all duration-150 last:border-0 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]"
+                  className="group border-b border-border-subtle/60 transition-all duration-150 last:border-0 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgb(var(--brand-rgb)/0.55)]"
                 >
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">

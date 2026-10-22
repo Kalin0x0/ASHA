@@ -70,3 +70,28 @@ export function isLikelyUnreachableUrl(url: string, currentHost?: string): boole
   if (current && host === current) return false; // served from this host → it resolves
   return host.endsWith('.local');
 }
+
+/**
+ * Turn KasmVNC's clipboard on for an embedded stream.
+ *
+ * Inside an iframe the KasmVNC client assumes Kasm Workspaces is driving it and
+ * defaults clipboard up, down and seamless to OFF unless the URL says otherwise
+ * (`isInsideKasmVDI` in its ui.js). Asha never said otherwise, so copy and paste
+ * was dead in every container, in both directions and inside the desktop too.
+ * A direction the DLP policy forbids stays off here — and the container is
+ * started with that direction disabled as well, which is the enforcing half.
+ */
+export function withClipboard(url: string, dlp: { clipboardUp?: boolean; clipboardDown?: boolean }): string {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return url;
+  }
+  const up = dlp.clipboardUp !== false;
+  const down = dlp.clipboardDown !== false;
+  u.searchParams.set('clipboard_up', String(up));
+  u.searchParams.set('clipboard_down', String(down));
+  u.searchParams.set('clipboard_seamless', String(up && down));
+  return u.toString();
+}

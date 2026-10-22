@@ -4,7 +4,7 @@ const { db, otp, password } = vi.hoisted(() => ({
   db: {
     org: { findUnique: vi.fn() },
     user: { findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
-    twoFactorMethod: { create: vi.fn(), findFirst: vi.fn(), deleteMany: vi.fn() },
+    twoFactorMethod: { create: vi.fn(), findFirst: vi.fn(), deleteMany: vi.fn(), updateMany: vi.fn() },
     refreshToken: { create: vi.fn() },
   }, otp: vi.fn(), password: vi.fn(),
 }));
@@ -39,6 +39,34 @@ describe('identity and TOTP hardening', () => {
     await svc().login({ email: user.email, password: 'pw', orgSlug: 'customer' });
     expect(db.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ orgId: 'o' }), take: 2 }));
   });
+  it('lets only one of two parallel logins spend the same TOTP window', async () => {
+    // Both requests read the row before either wrote to it, so both see an unused
+    // window and both verify the same six digits — the read cannot separate them.
+    const totpUser = { ...user, twoFactorMethods: [{ id: 'm', type: 'TOTP', confirmed: true, secret: 'BASE32SECRET', lastUsedAt: null }] };
+    db.user.findMany.mockResolvedValue([totpUser]);
+    db.user.update.mockResolvedValue(totpUser);
+    otp.mockReturnValue({ valid: true });
+    // The conditional UPDATE is what separates them: the first moves the row into
+    // this window, the second matches nothing.
+    db.twoFactorMethod.updateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 });
+
+    await expect(svc().login({ email: user.email, password: 'pw', totp: '123456' })).resolves.toBeDefined();
+    await expect(svc().login({ email: user.email, password: 'pw', totp: '123456' })).rejects.toThrow('already used');
+
+    expect(db.twoFactorMethod.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ id: 'm' }) }),
+    );
+  });
+
+  it('does not spend the TOTP window on a wrong code', async () => {
+    const totpUser = { ...user, twoFactorMethods: [{ id: 'm', type: 'TOTP', confirmed: true, secret: 'BASE32SECRET', lastUsedAt: null }] };
+    db.user.findMany.mockResolvedValue([totpUser]);
+    otp.mockReturnValue({ valid: false });
+    await expect(svc().login({ email: user.email, password: 'pw', totp: '000000' })).rejects.toThrow('Invalid two-factor code');
+    // Otherwise anyone could burn a victim's window by guessing at it.
+    expect(db.twoFactorMethod.updateMany).not.toHaveBeenCalled();
+  });
+
   it('seals newly enrolled TOTP secrets at rest', async () => {
     db.user.findUnique.mockResolvedValue(user);
     db.twoFactorMethod.create.mockResolvedValue({ id: 'm' });

@@ -62,7 +62,7 @@ export default function MetricsPage() {
                 onClick={() => setMetric(m)}
                 className={`rounded-md border px-3 py-1.5 text-xs transition-colors ${
                   metric === m
-                    ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
+                    ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
                     : 'border-border-subtle text-muted-foreground hover:bg-secondary'
                 }`}
               >
@@ -77,7 +77,7 @@ export default function MetricsPage() {
                 onClick={() => setHours(r)}
                 className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
                   hours === r
-                    ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
+                    ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
                     : 'border-border-subtle text-muted-foreground hover:bg-secondary'
                 }`}
               >

@@ -31,7 +31,7 @@ export default function BannersPage() {
   const [scope, setScope] = useState<(typeof SCOPES)[number]>('WORKSPACE');
   const [refId, setRefId] = useState('');
   const [bannerText, setBannerText] = useState('');
-  const [bannerColor, setBannerColor] = useState('#1a1a2e');
+  const [bannerColor, setBannerColor] = useState('#11262a');
   const [watermarkText, setWatermarkText] = useState('');
   const [opacity, setOpacity] = useState(0.15);
   const [saving, setSaving] = useState(false);

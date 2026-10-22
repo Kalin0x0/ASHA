@@ -281,7 +281,7 @@ export default function SessionMonitorPage() {
               className={cn(
                 'rounded-full border px-3 py-1 text-xs font-medium transition-colors ring-gold-focus',
                 status === f
-                  ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
+                  ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
                   : 'border-border-subtle text-muted-foreground hover:text-foreground',
               )}
             >
@@ -300,7 +300,7 @@ export default function SessionMonitorPage() {
               className={cn(
                 'rounded-full border px-3 py-1 text-xs font-medium tnum transition-colors ring-gold-focus',
                 intervalMs === ms
-                  ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
+                  ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
                   : 'border-border-subtle text-muted-foreground hover:text-foreground',
               )}
             >

@@ -70,7 +70,7 @@ export default function RolesPage() {
                     </td>
                   </tr>
                   {PERMISSION_CATALOG.filter((p) => p.category === cat).map((p) => (
-                    <tr key={p.key} className="border-b border-border-subtle/50 transition-all duration-150 last:border-0 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
+                    <tr key={p.key} className="border-b border-border-subtle/50 transition-all duration-150 last:border-0 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgb(var(--brand-rgb)/0.55)]">
                       <td className="px-5 py-2.5">
                         <p className="font-medium">{t(`roles.permissions.${p.key}`)}</p>
                         <p className="font-mono text-[11px] text-muted-foreground">{p.key}</p>

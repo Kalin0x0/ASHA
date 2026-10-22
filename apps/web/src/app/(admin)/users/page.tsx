@@ -146,8 +146,8 @@ function LicenseField({
               className={cn(
                 'rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors duration-150 ring-gold-focus',
                 selected
-                  ? 'border-[rgba(212,175,55,0.5)] bg-gold-500/15 text-gold-200'
-                  : 'border-border-subtle text-muted-foreground hover:border-[rgba(212,175,55,0.35)] hover:text-foreground',
+                  ? 'border-gold-500/50 bg-gold-500/15 text-gold-200'
+                  : 'border-border-subtle text-muted-foreground hover:border-gold-500/35 hover:text-foreground',
               )}
             >
               {t(`users.license.presets.${p}`)}
@@ -370,7 +370,7 @@ export default function UsersPage() {
               {filtered.map((u) => (
                 <tr
                   key={u.id}
-                  className="group border-b border-border-subtle/60 transition-all duration-150 last:border-0 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]"
+                  className="group border-b border-border-subtle/60 transition-all duration-150 last:border-0 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgb(var(--brand-rgb)/0.55)]"
                 >
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">

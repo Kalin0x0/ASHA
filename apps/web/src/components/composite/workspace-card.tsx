@@ -77,7 +77,7 @@ export function WorkspaceCard({
       className={cn(
         'group relative flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-[var(--surface-1)] text-start transition-all duration-300 ring-gold-focus',
         enabled
-          ? 'cursor-pointer hover:-translate-y-1 hover:border-[rgba(212,175,55,0.4)] hover:shadow-[0_18px_48px_-18px_rgba(0,0,0,0.7),0_0_0_1px_rgba(212,175,55,0.12)]'
+          ? 'cursor-pointer hover:-translate-y-1 hover:border-gold-500/40 hover:shadow-[0_18px_48px_-18px_rgba(0,0,0,0.7),0_0_0_1px_rgb(var(--brand-rgb)/0.12)]'
           : 'cursor-not-allowed opacity-60',
       )}
     >
@@ -204,7 +204,7 @@ export function WorkspaceCard({
             <Star
               className={cn(
                 'size-4 transition-all',
-                favorite && 'fill-gold-400 drop-shadow-[0_0_6px_rgba(212,175,55,0.5)]',
+                favorite && 'fill-gold-400 drop-shadow-[0_0_6px_rgb(var(--brand-rgb)/0.5)]',
               )}
             />
           </button>
@@ -213,7 +213,7 @@ export function WorkspaceCard({
         {/* Launch-on-hover overlay (Kasm signature) */}
         {enabled ? (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-anthracite-950/50 opacity-0 backdrop-blur-[2px] transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-            <span className="inline-flex items-center gap-2 rounded-full bg-gold-500 px-5 py-2 text-sm font-semibold text-anthracite-950 shadow-[0_8px_24px_-6px_rgba(212,175,55,0.6)] transition-transform duration-200 group-hover:scale-105">
+            <span className="inline-flex items-center gap-2 rounded-full bg-gold-500 px-5 py-2 text-sm font-semibold text-anthracite-950 shadow-[0_8px_24px_-6px_rgb(var(--brand-rgb)/0.6)] transition-transform duration-200 group-hover:scale-105">
               {launching ? (
                 <>
                   <span className="size-4 animate-spin rounded-full border-2 border-anthracite-950/30 border-t-anthracite-950" />

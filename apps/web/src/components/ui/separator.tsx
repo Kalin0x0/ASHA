@@ -15,7 +15,7 @@ export const Separator = React.forwardRef<
     className={cn(
       'shrink-0',
       gold
-        ? 'bg-gradient-to-r from-transparent via-[rgba(212,175,55,0.4)] to-transparent'
+        ? 'bg-gradient-to-r from-transparent via-gold-500/40 to-transparent'
         : 'bg-border-subtle',
       orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px',
       className,

@@ -105,7 +105,7 @@ export function Dock({
           active={launchpadOpen}
           onClick={onOpenLaunchpad}
         >
-          <span className="flex size-full items-center justify-center rounded-xl border border-gold-500/25 bg-[radial-gradient(120%_120%_at_50%_0%,#2a2a4a,#14141f)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <span className="flex size-full items-center justify-center rounded-xl border border-gold-500/25 bg-[radial-gradient(120%_120%_at_50%_0%,#384e52,#11262a)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
             <LayoutGrid className="size-[46%] text-gold-300" aria-hidden />
           </span>
         </DockItem>
@@ -180,7 +180,7 @@ function DockItem({
           aria-hidden
           className={cn(
             'absolute -bottom-[7px] left-1/2 size-1 -translate-x-1/2 rounded-full',
-            running ? 'bg-gold-400 shadow-[0_0_6px_rgba(212,175,55,0.8)]' : 'bg-foreground/60',
+            running ? 'bg-gold-400 shadow-[0_0_6px_rgb(var(--brand-rgb)/0.8)]' : 'bg-foreground/60',
           )}
         />
       )}

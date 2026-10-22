@@ -62,7 +62,7 @@ export function FavoriteQuickLaunch({ limit = 4 }: { limit?: number }) {
               onClick={() => void onLaunch(ws.id)}
               disabled={busy}
               title={t('favorites.launchTitle', { name: ws.friendlyName })}
-              className="group flex items-center gap-1.5 rounded-full border border-border-subtle bg-[var(--surface-2)]/60 py-1 ps-1 pe-2.5 text-xs transition-all duration-200 hover:border-[rgba(212,175,55,0.35)] hover:bg-[var(--surface-2)] hover:shadow-[0_0_0_1px_rgba(212,175,55,0.15)] disabled:opacity-60 ring-gold-focus"
+              className="group flex items-center gap-1.5 rounded-full border border-border-subtle bg-[var(--surface-2)]/60 py-1 ps-1 pe-2.5 text-xs transition-all duration-200 hover:border-gold-500/35 hover:bg-[var(--surface-2)] hover:shadow-[0_0_0_1px_rgb(var(--brand-rgb)/0.15)] disabled:opacity-60 ring-gold-focus"
             >
               <AppIcon
                 name={ws.friendlyName}
@@ -85,7 +85,7 @@ export function FavoriteQuickLaunch({ limit = 4 }: { limit?: number }) {
           <Link
             href="/"
             title={t('favorites.seeAll')}
-            className="flex items-center rounded-full border border-border-subtle bg-[var(--surface-2)]/60 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[rgba(212,175,55,0.35)] hover:text-gold-300 ring-gold-focus"
+            className="flex items-center rounded-full border border-border-subtle bg-[var(--surface-2)]/60 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-gold-500/35 hover:text-gold-300 ring-gold-focus"
           >
             +{overflow}
           </Link>

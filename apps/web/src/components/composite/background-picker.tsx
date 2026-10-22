@@ -120,7 +120,7 @@ export function BackgroundPicker() {
                 className={cn(
                   'flex flex-col items-center gap-1 rounded-lg border py-2 text-[11px] font-medium transition-all ring-gold-focus',
                   active
-                    ? 'border-gold-500/60 bg-gold-500/15 text-foreground shadow-[0_0_0_1px_rgba(212,175,55,0.4)]'
+                    ? 'border-gold-500/60 bg-gold-500/15 text-foreground shadow-[0_0_0_1px_rgb(var(--brand-rgb)/0.4)]'
                     : 'border-border-subtle text-muted-foreground hover:border-white/30 hover:text-foreground',
                 )}
               >
@@ -148,7 +148,7 @@ export function BackgroundPicker() {
               className={cn(
                 'flex items-center justify-center gap-1.5 rounded-lg border py-2 text-xs font-medium transition-all ring-gold-focus',
                 active
-                  ? 'border-gold-500/60 bg-gold-500/15 text-foreground shadow-[0_0_0_1px_rgba(212,175,55,0.4)]'
+                  ? 'border-gold-500/60 bg-gold-500/15 text-foreground shadow-[0_0_0_1px_rgb(var(--brand-rgb)/0.4)]'
                   : 'border-border-subtle text-muted-foreground hover:border-white/30 hover:text-foreground',
               )}
             >
@@ -176,7 +176,7 @@ export function BackgroundPicker() {
                 className={cn(
                   'group relative aspect-square overflow-hidden rounded-lg border bg-anthracite-950 transition-all ring-gold-focus',
                   active
-                    ? 'border-gold-500/70 shadow-[0_0_0_1px_rgba(212,175,55,0.5)]'
+                    ? 'border-gold-500/70 shadow-[0_0_0_1px_rgb(var(--brand-rgb)/0.5)]'
                     : 'border-white/10 hover:-translate-y-0.5 hover:border-white/30',
                 )}
               >

@@ -15,7 +15,7 @@ import { useBugReport, useDeleteBug, useResolveBug, useUpdateBug } from '@/lib/h
 import type { BugFixRow } from '@/lib/types';
 
 const textareaClass =
-  'flex w-full resize-y rounded-md border border-input bg-[var(--surface-1)] px-3 py-2 text-sm transition-shadow placeholder:text-muted-foreground/70 focus-visible:border-[rgba(212,175,55,0.5)] focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none';
+  'flex w-full resize-y rounded-md border border-input bg-[var(--surface-1)] px-3 py-2 text-sm transition-shadow placeholder:text-muted-foreground/70 focus-visible:border-gold-500/50 focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none';
 
 function FixCard({
   fix,

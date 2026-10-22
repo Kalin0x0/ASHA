@@ -51,6 +51,7 @@
     "settings": "Einstellungen",
     "settingsToast": "Stream-Einstellungen",
     "fullscreen": "Vollbild",
+    "exitFullscreen": "Vollbild beenden",
     "end": "Beenden",
     "disabledByPolicy": "{label} — durch Richtlinie deaktiviert",
     "dropToUpload": "Dateien hier ablegen, um sie in die Sitzung hochzuladen",
@@ -143,6 +144,7 @@
       "qualityFull": "Qualität: voll",
       "copyViewLink": "Nur-Ansicht-Link kopieren",
       "fullscreen": "Vollbild",
+      "exitFullscreen": "Vollbild beenden",
       "controlPanel": "Steuerung",
       "reconnect": "Neu verbinden",
       "endSession": "Sitzung beenden",
@@ -156,6 +158,7 @@
       "paste": "Einfügen",
       "ctrlAltDel": "Strg + Alt + Entf",
       "fullscreen": "Vollbild",
+      "exitFullscreen": "Vollbild beenden",
       "qualityTitle": "Streaming-Qualität",
       "qualityPerformanceOn": "Leistungsmodus: an",
       "qualityFull": "Volle Qualität",
@@ -230,5 +233,10 @@
     "title": "Ein Administrator sieht diese Sitzung gerade mit",
     "by": "{name} · seit {time}",
     "hint": "Ihr Bildschirm wird angesehen. Niemand übernimmt die Steuerung — die Eingabe bleibt bei Ihnen."
+  },
+  "menu": {
+    "show": "Menü einblenden",
+    "hide": "Menü ausblenden",
+    "pin": "Menü anheften"
   }
 }

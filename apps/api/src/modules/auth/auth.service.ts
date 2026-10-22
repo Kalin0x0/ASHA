@@ -18,6 +18,18 @@ import type { AuthUser } from '../../common/decorators';
 import { ENV } from '../../common/env.module';
 import { RbacService } from '../../common/rbac.service';
 
+/** A TOTP code is valid for one 30-second step, and that step is what gets spent. */
+const TOTP_PERIOD_MS = 30_000;
+
+/**
+ * How long after a rotation a second request may still present the same refresh
+ * token and be served rather than treated as theft. Two tabs share one token and
+ * both refresh when the access token expires, so a few hundred milliseconds of
+ * overlap is ordinary traffic, not an attack. Kept short: past this, a token that
+ * turns up again really is one the legitimate client should no longer hold.
+ */
+const REFRESH_RACE_GRACE_MS = 10_000;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -66,10 +78,8 @@ export class AuthService {
     if (confirmedTotp) {
       if (!dto.totp) throw new UnauthorizedException('Two-factor code required');
 
-      // Replay protection: reject if the same 30-second window was already used.
-      // lastUsedAt represents the last successful verification; if it falls within
-      // the current TOTP period, the code has already been consumed.
-      const TOTP_PERIOD_MS = 30_000;
+      // Cheap rejection of an obvious replay before spending a crypto verify. The
+      // binding decision is consumeTotp() below; this read can go stale.
       if (confirmedTotp.lastUsedAt) {
         const windowStart = Math.floor(Date.now() / TOTP_PERIOD_MS) * TOTP_PERIOD_MS;
         if (confirmedTotp.lastUsedAt.getTime() >= windowStart) {
@@ -79,10 +89,9 @@ export class AuthService {
 
       const result = await verifyOtp({ secret: this.readTotpSecret(confirmedTotp.secret), token: dto.totp });
       if (!result.valid) throw new UnauthorizedException('Invalid two-factor code');
-      await prisma.twoFactorMethod.update({
-        where: { id: confirmedTotp.id },
-        data: { lastUsedAt: new Date() },
-      });
+      if (!(await this.consumeTotp(confirmedTotp.id))) {
+        throw new UnauthorizedException('Two-factor code already used — wait for the next code');
+      }
     }
 
     await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
@@ -165,7 +174,54 @@ export class AuthService {
       throw new UnauthorizedException('User unavailable');
     }
 
-    await prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
+    // Claim the rotation atomically. Reading revokedAt above and writing it here
+    // left a gap, and which way it failed depended only on how the interleaving
+    // fell: either both callers minted a live successor into one family, or the
+    // slower one arrived after the winner's revoke and took the replay branch
+    // above — burning the family, signing the user out of every tab, and filing a
+    // theft alert that in fact describes ordinary use. The product opens that
+    // second tab itself, so this was reachable without an attacker.
+    const claimed = await prisma.refreshToken.updateMany({
+      where: { id: stored.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    if (claimed.count === 0) {
+      // Somebody rotated this exact token between our read and our write. If the
+      // family still holds a live token minted moments ago, that was the other tab:
+      // a race, not a theft. Mint alongside it and leave the family standing.
+      // Every other path here — logout, password change, licence expiry, a real
+      // replay — leaves no live member, and the burn is the right answer.
+      const successor = await prisma.refreshToken.findFirst({
+        where: { family: stored.family, revokedAt: null },
+        orderBy: { createdAt: 'desc' },
+      });
+      const raced =
+        !!successor && Date.now() - successor.createdAt.getTime() <= REFRESH_RACE_GRACE_MS;
+
+      if (!raced) {
+        await prisma.refreshToken.updateMany({
+          where: { family: stored.family, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+        await this.audit.record({
+          orgId: user.orgId,
+          actorUserId: stored.userId,
+          action: 'auth.refresh_replay_detected',
+          metadata: { family: stored.family, concurrent: true },
+        });
+        throw new UnauthorizedException('Refresh token reuse detected — all sessions revoked');
+      }
+
+      // Recorded under its own action so the replay alert keeps meaning something.
+      await this.audit.record({
+        orgId: user.orgId,
+        actorUserId: stored.userId,
+        action: 'auth.refresh_race_graced',
+        metadata: { family: stored.family },
+      });
+    }
+
     // Carry the rotation family forward so the full chain stays linked.
     return this.issueTokens(user, stored.family);
   }
@@ -293,6 +349,13 @@ export class AuthService {
     if (!method) throw new BadRequestException('No confirmed TOTP method enrolled');
     const result = await verifyOtp({ secret: this.readTotpSecret(method.secret), token: totp });
     if (!result.valid) throw new UnauthorizedException('Invalid two-factor code');
+    // Step-up spends the code like a login does. Without this, a code seen once —
+    // over the operator's shoulder, or in a login this account already completed —
+    // stayed good for the rest of its window and could be replayed for an elevated
+    // token as often as the attacker liked.
+    if (!(await this.consumeTotp(method.id))) {
+      throw new UnauthorizedException('Two-factor code already used — wait for the next code');
+    }
     const ttl = Math.min(this.env.JWT_ACCESS_TTL, 300);
     const accessToken = await this.jwt.signAsync(
       { sub: user.sub, orgId: user.orgId, email: user.email, isSystemAdmin: user.isSystemAdmin, acr: 'step-up' },
@@ -338,6 +401,30 @@ export class AuthService {
       },
     });
     return { accessToken, refreshToken, expiresIn: this.env.JWT_ACCESS_TTL, tokenType: 'Bearer' };
+  }
+
+  /**
+   * Spend the current TOTP window for one method, atomically. Returns false when
+   * somebody else already spent it.
+   *
+   * A code is only as good as its 30-second step, so the step is the thing that
+   * has to be consumed exactly once. Reading lastUsedAt, verifying, then writing
+   * it back left a gap wide enough for two requests carrying the same six digits:
+   * both read the previous window, both verified, both wrote, and both were let
+   * in. Moving the precondition into the WHERE clause makes the database the
+   * arbiter — the row only advances into this window for the caller whose
+   * condition still holds, and Prisma reports whether that was us.
+   *
+   * Call this only after verifyOtp has succeeded: claiming the window first would
+   * let anyone burn a victim's code with six random digits.
+   */
+  private async consumeTotp(methodId: string, now: number = Date.now()): Promise<boolean> {
+    const windowStart = new Date(Math.floor(now / TOTP_PERIOD_MS) * TOTP_PERIOD_MS);
+    const claimed = await prisma.twoFactorMethod.updateMany({
+      where: { id: methodId, OR: [{ lastUsedAt: null }, { lastUsedAt: { lt: windowStart } }] },
+      data: { lastUsedAt: new Date(now) },
+    });
+    return claimed.count === 1;
   }
 
   private readTotpSecret(stored: string): string {

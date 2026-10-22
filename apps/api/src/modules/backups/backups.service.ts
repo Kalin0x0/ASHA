@@ -62,9 +62,15 @@ export class BackupsService {
   protected performDump(filepath: string): Promise<number> {
     return new Promise<number>((resolve, reject) => {
       const connection = pgDumpConnection(this.env.DATABASE_URL);
+      // A DATABASE_URL carrying no password yields '', and passing that through is
+      // not the same as leaving PGPASSWORD unset: it overrides whatever the
+      // environment or a .pgpass file would have supplied and hands pg_dump an
+      // empty password instead. Only set the variable when there is one to set.
+      const childEnv = { ...process.env };
+      if (connection.password) childEnv.PGPASSWORD = connection.password;
       const child = spawn('pg_dump', ['--format=custom', `--file=${filepath}`, connection.url], {
         stdio: ['ignore', 'ignore', 'pipe'],
-        env: { ...process.env, PGPASSWORD: connection.password },
+        env: childEnv,
       });
       let stderr = '';
       child.stderr?.on('data', (d) => (stderr += String(d)));

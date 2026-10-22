@@ -8,7 +8,7 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default: 'border-border-subtle bg-secondary text-secondary-foreground',
-        gold: 'border-[rgba(212,175,55,0.35)] bg-[rgba(212,175,55,0.1)] text-gold-300',
+        gold: 'border-gold-500/35 bg-gold-500/10 text-gold-300',
         success: 'border-[rgba(95,184,143,0.3)] bg-[rgba(95,184,143,0.1)] text-success',
         warning: 'border-[rgba(224,168,74,0.3)] bg-[rgba(224,168,74,0.1)] text-warning',
         destructive: 'border-[rgba(210,104,95,0.3)] bg-[rgba(210,104,95,0.1)] text-destructive',

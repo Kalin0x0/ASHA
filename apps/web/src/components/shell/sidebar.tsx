@@ -180,7 +180,7 @@ function ExpandedGroup({
         <span className="flex-1 truncate text-sm font-medium">{tNav(`groups.${group.key}`)}</span>
         {/* Gold dot when the current page lives inside a collapsed category */}
         {groupActive && !open && (
-          <span className="size-1.5 rounded-full bg-gold-400 shadow-[0_0_6px_rgba(212,175,55,0.6)]" />
+          <span className="size-1.5 rounded-full bg-gold-400 shadow-[0_0_6px_rgb(var(--brand-rgb)/0.6)]" />
         )}
         <ChevronDown
           className={cn(
@@ -241,7 +241,7 @@ function ItemLink({
       )}
     >
       {active && (
-        <span className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-gradient-to-b from-gold-300 to-gold-600 shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
+        <span className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-gradient-to-b from-gold-300 to-gold-600 shadow-[0_0_10px_rgb(var(--brand-rgb)/0.5)]" />
       )}
       <Icon
         className={cn(
@@ -276,7 +276,7 @@ function CollapsedGroup({
       isActive ? 'bg-gold-500/[0.1] text-gold-300' : 'text-muted-foreground/70 hover:bg-secondary/60 hover:text-foreground',
     );
   const activeRail = (
-    <span className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-gradient-to-b from-gold-300 to-gold-600 shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
+    <span className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-gradient-to-b from-gold-300 to-gold-600 shadow-[0_0_10px_rgb(var(--brand-rgb)/0.5)]" />
   );
 
   // Single-page category → a direct icon link.

@@ -148,7 +148,7 @@ export default function TariffsPage() {
                   className={cn(
                     'rounded-md border px-3 py-1.5 text-xs transition-colors',
                     draft.period === p
-                      ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
+                      ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
                       : 'border-border-subtle text-muted-foreground hover:bg-secondary',
                   )}
                 >
@@ -359,7 +359,7 @@ function AssignPanel({
                 className={cn(
                   'flex-1 rounded-md border px-3 py-1.5 text-xs transition-colors',
                   subjectType === s
-                    ? 'border-[rgba(212,175,55,0.4)] bg-gold-500/10 text-gold-300'
+                    ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
                     : 'border-border-subtle text-muted-foreground hover:bg-secondary',
                 )}
               >

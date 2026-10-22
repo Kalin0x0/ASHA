@@ -38,6 +38,111 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.3',
+    date: '2026-10-22',
+    title: { en: 'Copy and paste work in container desktops again', de: 'Kopieren und Einfügen gehen in Container-Desktops wieder' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'Copy and paste were dead in every container desktop — from your computer into the desktop, back out, and even inside it. The embedded stream client switches its clipboard off unless it is told otherwise, and it never was. It is now switched on in both directions, except where your organisation’s data-loss policy forbids a direction.',
+          de: 'Kopieren und Einfügen funktionierten in keinem Container-Desktop — weder vom eigenen Rechner in den Desktop noch zurück noch innerhalb des Desktops. Der eingebettete Stream-Client schaltet seine Zwischenablage ab, wenn man ihm nichts anderes sagt, und das geschah nie. Sie ist jetzt in beide Richtungen an, außer wo die Datenschutz-Richtlinie Ihrer Organisation eine Richtung verbietet.',
+        },
+      },
+    ],
+  },
+  {
+    version: '1.3.2',
+    date: '2026-10-18',
+    title: { en: 'Fullscreen menu polish', de: 'Feinschliff am Vollbild-Menü' },
+    changes: [
+      {
+        type: 'fixed',
+        text: {
+          en: 'After the desktop’s own fullscreen button had been used, "Exit fullscreen" and End could not leave fullscreen in the container viewer — End then waited for a confirmation nobody could see. Both leave fullscreen reliably now.',
+          de: 'Nachdem der Vollbild-Knopf im Desktop selbst benutzt worden war, kamen „Vollbild beenden“ und „Beenden“ im Container-Viewer nicht mehr aus dem Vollbild — „Beenden“ wartete dann auf eine unsichtbare Rückfrage. Beide verlassen das Vollbild jetzt zuverlässig.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'On narrow phones the menu buttons stay on screen while watching a desktop, the new buttons are full-size touch targets, the pull-tab stays visible in the light theme, and the print preview’s Close and Print buttons are no longer hidden under the "being watched" notice.',
+          de: 'Auf schmalen Handys bleiben die Menüknöpfe beim Zuschauen auf dem Bildschirm, die neuen Knöpfe sind volle Touch-Ziele, der Griff bleibt im hellen Design sichtbar, und „Schließen“ und „Drucken“ der Druckvorschau liegen nicht mehr unter dem Beobachtungs-Hinweis.',
+        },
+      },
+    ],
+  },
+  {
+    version: '1.3.1',
+    date: '2026-10-18',
+    title: { en: 'Fullscreen is all desktop, and the menu folds away', de: 'Vollbild ist ganz Desktop, und das Menü klappt weg' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Fullscreen now gives the whole screen to the desktop: the menu bar folds away as you enter it. A small tab at the top centre brings the menu back over the desktop when you need it, and a click into the desktop puts it away again. Leaving fullscreen — with Esc or any other way — always brings the normal menu back.',
+          de: 'Im Vollbild gehört jetzt der ganze Bildschirm dem Desktop: Die Menüleiste klappt beim Wechsel ins Vollbild weg. Ein kleiner Griff oben in der Mitte holt das Menü bei Bedarf über den Desktop zurück, ein Klick in den Desktop räumt es wieder weg. Beim Verlassen des Vollbilds — per Esc oder auf jedem anderen Weg — kommt immer das normale Menü zurück.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'The menu can also be folded away outside fullscreen, with the new button at the end of the bar — on an iPhone, which has no fullscreen for web pages, that is the way to a desktop that fills the screen. Brought back from the tab, the menu lies over the desktop without resizing it; the pin button docks it again.',
+          de: 'Auch außerhalb des Vollbilds lässt sich das Menü wegklappen, mit dem neuen Knopf am Ende der Leiste — auf dem iPhone, das für Webseiten kein Vollbild kennt, ist das der Weg zum bildschirmfüllenden Desktop. Über den Griff zurückgeholt, liegt das Menü über dem Desktop, ohne seine Größe zu ändern; der Pin-Knopf dockt es wieder an.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'The notices that an administrator is watching or controlling the session now stay on top of everything in the viewer; the open control panel and the print preview used to cover them.',
+          de: 'Die Hinweise, dass ein Administrator die Sitzung beobachtet oder steuert, liegen jetzt über allem im Viewer; das geöffnete Bedienfeld und die Druckvorschau haben sie bisher verdeckt.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'A display resolution picked from the menu now survives a window or fullscreen change instead of quietly snapping back to the window size. Ending a session from fullscreen shows its confirmation instead of waiting for it out of sight, and in Persian the closed control panel no longer sits on screen.',
+          de: 'Eine im Menü gewählte Bildschirmauflösung übersteht jetzt Fenster- und Vollbildwechsel, statt still auf die Fenstergröße zurückzuspringen. Beenden aus dem Vollbild zeigt seine Rückfrage, statt unsichtbar auf sie zu warten, und auf Persisch steht das geschlossene Bedienfeld nicht mehr auf dem Bildschirm.',
+        },
+      },
+    ],
+  },
+  {
+    version: '1.3.0',
+    date: '2026-09-25',
+    title: { en: 'A new look, and an end to the surprise sign-outs', de: 'Neues Erscheinungsbild — und Schluss mit den plötzlichen Abmeldungen' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'Asha has its own colours. Deep teal with a mint accent replaces the old gold, over a night-slate background in dark mode and a soft ivory one in light mode. Nothing moved: the same pages, the same buttons, in the same places. Status colours are untouched, so green still means running and red still means trouble — and the contents of your desktops are never tinted. What you see inside a session is exactly what the application draws.',
+          de: 'Asha hat eigene Farben. Tiefes Petrol mit einem Mint-Akzent ersetzt das bisherige Gold, auf schiefergrauem Grund im dunklen und weichem Elfenbein im hellen Modus. Verschoben wurde nichts: dieselben Seiten, dieselben Schaltflächen, an denselben Stellen. Die Statusfarben bleiben, wie sie waren — Grün heißt weiterhin „läuft“, Rot weiterhin „Problem“ — und die Inhalte Ihrer Desktops werden nie eingefärbt. Was Sie in einer Sitzung sehen, zeichnet die Anwendung selbst.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Having Asha open in two tabs could sign you out of both at once, without warning and without you doing anything to cause it. Both tabs renew the same login in the background, and when they happened to renew at the same moment, Asha mistook it for a stolen session and ended every session you had. It now recognises your own second tab and leaves you signed in.',
+          de: 'Wer Asha in zwei Tabs geöffnet hatte, konnte ohne Vorwarnung aus beiden gleichzeitig abgemeldet werden, ohne etwas falsch gemacht zu haben. Beide Tabs erneuern im Hintergrund dieselbe Anmeldung, und traf das zufällig im selben Moment zusammen, hielt Asha es für eine gestohlene Sitzung und beendete alle. Der eigene zweite Tab wird jetzt erkannt, die Anmeldung bleibt bestehen.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Two-factor codes are now properly used up. A six-digit code is good for one sign-in and no longer works a second time inside its thirty seconds — neither for another sign-in nor for confirming a sensitive action. If you are asked for a code twice in a row, wait for the next one.',
+          de: 'Zwei-Faktor-Codes werden jetzt richtig verbraucht. Ein sechsstelliger Code gilt für eine Anmeldung und funktioniert innerhalb seiner dreißig Sekunden kein zweites Mal — weder für eine weitere Anmeldung noch zum Bestätigen einer sensiblen Aktion. Werden Sie zweimal hintereinander nach einem Code gefragt, warten Sie den nächsten ab.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'On a phone, the sign-in panel ran off the edge of the screen. It fits now.',
+          de: 'Auf dem Handy lief die Anmeldemaske über den Bildschirmrand hinaus. Sie passt jetzt.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.2.15',
     date: '2026-09-22',
     title: { en: 'Watching a desktop can no longer change it', de: 'Zuschauen verändert den Desktop nicht mehr' },

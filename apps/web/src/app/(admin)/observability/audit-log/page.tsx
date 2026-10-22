@@ -76,7 +76,7 @@ export default function AuditLogPage() {
             />
           ) : (
             entries.map((e) => (
-              <div key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
+              <div key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgb(var(--brand-rgb)/0.55)]">
                 <ScrollText className="size-4 shrink-0 text-gold-300" />
                 <Badge variant="outline" className="font-mono text-[11px]">{e.action}</Badge>
                 <div className="min-w-0 flex-1">

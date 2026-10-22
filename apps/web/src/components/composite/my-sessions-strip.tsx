@@ -198,7 +198,7 @@ function SessionCard({
   return (
     <div
       className={cn(
-        'group flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-[var(--surface-1)] transition-all duration-200 hover:border-[rgba(212,175,55,0.35)] hover:shadow-[var(--shadow-ambient)]',
+        'group flex flex-col overflow-hidden rounded-xl border border-border-subtle bg-[var(--surface-1)] transition-all duration-200 hover:border-gold-500/35 hover:shadow-[var(--shadow-ambient)]',
         vertical ? 'w-full' : 'w-[280px] shrink-0',
       )}
     >
@@ -219,7 +219,7 @@ function SessionCard({
             className={cn('size-full object-cover transition-all duration-300 group-hover:scale-105', paused && 'brightness-50 grayscale')}
           />
         ) : (
-          <span className="flex size-full items-center justify-center bg-[radial-gradient(120%_120%_at_50%_0%,#23234a,#14141f)]">
+          <span className="flex size-full items-center justify-center bg-[radial-gradient(120%_120%_at_50%_0%,#2e4348,#11262a)]">
             <AppIcon
               name={s.workspaceName}
               dockerImage={ws?.dockerImage}

@@ -86,7 +86,7 @@ export function AgentInstallCard() {
                 key={file}
                 href={`/agent/${file}`}
                 download
-                className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-[var(--surface-1)] px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-[rgba(212,175,55,0.4)] hover:text-gold-300 ring-gold-focus"
+                className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-[var(--surface-1)] px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-gold-500/40 hover:text-gold-300 ring-gold-focus"
               >
                 <Download className="size-3.5" /> {label}
               </a>

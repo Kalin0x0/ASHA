@@ -99,7 +99,7 @@ export default function SharingPage() {
             shares.map((s) => {
               const exp = expiryLabel(s.expiresAt);
               return (
-                <div key={s.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgba(212,175,55,0.55)]">
+                <div key={s.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm transition-all duration-150 hover:bg-gold-500/[0.05] hover:shadow-[inset_2px_0_0_rgb(var(--brand-rgb)/0.55)]">
                   <Share2 className="size-4 text-gold-300" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">

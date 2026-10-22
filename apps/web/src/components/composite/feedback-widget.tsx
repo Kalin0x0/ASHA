@@ -54,7 +54,7 @@ async function toCompactDataUrl(file: Blob, maxEdge = 1600, quality = 0.82): Pro
 }
 
 const TEXTAREA =
-  'min-h-[110px] w-full resize-y rounded-md border border-input bg-[var(--surface-1)] px-3 py-2 text-sm transition-shadow placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:border-[rgba(212,175,55,0.5)] focus-visible:shadow-[var(--gold-glow)]';
+  'min-h-[110px] w-full resize-y rounded-md border border-input bg-[var(--surface-1)] px-3 py-2 text-sm transition-shadow placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:border-gold-500/50 focus-visible:shadow-[var(--gold-glow)]';
 
 export function FeedbackWidget() {
   const t = useTranslations('feedback');
@@ -134,7 +134,7 @@ export function FeedbackWidget() {
         onClick={() => setOpen(true)}
         aria-label={t('widget.open')}
         title={t('widget.open')}
-        className="group fixed bottom-5 end-5 z-40 flex size-12 items-center justify-center rounded-full border border-[rgba(212,175,55,0.35)] bg-anthracite-900/90 text-gold-300 shadow-[var(--shadow-lifted)] backdrop-blur transition-all hover:scale-105 hover:border-[rgba(212,175,55,0.6)] hover:shadow-[var(--gold-glow)] ring-gold-focus"
+        className="group fixed bottom-5 end-5 z-40 flex size-12 items-center justify-center rounded-full border border-gold-500/35 bg-anthracite-900/90 text-gold-300 shadow-[var(--shadow-lifted)] backdrop-blur transition-all hover:scale-105 hover:border-gold-500/60 hover:shadow-[var(--gold-glow)] ring-gold-focus"
       >
         <MessageSquarePlus className="size-5 transition-transform group-hover:-rotate-6" />
       </button>
