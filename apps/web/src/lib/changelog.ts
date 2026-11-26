@@ -38,6 +38,34 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.4',
+    date: '2026-11-26',
+    title: { en: 'A calmer sign-in that asks for your code only when it needs one', de: 'Eine aufgeräumte Anmeldung, die den Code nur fragt, wenn er nötig ist' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'Signing in is now a short conversation instead of one crowded form. You enter your username and password first; the authenticator code is asked for on a second screen, and only if your account has two-step verification switched on. The organization field, the 10-minute demo and passkeys are still there, but no longer all on the first screen.',
+          de: 'Die Anmeldung ist jetzt ein kurzer Dialog statt eines überfüllten Formulars. Zuerst kommen Benutzername und Passwort; den Code aus der Authenticator-App fragt Asha auf einer zweiten Seite ab, und nur, wenn für Ihr Konto die Bestätigung in zwei Schritten aktiv ist. Organisationsfeld, 10-Minuten-Demo und Passkeys gibt es weiterhin, aber nicht mehr alle auf der ersten Seite.',
+        },
+      },
+      {
+        type: 'added',
+        text: {
+          en: 'The sign-in page now shows what Asha is: a 3D picture of desktops in the browser and a few lines on what you get. On phones the form comes first and the explanation follows below.',
+          de: 'Die Anmeldeseite zeigt jetzt, was Asha ist: ein 3D-Bild von Desktops im Browser und ein paar Zeilen dazu, was Sie bekommen. Auf dem Handy kommt zuerst das Formular, die Erklärung folgt darunter.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: '“Forgot password?” did nothing. It now explains that your administrator sets a new password. Wrong passwords and codes are shown next to the form in your language instead of as a short English pop-up, and a code typed with Persian digits is accepted.',
+          de: '„Passwort vergessen?“ tat nichts. Jetzt steht dort, dass Ihr Administrator ein neues Passwort vergibt. Falsche Passwörter und Codes erscheinen direkt am Formular in Ihrer Sprache statt als kurze englische Einblendung, und ein Code mit persischen Ziffern wird angenommen.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.3.3',
     date: '2026-10-22',
     title: { en: 'Copy and paste work in container desktops again', de: 'Kopieren und Einfügen gehen in Container-Desktops wieder' },
