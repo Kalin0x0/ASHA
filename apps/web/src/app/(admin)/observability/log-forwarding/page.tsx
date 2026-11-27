@@ -110,11 +110,11 @@ export default function LogForwardingPage() {
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t('logForwarding.liveOnlyNotice')}{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          <code className="code-chip text-xs">NEXT_PUBLIC_API_MODE=live</code>.
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard label={t('logForwarding.forwarders')} value={forwarders.length} icon={Send} primary />
         <StatCard label={tCommon('labels.enabled')} value={forwarders.filter((f) => f.enabled).length} icon={Send} />
       </div>

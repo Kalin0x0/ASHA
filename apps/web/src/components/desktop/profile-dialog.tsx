@@ -207,7 +207,7 @@ function ProfileTab() {
           <select
             value={locale}
             onChange={(e) => setLocale(e.target.value)}
-            className="h-9 w-full rounded-md border border-border-subtle bg-anthracite-950/40 px-2 text-sm outline-none ring-gold-focus"
+            className="native-select w-full"
           >
             {LOCALES.map((l) => (
               <option key={l.code} value={l.code}>

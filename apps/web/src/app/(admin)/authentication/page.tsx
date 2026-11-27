@@ -189,11 +189,11 @@ export default function AuthenticationPage() {
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t('authentication.liveOnlyNotice')}{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          <code className="code-chip text-xs">NEXT_PUBLIC_API_MODE=live</code>.
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('authentication.stats.providers')} value={providers.length} icon={KeyRound} primary />
         <StatCard label={tc('labels.enabled')} value={enabledCount} icon={ShieldCheck} />
         <StatCard label={t('authentication.stats.scim')} value={1} icon={UserCog} format={() => 'RFC 7644'} />
@@ -314,7 +314,7 @@ export default function AuthenticationPage() {
         </div>
         <p className="text-sm text-muted-foreground">
           {t('authentication.scim.description')}{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">/scim/v2/&lt;orgId&gt;/Users</code>.
+          <code className="code-chip text-xs">/scim/v2/&lt;orgId&gt;/Users</code>.
         </p>
         {scimToken ? (
           <div className="flex items-center gap-2 rounded-lg border border-gold-500/30 bg-gold-500/5 p-3">
@@ -421,9 +421,9 @@ function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiG
         <div className="space-y-1.5">
           {mappings.map((m) => (
             <div key={m.id} className="flex items-center gap-2 rounded-md border border-border-subtle/60 px-3 py-2 text-xs">
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5">{m.attribute}</code>
+              <code className="code-chip">{m.attribute}</code>
               <span className="text-muted-foreground">=</span>
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5">{m.value}</code>
+              <code className="code-chip">{m.value}</code>
               <span className="text-muted-foreground">→</span>
               <Badge variant="gold">{groupName(m.groupId)}</Badge>
               <div className="flex-1" />
@@ -449,7 +449,7 @@ function MappingPanel({ providerId, groups }: { providerId: string; groups: ApiG
           <select
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}
-            className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+            className="native-select w-full"
           >
             <option value="">{t('authentication.mappings.selectGroup')}</option>
             {groups.map((g) => (

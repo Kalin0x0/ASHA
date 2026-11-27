@@ -52,13 +52,13 @@ export default function AutoScalePage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('autoscale.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('autoscale.stats.autoscaledPools')} value={autoscaled.length} icon={Gauge} primary />
         <StatCard label={t('autoscale.stats.maxInstances')} value={autoscaled.reduce((a, p) => a + (p.autoscaleConfig?.maxInstances ?? 0), 0)} icon={Network} />
         <StatCard label={t('autoscale.stats.standby')} value={autoscaled.reduce((a, p) => a + (p.autoscaleConfig?.minStandby ?? 0), 0)} icon={Network} />

@@ -75,7 +75,7 @@ export default function SharingPage() {
         description={t('sharing.description')}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('sharing.stats.activeShares')} value={shares.length} icon={Share2} primary />
         <StatCard label={t('sharing.stats.connectedGuests')} value={participants} icon={Users} />
         <StatCard label={t('sharing.stats.interactive')} value={shares.filter((s) => s.allowControl).length} icon={MousePointerClick} />

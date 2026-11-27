@@ -26,7 +26,7 @@ export default function AgentsPage() {
         description={t('agents.description')}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('agents.stats.onlineAgents')} value={online} suffix={`/ ${agents.length}`} icon={Server} primary />
         <StatCard label={t('agents.stats.hostedSessions')} value={totalSessions} icon={Layers} />
         <StatCard label={t('agents.stats.avgCpu')} value={Math.round(avgCpu)} suffix="%" icon={Cpu} format={(v) => `${Math.round(v)}`} />

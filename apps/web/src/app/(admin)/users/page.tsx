@@ -334,7 +334,7 @@ export default function UsersPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('users.stats.totalUsers')} value={users.length} icon={UsersIcon} primary />
         <StatCard label={tc('labels.active')} value={active} icon={UserCheck} />
         <StatCard label={t('users.stats.withTwoFactor')} value={withMfa} icon={Shield} />

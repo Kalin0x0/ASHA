@@ -58,11 +58,11 @@ export default function ReportingPage() {
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t('reporting.liveOnlyNotice')}{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          <code className="code-chip text-xs">NEXT_PUBLIC_API_MODE=live</code>.
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label={t('reporting.totalSessions')} value={summary?.totalSessions ?? 0} icon={MonitorPlay} primary />
         <StatCard label={t('reporting.activeNow')} value={summary?.activeSessions ?? 0} icon={MonitorPlay} />
         <StatCard label={t('reporting.agentsOnline')} value={summary?.agents.online ?? 0} icon={Server} format={(v) => `${v} / ${summary?.agents.total ?? 0}`} />

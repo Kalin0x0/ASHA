@@ -117,13 +117,13 @@ export default function CastingPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('casting.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard label={t('casting.stats.castLinks')} value={casts.length} icon={Cast} primary />
         <StatCard label={t('casting.stats.anonymous')} value={casts.filter((c) => c.allowAnonymous).length} icon={Cast} />
       </div>
@@ -178,7 +178,7 @@ export default function CastingPage() {
             <select
               value={workspaceId}
               onChange={(e) => setWorkspaceId(e.target.value)}
-              className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+              className="native-select w-full"
             >
               {workspaces.length === 0 && <option value="">{t('casting.noWorkspaces')}</option>}
               {workspaces.map((w) => (

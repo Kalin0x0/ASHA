@@ -76,7 +76,7 @@ export default function ConfigPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('config.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>

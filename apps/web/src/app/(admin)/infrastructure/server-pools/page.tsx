@@ -108,13 +108,13 @@ export default function ServerPoolsPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('serverPools.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('serverPools.stats.pools')} value={pools.length} icon={Network} primary />
         <StatCard label={t('serverPools.stats.autoscaled')} value={pools.filter((p) => p.autoscaleConfig).length} icon={Gauge} />
         <StatCard label={t('serverPools.stats.members')} value={pools.reduce((a, p) => a + (p._count?.members ?? 0), 0)} icon={Network} />
@@ -178,7 +178,7 @@ export default function ServerPoolsPage() {
             <select
               value={kind}
               onChange={(e) => setKind(e.target.value as 'AGENT' | 'SERVER')}
-              className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+              className="native-select w-full"
             >
               <option value="AGENT">{t('serverPools.form.kindAgent')}</option>
               <option value="SERVER">{t('serverPools.form.kindServer')}</option>
@@ -229,7 +229,7 @@ function AutoscaleEditor({ pool, onSaved }: { pool: ApiServerPool; onSaved: () =
           <select
             value={mode}
             onChange={(e) => setMode(e.target.value as typeof mode)}
-            className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+            className="native-select w-full"
           >
             <option value="LOAD">{t('serverPools.modes.LOAD')}</option>
             <option value="SCHEDULE">{t('serverPools.modes.SCHEDULE')}</option>
