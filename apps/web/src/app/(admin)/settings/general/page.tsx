@@ -203,7 +203,13 @@ export default function GeneralSettingsPage() {
                 {i === 0 && <Label className="text-xs">{t('general.fields.value')}</Label>}
                 <Input placeholder={t('general.placeholders.value')} value={r.value} onChange={(e) => setRow(i, { value: e.target.value })} />
               </div>
-              <Button variant="ghost" size="icon-sm" onClick={() => removeRow(i)}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => removeRow(i)}
+                aria-label={tCommon('actions.remove')}
+                title={tCommon('actions.remove')}
+              >
                 <Trash2 className="size-4 text-destructive" />
               </Button>
             </div>

@@ -129,6 +129,8 @@ export default function FileMappingsPage() {
                   size="icon-sm"
                   disabled={busyId === f.id}
                   onClick={() => void onDelete(f.id)}
+                  aria-label={`${tc('actions.delete')}: ${f.name}`}
+                  title={tc('actions.delete')}
                 >
                   {busyId === f.id ? (
                     <Loader2 className="size-4 animate-spin" />

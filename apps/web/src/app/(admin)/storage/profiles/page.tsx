@@ -123,6 +123,8 @@ export default function PersistentProfilesPage() {
                   size="icon-sm"
                   disabled={busyId === p.id}
                   onClick={() => void onDelete(p.id)}
+                  aria-label={`${tc('actions.delete')}: ${p.volumeName}`}
+                  title={tc('actions.delete')}
                 >
                   {busyId === p.id ? (
                     <Loader2 className="size-4 animate-spin" />

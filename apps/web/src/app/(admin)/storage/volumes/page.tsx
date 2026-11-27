@@ -103,6 +103,8 @@ export default function VolumeMappingsPage() {
                   size="icon-sm"
                   disabled={busyId === v.id}
                   onClick={() => void onDelete(v.id)}
+                  aria-label={`${tc('actions.delete')}: ${v.name}`}
+                  title={tc('actions.delete')}
                 >
                   {busyId === v.id ? (
                     <Loader2 className="size-4 animate-spin" />
