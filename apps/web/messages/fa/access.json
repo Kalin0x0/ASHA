@@ -145,7 +145,8 @@
       "Connectivity": "اتصالات",
       "Settings": "تنظیمات",
       "Observability": "مشاهده‌پذیری",
-      "Developer": "توسعه‌دهنده"
+      "Developer": "توسعه‌دهنده",
+      "Support": "پشتیبانی"
     },
     "permissions": {
       "SESSION_VIEW": "مشاهده نشست‌های خود",
@@ -185,7 +186,10 @@
       "AUDIT_VIEW": "مشاهده لاگ‌های ممیزی",
       "REPORTING_VIEW": "مشاهده گزارش‌ها و متریک‌ها",
       "WEBHOOK_MANAGE": "مدیریت وب‌هوک‌ها",
-      "APIKEY_MANAGE": "مدیریت کلیدهای API"
+      "APIKEY_MANAGE": "مدیریت کلیدهای API",
+      "MAINTENANCE_MANAGE": "مدیریت نگهداری زمان‌بندی‌شده و کارهای خودکار",
+      "BUG_VIEW": "مشاهدهٔ گزارش‌های خطا و دانش رفع آن‌ها",
+      "BUG_MANAGE": "بررسی، رفع و مستندسازی گزارش‌های خطا"
     }
   },
   "authentication": {

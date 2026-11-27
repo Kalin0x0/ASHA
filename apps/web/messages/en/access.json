@@ -145,7 +145,8 @@
       "Connectivity": "Connectivity",
       "Settings": "Settings",
       "Observability": "Observability",
-      "Developer": "Developer"
+      "Developer": "Developer",
+      "Support": "Support"
     },
     "permissions": {
       "SESSION_VIEW": "View own sessions",
@@ -185,7 +186,10 @@
       "AUDIT_VIEW": "View audit logs",
       "REPORTING_VIEW": "View reports & metrics",
       "WEBHOOK_MANAGE": "Manage webhooks",
-      "APIKEY_MANAGE": "Manage API keys"
+      "APIKEY_MANAGE": "Manage API keys",
+      "MAINTENANCE_MANAGE": "Manage scheduled maintenance and automation tasks",
+      "BUG_VIEW": "View bug reports and fix knowledge",
+      "BUG_MANAGE": "Triage, resolve and document bug reports"
     }
   },
   "authentication": {
