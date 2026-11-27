@@ -1,7 +1,7 @@
 'use client';
 
 import { Clock, Cpu, Lock, MemoryStick, MoreVertical, Pencil, Play, Sparkles, Star, Trash2, UserCheck } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { AppIcon } from '@/components/composite/app-icon';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -48,6 +48,8 @@ export function WorkspaceCard({
 }) {
   const t = useTranslations('portal');
   const format = useFormatter();
+  // "5 min ago" needs an explicit now; refreshed every minute while the card is up.
+  const now = useNow({ updateInterval: 60_000 });
   const { Icon, accent } = categoryVisual(workspace.category);
   const enabled = workspace.enabled;
   const protocolLabel = workspace.protocol === 'KASMVNC' ? 'KasmVNC' : workspace.protocol;
@@ -139,7 +141,7 @@ export function WorkspaceCard({
           <div className="on-dark absolute bottom-2 start-2 z-10 flex items-center gap-1 rounded-full bg-anthracite-950/70 px-2 py-0.5 backdrop-blur-sm">
             <Clock className="size-2.5 text-gold-300" />
             <span className="text-[10px] font-medium text-gold-300 tabular-nums">
-              {format.relativeTime(new Date(thumbEntry.capturedAt))}
+              {format.relativeTime(new Date(thumbEntry.capturedAt), now)}
             </span>
           </div>
         )}
