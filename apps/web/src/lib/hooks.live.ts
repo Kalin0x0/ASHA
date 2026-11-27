@@ -283,6 +283,17 @@ export function useUpdateUser() {
   );
 }
 
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  const { mutateAsync } = useMutation({
+    mutationFn: (id: string) => api.deleteUser(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: USERS_KEY }),
+  });
+  return useCallback(async (id: string): Promise<void> => {
+    await mutateAsync(id);
+  }, [mutateAsync]);
+}
+
 export function useCreateWorkspace() {
   const qc = useQueryClient();
   const { mutateAsync } = useMutation({

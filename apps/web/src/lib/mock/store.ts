@@ -207,6 +207,13 @@ class MockStore {
    * validation: email is required and email/username must be unique. Throws an
    * Error whose message the dialog surfaces to the operator.
    */
+  deleteUser(id: string): void {
+    const before = this.data.users.length;
+    this.data.users = this.data.users.filter((u) => u.id !== id);
+    if (this.data.users.length === before) throw new Error('User not found');
+    this.emit();
+  }
+
   createUser(input: CreateUserInput): UserRow {
     const email = input.email.trim().toLowerCase();
     if (!email) throw new Error('Email is required');

@@ -79,7 +79,9 @@
       "createFailed": "Benutzer konnte nicht erstellt werden",
       "renewed": "Lizenz für {email} verlängert",
       "deactivated": "{email} deaktiviert",
-      "updateFailed": "Aktualisierung fehlgeschlagen"
+      "updateFailed": "Aktualisierung fehlgeschlagen",
+      "deleted": "{email} gelöscht",
+      "deleteFailed": "Der Benutzer konnte nicht gelöscht werden"
     },
     "empty": {
       "title": "Keine Benutzer gefunden",
@@ -109,7 +111,13 @@
       "customRequired": "Bitte ein Datum wählen.",
       "deactivateConfirm": "Der Zugang von {name} wird sofort beendet und das Konto deaktiviert."
     },
-    "assignments": "Desktops & Zugriff"
+    "assignments": "Desktops & Zugriff",
+    "actions": {
+      "delete": "Benutzer löschen",
+      "deleteConfirmTitle": "{name} löschen?",
+      "deleteConfirm": "{email} wird endgültig entfernt: Konto, Passwort und Passkeys, Gruppenmitgliedschaften und Sitzungsverlauf. Laufende Desktops werden vorher beendet. Das lässt sich nicht rückgängig machen; wer den Verlauf behalten will, deaktiviert das Konto stattdessen.",
+      "self": "Das sind Sie"
+    }
   },
   "groups": {
     "title": "Gruppen",
