@@ -20,7 +20,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { WorkspaceStage } from '@/components/auth/workspace-stage';
+import { AuthShowcase } from '@/components/auth/auth-showcase';
 import { AshaMark } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
@@ -299,64 +299,28 @@ export default function LoginPage() {
 
   return (
     <div className="grid min-h-dvh w-full bg-anthracite-950 lg:grid-cols-[minmax(0,1.15fr)_minmax(440px,0.85fr)]">
-      {/* ── What Asha is. Beside the form on wide screens, below it on narrow
-             ones: signing in comes first, the pitch is there for whoever wants it. */}
-      <section
-        aria-labelledby="asha-pitch"
-        className="on-dark relative order-2 flex flex-col overflow-hidden px-6 py-14 sm:px-10 lg:order-1 lg:justify-between lg:px-14 lg:py-10"
+      {/* ── What Asha is (shared with request-access). ─────────────────── */}
+      <AuthShowcase
+        id="asha-pitch"
+        eyebrow={t('showcase.eyebrow')}
+        headline={t.rich('showcase.headline', {
+          gold: (chunks) => <span className="text-gradient-gold">{chunks}</span>,
+        })}
+        lead={t('showcase.lead')}
+        footer={t('showcase.footer')}
       >
-        <div
-          aria-hidden
-          className="absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(70% 55% at 70% 30%, rgb(var(--brand-rgb)/0.18), transparent 65%), radial-gradient(60% 50% at 0% 100%, rgb(var(--brand-rgb)/0.10), transparent 70%), linear-gradient(160deg, var(--color-slate-900), var(--color-slate-950) 70%)',
-          }}
-        />
-        <div
-          aria-hidden
-          className="absolute inset-y-0 end-0 hidden w-px lg:block"
-          style={{ background: 'linear-gradient(180deg, transparent, rgb(var(--brand-rgb)/0.45), transparent)' }}
-        />
-
-        <div className="relative hidden items-center gap-3 lg:flex">
-          <AshaMark className="size-11 rounded-xl shadow-[0_8px_24px_-6px_rgba(0,0,0,0.6)]" />
-          <span className="font-display text-xl font-semibold tracking-[0.08em] text-white">ASHA</span>
-        </div>
-
-        {/* Sized by the viewport's height too, so on a laptop the pitch below
-            still fits beside the form without scrolling. */}
-        <div className="relative mx-auto w-[88%] max-w-[640px] sm:w-full lg:my-2">
-          <WorkspaceStage className="mx-auto w-[min(100%,560px,calc(38dvh*16/11))]" />
-        </div>
-
-        <div className="relative mx-auto w-full max-w-[640px]">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold-300">{t('showcase.eyebrow')}</p>
-          <h2
-            id="asha-pitch"
-            className="mt-3 font-display text-[clamp(1.75rem,3vw,2.6rem)] font-semibold leading-[1.1] tracking-[-0.02em] text-white text-balance"
-          >
-            {t.rich('showcase.headline', {
-              gold: (chunks) => <span className="text-gradient-gold">{chunks}</span>,
-            })}
-          </h2>
-          <p className="mt-4 max-w-[56ch] text-[15px] leading-relaxed text-white/75">{t('showcase.lead')}</p>
-
-          <ul className="mt-6 grid gap-5 sm:grid-cols-3 sm:gap-6">
-            {FEATURES.map(({ Icon, key }) => (
-              <li key={key}>
-                <span className="inline-flex size-9 items-center justify-center rounded-[10px] border border-gold-500/30 bg-gold-500/[0.12] text-gold-300">
-                  <Icon className="size-[18px]" aria-hidden />
-                </span>
-                <p className="mt-3 text-sm font-semibold text-white">{t(`showcase.features.${key}.title`)}</p>
-                <p className="mt-1 text-[13px] leading-relaxed text-white/65">{t(`showcase.features.${key}.body`)}</p>
-              </li>
-            ))}
-          </ul>
-
-          <p className="mt-6 text-xs text-white/50">{t('showcase.footer')}</p>
-        </div>
-      </section>
+        <ul className="mt-6 grid gap-5 sm:grid-cols-3 sm:gap-6">
+          {FEATURES.map(({ Icon, key }) => (
+            <li key={key}>
+              <span className="inline-flex size-9 items-center justify-center rounded-[10px] border border-gold-500/30 bg-gold-500/[0.12] text-gold-300">
+                <Icon className="size-[18px]" aria-hidden />
+              </span>
+              <p className="mt-3 text-sm font-semibold text-white">{t(`showcase.features.${key}.title`)}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-white/65">{t(`showcase.features.${key}.body`)}</p>
+            </li>
+          ))}
+        </ul>
+      </AuthShowcase>
 
       {/* ── Sign-in ──────────────────────────────────────────────────────── */}
       <main className="bg-aurora relative order-1 flex min-h-dvh flex-col px-6 pb-6 pt-6 sm:px-10 lg:order-2">
