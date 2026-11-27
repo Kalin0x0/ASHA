@@ -38,6 +38,41 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.5',
+    date: '2026-11-27',
+    title: { en: 'A calmer dashboard, and every page readable in both themes', de: 'Ein ruhigeres Dashboard, und jede Seite in beiden Designs lesbar' },
+    changes: [
+      {
+        type: 'changed',
+        text: {
+          en: 'The dashboard shows resource use as one row of four gauges and the agent fleet across the full width, so no card is half empty and host names stay on one line. On phones, key figures sit two to a row instead of filling the whole screen, and buttons and fields are large enough to tap.',
+          de: 'Das Dashboard zeigt die Auslastung als eine Reihe mit vier Anzeigen und die Agent-Flotte über die volle Breite: keine halb leere Karte mehr, Hostnamen bleiben auf einer Zeile. Auf dem Handy stehen Kennzahlen zu zweit nebeneinander statt den ganzen Bildschirm zu füllen, und Knöpfe und Felder sind groß genug zum Tippen.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'In the light theme your avatar initials, the feedback button, status labels on desktop thumbnails and inline code were invisible or unreadable; in the dark theme the dividers inside cards and secondary buttons disappeared. Both themes now show them clearly.',
+          de: 'Im hellen Design waren Ihre Avatar-Initialen, der Feedback-Knopf, Statusanzeigen auf Desktop-Vorschauen und Code-Hinweise unsichtbar oder unlesbar; im dunklen Design verschwanden Trennlinien in Karten und Zweit-Knöpfe. Beide Designs zeigen sie jetzt deutlich.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Several pages flickered or rebuilt themselves on load because times and addresses were printed for the server instead of your browser. Missing translations on the roles page, English-only “3d ago” times, reversed numbers and paths in Persian, an off switch that looked on in Persian, and a licence mode switch that changed nothing are fixed too.',
+          de: 'Mehrere Seiten flackerten oder bauten sich beim Laden neu auf, weil Zeiten und Adressen für den Server statt für Ihren Browser ausgegeben wurden. Ebenfalls behoben: fehlende Übersetzungen auf der Rollen-Seite, nur englische „3d ago“-Zeiten, verdrehte Zahlen und Pfade im Persischen, ein ausgeschalteter Schalter, der im Persischen eingeschaltet aussah, und ein Lizenzmodus-Schalter ohne Wirkung.',
+        },
+      },
+      {
+        type: 'changed',
+        text: {
+          en: 'The request-access page now matches the new sign-in page.',
+          de: 'Die Seite „Zugang anfragen“ passt jetzt zur neuen Anmeldeseite.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.3.4',
     date: '2026-11-26',
     title: { en: 'A calmer sign-in that asks for your code only when it needs one', de: 'Eine aufgeräumte Anmeldung, die den Code nur fragt, wenn er nötig ist' },
