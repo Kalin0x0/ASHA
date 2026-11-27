@@ -137,7 +137,7 @@ export function RingGauge({
             </feMerge>
           </filter>
         </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border-subtle)" strokeWidth={sw} opacity={0.55} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border-subtle)" strokeWidth={sw} />
         {pct > 0 && (
           <circle
             cx={size / 2}

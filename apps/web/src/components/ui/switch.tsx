@@ -9,9 +9,12 @@ import { cn } from '@/lib/utils';
  * pending a Save", while a switch reads as "this is the state right now" — which
  * is what an access toggle actually is, since it saves the moment you flip it.
  *
- * The track is mirrored under `dir="rtl"` so the thumb's physical `translate-x`
- * still reads as "travels toward the end of the row". Flipping the thumb alone
- * would not help — it is a circle; it is the direction of travel that is wrong.
+ * Under `dir="rtl"` the flex row already starts on the right, so the thumb rests
+ * there and travels left: the translate is negated, nothing is mirrored. (The
+ * old `rtl:-scale-x-100` flipped the row a second time, and an off switch in
+ * Persian sat where "on" belongs.)
+ *
+ * The visible track is 38×22; an invisible ::after extends the hit area to 44px.
  */
 export const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitive.Root>,
@@ -20,8 +23,9 @@ export const Switch = React.forwardRef<
   <SwitchPrimitive.Root
     ref={ref}
     className={cn(
-      'peer inline-flex h-[22px] w-[38px] shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors ring-gold-focus rtl:-scale-x-100',
-      'data-[state=checked]:bg-gold-500 data-[state=unchecked]:bg-anthracite-600',
+      'peer relative inline-flex h-[22px] w-[38px] shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors ring-gold-focus',
+      "after:absolute after:-inset-x-1.5 after:-inset-y-[11px] after:content-['']",
+      'data-[state=checked]:bg-primary data-[state=unchecked]:bg-input',
       'disabled:cursor-not-allowed disabled:opacity-50',
       className,
     )}
@@ -29,8 +33,8 @@ export const Switch = React.forwardRef<
   >
     <SwitchPrimitive.Thumb
       className={cn(
-        'pointer-events-none block size-[18px] translate-x-0.5 rounded-full bg-white shadow-sm transition-transform',
-        'data-[state=checked]:translate-x-[17px]',
+        'pointer-events-none block size-[18px] translate-x-0.5 rounded-full bg-white shadow-sm transition-transform rtl:-translate-x-0.5',
+        'data-[state=checked]:translate-x-[17px] rtl:data-[state=checked]:-translate-x-[17px]',
       )}
     />
   </SwitchPrimitive.Root>

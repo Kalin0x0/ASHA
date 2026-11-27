@@ -23,11 +23,12 @@ const buttonVariants = cva(
         link: 'text-gold-300 underline-offset-4 hover:underline',
       },
       size: {
-        sm: 'h-8 px-3 text-xs',
-        md: 'h-9.5 px-4',
+        // On a touch screen every size reaches 44px; a mouse keeps the dense desktop sizes.
+        sm: 'h-8 px-3 text-xs pointer-coarse:h-11 pointer-coarse:px-4 pointer-coarse:text-sm',
+        md: 'h-9.5 px-4 pointer-coarse:h-11',
         lg: 'h-11 px-6 text-base',
-        icon: 'size-9.5',
-        'icon-sm': 'size-8',
+        icon: 'size-9.5 pointer-coarse:size-11',
+        'icon-sm': 'size-8 pointer-coarse:size-11',
       },
     },
     defaultVariants: { variant: 'primary', size: 'md' },

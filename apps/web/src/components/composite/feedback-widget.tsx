@@ -134,7 +134,7 @@ export function FeedbackWidget() {
         onClick={() => setOpen(true)}
         aria-label={t('widget.open')}
         title={t('widget.open')}
-        className="group fixed bottom-5 end-5 z-40 flex size-12 items-center justify-center rounded-full border border-gold-500/35 bg-anthracite-900/90 text-gold-300 shadow-[var(--shadow-lifted)] backdrop-blur transition-all hover:scale-105 hover:border-gold-500/60 hover:shadow-[var(--gold-glow)] ring-gold-focus"
+        className="on-dark group fixed bottom-5 end-5 z-40 flex size-12 items-center justify-center rounded-full border border-gold-500/35 bg-anthracite-900/90 text-gold-300 shadow-[var(--shadow-lifted)] backdrop-blur transition-all hover:scale-105 hover:border-gold-500/60 hover:shadow-[var(--gold-glow)] ring-gold-focus"
       >
         <MessageSquarePlus className="size-5 transition-transform group-hover:-rotate-6" />
       </button>

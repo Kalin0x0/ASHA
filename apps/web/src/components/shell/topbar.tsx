@@ -125,7 +125,7 @@ export function Topbar() {
             aria-label={t('account')}
           >
             <Avatar className="size-8 ring-2 ring-border-subtle transition-all hover:ring-gold-500/40">
-              <AvatarFallback className="text-[11px] font-bold bg-gradient-to-br from-gold-700 to-gold-900 text-gold-200">
+              <AvatarFallback className="on-dark text-[11px] font-bold bg-gradient-to-br from-gold-700 to-gold-900 text-gold-200">
                 {initials}
               </AvatarFallback>
             </Avatar>
