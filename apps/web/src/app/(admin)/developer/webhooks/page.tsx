@@ -133,11 +133,11 @@ export default function WebhooksPage() {
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t('webhooks.liveOnlyNotice')}{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          <code className="code-chip text-xs">NEXT_PUBLIC_API_MODE=live</code>.
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard label={t('webhooks.title')} value={webhooks.length} icon={Webhook} primary />
         <StatCard label={tCommon('labels.enabled')} value={webhooks.filter((w) => w.enabled).length} icon={Webhook} />
       </div>

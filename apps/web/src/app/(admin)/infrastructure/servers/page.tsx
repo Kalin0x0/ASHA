@@ -37,7 +37,7 @@ import { REMOTE_LAYOUTS, type RemoteLayout } from '@/lib/keyboard-layout';
 const CONNECTION_TYPES = ['RDP', 'VNC', 'SSH'] as const;
 /** '' in a form = leave it unset, i.e. fall back to the installation default. */
 const LAYOUT_UNSET = '';
-const SELECT = 'h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm';
+const SELECT = 'native-select w-full';
 
 export default function ServersPage() {
   const t = useTranslations('infrastructure.servers');
@@ -198,13 +198,13 @@ export default function ServersPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('stats.servers')} value={servers.length} icon={HardDrive} primary />
         <StatCard label={t('stats.capacity')} value={servers.reduce((a, s) => a + s.maxSessions, 0)} icon={HardDrive} />
         <StatCard label={t('stats.inUse')} value={servers.reduce((a, s) => a + (s.currentSessions ?? 0), 0)} icon={HardDrive} />
@@ -269,7 +269,7 @@ export default function ServersPage() {
             <select
               value={zoneId}
               onChange={(e) => setZoneId(e.target.value)}
-              className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+              className="native-select w-full"
             >
               {zones.length === 0 && <option value="">{t('form.noZones')}</option>}
               {zones.map((z) => (
@@ -284,7 +284,7 @@ export default function ServersPage() {
             <select
               value={connectionType}
               onChange={(e) => setConnectionType(e.target.value as (typeof CONNECTION_TYPES)[number])}
-              className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+              className="native-select w-full"
             >
               {CONNECTION_TYPES.map((c) => (
                 <option key={c} value={c}>
@@ -317,7 +317,7 @@ export default function ServersPage() {
               <select
                 value={security}
                 onChange={(e) => setSecurity(e.target.value)}
-                className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+                className="native-select w-full"
               >
                 <option value="nla">{t('form.rdpSecurityOptions.nla')}</option>
                 <option value="any">{t('form.rdpSecurityOptions.any')}</option>

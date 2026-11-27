@@ -128,13 +128,13 @@ export default function StorageMappingsPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('mappings.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard label={t('mappings.stats.mappings')} value={mappings.length} icon={FolderTree} primary />
         <StatCard label={tc('labels.enabled')} value={mappings.filter((m) => m.enabled).length} icon={FolderTree} />
       </div>
@@ -205,7 +205,7 @@ export default function StorageMappingsPage() {
             <select
               value={scope}
               onChange={(e) => setScope(e.target.value as (typeof SCOPES)[number])}
-              className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+              className="native-select w-full"
             >
               {SCOPES.map((s) => (
                 <option key={s} value={s}>

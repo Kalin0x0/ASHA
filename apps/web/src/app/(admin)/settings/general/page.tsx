@@ -132,7 +132,7 @@ export default function GeneralSettingsPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('general.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
@@ -157,7 +157,7 @@ export default function GeneralSettingsPage() {
             <option value="ack">{t('observation.modeAck')}</option>
           </select>
         </div>
-        <p className="rounded-md border border-border-subtle/60 bg-anthracite-950/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+        <p className="rounded-md border border-border-subtle bg-muted px-3 py-2 text-xs leading-relaxed text-muted-foreground">
           {noticeMode === 'ack' ? t('observation.helpAck') : t('observation.helpLive')}
         </p>
       </Card>
@@ -181,7 +181,7 @@ export default function GeneralSettingsPage() {
             <option value="notify">{t('assist.modeNotify')}</option>
           </select>
         </div>
-        <p className="rounded-md border border-border-subtle/60 bg-anthracite-950/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+        <p className="rounded-md border border-border-subtle bg-muted px-3 py-2 text-xs leading-relaxed text-muted-foreground">
           {consentMode === 'notify' ? t('assist.helpNotify') : t('assist.helpApprove')}
         </p>
       </Card>
@@ -203,7 +203,13 @@ export default function GeneralSettingsPage() {
                 {i === 0 && <Label className="text-xs">{t('general.fields.value')}</Label>}
                 <Input placeholder={t('general.placeholders.value')} value={r.value} onChange={(e) => setRow(i, { value: e.target.value })} />
               </div>
-              <Button variant="ghost" size="icon-sm" onClick={() => removeRow(i)}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => removeRow(i)}
+                aria-label={tCommon('actions.remove')}
+                title={tCommon('actions.remove')}
+              >
                 <Trash2 className="size-4 text-destructive" />
               </Button>
             </div>

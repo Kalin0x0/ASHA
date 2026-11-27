@@ -90,13 +90,13 @@ export default function SecurityPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('security.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard label={t('security.stats.passkeys')} value={passkeys.length} icon={Fingerprint} primary />
         <StatCard label={t('security.stats.method')} value={1} icon={KeyRound} format={() => 'WebAuthn'} />
       </div>

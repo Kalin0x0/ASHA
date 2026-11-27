@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { severityVariant, sourceVariant, statusVariant } from '@/lib/bug-display';
 import { useBugReports, useBugStats } from '@/lib/hooks';
 import type { BugStatus } from '@/lib/types';
+import { useHydrated } from '@/lib/use-hydrated';
 
 const selectClass =
   'h-9.5 rounded-md border border-input bg-[var(--surface-1)] px-3 text-sm focus-visible:border-gold-500/50 focus-visible:shadow-[var(--gold-glow)] focus-visible:outline-none';
@@ -45,7 +46,10 @@ export default function BugReportsPage() {
     });
   }, [reports, query, statusFilter, sourceFilter]);
 
-  const fmtRel = (iso: string) => new Date(iso).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
+  // Printed in the viewer's time zone, so only once the browser renders.
+  const hydrated = useHydrated();
+  const fmtRel = (iso: string) =>
+    hydrated ? new Date(iso).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' }) : '';
 
   return (
     <div className="space-y-6">
@@ -114,7 +118,7 @@ export default function BugReportsPage() {
                           <Badge variant={sourceVariant[b.source]} className="px-1.5 py-0">
                             {tSource(b.source)}
                           </Badge>
-                          {b.errorCode && <code className="font-mono text-gold-300/80">{b.errorCode}</code>}
+                          {b.errorCode && <code dir="ltr" className="font-mono text-muted-foreground">{b.errorCode}</code>}
                           {b.fix && <span className="text-success">{t('table.hasFix')}</span>}
                         </div>
                       </div>

@@ -379,6 +379,10 @@ export function useUpdateUser() {
   );
 }
 
+export function useDeleteUser() {
+  return useCallback(async (id: string): Promise<void> => store.deleteUser(id), []);
+}
+
 export function useCreateWorkspace() {
   return useCallback(async (input: CreateWorkspaceInput) => store.createWorkspace(input), []);
 }

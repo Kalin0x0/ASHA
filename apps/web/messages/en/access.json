@@ -79,7 +79,9 @@
       "createFailed": "Could not create the user",
       "renewed": "License renewed for {email}",
       "deactivated": "{email} deactivated",
-      "updateFailed": "Update failed"
+      "updateFailed": "Update failed",
+      "deleted": "{email} deleted",
+      "deleteFailed": "Could not delete the user"
     },
     "empty": {
       "title": "No users found",
@@ -109,7 +111,13 @@
       "customRequired": "Please choose a date.",
       "deactivateConfirm": "{name}'s access ends immediately and the account is deactivated."
     },
-    "assignments": "Desktops & access"
+    "assignments": "Desktops & access",
+    "actions": {
+      "delete": "Delete user",
+      "deleteConfirmTitle": "Delete {name}?",
+      "deleteConfirm": "{email} is removed for good: the account, its password and passkeys, group memberships and session history. Running desktops are shut down first. This cannot be undone; to keep the history, deactivate the account instead.",
+      "self": "This is you"
+    }
   },
   "groups": {
     "title": "Groups",
@@ -145,7 +153,8 @@
       "Connectivity": "Connectivity",
       "Settings": "Settings",
       "Observability": "Observability",
-      "Developer": "Developer"
+      "Developer": "Developer",
+      "Support": "Support"
     },
     "permissions": {
       "SESSION_VIEW": "View own sessions",
@@ -185,7 +194,10 @@
       "AUDIT_VIEW": "View audit logs",
       "REPORTING_VIEW": "View reports & metrics",
       "WEBHOOK_MANAGE": "Manage webhooks",
-      "APIKEY_MANAGE": "Manage API keys"
+      "APIKEY_MANAGE": "Manage API keys",
+      "MAINTENANCE_MANAGE": "Manage scheduled maintenance and automation tasks",
+      "BUG_VIEW": "View bug reports and fix knowledge",
+      "BUG_MANAGE": "Triage, resolve and document bug reports"
     }
   },
   "authentication": {

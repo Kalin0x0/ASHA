@@ -101,13 +101,13 @@ export default function BrowserIsolationPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('browserIsolation.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard label={t('browserIsolation.stats.profiles')} value={configs.length} icon={ShieldHalf} primary />
         <StatCard label={tc('labels.enabled')} value={configs.filter((c) => c.enabled).length} icon={ShieldHalf} />
       </div>

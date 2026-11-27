@@ -7,7 +7,8 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       type={type}
       ref={ref}
       className={cn(
-        'flex h-9.5 w-full rounded-md border border-input bg-[var(--surface-1)] px-3 py-2 text-sm transition-shadow',
+        // 16px text on touch screens: iOS zooms the page into any smaller field.
+        'flex h-9.5 w-full rounded-md border border-input bg-[var(--surface-1)] px-3 py-2 text-sm transition-shadow pointer-coarse:h-11 pointer-coarse:text-base',
         'placeholder:text-muted-foreground/70',
         'focus-visible:outline-none focus-visible:border-gold-500/50 focus-visible:shadow-[var(--gold-glow)]',
         'disabled:cursor-not-allowed disabled:opacity-50',

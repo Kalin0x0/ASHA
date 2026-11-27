@@ -53,7 +53,7 @@ export default function AuditLogPage() {
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t('auditLog.liveOnlyNotice')}{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          <code className="code-chip text-xs">NEXT_PUBLIC_API_MODE=live</code>.
         </Card>
       )}
 

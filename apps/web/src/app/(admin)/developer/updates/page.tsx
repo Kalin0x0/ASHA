@@ -103,7 +103,14 @@ export default function UpdatesPage() {
             {checking ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
             {t('checkForUpdates')}
           </Button>
-          <Button size="sm" onClick={() => void onUpdate()} disabled={updating || checking}>
+          {/* Primary only when there is something to update to; next to "you're on the
+              latest version" it is a re-run, not the call to action. */}
+          <Button
+            size="sm"
+            variant={updateAvailable ? 'primary' : 'secondary'}
+            onClick={() => void onUpdate()}
+            disabled={updating || checking}
+          >
             {updating ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
             {updateAvailable ? t('updateToVersion', { version: targetVersion }) : t('updateNow')}
           </Button>

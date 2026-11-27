@@ -208,7 +208,7 @@ function SessionCard({
         onClick={() => onResume(s)}
         disabled={busy === 'delete'}
         aria-label={t('mySessions.resumeAria', { name: s.workspaceName })}
-        className="relative block h-32 w-full overflow-hidden bg-anthracite-900 ring-gold-focus disabled:opacity-60"
+        className="on-dark relative block h-32 w-full overflow-hidden bg-anthracite-900 ring-gold-focus disabled:opacity-60"
       >
         {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element

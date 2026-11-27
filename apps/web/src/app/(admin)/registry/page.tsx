@@ -33,7 +33,8 @@ import {
   useUninstallEntry,
 } from '@/lib/hooks';
 import { useConfirm } from '@/components/ui/confirm';
-import { cn, formatRelativeTime } from '@/lib/utils';
+import { useRelativeTime } from '@/lib/use-relative-time';
+import { cn } from '@/lib/utils';
 
 type Tab = 'available' | 'installed' | 'registries';
 
@@ -351,17 +352,21 @@ function ImageCard({
           className="size-11 shrink-0"
         />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-medium leading-tight">{entry.friendlyName}</h3>
-          {entry.registry && (
-            <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] text-muted-foreground" title={sourceLabel}>
-              {firstParty && <BadgeCheck className="size-3 shrink-0 text-gold-300" />}
-              {entry.registry.name}
-            </p>
-          )}
+          <h3 dir="auto" className="line-clamp-2 text-start font-medium leading-tight">
+            {entry.friendlyName}
+          </h3>
+          <div className="mt-1 flex items-center gap-2">
+            {entry.registry && (
+              <p className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground" title={sourceLabel}>
+                {firstParty && <BadgeCheck className="size-3 shrink-0 text-gold-300" />}
+                <span className="truncate">{entry.registry.name}</span>
+              </p>
+            )}
+            <Badge variant="outline" className="ms-auto shrink-0 font-mono text-[10px]">
+              <bdi>{gib(entry.sizeMb)}</bdi>
+            </Badge>
+          </div>
         </div>
-        <Badge variant="outline" className="shrink-0 font-mono text-[10px]">
-          {gib(entry.sizeMb)}
-        </Badge>
       </div>
 
       <p className="line-clamp-2 min-h-[2.5rem] text-[13px] text-muted-foreground">{entry.description}</p>
@@ -448,6 +453,7 @@ function RegistriesPanel({
   onDelete: (id: string) => void;
 }) {
   const t = useTranslations('workspaces.registry');
+  const formatRelativeTime = useRelativeTime();
   const tc = useTranslations('common');
   return (
     <Card elevation={1} className="overflow-hidden">

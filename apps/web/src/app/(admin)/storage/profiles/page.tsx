@@ -87,7 +87,7 @@ export default function PersistentProfilesPage() {
         description={t('profiles.description')}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('profiles.stats.profiles')} value={profiles.length} icon={FolderCog} primary />
         <StatCard label={t('profiles.stats.withUser')} value={profiles.filter((p) => p.userId).length} icon={Users} />
         <StatCard label={t('profiles.stats.allocated')} value={totalGb} icon={HardDrive} />
@@ -123,6 +123,8 @@ export default function PersistentProfilesPage() {
                   size="icon-sm"
                   disabled={busyId === p.id}
                   onClick={() => void onDelete(p.id)}
+                  aria-label={`${tc('actions.delete')}: ${p.volumeName}`}
+                  title={tc('actions.delete')}
                 >
                   {busyId === p.id ? (
                     <Loader2 className="size-4 animate-spin" />

@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useSessionHistory } from '@/lib/hooks';
 import type { SessionEndReason } from '@/lib/types';
+import { useHydrated } from '@/lib/use-hydrated';
 import { formatDuration } from '@/lib/utils';
 
 const END_REASON_VARIANT: Record<SessionEndReason, 'outline' | 'success' | 'info' | 'destructive'> = {
@@ -34,6 +35,8 @@ function formatDateTime(iso: string, locale: string): string {
 export default function HistoryPage() {
   const t = useTranslations('sessions');
   const locale = useLocale();
+  // Start and end are printed in the viewer's time zone: only once the browser renders.
+  const hydrated = useHydrated();
   const history = useSessionHistory();
   const [query, setQuery] = useState('');
 
@@ -66,7 +69,7 @@ export default function HistoryPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('history.stats.totalSessions')} value={history.length} icon={History} primary />
         <StatCard label={t('history.stats.uniqueUsers')} value={uniqueUsers} icon={UsersRound} />
         <StatCard label={t('history.stats.avgDuration')} value={Math.round(avgDuration / 60)} icon={Clock} />
@@ -114,8 +117,8 @@ export default function HistoryPage() {
                     <p className="truncate text-xs text-muted-foreground">{h.user.email}</p>
                   </td>
                   <td className="px-5 py-3 text-muted-foreground">{h.zone}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{formatDateTime(h.startedAt, locale)}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{formatDateTime(h.endedAt, locale)}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{hydrated && formatDateTime(h.startedAt, locale)}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{hydrated && formatDateTime(h.endedAt, locale)}</td>
                   <td className="px-5 py-3 tnum text-muted-foreground">{formatDuration(h.durationSec)}</td>
                   <td className="px-5 py-3">
                     <Badge variant={END_REASON_VARIANT[h.endReason]}>

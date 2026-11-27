@@ -109,7 +109,7 @@ export default function ApiKeysPage() {
       {!isLive && (
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t('apiKeys.liveOnlyNotice')}{' '}
-          <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_API_MODE=live</code>.
+          <code className="code-chip text-xs">NEXT_PUBLIC_API_MODE=live</code>.
         </Card>
       )}
 
@@ -135,7 +135,7 @@ export default function ApiKeysPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard label={t('apiKeys.activeKeys')} value={active.length} icon={KeyRound} primary />
         <StatCard label={t('apiKeys.totalIssued')} value={keys.length} icon={KeyRound} />
       </div>

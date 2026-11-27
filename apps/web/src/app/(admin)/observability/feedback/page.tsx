@@ -18,7 +18,8 @@ import {
 import { useConfirm } from '@/components/ui/confirm';
 import { useDeleteFeedback, useFeedback, useUpdateFeedback, useUsers } from '@/lib/hooks';
 import type { FeedbackItem, FeedbackStatus } from '@/lib/types';
-import { cn, formatRelativeTime } from '@/lib/utils';
+import { useRelativeTime } from '@/lib/use-relative-time';
+import { cn } from '@/lib/utils';
 
 const STATUSES: FeedbackStatus[] = ['OPEN', 'IN_PROGRESS', 'FIXED', 'WONTFIX'];
 const STATUS_VARIANT: Record<FeedbackStatus, BadgeProps['variant']> = {
@@ -121,6 +122,7 @@ function FeedbackCard({
 }) {
   const t = useTranslations('feedback');
   const tc = useTranslations('common');
+  const formatRelativeTime = useRelativeTime();
   const updateFeedback = useUpdateFeedback();
   const deleteFeedback = useDeleteFeedback();
   const confirm = useConfirm();
@@ -224,7 +226,7 @@ function FeedbackCard({
       {/* Triage controls */}
       <div className="mt-3 flex flex-col gap-2 border-t border-border-subtle pt-3 sm:flex-row sm:items-center">
         <input
-          className="h-8 flex-1 rounded-md border border-input bg-[var(--surface-1)] px-2.5 text-sm outline-none ring-gold-focus placeholder:text-muted-foreground/70"
+          className="h-9 w-full rounded-md border border-input bg-[var(--surface-1)] px-2.5 text-sm outline-none ring-gold-focus placeholder:text-muted-foreground/70 pointer-coarse:h-11 pointer-coarse:text-base sm:h-8 sm:flex-1"
           placeholder={t('triage.notePlaceholder')}
           value={note}
           onChange={(e) => setNote(e.target.value)}

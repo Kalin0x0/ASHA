@@ -17,6 +17,7 @@ import {
 import { Input, Label } from '@/components/ui/input';
 import { mintRegistrationToken } from '@/lib/api/endpoints';
 import { isLive } from '@/lib/api/mode';
+import { useHydrated } from '@/lib/use-hydrated';
 
 const FILES = [
   { file: 'install.ps1', label: 'install.ps1' },
@@ -24,8 +25,10 @@ const FILES = [
   { file: 'remote-install.ps1', label: 'remote-install.ps1' },
 ];
 
+// The real origin only after hydration: the server has no window and would
+// otherwise render the placeholder into HTML the browser then contradicts.
 function useOrigin() {
-  return typeof window !== 'undefined' ? window.location.origin : 'https://asha.example.com';
+  return useHydrated() ? window.location.origin : 'https://asha.example.com';
 }
 
 async function copy(text: string, okMsg: string, failMsg: string) {

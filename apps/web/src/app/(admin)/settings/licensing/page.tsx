@@ -69,13 +69,13 @@ export default function LicensingPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('licensing.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard
           label={t('licensing.stats.license')}
           value={usage?.licensed ? 1 : 0}
@@ -102,14 +102,19 @@ export default function LicensingPage() {
         </div>
 
         <div>
-          <label className="text-xs text-muted-foreground">{t('licensing.fields.mode')}</label>
-          <div className="mt-1 flex gap-2">
+          <p id="license-mode" className="text-xs text-muted-foreground">
+            {t('licensing.fields.mode')}
+          </p>
+          <div className="mt-1 flex gap-2" role="radiogroup" aria-labelledby="license-mode">
             {(['CONCURRENT', 'NAMED_USER'] as const).map((m) => (
               <button
                 key={m}
+                type="button"
+                role="radio"
+                aria-checked={type === m}
                 onClick={() => setType(m)}
                 className={cn(
-                  'rounded-md border px-3 py-1.5 text-xs transition-colors',
+                  'min-h-9 rounded-md border px-3 py-1.5 text-xs transition-colors pointer-coarse:min-h-11',
                   type === m
                     ? 'border-gold-500/40 bg-gold-500/10 text-gold-300'
                     : 'border-border-subtle text-muted-foreground hover:bg-secondary',
@@ -121,15 +126,30 @@ export default function LicensingPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="text-xs text-muted-foreground">{t('licensing.fields.concurrentLimit')}</label>
-            <Input type="number" min={1} value={concurrent} onChange={(e) => setConcurrent(Number(e.target.value))} />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">{t('licensing.fields.seats')}</label>
-            <Input type="number" min={1} value={seats} onChange={(e) => setSeats(Number(e.target.value))} />
-          </div>
+        {/* Only the limit the chosen mode enforces; the toggle above used to change
+            nothing you could see. */}
+        <div className="max-w-xs">
+          {type === 'CONCURRENT' ? (
+            <>
+              <label htmlFor="license-concurrent" className="text-xs text-muted-foreground">
+                {t('licensing.fields.concurrentLimit')}
+              </label>
+              <Input
+                id="license-concurrent"
+                type="number"
+                min={1}
+                value={concurrent}
+                onChange={(e) => setConcurrent(Number(e.target.value))}
+              />
+            </>
+          ) : (
+            <>
+              <label htmlFor="license-seats" className="text-xs text-muted-foreground">
+                {t('licensing.fields.seats')}
+              </label>
+              <Input id="license-seats" type="number" min={1} value={seats} onChange={(e) => setSeats(Number(e.target.value))} />
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-3">

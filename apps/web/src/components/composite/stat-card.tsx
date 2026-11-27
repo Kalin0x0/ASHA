@@ -47,25 +47,26 @@ export function StatCard({
   const fmt = format ?? ((v: number) => Math.round(v).toLocaleString(locale));
 
   return (
-    <Card
-      elevation={primary ? 'gold' : 'glass'}
-      interactive
-      className="animate-rise group relative overflow-hidden"
-    >
+    // Not `interactive`: a stat card leads nowhere, so it must not lift and
+    // show a pointer as if it did.
+    <Card elevation={primary ? 'gold' : 'glass'} className="animate-rise group relative overflow-hidden">
       {/* Tone wash in the corner */}
       <div
         className="pointer-events-none absolute -end-12 -top-12 size-32 rounded-full blur-2xl"
         style={{ background: t.glow }}
       />
 
-      <div className="relative flex flex-col gap-3.5 px-5 pt-5">
+      {/* Compact on phones, where two cards share a row. */}
+      <div className="relative flex flex-col gap-3 px-4 pt-4 sm:gap-3.5 sm:px-5 sm:pt-5">
         {/* Label + icon */}
         <div className="flex items-start justify-between gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>
+          <span className="line-clamp-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+            {label}
+          </span>
           {Icon && (
             <span
               className={cn(
-                'flex size-9 items-center justify-center rounded-xl ring-1 transition-transform duration-200 group-hover:scale-105',
+                'hidden size-9 shrink-0 items-center justify-center rounded-xl ring-1 sm:flex',
                 t.chip,
               )}
             >
@@ -76,7 +77,12 @@ export function StatCard({
 
         {/* Value + delta */}
         <div className="flex items-end gap-2">
-          <span className={cn('font-display text-4xl font-medium leading-none tnum', primary ? t.value : 'text-foreground')}>
+          <span
+            className={cn(
+              'font-display text-3xl font-medium leading-none tnum sm:text-4xl',
+              primary ? t.value : 'text-foreground',
+            )}
+          >
             {fmt(animated)}
           </span>
           {suffix && <span className="mb-0.5 text-sm text-muted-foreground">{suffix}</span>}
@@ -100,7 +106,7 @@ export function StatCard({
           <Sparkline data={series} height={48} stroke={t.stroke} strokeWidth={2} />
         </div>
       ) : (
-        <div className="h-5" />
+        <div className="h-4 sm:h-5" />
       )}
     </Card>
   );

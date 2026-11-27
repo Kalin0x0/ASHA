@@ -29,6 +29,7 @@ import {
   useUpdateMaintenanceTask,
 } from '@/lib/hooks';
 import type { MaintenanceRunStatus, MaintenanceTaskRow, MaintenanceTaskType } from '@/lib/types';
+import { useHydrated } from '@/lib/use-hydrated';
 import { cn } from '@/lib/utils';
 
 const CLEANUP_TYPES: MaintenanceTaskType[] = [
@@ -46,8 +47,10 @@ const runVariant: Record<MaintenanceRunStatus, 'success' | 'destructive' | 'info
 
 function useRelTime() {
   const locale = useLocale();
+  // "In 5 minutes" depends on the clock that renders it; wait for the browser's.
+  const hydrated = useHydrated();
   return (iso: string | null): string | null => {
-    if (!iso) return null;
+    if (!iso || !hydrated) return null;
     const diff = new Date(iso).getTime() - Date.now();
     const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
     const abs = Math.abs(diff);
@@ -94,7 +97,7 @@ export default function AutomationPage() {
         <StatCard label={t('stats.active')} value={stats.active} icon={CalendarClock} primary />
         <StatCard label={t('stats.cleanup')} value={stats.cleanup} icon={Wrench} tone="info" />
         <StatCard label={t('stats.restart')} value={stats.restart} icon={RotateCw} tone="warning" />
-        <StatCard label={t('stats.lastRun')} value={stats.runs} icon={Play} tone="success" />
+        <StatCard label={t('stats.runs')} value={stats.runs} icon={Play} tone="success" />
       </div>
 
       <Card elevation={1} className="overflow-hidden">

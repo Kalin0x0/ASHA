@@ -67,7 +67,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <Topbar />
         <main className="relative flex-1 overflow-y-auto">
           <div aria-hidden className="pointer-events-none absolute inset-0 z-0 bg-grid opacity-40 [mask-image:linear-gradient(to_bottom,black,transparent_60%)]" />
-          <div className="relative z-10 mx-auto max-w-[1600px] px-4 py-6 lg:px-8">{children}</div>
+          {/* pb-24 keeps the last row clear of the floating feedback button. */}
+          <div className="relative z-10 mx-auto max-w-[1600px] px-4 pb-24 pt-6 lg:px-8">{children}</div>
         </main>
       </div>
 

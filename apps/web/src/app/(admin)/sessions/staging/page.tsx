@@ -188,13 +188,13 @@ export default function StagingPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('staging.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('staging.stats.pools')} value={staging.length} icon={Layers} primary />
         <StatCard label={t('staging.stats.ready')} value={staging.reduce((a, s) => a + (s.readyCount ?? 0), 0)} icon={Zap} />
         <StatCard label={t('staging.stats.target')} value={staging.reduce((a, s) => a + s.desiredSessions, 0)} icon={Layers} />
@@ -267,7 +267,7 @@ export default function StagingPage() {
             <select
               value={workspaceId}
               onChange={(e) => setWorkspaceId(e.target.value)}
-              className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+              className="native-select w-full"
             >
               {workspaces.length === 0 && <option value="">{t('staging.noWorkspaces')}</option>}
               {workspaces.map((w) => (
@@ -282,7 +282,7 @@ export default function StagingPage() {
             <select
               value={zoneId}
               onChange={(e) => setZoneId(e.target.value)}
-              className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+              className="native-select w-full"
             >
               {zones.length === 0 && <option value="">{t('staging.noZones')}</option>}
               {zones.map((z) => (

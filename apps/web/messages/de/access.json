@@ -79,7 +79,9 @@
       "createFailed": "Benutzer konnte nicht erstellt werden",
       "renewed": "Lizenz für {email} verlängert",
       "deactivated": "{email} deaktiviert",
-      "updateFailed": "Aktualisierung fehlgeschlagen"
+      "updateFailed": "Aktualisierung fehlgeschlagen",
+      "deleted": "{email} gelöscht",
+      "deleteFailed": "Der Benutzer konnte nicht gelöscht werden"
     },
     "empty": {
       "title": "Keine Benutzer gefunden",
@@ -109,7 +111,13 @@
       "customRequired": "Bitte ein Datum wählen.",
       "deactivateConfirm": "Der Zugang von {name} wird sofort beendet und das Konto deaktiviert."
     },
-    "assignments": "Desktops & Zugriff"
+    "assignments": "Desktops & Zugriff",
+    "actions": {
+      "delete": "Benutzer löschen",
+      "deleteConfirmTitle": "{name} löschen?",
+      "deleteConfirm": "{email} wird endgültig entfernt: Konto, Passwort und Passkeys, Gruppenmitgliedschaften und Sitzungsverlauf. Laufende Desktops werden vorher beendet. Das lässt sich nicht rückgängig machen; wer den Verlauf behalten will, deaktiviert das Konto stattdessen.",
+      "self": "Das sind Sie"
+    }
   },
   "groups": {
     "title": "Gruppen",
@@ -145,7 +153,8 @@
       "Connectivity": "Konnektivität",
       "Settings": "Einstellungen",
       "Observability": "Observability",
-      "Developer": "Entwickler"
+      "Developer": "Entwickler",
+      "Support": "Support"
     },
     "permissions": {
       "SESSION_VIEW": "Eigene Sitzungen anzeigen",
@@ -185,7 +194,10 @@
       "AUDIT_VIEW": "Audit-Logs anzeigen",
       "REPORTING_VIEW": "Berichte & Metriken anzeigen",
       "WEBHOOK_MANAGE": "Webhooks verwalten",
-      "APIKEY_MANAGE": "API-Schlüssel verwalten"
+      "APIKEY_MANAGE": "API-Schlüssel verwalten",
+      "MAINTENANCE_MANAGE": "Geplante Wartung und Automatisierung verwalten",
+      "BUG_VIEW": "Fehlerberichte und Lösungswissen ansehen",
+      "BUG_MANAGE": "Fehlerberichte einordnen, lösen und dokumentieren"
     }
   },
   "authentication": {

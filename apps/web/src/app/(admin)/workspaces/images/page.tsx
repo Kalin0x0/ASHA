@@ -98,7 +98,7 @@ export default function ImagesPage() {
     <div className="space-y-6">
       <PageHeader title={t('title')} description={t('description')} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('stats.images')} value={images.length} icon={Package} primary />
         <StatCard label={t('stats.workspaces')} value={totalWorkspaces} icon={Container} />
         <StatCard label={t('stats.pinned')} value={images.filter((i) => i.digest).length} icon={MonitorCog} />

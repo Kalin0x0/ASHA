@@ -84,7 +84,7 @@ export default function BrandingPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('branding.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
@@ -155,8 +155,8 @@ export default function BrandingPage() {
               )}
             </div>
             <div className="space-y-2 p-4">
-              <div className="h-2 w-3/4 rounded-full bg-anthracite-700" />
-              <div className="h-2 w-1/2 rounded-full bg-anthracite-700" />
+              <div className="h-2 w-3/4 rounded-full bg-white/20" />
+              <div className="h-2 w-1/2 rounded-full bg-white/20" />
               <button className="mt-2 rounded-md px-3 py-1.5 text-sm font-medium text-anthracite-950" style={{ background: b.accentColor }}>
                 {t('branding.signIn')}
               </button>

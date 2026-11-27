@@ -37,7 +37,7 @@ export default function ApiDocsPage() {
           <h2 className="font-display text-lg font-medium">{t('apiDocs.interactiveExplorer')}</h2>
           <p className="text-sm text-muted-foreground">
             {t('apiDocs.interactiveExplorerDescription')}{' '}
-            <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">/api/docs</code>.
+            <code className="code-chip text-xs">/api/docs</code>.
           </p>
           <Button asChild variant="secondary" size="sm">
             <a href={docsUrl} target="_blank" rel="noreferrer">
@@ -64,7 +64,7 @@ export default function ApiDocsPage() {
           <h2 className="font-display text-lg font-medium">{t('apiDocs.authentication')}</h2>
           <p className="text-sm text-muted-foreground">
             {t('apiDocs.authDescriptionBeforeCode')}{' '}
-            <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">/auth/login</code>{' '}
+            <code className="code-chip text-xs">/auth/login</code>{' '}
             {t('apiDocs.authDescriptionAfterCode')}
           </p>
           <Button asChild variant="secondary" size="sm">

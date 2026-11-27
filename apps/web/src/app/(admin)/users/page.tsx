@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Search,
   Shield,
+  Trash2,
   UserCheck,
   UserPlus,
   Users as UsersIcon,
@@ -43,7 +44,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input, Label } from '@/components/ui/input';
-import { useCreateUser, useUpdateUser, useUsers } from '@/lib/hooks';
+import { useAuth } from '@/lib/api/auth-context';
+import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from '@/lib/hooks';
 import type { UserRow } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -202,6 +204,8 @@ export default function UsersPage() {
   const users = useUsers();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
+  const deleteUser = useDeleteUser();
+  const me = useAuth().user;
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -308,6 +312,26 @@ export default function UsersPage() {
     }
   };
 
+  const onDelete = async (u: UserRow) => {
+    const ok = await confirm({
+      title: t('users.actions.deleteConfirmTitle', { name: u.name }),
+      description: t('users.actions.deleteConfirm', { email: u.email }),
+      confirmLabel: t('users.actions.delete'),
+      destructive: true,
+    });
+    if (!ok) return;
+    setBusyId(u.id);
+    try {
+      await deleteUser(u.id);
+      toast.success(t('users.toasts.deleted', { email: u.email }));
+    } catch (err) {
+      // The API's own reason wins: "the last active system admin", "your own account".
+      toast.error(err instanceof Error ? err.message : t('users.toasts.deleteFailed'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const filtered = useMemo(() => {
     if (!query) return users;
     const q = query.toLowerCase();
@@ -334,7 +358,7 @@ export default function UsersPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('users.stats.totalUsers')} value={users.length} icon={UsersIcon} primary />
         <StatCard label={tc('labels.active')} value={active} icon={UserCheck} />
         <StatCard label={t('users.stats.withTwoFactor')} value={withMfa} icon={Shield} />
@@ -417,9 +441,8 @@ export default function UsersPage() {
                     {formatDate(u.lastLoginAt, locale, tc('time.never'))}
                   </td>
                   <td className="px-5 py-3 text-end">
-                    {u.isSystemAdmin ? (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    ) : (
+                    {/* Every row gets the menu, system admins included: hiding it
+                        left admin accounts impossible to manage from here. */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -445,20 +468,38 @@ export default function UsersPage() {
                             <AppWindow className="size-4 text-gold-300" /> {t('users.assignments')}
                           </Link>
                         </DropdownMenuItem>
+                        {/* Licenses never expire a system admin, so those two items only
+                            make sense for everyone else. */}
+                        {!u.isSystemAdmin && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => openRenew(u)}>
+                              <RotateCcw className="size-4 text-gold-300" /> {t('users.license.renew')}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onSelect={() => void onDeactivateNow(u)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Ban className="size-4" /> {t('users.license.deactivateNow')}
+                            </DropdownMenuItem>
+                          </>
+                        )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => openRenew(u)}>
-                          <RotateCcw className="size-4 text-gold-300" /> {t('users.license.renew')}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onSelect={() => void onDeactivateNow(u)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Ban className="size-4" /> {t('users.license.deactivateNow')}
-                        </DropdownMenuItem>
+                        {me?.id === u.id ? (
+                          <DropdownMenuItem disabled>
+                            <Trash2 className="size-4" /> {t('users.actions.self')}
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            onSelect={() => void onDelete(u)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="size-4" /> {t('users.actions.delete')}
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    )}
                   </td>
                 </tr>
               ))}

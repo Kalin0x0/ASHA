@@ -104,13 +104,13 @@ export default function ZonesPage() {
         <Card elevation={1} className="p-4 text-sm text-muted-foreground">
           {t.rich('zones.liveOnly', {
             code: (chunks) => (
-              <code className="rounded bg-anthracite-950/60 px-1.5 py-0.5 text-xs">{chunks}</code>
+              <code className="code-chip text-xs">{chunks}</code>
             ),
           })}
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard label={t('zones.stats.zones')} value={zones.length} icon={Globe} primary />
         <StatCard label={t('zones.stats.regions')} value={new Set(zones.map((z) => z.region).filter(Boolean)).size} icon={Globe} />
       </div>

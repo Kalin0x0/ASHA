@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { AuthShowcase } from '@/components/auth/auth-showcase';
 import { AshaMark } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
@@ -76,73 +77,39 @@ export default function RequestAccessPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-anthracite-950">
-      {/* ── Showcase panel — mirrors the sign-in screen ─────────────────── */}
-      <aside className="on-dark relative hidden flex-[1.1] flex-col justify-between overflow-hidden p-12 md:flex lg:p-[52px]">
-        <div
-          aria-hidden
-          className="absolute inset-0 scale-[1.04] bg-cover bg-center"
-          style={{ backgroundImage: "url('/backgrounds/nature-forest.jpg')" }}
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(150deg, color-mix(in srgb, var(--color-anthracite-950) 78%, transparent), color-mix(in srgb, var(--color-anthracite-900) 52%, transparent) 50%, color-mix(in srgb, #5a3d12 35%, transparent))',
-          }}
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0"
-          style={{ background: 'radial-gradient(70% 60% at 78% 28%, rgb(var(--brand-rgb)/0.22), transparent 60%)' }}
-        />
-        <div aria-hidden className="absolute inset-0" style={{ boxShadow: 'inset 0 0 160px 30px rgba(8,8,16,0.6)' }} />
-        <div
-          aria-hidden
-          className="absolute inset-y-0 end-0 w-px"
-          style={{ background: 'linear-gradient(180deg, transparent, rgb(var(--brand-rgb)/0.5), transparent)' }}
-        />
-
-        <div className="relative flex items-center gap-3.5">
-          <AshaMark className="size-[52px] rounded-2xl shadow-[0_8px_24px_-6px_rgba(0,0,0,0.6)]" />
-          <span className="font-display text-[26px] font-semibold tracking-[0.06em] text-white">ASHA</span>
-        </div>
-
-        {/* How it works — sets the expectation that a human reviews this */}
-        <div className="relative max-w-[460px]">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gold-300">{t('showcase.eyebrow')}</p>
-          <h2 className="mt-3.5 font-display text-[2.5rem] font-semibold leading-[1.08] tracking-[-0.03em] text-white text-balance">
-            {t.rich('showcase.headline', {
-              gold: (chunks) => <span className="text-gradient-gold">{chunks}</span>,
-            })}
-          </h2>
-          <ol className="mt-7 flex flex-col gap-4">
-            {STEPS.map(({ Icon, key }, i) => (
-              <li key={key} className="flex items-start gap-3.5">
-                <span className="relative inline-flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-gold-500/30 bg-gold-500/[0.14] text-gold-300">
-                  <Icon className="size-4" />
-                  <span className="absolute -end-1 -top-1 flex size-[18px] items-center justify-center rounded-full bg-gold-500 text-[10px] font-bold text-anthracite-950">
-                    {i + 1}
-                  </span>
+    <div className="grid min-h-dvh w-full bg-anthracite-950 lg:grid-cols-[minmax(0,1.15fr)_minmax(440px,0.85fr)]">
+      {/* ── Same stage as sign-in; here it explains that a person reviews this. */}
+      <AuthShowcase
+        id="request-pitch"
+        eyebrow={t('showcase.eyebrow')}
+        headline={t.rich('showcase.headline', {
+          gold: (chunks) => <span className="text-gradient-gold">{chunks}</span>,
+        })}
+        footer={tAuth('showcase.footer')}
+      >
+        <ol className="mt-6 grid gap-5 sm:grid-cols-3 sm:gap-6">
+          {STEPS.map(({ Icon, key }, i) => (
+            <li key={key}>
+              <span className="relative inline-flex size-9 items-center justify-center rounded-[10px] border border-gold-500/30 bg-gold-500/[0.12] text-gold-300">
+                <Icon className="size-[18px]" aria-hidden />
+                <span className="absolute -end-1.5 -top-1.5 flex size-[18px] items-center justify-center rounded-full bg-gold-500 text-[10px] font-bold text-anthracite-950">
+                  {i + 1}
                 </span>
-                <div>
-                  <p className="text-sm font-semibold text-white">{t(`showcase.steps.${key}.title`)}</p>
-                  <p className="mt-0.5 text-[13px] leading-relaxed text-white/75">
-                    {t(`showcase.steps.${key}.body`)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        <div className="relative text-xs text-white/60">{tAuth('showcase.footer')}</div>
-      </aside>
+              </span>
+              <p className="mt-3 text-sm font-semibold text-white">{t(`showcase.steps.${key}.title`)}</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-white/65">{t(`showcase.steps.${key}.body`)}</p>
+            </li>
+          ))}
+        </ol>
+      </AuthShowcase>
 
       {/* ── Request panel ──────────────────────────────────────────────── */}
-      <main className="bg-aurora relative flex flex-1 items-center justify-center p-6 sm:p-10 md:min-w-[400px] md:flex-[0.9]">
-        <div className="w-full max-w-[380px] animate-fade-up">
+      <main className="bg-aurora relative order-1 flex min-h-dvh flex-col px-6 pb-6 pt-6 sm:px-10 lg:order-2">
+        <div className="flex items-center gap-2.5 lg:hidden">
+          <AshaMark className="size-9 rounded-lg" />
+          <span className="font-display text-lg font-semibold tracking-[0.08em]">ASHA</span>
+        </div>
+        <div className="mx-auto flex w-full max-w-[400px] flex-1 animate-fade-up flex-col justify-center py-10">
           {done ? (
             /* Submitted — nothing exists yet, an admin must approve. */
             <div className="text-center">
@@ -191,13 +158,15 @@ export default function RequestAccessPage() {
                 <p className="mt-1.5 text-sm text-muted-foreground">{t('subtitle')}</p>
               </div>
 
-              <form onSubmit={onSubmit} className="flex flex-col gap-4">
+              <form onSubmit={onSubmit} className="flex flex-col gap-5">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="email">{t('emailLabel')}</Label>
                   <Input
                     id="email"
                     type="email"
                     autoComplete="email"
+                    dir="ltr"
+                    className="h-11 text-base sm:text-sm"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={tAuth('emailPlaceholder')}
@@ -212,6 +181,8 @@ export default function RequestAccessPage() {
                     id="displayName"
                     type="text"
                     autoComplete="name"
+                    dir="auto"
+                    className="h-11 text-base sm:text-sm"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder={t('namePlaceholder')}
@@ -240,6 +211,7 @@ export default function RequestAccessPage() {
                     id="password"
                     type="password"
                     autoComplete="new-password"
+                    className="h-11 text-base sm:text-sm"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••"
@@ -263,6 +235,7 @@ export default function RequestAccessPage() {
                     id="confirm"
                     type="password"
                     autoComplete="new-password"
+                    className="h-11 text-base sm:text-sm"
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
                     placeholder="••••••••••"
@@ -278,9 +251,9 @@ export default function RequestAccessPage() {
                   )}
                 </div>
 
-                <Button type="submit" loading={loading} disabled={!canSubmit} size="lg" className="mt-1 w-full gap-2">
-                  {!loading && <ArrowRight className="size-4 rtl:rotate-180" />}
+                <Button type="submit" loading={loading} disabled={!canSubmit} size="lg" className="h-11 w-full gap-2">
                   {t('submit')}
+                  {!loading && <ArrowRight className="size-4 rtl:rotate-180" aria-hidden />}
                 </Button>
               </form>
 
@@ -293,7 +266,7 @@ export default function RequestAccessPage() {
                 {t('haveAccount')}{' '}
                 <Link
                   href="/login"
-                  className="ring-gold-focus rounded text-gold-300 transition-colors hover:text-gold-200 hover:underline"
+                  className="ring-gold-focus rounded text-gold-300 underline-offset-4 transition-colors hover:text-gold-200 hover:underline"
                 >
                   {t('backToSignIn')}
                 </Link>

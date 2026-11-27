@@ -92,7 +92,7 @@ export default function FileMappingsPage() {
         description={t('fileMappings.description')}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('fileMappings.stats.fileMappings')} value={files.length} icon={FileCog} primary />
         <StatCard label={t('fileMappings.stats.homeProfileFiles')} value={files.filter((f) => f.isHomeProfile).length} icon={Home} />
         <StatCard label={t('fileMappings.stats.restricted')} value={files.filter((f) => f.mode === '0600').length} icon={Shield} />
@@ -112,8 +112,8 @@ export default function FileMappingsPage() {
                 <FileCog className="size-4 text-gold-300" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{f.name}</p>
-                  <p className="truncate font-mono text-xs text-muted-foreground">
-                    {f.sourcePath} <span className="text-gold-300/70">→</span> {f.destPath}
+                  <p dir="ltr" className="truncate text-start font-mono text-xs text-muted-foreground rtl:text-end">
+                    {f.sourcePath} <span className="text-gold-300">→</span> {f.destPath}
                   </p>
                 </div>
                 {f.mode && <Badge variant="outline">{f.mode}</Badge>}
@@ -129,6 +129,8 @@ export default function FileMappingsPage() {
                   size="icon-sm"
                   disabled={busyId === f.id}
                   onClick={() => void onDelete(f.id)}
+                  aria-label={`${tc('actions.delete')}: ${f.name}`}
+                  title={tc('actions.delete')}
                 >
                   {busyId === f.id ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -169,7 +171,7 @@ export default function FileMappingsPage() {
             <select
               value={scope}
               onChange={(e) => setScope(e.target.value as (typeof SCOPES)[number])}
-              className="h-9 w-full rounded-md border border-border-subtle bg-[var(--surface-1)] px-2 text-sm"
+              className="native-select w-full"
             >
               {SCOPES.map((s) => (
                 <option key={s} value={s}>

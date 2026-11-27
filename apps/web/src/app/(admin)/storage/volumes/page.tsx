@@ -67,7 +67,7 @@ export default function VolumeMappingsPage() {
         description={t('volumes.description')}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 max-sm:[&>:last-child:nth-child(odd)]:col-span-2">
         <StatCard label={t('volumes.stats.volumeMappings')} value={volumes.length} icon={Database} primary />
         <StatCard label={t('volumes.stats.readOnly')} value={volumes.filter((v) => v.readOnly).length} icon={Lock} />
         <StatCard label={t('volumes.stats.readWrite')} value={volumes.filter((v) => !v.readOnly).length} icon={HardDrive} />
@@ -87,8 +87,8 @@ export default function VolumeMappingsPage() {
                 <Database className="size-4 text-gold-300" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{v.name}</p>
-                  <p className="truncate font-mono text-xs text-muted-foreground">
-                    {v.hostPath} <span className="text-gold-300/70">→</span> {v.destPath}
+                  <p dir="ltr" className="truncate text-start font-mono text-xs text-muted-foreground rtl:text-end">
+                    {v.hostPath} <span className="text-gold-300">→</span> {v.destPath}
                   </p>
                 </div>
                 {v.readOnly ? (
@@ -103,6 +103,8 @@ export default function VolumeMappingsPage() {
                   size="icon-sm"
                   disabled={busyId === v.id}
                   onClick={() => void onDelete(v.id)}
+                  aria-label={`${tc('actions.delete')}: ${v.name}`}
+                  title={tc('actions.delete')}
                 >
                   {busyId === v.id ? (
                     <Loader2 className="size-4 animate-spin" />
