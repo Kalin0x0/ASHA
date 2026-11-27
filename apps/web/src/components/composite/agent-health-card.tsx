@@ -20,17 +20,23 @@ export function AgentHealthCard({ agent }: { agent: Agent }) {
       className="group relative overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-500/25 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5)]"
     >
       {/* Header */}
+      {/* A long hostname stays on one line and truncates; it used to break at
+          every hyphen into a three-line stack beside the status pill. */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-secondary ring-1 ring-white/5 text-muted-foreground transition-colors group-hover:bg-[var(--surface-3)]">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary ring-1 ring-white/5 text-muted-foreground transition-colors group-hover:bg-[var(--surface-3)]">
             <Server className="size-4" />
           </span>
-          <div>
-            <p className="text-sm font-semibold leading-tight">{agent.hostname}</p>
-            <p className="text-[11px] text-muted-foreground">{agent.zone}</p>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold leading-tight" title={agent.hostname}>
+              {agent.hostname}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">{agent.zone}</p>
           </div>
         </div>
-        <AgentStatusPill status={agent.status} />
+        <span className="shrink-0">
+          <AgentStatusPill status={agent.status} />
+        </span>
       </div>
 
       {/* Gauges */}

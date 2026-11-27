@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useActivity, useAgents, useDashboard } from '@/lib/hooks';
 import { useCountUp } from '@/lib/use-count-up';
+import { useHydrated } from '@/lib/use-hydrated';
 import { cn } from '@/lib/utils';
 
 const ACTIVITY_TONE: Record<string, string> = {
@@ -21,11 +22,15 @@ const ACTIVITY_TONE: Record<string, string> = {
   alert: 'bg-destructive',
 };
 
-function useGreeting() {
+// The viewer's own hour, so only after hydration (the server renders in UTC).
+// Before five in the morning it is still the evening, not "good morning".
+function useGreeting(): 'morning' | 'afternoon' | 'evening' | null {
+  const hydrated = useHydrated();
   return useMemo(() => {
+    if (!hydrated) return null;
     const h = new Date().getHours();
-    return h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
-  }, []);
+    return h < 5 ? 'evening' : h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+  }, [hydrated]);
 }
 
 function MiniStat({
@@ -83,8 +88,12 @@ export default function DashboardPage() {
           <div className="flex flex-col">
             <div className="flex items-center gap-2.5">
               <span className="eyebrow">{t('hero.eyebrow')}</span>
-              <span className="text-muted-foreground/40">·</span>
-              <span className="text-[11px] font-medium text-muted-foreground">{t(`greeting.${greeting}`)}</span>
+              {greeting && (
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="text-[11px] font-medium text-muted-foreground">{t(`greeting.${greeting}`)}</span>
+                </>
+              )}
               <span className="ms-auto inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
                 <span className="size-1.5 rounded-full bg-success animate-pulse-ring" /> {t('hero.live')}
               </span>
@@ -152,48 +161,48 @@ export default function DashboardPage() {
       {/* ── Bento ───────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         {/* Main column */}
-        <div className="space-y-5 lg:col-span-9">
-          <div className="grid gap-5 md:grid-cols-12">
-            <Card elevation="glass" className="animate-fade-up delay-100 md:col-span-5">
-              <CardHeader className="pb-2">
-                <CardTitle className="font-display text-base font-semibold">{t('cards.resourceUtilization.title')}</CardTitle>
-                <p className="text-[12px] text-muted-foreground">{t('cards.resourceUtilization.subtitle')}</p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 place-items-center gap-y-5 py-2">
-                  <RingGauge value={dash.utilization.cpu} label={t('gauges.cpu')} tone="gold" />
-                  <RingGauge value={dash.utilization.mem} label={t('gauges.mem')} tone="info" />
-                  <RingGauge value={dash.utilization.gpu} label={t('gauges.gpu')} tone="success" />
-                  <RingGauge value={dash.utilization.storage} label={t('gauges.disk')} tone="warning" />
-                </div>
-              </CardContent>
-            </Card>
+        <div className="space-y-5 lg:col-span-8 xl:col-span-9">
+          {/* Utilization reads as one row of four, so it no longer stretches to
+              the fleet's height and leaves half a card empty. */}
+          <Card elevation="glass" className="animate-fade-up delay-100">
+            <CardHeader className="pb-2">
+              <CardTitle className="font-display text-base font-semibold">{t('cards.resourceUtilization.title')}</CardTitle>
+              <p className="text-[12px] text-muted-foreground">{t('cards.resourceUtilization.subtitle')}</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 place-items-center gap-y-5 py-2 sm:grid-cols-4">
+                <RingGauge value={dash.utilization.cpu} label={t('gauges.cpu')} tone="gold" />
+                <RingGauge value={dash.utilization.mem} label={t('gauges.mem')} tone="info" />
+                <RingGauge value={dash.utilization.gpu} label={t('gauges.gpu')} tone="success" />
+                <RingGauge value={dash.utilization.storage} label={t('gauges.disk')} tone="warning" />
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card elevation="glass" className="animate-fade-up delay-200 md:col-span-7">
-              <CardHeader className="flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="font-display text-base font-semibold">{t('cards.agentFleet.title')}</CardTitle>
-                  <p className="text-[12px] text-muted-foreground">{t('cards.agentFleet.subtitle')}</p>
+          <Card elevation="glass" className="animate-fade-up delay-200">
+            <CardHeader className="flex-row items-center justify-between pb-2">
+              <div>
+                <CardTitle className="font-display text-base font-semibold">{t('cards.agentFleet.title')}</CardTitle>
+                <p className="text-[12px] text-muted-foreground">{t('cards.agentFleet.subtitle')}</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => router.push('/infrastructure/agents')}>
+                {t('cards.agentFleet.viewAll')}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {agents.length === 0 ? (
+                <div className="flex h-32 items-center justify-center text-sm text-muted-foreground/70">
+                  {t('cards.agentFleet.empty')}
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => router.push('/infrastructure/agents')}>
-                  {t('cards.agentFleet.viewAll')}
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {agents.length === 0 ? (
-                  <div className="flex h-32 items-center justify-center text-sm text-muted-foreground/70">
-                    {t('cards.agentFleet.empty')}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {agents.slice(0, 4).map((a) => (
-                      <AgentHealthCard key={a.id} agent={a} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {agents.slice(0, 4).map((a) => (
+                    <AgentHealthCard key={a.id} agent={a} />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <Card elevation="glass" className="animate-fade-up delay-200">
             <CardHeader className="pb-2">
@@ -207,7 +216,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Live activity rail */}
-        <Card elevation="glass" className="animate-fade-up delay-300 lg:col-span-3">
+        <Card elevation="glass" className="animate-fade-up delay-300 lg:col-span-4 xl:col-span-3">
           <CardHeader className="flex-row items-center justify-between pb-2">
             <CardTitle className="font-display text-base font-semibold">{t('cards.liveActivity.title')}</CardTitle>
             <span className="size-1.5 rounded-full bg-success animate-pulse-ring" />
