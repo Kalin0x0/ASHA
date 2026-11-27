@@ -38,6 +38,27 @@ export function localize(text: LocalizedText, locale: string): string {
  */
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.6',
+    date: '2026-11-27',
+    title: { en: 'Delete users from the users page', de: 'Benutzer auf der Benutzerseite löschen' },
+    changes: [
+      {
+        type: 'added',
+        text: {
+          en: 'Users can now be deleted from the users page, system administrators included. A confirmation spells out what is removed; your own account and the last active administrator are protected.',
+          de: 'Benutzer lassen sich jetzt auf der Benutzerseite löschen, auch Systemadministratoren. Eine Rückfrage sagt genau, was entfernt wird; das eigene Konto und der letzte aktive Administrator sind geschützt.',
+        },
+      },
+      {
+        type: 'fixed',
+        text: {
+          en: 'Rows of system administrators showed no actions at all, so those accounts could not be managed from the list.',
+          de: 'Zeilen von Systemadministratoren zeigten gar keine Aktionen, deshalb ließen sich diese Konten nicht über die Liste verwalten.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.3.5',
     date: '2026-11-27',
     title: { en: 'A calmer dashboard, and every page readable in both themes', de: 'Ein ruhigeres Dashboard, und jede Seite in beiden Designs lesbar' },
