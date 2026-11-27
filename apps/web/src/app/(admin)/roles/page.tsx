@@ -32,7 +32,7 @@ export default function RolesPage() {
         description={t('roles.description')}
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {ROLES.map((r) => (
           <StatCard
             key={r.name}
@@ -64,7 +64,7 @@ export default function RolesPage() {
                   <tr className="bg-secondary/30">
                     <td
                       colSpan={ROLES.length + 1}
-                      className="px-5 py-2 text-xs font-semibold uppercase tracking-wider text-gold-300/80"
+                      className="px-5 py-2 text-xs font-semibold uppercase tracking-wider text-gold-300"
                     >
                       {t(`roles.categories.${cat}`)}
                     </td>

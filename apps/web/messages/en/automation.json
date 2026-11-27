@@ -8,7 +8,8 @@
     "active": "Active tasks",
     "cleanup": "Cleanup",
     "restart": "Restart & disk",
-    "lastRun": "Last run"
+    "lastRun": "Last run",
+    "runs": "Runs"
   },
   "table": {
     "task": "Task",

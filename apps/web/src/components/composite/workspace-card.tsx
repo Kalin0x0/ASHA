@@ -240,7 +240,7 @@ export function WorkspaceCard({
       {/* ── Metadata ───────────────────────────────────────────────── */}
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="min-w-0 truncate font-display text-[15px] font-semibold leading-tight">
+          <h3 dir="auto" className="min-w-0 truncate font-display text-[15px] font-semibold leading-tight">
             {workspace.friendlyName}
           </h3>
           <span className="shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
@@ -248,7 +248,7 @@ export function WorkspaceCard({
           </span>
         </div>
 
-        <p className="line-clamp-2 flex-1 text-[13px] leading-relaxed text-muted-foreground">
+        <p dir="auto" className="line-clamp-2 flex-1 text-start text-[13px] leading-relaxed text-muted-foreground">
           {workspace.description}
         </p>
 
@@ -256,11 +256,11 @@ export function WorkspaceCard({
         <div className="mt-1 flex items-center gap-3.5 border-t border-border-subtle pt-3 text-[11px] text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <Cpu className="size-3.5 text-muted-foreground/60" />
-            {t('card.vcpu', { count: workspace.cores })}
+            <bdi>{t('card.vcpu', { count: workspace.cores })}</bdi>
           </span>
           <span className="inline-flex items-center gap-1.5">
             <MemoryStick className="size-3.5 text-muted-foreground/60" />
-            {t('card.gb', { value: (workspace.memMb / 1024).toFixed(1) })}
+            <bdi>{t('card.gb', { value: (workspace.memMb / 1024).toFixed(1) })}</bdi>
           </span>
           {workspace.activeSessions > 0 && (
             <span className="ms-auto inline-flex items-center gap-1.5 font-medium text-success">

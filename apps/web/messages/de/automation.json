@@ -8,7 +8,8 @@
     "active": "Aktive Aufgaben",
     "cleanup": "Aufräumen",
     "restart": "Neustart & Speicher",
-    "lastRun": "Letzter Lauf"
+    "lastRun": "Letzter Lauf",
+    "runs": "Ausführungen"
   },
   "table": {
     "task": "Aufgabe",

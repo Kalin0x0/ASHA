@@ -399,7 +399,7 @@ function MonitorTile({
     <Card elevation="glass" className="flex flex-col overflow-hidden">
       {/* The frame box is always laid out, filled or not, so tiles never jump
           as captures arrive. */}
-      <div className="relative aspect-video w-full shrink-0 bg-anthracite-950">
+      <div className="on-dark relative aspect-video w-full shrink-0 bg-anthracite-950">
         {preview.kind === 'frame' ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -513,7 +513,9 @@ function Meter({ label, value, children }: { label: string; value: string; child
     <div className="flex items-center gap-2">
       <span className="w-14 shrink-0 truncate">{label}</span>
       <span className="min-w-0 flex-1">{children}</span>
-      <span className="shrink-0 tnum">{value}</span>
+      <bdi dir="ltr" className="shrink-0 tnum">
+        {value}
+      </bdi>
     </div>
   );
 }

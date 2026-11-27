@@ -118,7 +118,7 @@ export default function BugReportsPage() {
                           <Badge variant={sourceVariant[b.source]} className="px-1.5 py-0">
                             {tSource(b.source)}
                           </Badge>
-                          {b.errorCode && <code className="font-mono text-gold-300/80">{b.errorCode}</code>}
+                          {b.errorCode && <code dir="ltr" className="font-mono text-muted-foreground">{b.errorCode}</code>}
                           {b.fix && <span className="text-success">{t('table.hasFix')}</span>}
                         </div>
                       </div>
